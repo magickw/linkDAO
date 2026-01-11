@@ -110,14 +110,14 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
       iconSolid: UserGroupIconSolid,
       path: '/communities'
     },
-    // {
-    //   id: 'messaging',
-    //   label: 'Messages',
-    //   icon: ChatBubbleLeftRightIcon,
-    //   iconSolid: ChatBubbleLeftRightIconSolid,
-    //   path: '/messaging',
-    //   badge: messagesUnread
-    // },
+    {
+      id: 'messaging',
+      label: 'Messages',
+      icon: ChatBubbleLeftRightIcon,
+      iconSolid: ChatBubbleLeftRightIconSolid,
+      path: '/chat',
+      badge: messagesUnread
+    },
     {
       id: 'marketplace',
       label: 'Marketplace',

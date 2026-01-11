@@ -62,16 +62,36 @@ export class AdvancedCacheService {
    * Initialize Redis connection
    */
   private async initializeRedis(): Promise<void> {
+    // Check if Redis is disabled via environment variable
+    const redisEnabled = process.env.REDIS_ENABLED;
+    if (redisEnabled === 'false' || redisEnabled === '0') {
+      logger.info('Redis is disabled via REDIS_ENABLED, using memory cache only');
+      this.redis = null;
+      return;
+    }
+
+    // Don't connect to localhost in production - that's a sign Redis isn't configured
+    const redisUrl = process.env.REDIS_URL;
+    if (!redisUrl || redisUrl === 'redis://localhost:6379' || redisUrl === 'your_redis_url') {
+      logger.info('Redis URL not configured, using memory cache only');
+      this.redis = null;
+      return;
+    }
+
     try {
-      const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
       this.redis = new Redis(redisUrl, {
-        maxRetriesPerRequest: 3,
+        maxRetriesPerRequest: 2,
         lazyConnect: true,
         keepAlive: 30000,
         family: 4,
         keyPrefix: 'linkdao:',
-        // Enable compression for large values
-        enableAutoPipelining: true
+        enableAutoPipelining: true,
+        retryStrategy(times) {
+          if (times > 2) {
+            return null; // Stop retrying
+          }
+          return Math.min(times * 500, 2000);
+        }
       });
 
       this.redis.on('connect', () => {
@@ -79,14 +99,20 @@ export class AdvancedCacheService {
       });
 
       this.redis.on('error', (error) => {
-        logger.error('Redis connection error:', error);
-        this.redis = null;
+        // Log but don't spam - only log once
+        if (this.redis) {
+          logger.warn('Redis connection error, falling back to memory cache');
+          this.redis = null;
+        }
       });
 
-      // Test connection
-      await this.redis.ping();
+      // Test connection with timeout
+      await Promise.race([
+        this.redis.ping(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 5000))
+      ]);
     } catch (error) {
-      logger.error('Failed to initialize Redis:', error);
+      logger.warn('Failed to connect to Redis, using memory cache only');
       this.redis = null;
     }
   }

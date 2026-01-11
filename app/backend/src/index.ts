@@ -1,3 +1,8 @@
+// CRITICAL: Load environment variables FIRST before any other imports
+// This must be a side-effect import at the very top to ensure env vars
+// are available when other modules are loaded and instantiate their services
+import 'dotenv/config';
+
 // CRITICAL: Register error handlers FIRST before any imports
 process.on('uncaughtException', (error) => {
   // Bypass ALL logging systems - write directly to stdout
@@ -41,10 +46,7 @@ process.on('unhandledRejection', (reason, promise) => {
 import express from 'express';
 import { createServer } from 'http';
 import cookieParser from 'cookie-parser';
-import dotenv from 'dotenv';
-
-// Load environment variables
-dotenv.config();
+// dotenv is loaded via 'import dotenv/config' at the top of this file
 
 // Import security configuration and middleware
 import { validateSecurityConfig } from './config/securityConfig';
@@ -236,10 +238,21 @@ const PORT = parseInt(process.env.PORT || '10000', 10);
 app.set('trust proxy', 1);
 
 // Optimize for Render deployment constraints
-const isRenderFree = process.env.RENDER && !process.env.RENDER_PRO;
-const isRenderPro = process.env.RENDER && process.env.RENDER_PRO;
+// Optimize for Render deployment constraints
+const isRenderFree = process.env.RENDER && !process.env.RENDER_PRO &&
+  (!process.env.MEMORY_LIMIT || parseInt(process.env.MEMORY_LIMIT) < 1024) &&
+  process.env.RENDER_SERVICE_TYPE !== 'pro';
+
+// improved Render Pro detection - checks for explicit flag OR high memory allocation (>= 3GB)
+const isRenderPro = (process.env.RENDER && (
+  process.env.RENDER_PRO === 'true' ||
+  process.env.RENDER_SERVICE_TYPE === 'pro' ||
+  (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) >= 3000)
+)) || false;
+
 const isRenderStandard = process.env.RENDER && (process.env.RENDER_SERVICE_TYPE === 'standard' || process.env.RENDER_SERVICE_PLAN === 'standard');
-const isResourceConstrained = isRenderFree || (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 1024 && !isRenderStandard);
+const isResourceConstrained = (isRenderFree || (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 1024 && !isRenderStandard)) &&
+  process.env.FORCE_ENABLE_WEBSOCKETS !== 'true';
 
 // More aggressive resource constraints for memory-critical environments
 const isMemoryCritical = process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 512;
@@ -1373,7 +1386,9 @@ httpServer.listen(PORT, () => {
 
       // WebSocket services - enabled on Render Pro and non-constrained environments
       // Render Pro (4GB RAM, 2 CPU) can easily handle WebSocket connections
-      const enableWebSockets = (isRenderPro || (!isSevereResourceConstrained || isRenderStandard)) && !process.env.DISABLE_WEBSOCKETS;
+      // Also forced enabled if FORCE_ENABLE_WEBSOCKETS is set to true
+      const forceEnableWebSockets = process.env.FORCE_ENABLE_WEBSOCKETS === 'true';
+      const enableWebSockets = forceEnableWebSockets || ((isRenderPro || (!isSevereResourceConstrained || isRenderStandard)) && !process.env.DISABLE_WEBSOCKETS);
 
       if (enableWebSockets) {
         try {
@@ -1439,6 +1454,7 @@ httpServer.listen(PORT, () => {
             isResourceConstrained ? 'resource constraints' :
               'manual disable';
         console.log(`⚠️ WebSocket service disabled (${reason}) to conserve memory`);
+        console.log(`ℹ️  To force enable, set FORCE_ENABLE_WEBSOCKETS=true`);
       }
 
       // Initialize cache service

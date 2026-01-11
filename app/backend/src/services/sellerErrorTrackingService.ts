@@ -66,7 +66,7 @@ export interface ErrorMetrics {
 }
 
 export class SellerErrorTrackingService {
-  private redis: Redis;
+  private redis: Redis | null = null;
   private readonly CACHE_TTL = 300; // 5 minutes
   private readonly ERROR_RETENTION_DAYS = 90;
   private readonly ALERT_THRESHOLDS = {
@@ -76,7 +76,38 @@ export class SellerErrorTrackingService {
   };
 
   constructor() {
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    this.initializeRedis();
+  }
+
+  private initializeRedis(): void {
+    const redisEnabled = process.env.REDIS_ENABLED;
+    if (redisEnabled === 'false' || redisEnabled === '0') {
+      return;
+    }
+
+    const redisUrl = process.env.REDIS_URL;
+    if (!redisUrl || redisUrl === 'redis://localhost:6379' || redisUrl === 'your_redis_url') {
+      return;
+    }
+
+    try {
+      this.redis = new Redis(redisUrl, {
+        maxRetriesPerRequest: 2,
+        lazyConnect: true,
+        retryStrategy: (times) => {
+          if (times > 2) return null;
+          return Math.min(times * 500, 2000);
+        }
+      });
+
+      this.redis.on('error', () => {
+        if (this.redis) {
+          this.redis = null;
+        }
+      });
+    } catch {
+      this.redis = null;
+    }
   }
 
   /**
@@ -133,10 +164,12 @@ export class SellerErrorTrackingService {
   ): Promise<ErrorMetrics> {
     try {
       const cacheKey = `seller:errors:metrics:${sellerId}:${timeframe}`;
-      const cached = await this.redis.get(cacheKey);
-      
-      if (cached) {
-        return JSON.parse(cached);
+
+      if (this.redis) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       const timeframeSql = this.getTimeframeSql(timeframe);
@@ -221,7 +254,9 @@ export class SellerErrorTrackingService {
         }))
       };
 
-      await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(metrics));
+      if (this.redis) {
+        await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(metrics));
+      }
       return metrics;
 
     } catch (error) {
@@ -551,10 +586,12 @@ export class SellerErrorTrackingService {
   private async sendAlertNotification(sellerId: string, alert: ErrorAlert): Promise<void> {
     try {
       // Send to Redis pub/sub for real-time notifications
-      await this.redis.publish(
-        `seller:error-alerts:${sellerId}`,
-        JSON.stringify(alert)
-      );
+      if (this.redis) {
+        await this.redis.publish(
+          `seller:error-alerts:${sellerId}`,
+          JSON.stringify(alert)
+        );
+      }
 
       // Could also integrate with email, Slack, etc.
     } catch (error) {

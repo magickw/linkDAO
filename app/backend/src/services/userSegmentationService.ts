@@ -133,11 +133,42 @@ export interface SegmentPersonalization {
 }
 
 export class UserSegmentationService {
-  private redis: Redis;
+  private redis: Redis | null = null;
   private readonly CACHE_TTL = 1800; // 30 minutes
 
   constructor() {
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    this.initializeRedis();
+  }
+
+  private initializeRedis(): void {
+    const redisEnabled = process.env.REDIS_ENABLED;
+    if (redisEnabled === 'false' || redisEnabled === '0') {
+      return;
+    }
+
+    const redisUrl = process.env.REDIS_URL;
+    if (!redisUrl || redisUrl === 'redis://localhost:6379' || redisUrl === 'your_redis_url') {
+      return;
+    }
+
+    try {
+      this.redis = new Redis(redisUrl, {
+        maxRetriesPerRequest: 2,
+        lazyConnect: true,
+        retryStrategy: (times) => {
+          if (times > 2) return null;
+          return Math.min(times * 500, 2000);
+        }
+      });
+
+      this.redis.on('error', () => {
+        if (this.redis) {
+          this.redis = null;
+        }
+      });
+    } catch {
+      this.redis = null;
+    }
   }
 
   /**
@@ -172,7 +203,9 @@ export class UserSegmentationService {
       await this.storeSegment(segment);
 
       // Cache the segment
-      await this.redis.setex(`segment:${segmentId}`, this.CACHE_TTL, JSON.stringify(segment));
+      if (this.redis) {
+        await this.redis.setex(`segment:${segmentId}`, this.CACHE_TTL, JSON.stringify(segment));
+      }
 
       return segment;
     } catch (error) {
@@ -187,10 +220,12 @@ export class UserSegmentationService {
   async getAllSegments(): Promise<UserSegment[]> {
     try {
       const cacheKey = 'segments:all';
-      const cached = await this.redis.get(cacheKey);
-      
-      if (cached) {
-        return JSON.parse(cached);
+
+      if (this.redis) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       // Get segments from database
@@ -213,7 +248,9 @@ export class UserSegmentationService {
         })
       );
 
-      await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(updatedSegments));
+      if (this.redis) {
+        await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(updatedSegments));
+      }
       return updatedSegments;
     } catch (error) {
       safeLogger.error('Error getting segments:', error);
@@ -227,10 +264,12 @@ export class UserSegmentationService {
   async getSegmentById(segmentId: string): Promise<UserSegment | null> {
     try {
       const cacheKey = `segment:${segmentId}`;
-      const cached = await this.redis.get(cacheKey);
-      
-      if (cached) {
-        return JSON.parse(cached);
+
+      if (this.redis) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       const segment = await this.getSegmentFromDatabase(segmentId);
@@ -249,7 +288,9 @@ export class UserSegmentationService {
         updatedAt: new Date()
       };
 
-      await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(updatedSegment));
+      if (this.redis) {
+        await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(updatedSegment));
+      }
       return updatedSegment;
     } catch (error) {
       safeLogger.error('Error getting segment by ID:', error);
@@ -287,8 +328,10 @@ export class UserSegmentationService {
       await this.updateSegmentInDatabase(updatedSegment);
 
       // Update cache
-      await this.redis.setex(`segment:${segmentId}`, this.CACHE_TTL, JSON.stringify(updatedSegment));
-      await this.redis.del('segments:all'); // Invalidate all segments cache
+      if (this.redis) {
+        await this.redis.setex(`segment:${segmentId}`, this.CACHE_TTL, JSON.stringify(updatedSegment));
+        await this.redis.del('segments:all'); // Invalidate all segments cache
+      }
 
       return updatedSegment;
     } catch (error) {
@@ -303,8 +346,10 @@ export class UserSegmentationService {
   async deleteSegment(segmentId: string): Promise<void> {
     try {
       await this.deleteSegmentFromDatabase(segmentId);
-      await this.redis.del(`segment:${segmentId}`);
-      await this.redis.del('segments:all');
+      if (this.redis) {
+        await this.redis.del(`segment:${segmentId}`);
+        await this.redis.del('segments:all');
+      }
     } catch (error) {
       safeLogger.error('Error deleting segment:', error);
       throw new Error('Failed to delete user segment');

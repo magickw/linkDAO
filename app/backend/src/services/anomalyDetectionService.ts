@@ -58,12 +58,43 @@ export interface MLAnomalyModel {
 }
 
 export class AnomalyDetectionService {
-  private redis: Redis;
+  private redis: Redis | null = null;
   private readonly CACHE_TTL = 300; // 5 minutes
   private readonly ANOMALY_HISTORY_DAYS = 30;
 
   constructor() {
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    this.initializeRedis();
+  }
+
+  private initializeRedis(): void {
+    const redisEnabled = process.env.REDIS_ENABLED;
+    if (redisEnabled === 'false' || redisEnabled === '0') {
+      return;
+    }
+
+    const redisUrl = process.env.REDIS_URL;
+    if (!redisUrl || redisUrl === 'redis://localhost:6379' || redisUrl === 'your_redis_url') {
+      return;
+    }
+
+    try {
+      this.redis = new Redis(redisUrl, {
+        maxRetriesPerRequest: 2,
+        lazyConnect: true,
+        retryStrategy: (times) => {
+          if (times > 2) return null;
+          return Math.min(times * 500, 2000);
+        }
+      });
+
+      this.redis.on('error', () => {
+        if (this.redis) {
+          this.redis = null;
+        }
+      });
+    } catch {
+      this.redis = null;
+    }
   }
 
   /**
@@ -286,6 +317,10 @@ export class AnomalyDetectionService {
    */
   async configureThresholds(thresholds: AnomalyThreshold[]): Promise<void> {
     try {
+      if (!this.redis) {
+        safeLogger.warn('Redis not available, thresholds not persisted');
+        return;
+      }
       for (const threshold of thresholds) {
         await this.redis.hset(
           'anomaly_thresholds',

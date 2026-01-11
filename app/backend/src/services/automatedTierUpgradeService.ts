@@ -72,7 +72,7 @@ export interface TierDowngradeNotification {
 }
 
 class AutomatedTierUpgradeService {
-  private redis: Redis;
+  private redis: Redis | null = null;
   private readonly EVALUATION_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
   private readonly CACHE_TTL = 3600; // 1 hour
   private sellerWebSocketService: SellerWebSocketService | null;
@@ -168,14 +168,45 @@ class AutomatedTierUpgradeService {
   ];
 
   constructor() {
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    this.initializeRedis();
     // Initialize WebSocket service lazily to avoid initialization order issues
     this.sellerWebSocketService = null;
     this.notificationService = new NotificationService();
-    
+
     // Only start automated evaluation in production
     if (process.env.NODE_ENV !== 'test') {
       this.startAutomatedEvaluation();
+    }
+  }
+
+  private initializeRedis(): void {
+    const redisEnabled = process.env.REDIS_ENABLED;
+    if (redisEnabled === 'false' || redisEnabled === '0') {
+      return;
+    }
+
+    const redisUrl = process.env.REDIS_URL;
+    if (!redisUrl || redisUrl === 'redis://localhost:6379' || redisUrl === 'your_redis_url') {
+      return;
+    }
+
+    try {
+      this.redis = new Redis(redisUrl, {
+        maxRetriesPerRequest: 2,
+        lazyConnect: true,
+        retryStrategy: (times) => {
+          if (times > 2) return null;
+          return Math.min(times * 500, 2000);
+        }
+      });
+
+      this.redis.on('error', () => {
+        if (this.redis) {
+          this.redis = null;
+        }
+      });
+    } catch {
+      this.redis = null;
     }
   }
 
@@ -247,15 +278,17 @@ class AutomatedTierUpgradeService {
       safeLogger.info(`Batch tier evaluation completed: ${evaluationsCompleted} evaluations, ${upgradesProcessed} upgrades processed`);
 
       // Cache batch evaluation results
-      await this.redis.setex(
-        'tier:batch:last_evaluation',
-        this.CACHE_TTL,
-        JSON.stringify({
-          timestamp: new Date().toISOString(),
-          sellersEvaluated: evaluationsCompleted,
-          upgradesProcessed,
-        })
-      );
+      if (this.redis) {
+        await this.redis.setex(
+          'tier:batch:last_evaluation',
+          this.CACHE_TTL,
+          JSON.stringify({
+            timestamp: new Date().toISOString(),
+            sellersEvaluated: evaluationsCompleted,
+            upgradesProcessed,
+          })
+        );
+      }
 
     } catch (error) {
       safeLogger.error('Error in batch tier evaluation:', error);
@@ -325,11 +358,13 @@ class AutomatedTierUpgradeService {
       //   .where(eq(sellers.id, sellerData.id));
 
       // Cache evaluation result
-      await this.redis.setex(
-        `tier:evaluation:${walletAddress}`,
-        this.CACHE_TTL,
-        JSON.stringify(evaluationResult)
-      );
+      if (this.redis) {
+        await this.redis.setex(
+          `tier:evaluation:${walletAddress}`,
+          this.CACHE_TTL,
+          JSON.stringify(evaluationResult)
+        );
+      }
 
       return evaluationResult;
 
@@ -576,8 +611,10 @@ class AutomatedTierUpgradeService {
       }
 
       // Clear tier cache
-      await this.redis.del(`tier:evaluation:${walletAddress}`);
-      await this.redis.del(`seller:tier:${walletAddress}`);
+      if (this.redis) {
+        await this.redis.del(`tier:evaluation:${walletAddress}`);
+        await this.redis.del(`seller:tier:${walletAddress}`);
+      }
 
       safeLogger.info(`Automated upgrade completed for ${walletAddress}`);
 
@@ -635,8 +672,10 @@ class AutomatedTierUpgradeService {
       }
 
       // Clear tier cache
-      await this.redis.del(`tier:evaluation:${walletAddress}`);
-      await this.redis.del(`seller:tier:${walletAddress}`);
+      if (this.redis) {
+        await this.redis.del(`tier:evaluation:${walletAddress}`);
+        await this.redis.del(`seller:tier:${walletAddress}`);
+      }
 
       safeLogger.info(`Automated downgrade completed for ${walletAddress}`);
 
@@ -786,10 +825,12 @@ class AutomatedTierUpgradeService {
   async getTierProgressionTracking(walletAddress: string): Promise<any> {
     try {
       const cacheKey = `tier:progression:${walletAddress}`;
-      const cached = await this.redis.get(cacheKey);
-      
-      if (cached) {
-        return JSON.parse(cached);
+
+      if (this.redis) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       const evaluation = await this.evaluateSellerTier(walletAddress);
@@ -805,7 +846,9 @@ class AutomatedTierUpgradeService {
         estimatedUpgradeTime: this.estimateUpgradeTime(evaluation.requirementsMet),
       };
 
-      await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(progression));
+      if (this.redis) {
+        await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(progression));
+      }
       return progression;
 
     } catch (error) {
@@ -857,6 +900,7 @@ class AutomatedTierUpgradeService {
    */
   async getEvaluationStatistics(): Promise<any> {
     try {
+      if (!this.redis) return null;
       const stats = await this.redis.get('tier:batch:last_evaluation');
       return stats ? JSON.parse(stats) : null;
     } catch (error) {

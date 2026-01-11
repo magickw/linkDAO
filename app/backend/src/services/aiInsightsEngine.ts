@@ -51,13 +51,13 @@ export interface ComprehensiveInsightReport {
 }
 
 export class AIInsightsEngine {
-  private redis: Redis;
+  private redis: Redis | null = null;
   private config: AIInsightsEngineConfig;
   private isRunning: boolean = false;
   private intervalId: NodeJS.Timeout | null = null;
 
   constructor(config?: Partial<AIInsightsEngineConfig>) {
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    this.initializeRedis();
     this.config = {
       enablePredictiveAnalytics: true,
       enableAnomalyDetection: true,
@@ -67,6 +67,37 @@ export class AIInsightsEngine {
       alertThresholds: {},
       ...config
     };
+  }
+
+  private initializeRedis(): void {
+    const redisEnabled = process.env.REDIS_ENABLED;
+    if (redisEnabled === 'false' || redisEnabled === '0') {
+      return;
+    }
+
+    const redisUrl = process.env.REDIS_URL;
+    if (!redisUrl || redisUrl === 'redis://localhost:6379' || redisUrl === 'your_redis_url') {
+      return;
+    }
+
+    try {
+      this.redis = new Redis(redisUrl, {
+        maxRetriesPerRequest: 2,
+        lazyConnect: true,
+        retryStrategy: (times) => {
+          if (times > 2) return null;
+          return Math.min(times * 500, 2000);
+        }
+      });
+
+      this.redis.on('error', () => {
+        if (this.redis) {
+          this.redis = null;
+        }
+      });
+    } catch {
+      this.redis = null;
+    }
   }
 
   /**
@@ -203,11 +234,15 @@ export class AIInsightsEngine {
    */
   async getEngineStatus(): Promise<EngineStatus> {
     try {
-      const statusData = await this.redis.get('ai_insights_engine:status');
-      const performanceData = await this.redis.get('ai_insights_engine:performance');
+      let status = null;
+      let performance = null;
 
-      const status = statusData ? JSON.parse(statusData) : null;
-      const performance = performanceData ? JSON.parse(performanceData) : null;
+      if (this.redis) {
+        const statusData = await this.redis.get('ai_insights_engine:status');
+        const performanceData = await this.redis.get('ai_insights_engine:performance');
+        status = statusData ? JSON.parse(statusData) : null;
+        performance = performanceData ? JSON.parse(performanceData) : null;
+      }
 
       return {
         isRunning: this.isRunning,
@@ -244,7 +279,9 @@ export class AIInsightsEngine {
         await this.start();
       }
 
-      await this.redis.set('ai_insights_engine:config', JSON.stringify(this.config));
+      if (this.redis) {
+        await this.redis.set('ai_insights_engine:config', JSON.stringify(this.config));
+      }
       safeLogger.info('AI Insights Engine configuration updated');
     } catch (error) {
       safeLogger.error('Error updating engine configuration:', error);
@@ -262,28 +299,32 @@ export class AIInsightsEngine {
   ): Promise<any[]> {
     try {
       const cacheKey = `insights:filtered:${type || 'all'}:${timeframe || 'all'}:${limit}`;
-      const cached = await this.redis.get(cacheKey);
-      
-      if (cached) {
-        return JSON.parse(cached);
+
+      if (this.redis) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       // Get insights from automated insight service
       const allInsights = await automatedInsightService.generateInsights();
-      
+
       let filteredInsights = allInsights;
-      
+
       if (type) {
         filteredInsights = filteredInsights.filter(insight => insight.type === type);
       }
-      
+
       if (timeframe) {
         filteredInsights = filteredInsights.filter(insight => insight.timeframe === timeframe);
       }
-      
+
       const limitedInsights = filteredInsights.slice(0, limit);
-      
-      await this.redis.setex(cacheKey, 300, JSON.stringify(limitedInsights)); // 5 min cache
+
+      if (this.redis) {
+        await this.redis.setex(cacheKey, 300, JSON.stringify(limitedInsights)); // 5 min cache
+      }
       return limitedInsights;
     } catch (error) {
       safeLogger.error('Error getting insights:', error);
@@ -546,9 +587,11 @@ export class AIInsightsEngine {
 
   private async storeReport(report: ComprehensiveInsightReport): Promise<void> {
     try {
+      if (!this.redis) return;
+
       const reportKey = `ai_insights:report:${report.generatedAt.toISOString()}`;
       await this.redis.setex(reportKey, 86400 * 7, JSON.stringify(report)); // Store for 7 days
-      
+
       // Keep reference to latest report
       await this.redis.set('ai_insights:latest_report', reportKey);
     } catch (error) {
@@ -558,6 +601,8 @@ export class AIInsightsEngine {
 
   private async updateEngineStatus(status: string): Promise<void> {
     try {
+      if (!this.redis) return;
+
       const statusData = {
         status,
         lastUpdate: new Date().toISOString(),
@@ -574,6 +619,8 @@ export class AIInsightsEngine {
     status: 'active' | 'inactive' | 'error'
   ): Promise<void> {
     try {
+      if (!this.redis) return;
+
       await this.redis.hset('ai_insights_engine:components', component, status);
     } catch (error) {
       safeLogger.error('Error updating component status:', error);
@@ -582,6 +629,8 @@ export class AIInsightsEngine {
 
   private async checkComponentStatus(component: string): Promise<'active' | 'inactive' | 'error'> {
     try {
+      if (!this.redis) return 'inactive';
+
       const status = await this.redis.hget('ai_insights_engine:components', component);
       return (status as any) || 'inactive';
     } catch (error) {
@@ -591,6 +640,8 @@ export class AIInsightsEngine {
 
   private async updatePerformanceMetrics(processingTime: number): Promise<void> {
     try {
+      if (!this.redis) return;
+
       const performanceData = await this.redis.get('ai_insights_engine:performance');
       const performance = performanceData ? JSON.parse(performanceData) : {
         totalInsightsGenerated: 0,
@@ -611,6 +662,8 @@ export class AIInsightsEngine {
 
   private async recordError(error: any): Promise<void> {
     try {
+      if (!this.redis) return;
+
       const performanceData = await this.redis.get('ai_insights_engine:performance');
       const performance = performanceData ? JSON.parse(performanceData) : {
         errorCount: 0,

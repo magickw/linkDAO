@@ -109,12 +109,43 @@ export interface ForecastModel {
 }
 
 export class TrendAnalysisService {
-  private redis: Redis;
+  private redis: Redis | null = null;
   private readonly CACHE_TTL = 1800; // 30 minutes
   private readonly MIN_DATA_POINTS = 10;
 
   constructor() {
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    this.initializeRedis();
+  }
+
+  private initializeRedis(): void {
+    const redisEnabled = process.env.REDIS_ENABLED;
+    if (redisEnabled === 'false' || redisEnabled === '0') {
+      return;
+    }
+
+    const redisUrl = process.env.REDIS_URL;
+    if (!redisUrl || redisUrl === 'redis://localhost:6379' || redisUrl === 'your_redis_url') {
+      return;
+    }
+
+    try {
+      this.redis = new Redis(redisUrl, {
+        maxRetriesPerRequest: 2,
+        lazyConnect: true,
+        retryStrategy: (times) => {
+          if (times > 2) return null;
+          return Math.min(times * 500, 2000);
+        }
+      });
+
+      this.redis.on('error', () => {
+        if (this.redis) {
+          this.redis = null;
+        }
+      });
+    } catch {
+      this.redis = null;
+    }
   }
 
   /**
@@ -127,17 +158,19 @@ export class TrendAnalysisService {
   ): Promise<TrendAnalysis[]> {
     try {
       const cacheKey = `trends:analysis:${metrics.join(',')}:${timeframe}:${lookbackDays}`;
-      const cached = await this.redis.get(cacheKey);
-      
-      if (cached) {
-        return JSON.parse(cached);
+
+      if (this.redis) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       const analyses: TrendAnalysis[] = [];
 
       for (const metric of metrics) {
         const data = await this.getMetricData(metric, timeframe, lookbackDays);
-        
+
         if (data.length < this.MIN_DATA_POINTS) {
           continue;
         }
@@ -146,7 +179,9 @@ export class TrendAnalysisService {
         analyses.push(analysis);
       }
 
-      await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(analyses));
+      if (this.redis) {
+        await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(analyses));
+      }
       return analyses;
     } catch (error) {
       safeLogger.error('Error analyzing trends:', error);
@@ -164,21 +199,25 @@ export class TrendAnalysisService {
   ): Promise<SeasonalPattern[]> {
     try {
       const cacheKey = `trends:seasonal:${metric}:${timeframe}:${lookbackDays}`;
-      const cached = await this.redis.get(cacheKey);
-      
-      if (cached) {
-        return JSON.parse(cached);
+
+      if (this.redis) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       const data = await this.getMetricData(metric, timeframe, lookbackDays);
-      
+
       if (data.length < 28) { // Need at least 4 weeks of data
         return [];
       }
 
       const patterns = await this.identifySeasonalPatterns(metric, data, timeframe);
-      
-      await this.redis.setex(cacheKey, this.CACHE_TTL * 2, JSON.stringify(patterns));
+
+      if (this.redis) {
+        await this.redis.setex(cacheKey, this.CACHE_TTL * 2, JSON.stringify(patterns));
+      }
       return patterns;
     } catch (error) {
       safeLogger.error('Error detecting seasonal patterns:', error);

@@ -14,28 +14,49 @@ interface CacheEntry<T> {
 
 export class CommunityCacheService {
   private static instance: CommunityCacheService;
-  private redis: Redis;
+  private redis: Redis | null = null;
   private localCache: Map<string, CacheEntry<any>> = new Map();
   private readonly DEFAULT_TTL = 300; // 5 minutes
   private readonly MAX_LOCAL_CACHE_SIZE = 1000;
 
   private constructor() {
-    // Initialize Redis connection
-    this.redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD,
-      maxRetriesPerRequest: 3,
-      lazyConnect: true,
-    });
+    // Check if Redis is disabled via environment variable
+    const redisEnabled = process.env.REDIS_ENABLED;
+    if (redisEnabled === 'false' || redisEnabled === '0') {
+      safeLogger.info('Redis is disabled, CommunityCacheService using local cache only');
+    } else {
+      // Don't connect to localhost in production
+      const redisUrl = process.env.REDIS_URL;
+      if (redisUrl && redisUrl !== 'redis://localhost:6379' && redisUrl !== 'your_redis_url') {
+        this.redis = new Redis({
+          host: process.env.REDIS_HOST || 'localhost',
+          port: parseInt(process.env.REDIS_PORT || '6379'),
+          password: process.env.REDIS_PASSWORD,
+          maxRetriesPerRequest: 2,
+          lazyConnect: true,
+          retryStrategy(times) {
+            if (times > 2) {
+              return null; // Stop retrying
+            }
+            return Math.min(times * 500, 2000);
+          }
+        });
 
-    this.redis.on('error', (error) => {
-      safeLogger.error('Redis connection error:', error);
-    });
+        this.redis.on('error', (error) => {
+          // Log once, then disable
+          if (this.redis) {
+            safeLogger.warn('Redis connection error, using local cache only');
+            this.redis = null;
+          }
+        });
 
-    this.redis.on('connect', () => {
-      safeLogger.info('Redis connected successfully');
-    });
+        this.redis.on('connect', () => {
+          safeLogger.info('CommunityCacheService Redis connected successfully');
+        });
+      } else {
+        safeLogger.info('Redis URL not configured, CommunityCacheService using local cache only');
+      }
+    }
 
     // Clean up expired local cache entries every minute
     setInterval(() => {
@@ -61,17 +82,19 @@ export class CommunityCacheService {
         return localEntry.data;
       }
 
-      // Check Redis
-      const redisValue = await this.redis.get(key);
-      if (redisValue) {
-        const entry: CacheEntry<T> = JSON.parse(redisValue);
-        
-        // Cache in local if not expired
-        if (entry.expiresAt > Date.now()) {
-          this.setLocalCache(key, entry);
+      // Check Redis if available
+      if (this.redis) {
+        const redisValue = await this.redis.get(key);
+        if (redisValue) {
+          const entry: CacheEntry<T> = JSON.parse(redisValue);
+
+          // Cache in local if not expired
+          if (entry.expiresAt > Date.now()) {
+            this.setLocalCache(key, entry);
+          }
+
+          return entry.data;
         }
-        
-        return entry.data;
       }
 
       return null;
@@ -99,12 +122,14 @@ export class CommunityCacheService {
       // Set in local cache
       this.setLocalCache(key, entry);
 
-      // Set in Redis
-      await this.redis.setex(key, ttl, JSON.stringify(entry));
+      // Set in Redis if available
+      if (this.redis) {
+        await this.redis.setex(key, ttl, JSON.stringify(entry));
 
-      // Add to tag sets for invalidation
-      if (tags.length > 0) {
-        await this.addToTagSets(key, tags);
+        // Add to tag sets for invalidation
+        if (tags.length > 0) {
+          await this.addToTagSets(key, tags);
+        }
       }
     } catch (error) {
       safeLogger.error('Cache set error:', error);
@@ -119,8 +144,10 @@ export class CommunityCacheService {
       // Remove from local cache
       this.localCache.delete(key);
 
-      // Remove from Redis
-      await this.redis.del(key);
+      // Remove from Redis if available
+      if (this.redis) {
+        await this.redis.del(key);
+      }
     } catch (error) {
       safeLogger.error('Cache delete error:', error);
     }
@@ -131,16 +158,21 @@ export class CommunityCacheService {
    */
   async invalidateByTag(tag: string): Promise<void> {
     try {
+      if (!this.redis) {
+        // Only local cache invalidation is possible
+        return;
+      }
+
       const tagKey = `cache:tag:${tag}`;
       const keys = await this.redis.smembers(tagKey);
-      
+
       if (keys.length > 0) {
         // Remove from local cache
         keys.forEach(key => this.localCache.delete(key));
-        
+
         // Remove from Redis
         await this.redis.del(...keys);
-        
+
         // Remove tag set
         await this.redis.del(tagKey);
       }
@@ -204,16 +236,23 @@ export class CommunityCacheService {
     redisMemory?: string;
   }> {
     try {
-      const redisMemory = this.redis.status === 'ready' 
-        ? await this.redis.info('memory').then(info => {
-            const match = info.match(/used_memory_human:(.+)/);
-            return match ? match[1].trim() : 'unknown';
-          }).catch(() => 'unknown')
-        : 'unknown';
+      let redisMemory = 'unavailable';
+      let redisConnected = false;
+
+      if (this.redis && this.redis.status === 'ready') {
+        redisConnected = true;
+        try {
+          const info = await this.redis.info('memory');
+          const match = info.match(/used_memory_human:(.+)/);
+          redisMemory = match ? match[1].trim() : 'unknown';
+        } catch {
+          redisMemory = 'unknown';
+        }
+      }
 
       return {
         localCacheSize: this.localCache.size,
-        redisConnected: this.redis.status === 'ready',
+        redisConnected,
         redisMemory
       };
     } catch (error) {
@@ -259,14 +298,16 @@ export class CommunityCacheService {
   }
 
   private async addToTagSets(key: string, tags: string[]): Promise<void> {
+    if (!this.redis) return;
+
     const pipeline = this.redis.pipeline();
-    
+
     tags.forEach(tag => {
       const tagKey = `cache:tag:${tag}`;
       pipeline.sadd(tagKey, key);
       pipeline.expire(tagKey, 3600); // Tag sets expire after 1 hour
     });
-    
+
     await pipeline.exec();
   }
 

@@ -23,7 +23,7 @@ router.post('/listings', csrfProtection,
       priceCrypto: { type: 'number', required: true, min: 0 },
       currency: { type: 'string', optional: true, enum: ['USDC', 'ETH', 'MATIC'] },
       isPhysical: { type: 'boolean', optional: true },
-      stock: { type: 'number', optional: true, min: 0 },
+      inventory: { type: 'number', optional: true, min: 0 },
       metadataUri: { type: 'string', optional: true }
     }
   }),
@@ -44,8 +44,7 @@ router.put('/listings/:id', csrfProtection,
       priceCrypto: { type: 'number', optional: true, min: 0 },
       currency: { type: 'string', optional: true, enum: ['USDC', 'ETH', 'MATIC', 'USD', 'USDT'] },
       isPhysical: { type: 'boolean', optional: true },
-      stock: { type: 'number', optional: true, min: 0 },
-      quantity: { type: 'number', optional: true, min: 0 },
+      inventory: { type: 'number', optional: true, min: 0 },
       status: { type: 'string', optional: true, enum: ['active', 'inactive', 'draft', 'sold_out'] },
       metadataUri: { type: 'string', optional: true },
       // Enhanced fields

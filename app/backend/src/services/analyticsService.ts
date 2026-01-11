@@ -80,20 +80,55 @@ export interface AnomalyAlert {
 }
 
 export class AnalyticsService {
-  private redis: Redis;
+  private redis: Redis | null = null;
   private readonly CACHE_TTL = 300; // 5 minutes
 
   constructor() {
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    this.initializeRedis();
+  }
+
+  private initializeRedis(): void {
+    // Check if Redis is disabled via environment variable
+    const redisEnabled = process.env.REDIS_ENABLED;
+    if (redisEnabled === 'false' || redisEnabled === '0') {
+      return;
+    }
+
+    const redisUrl = process.env.REDIS_URL;
+    // Don't connect to localhost in production
+    if (!redisUrl || redisUrl === 'redis://localhost:6379' || redisUrl === 'your_redis_url') {
+      return;
+    }
+
+    try {
+      this.redis = new Redis(redisUrl, {
+        maxRetriesPerRequest: 2,
+        lazyConnect: true,
+        retryStrategy: (times) => {
+          if (times > 2) return null;
+          return Math.min(times * 500, 2000);
+        }
+      });
+
+      this.redis.on('error', () => {
+        if (this.redis) {
+          this.redis = null;
+        }
+      });
+    } catch {
+      this.redis = null;
+    }
   }
 
   async getOverviewMetrics(startDate?: Date, endDate?: Date): Promise<AnalyticsMetrics> {
     try {
       const cacheKey = `analytics:overview:${startDate?.toISOString()}:${endDate?.toISOString()}`;
-      const cached = await this.redis.get(cacheKey);
 
-      if (cached) {
-        return JSON.parse(cached);
+      if (this.redis) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       const dateFilter = startDate && endDate
@@ -145,7 +180,9 @@ export class AnalyticsService {
         activeUsers: activeUsersMetrics
       };
 
-      await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(result));
+      if (this.redis) {
+        await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(result));
+      }
       return result;
     } catch (error) {
       safeLogger.error('Error getting overview metrics:', error);
@@ -156,10 +193,12 @@ export class AnalyticsService {
   async getUserBehaviorData(startDate?: Date, endDate?: Date): Promise<UserBehaviorData> {
     try {
       const cacheKey = `analytics:behavior:${startDate?.toISOString()}:${endDate?.toISOString()}`;
-      const cached = await this.redis.get(cacheKey);
 
-      if (cached) {
-        return JSON.parse(cached);
+      if (this.redis) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       // Get user behavior analytics from user_analytics table
@@ -175,7 +214,9 @@ export class AnalyticsService {
         geographicDistribution: behaviorData.geographicDistribution
       };
 
-      await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(result));
+      if (this.redis) {
+        await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(result));
+      }
       return result;
     } catch (error) {
       safeLogger.error('Error getting user behavior data:', error);
@@ -186,10 +227,12 @@ export class AnalyticsService {
   async getSalesAnalytics(startDate?: Date, endDate?: Date): Promise<SalesAnalytics> {
     try {
       const cacheKey = `analytics:sales:${startDate?.toISOString()}:${endDate?.toISOString()}`;
-      const cached = await this.redis.get(cacheKey);
 
-      if (cached) {
-        return JSON.parse(cached);
+      if (this.redis) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       const dateFilter = startDate && endDate
@@ -219,7 +262,9 @@ export class AnalyticsService {
         customerSegments: customerSegmentData
       };
 
-      await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(result));
+      if (this.redis) {
+        await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(result));
+      }
       return result;
     } catch (error) {
       safeLogger.error('Error getting sales analytics:', error);
@@ -230,16 +275,20 @@ export class AnalyticsService {
   async getSellerAnalytics(sellerId: string, startDate?: Date, endDate?: Date): Promise<SellerAnalytics> {
     try {
       const cacheKey = `analytics:seller:${sellerId}:${startDate?.toISOString()}:${endDate?.toISOString()}`;
-      const cached = await this.redis.get(cacheKey);
 
-      if (cached) {
-        return JSON.parse(cached);
+      if (this.redis) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       // Get seller-specific analytics
       const sellerMetrics = await this.calculateSellerMetrics(sellerId, startDate, endDate);
 
-      await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(sellerMetrics));
+      if (this.redis) {
+        await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(sellerMetrics));
+      }
       return sellerMetrics;
     } catch (error) {
       safeLogger.error('Error getting seller analytics:', error);
@@ -250,15 +299,19 @@ export class AnalyticsService {
   async getMarketTrends(): Promise<MarketTrends> {
     try {
       const cacheKey = 'analytics:market-trends';
-      const cached = await this.redis.get(cacheKey);
 
-      if (cached) {
-        return JSON.parse(cached);
+      if (this.redis) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       const trends = await this.analyzeMarketTrends();
 
-      await this.redis.setex(cacheKey, this.CACHE_TTL * 4, JSON.stringify(trends)); // Cache longer for trends
+      if (this.redis) {
+        await this.redis.setex(cacheKey, this.CACHE_TTL * 4, JSON.stringify(trends)); // Cache longer for trends
+      }
       return trends;
     } catch (error) {
       safeLogger.error('Error getting market trends:', error);
@@ -812,9 +865,11 @@ export class AnalyticsService {
 
   private async updateRealTimeMetrics(eventType: string, eventData: any): Promise<void> {
     // Update real-time dashboard metrics cache
-    const metricKey = `realtime:${eventType}`;
-    await this.redis.incr(metricKey);
-    await this.redis.expire(metricKey, 3600); // 1 hour TTL
+    if (this.redis) {
+      const metricKey = `realtime:${eventType}`;
+      await this.redis.incr(metricKey);
+      await this.redis.expire(metricKey, 3600); // 1 hour TTL
+    }
   }
 
   /**

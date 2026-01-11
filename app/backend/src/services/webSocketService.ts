@@ -76,29 +76,7 @@ export class WebSocketService {
       ...config
     };
 
-    // Detect resource constraints from environment
-    const isRenderFree = process.env.RENDER_SERVICE_TYPE === 'free' || 
-                         process.env.DISABLE_WEBSOCKET_FEATURES === 'true' ||
-                         process.env.NODE_ENV === 'production' && !process.env.RENDER_SERVICE_TYPE;
-
-    const memoryLimit = process.env.MEMORY_LIMIT ? parseInt(process.env.MEMORY_LIMIT) : 512;
-    const isLowMemory = memoryLimit < 1024; // Less than 1GB
-
-    // Check current memory usage
-    const memUsage = process.memoryUsage();
-    const memUsageMB = memUsage.heapUsed / 1024 / 1024;
-    const isHighMemoryUsage = memUsageMB > this.config.memoryThreshold!;
-
-    this.isResourceConstrained = isRenderFree || isLowMemory || isHighMemoryUsage || 
-                                process.env.DISABLE_WEBSOCKET_FEATURES === 'true';
-
-    if (this.isResourceConstrained) {
-      // Reduce limits for resource-constrained environments
-      this.config.maxConnections = Math.min(this.config.maxConnections!, 100);
-      this.config.messageQueueLimit = Math.min(this.config.messageQueueLimit!, 20);
-      this.config.heartbeatInterval = Math.max(this.config.heartbeatInterval!, 60000);
-    }
-
+    this.detectResourceConstraints();
     // Enhanced CORS configuration for better compatibility
     const allowedOrigins = [
       'https://www.linkdao.io',
@@ -123,13 +101,13 @@ export class WebSocketService {
         origin: (origin, callback) => {
           // Allow requests with no origin (like mobile apps or curl requests)
           if (!origin) return callback(null, true);
-          
+
           // Check if origin is in allowlist
-          const isAllowed = allowedOrigins.some(allowedOrigin => 
-            origin === allowedOrigin || 
+          const isAllowed = allowedOrigins.some(allowedOrigin =>
+            origin === allowedOrigin ||
             origin.startsWith(allowedOrigin.replace(/\./g, '\\.'))
           );
-          
+
           if (isAllowed) {
             callback(null, true);
           } else {
@@ -174,13 +152,13 @@ export class WebSocketService {
     this.io = new Server(httpServer, socketConfig);
 
     this.setupEventHandlers();
-    
+
     if (this.config.enableHeartbeat && !this.isResourceConstrained) {
       this.startHeartbeat();
     }
 
     safeLogger.info(`WebSocket service initialized with resource awareness: ${this.isResourceConstrained ? 'constrained' : 'normal'} mode`);
-    
+
     // Log the actual configuration being used
     safeLogger.info('WebSocket configuration:', {
       path: socketConfig.path,
@@ -192,10 +170,14 @@ export class WebSocketService {
   }
 
   private detectResourceConstraints(): void {
-    // Check environment variables for resource constraints
-    const isRenderFree = process.env.RENDER_SERVICE_TYPE === 'free' || 
-                        process.env.NODE_ENV === 'production' && !process.env.RENDER_SERVICE_TYPE;
-    
+    // Detect resource constraints from environment
+    const isRenderFree = process.env.RENDER_SERVICE_TYPE === 'free' ||
+      process.env.DISABLE_WEBSOCKET_FEATURES === 'true' ||
+      (process.env.NODE_ENV === 'production' && !process.env.RENDER_SERVICE_TYPE && !process.env.RENDER_PRO);
+
+    // Check if explicitly forced enabled
+    const forceEnabled = process.env.FORCE_ENABLE_WEBSOCKETS === 'true';
+
     const memoryLimit = process.env.MEMORY_LIMIT ? parseInt(process.env.MEMORY_LIMIT) : 512;
     const isLowMemory = memoryLimit < 1024; // Less than 1GB
 
@@ -204,8 +186,8 @@ export class WebSocketService {
     const memUsageMB = memUsage.heapUsed / 1024 / 1024;
     const isHighMemoryUsage = memUsageMB > this.config.memoryThreshold!;
 
-    this.isResourceConstrained = isRenderFree || isLowMemory || isHighMemoryUsage || 
-                                process.env.DISABLE_WEBSOCKET_FEATURES === 'true';
+    this.isResourceConstrained = !forceEnabled && (isRenderFree || isLowMemory || isHighMemoryUsage ||
+      process.env.DISABLE_WEBSOCKET_FEATURES === 'true');
 
     if (this.isResourceConstrained) {
       // Reduce limits for resource-constrained environments
@@ -214,8 +196,14 @@ export class WebSocketService {
       this.config.heartbeatInterval = Math.max(this.config.heartbeatInterval!, 60000);
     }
 
+    // Allow override of max connections via env var even if constrained
+    if (process.env.WS_MAX_CONNECTIONS) {
+      this.config.maxConnections = parseInt(process.env.WS_MAX_CONNECTIONS);
+    }
+
     safeLogger.info('WebSocket resource constraints detected:', {
       isResourceConstrained: this.isResourceConstrained,
+      forceEnabled,
       memoryUsageMB: Math.round(memUsageMB),
       memoryThreshold: this.config.memoryThreshold,
       maxConnections: this.config.maxConnections
@@ -225,24 +213,24 @@ export class WebSocketService {
   private setupEventHandlers() {
     this.io.on('connection', (socket) => {
       // Check connection limits
-    if (this.connectedUsers.size >= this.config.maxConnections!) {
-      safeLogger.warn(`Connection limit reached (${this.config.maxConnections}), rejecting connection: ${socket.id}`);
-      socket.emit('error', { message: 'Server at maximum capacity' });
-      socket.disconnect();
-      return;
-    }
+      if (this.connectedUsers.size >= this.config.maxConnections!) {
+        safeLogger.warn(`Connection limit reached (${this.config.maxConnections}), rejecting connection: ${socket.id}`);
+        socket.emit('error', { message: 'Server at maximum capacity' });
+        socket.disconnect();
+        return;
+      }
 
-    // Check for multiple connections from the same IP
-    const clientIP = socket.handshake.address;
-    const connectionsFromIP = Array.from(this.connectedUsers.values())
-      .filter(user => user.ip === clientIP).length;
-    
-    if (connectionsFromIP > 5) { // Limit to 5 connections per IP
-      safeLogger.warn(`Too many connections from IP ${clientIP} (${connectionsFromIP}), rejecting: ${socket.id}`);
-      socket.emit('error', { message: 'Too many connections from your IP' });
-      socket.disconnect();
-      return;
-    }
+      // Check for multiple connections from the same IP
+      const clientIP = socket.handshake.address;
+      const connectionsFromIP = Array.from(this.connectedUsers.values())
+        .filter(user => user.ip === clientIP).length;
+
+      if (connectionsFromIP > 5) { // Limit to 5 connections per IP
+        safeLogger.warn(`Too many connections from IP ${clientIP} (${connectionsFromIP}), rejecting: ${socket.id}`);
+        socket.emit('error', { message: 'Too many connections from your IP' });
+        socket.disconnect();
+        return;
+      }
 
       safeLogger.info(`Client connected: ${socket.id} (${this.connectedUsers.size + 1}/${this.config.maxConnections})`);
 
@@ -259,7 +247,7 @@ export class WebSocketService {
       // Handle user authentication
       socket.on('authenticate', (data: { walletAddress: string; reconnecting?: boolean }) => {
         const { walletAddress, reconnecting = false } = data;
-        
+
         if (!walletAddress) {
           socket.emit('auth_error', { message: 'Wallet address required' });
           return;
@@ -273,13 +261,13 @@ export class WebSocketService {
 
         // Store user connection
         const user: ConnectedUser = {
-      socketId: socket.id,
-      walletAddress,
-      lastSeen: new Date(),
-      connectionState: 'connected',
-      ip: socket.handshake.address,
-      subscriptions: new Set()
-    };
+          socketId: socket.id,
+          walletAddress,
+          lastSeen: new Date(),
+          connectionState: 'connected',
+          ip: socket.handshake.address,
+          subscriptions: new Set()
+        };
 
         this.connectedUsers.set(socket.id, user);
 
@@ -307,7 +295,7 @@ export class WebSocketService {
         // Send queued messages if any
         this.deliverQueuedMessages(walletAddress);
 
-        socket.emit('authenticated', { 
+        socket.emit('authenticated', {
           message: 'Successfully authenticated',
           connectedUsers: this.connectedUsers.size,
           reconnecting,
@@ -321,7 +309,7 @@ export class WebSocketService {
       });
 
       // Handle subscription management
-      socket.on('subscribe', (data: { 
+      socket.on('subscribe', (data: {
         type: 'feed' | 'community' | 'conversation' | 'user' | 'global';
         target: string;
         filters?: {
@@ -356,7 +344,7 @@ export class WebSocketService {
         // Join appropriate room
         this.joinSubscriptionRoom(socket, subscription);
 
-        socket.emit('subscribed', { 
+        socket.emit('subscribed', {
           subscriptionId: subscription.id,
           type: data.type,
           target: data.target
@@ -527,10 +515,10 @@ export class WebSocketService {
     if (!this.messageQueue.has(walletAddress)) {
       this.messageQueue.set(walletAddress, []);
     }
-    
+
     const queue = this.messageQueue.get(walletAddress)!;
     queue.push(message);
-    
+
     // Limit queue size based on resource constraints
     const queueLimit = this.config.messageQueueLimit!;
     if (queue.length > queueLimit) {
@@ -539,7 +527,7 @@ export class WebSocketService {
         const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
         return priorityOrder[b.priority] - priorityOrder[a.priority];
       });
-      
+
       // Keep only the most important messages
       queue.splice(queueLimit);
     }
@@ -560,7 +548,7 @@ export class WebSocketService {
 
     // Clear the queue
     this.messageQueue.delete(walletAddress);
-    
+
     safeLogger.info(`Delivered ${queue.length} queued messages to ${walletAddress}`);
   }
 
@@ -568,7 +556,7 @@ export class WebSocketService {
   private startHeartbeat() {
     if (!this.config.enableHeartbeat) return;
 
-    const heartbeatInterval = this.isResourceConstrained ? 
+    const heartbeatInterval = this.isResourceConstrained ?
       this.config.heartbeatInterval! * 2 : // Less frequent on constrained systems
       this.config.heartbeatInterval!;
 
@@ -578,12 +566,12 @@ export class WebSocketService {
 
       this.connectedUsers.forEach((user, socketId) => {
         const timeSinceLastSeen = now.getTime() - user.lastSeen.getTime();
-        
+
         if (timeSinceLastSeen > staleThreshold) {
           // Mark connection as potentially stale
           if (user.connectionState === 'connected') {
             user.connectionState = 'reconnecting';
-            
+
             // Only send connection check if not resource constrained
             if (!this.isResourceConstrained) {
               this.io.to(socketId).emit('connection_check');
@@ -605,10 +593,10 @@ export class WebSocketService {
 
     // Clean up old message queues
     this.messageQueue.forEach((queue, walletAddress) => {
-      const filteredQueue = queue.filter(msg => 
+      const filteredQueue = queue.filter(msg =>
         now.getTime() - msg.timestamp.getTime() < cleanupThreshold
       );
-      
+
       if (filteredQueue.length === 0) {
         this.messageQueue.delete(walletAddress);
       } else if (filteredQueue.length < queue.length) {
@@ -662,7 +650,7 @@ export class WebSocketService {
 
     // Send to community room
     this.io.to(`community:${communityId}`).emit(event, message);
-    
+
     // Also send to feed subscribers who might be interested
     this.io.to(`feed:${communityId}`).emit(event, message);
   }
@@ -697,20 +685,20 @@ export class WebSocketService {
           const hasMatchingSubscription = Array.from(userSubs).some(subId => {
             const subscription = this.subscriptions.get(subId);
             if (!subscription) return false;
-            
+
             // Check event type filter
             if (filters.eventTypes && subscription.filters?.eventTypes) {
               return subscription.filters.eventTypes.includes(event);
             }
-            
+
             // Check priority filter
             if (subscription.filters?.priority) {
               return subscription.filters.priority.includes(priority);
             }
-            
+
             return subscription.type === 'global';
           });
-          
+
           if (hasMatchingSubscription) {
             this.io.to(user.socketId).emit(event, message);
           }
@@ -725,7 +713,7 @@ export class WebSocketService {
   // Send real-time feed update with intelligent routing
   sendFeedUpdate(data: { postId: string; authorAddress: string; communityId?: string; contentType?: string; post?: any }) {
     const priority = data.contentType === 'urgent' ? 'urgent' : 'medium';
-    
+
     // Send to global feed subscribers
     this.broadcast('feed_update', {
       type: 'new_post',
@@ -829,16 +817,16 @@ export class WebSocketService {
   shouldDisableFeatures(): boolean {
     const memUsage = process.memoryUsage();
     const memUsageMB = memUsage.heapUsed / 1024 / 1024;
-    
-    return this.isResourceConstrained || 
-           memUsageMB > this.config.memoryThreshold! ||
-           this.connectedUsers.size > this.config.maxConnections! * 0.9;
+
+    return this.isResourceConstrained ||
+      memUsageMB > this.config.memoryThreshold! ||
+      this.connectedUsers.size > this.config.maxConnections! * 0.9;
   }
 
   // Gracefully degrade service
   enableGracefulDegradation(): void {
     safeLogger.warn('Enabling WebSocket graceful degradation mode');
-    
+
     // Disable heartbeat to save resources
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
@@ -865,9 +853,9 @@ export class WebSocketService {
     const memUsageMB = memUsage.heapUsed / 1024 / 1024;
     const connectionRatio = this.connectedUsers.size / this.config.maxConnections!;
 
-    const healthy = memUsageMB < this.config.memoryThreshold! && 
-                   connectionRatio < 0.9 &&
-                   !this.isResourceConstrained;
+    const healthy = memUsageMB < this.config.memoryThreshold! &&
+      connectionRatio < 0.9 &&
+      !this.isResourceConstrained;
 
     return {
       healthy,
@@ -934,10 +922,10 @@ export class WebSocketService {
     this.connectedUsers.forEach((user, socketId) => {
       if (now.getTime() - user.lastSeen.getTime() > staleThreshold) {
         safeLogger.info(`Cleaning up stale connection: ${user.walletAddress} (${socketId})`);
-        
+
         // Remove from tracking
         this.connectedUsers.delete(socketId);
-        
+
         const userSocketSet = this.userSockets.get(user.walletAddress);
         if (userSocketSet) {
           userSocketSet.delete(socketId);
@@ -962,7 +950,7 @@ export class WebSocketService {
         // Keep messages for up to 1 hour for offline users
         const cutoff = now.getTime() - (60 * 60 * 1000);
         const filteredQueue = queue.filter(msg => msg.timestamp.getTime() > cutoff);
-        
+
         if (filteredQueue.length === 0) {
           this.messageQueue.delete(walletAddress);
         } else {
@@ -980,7 +968,7 @@ export class WebSocketService {
   // Graceful shutdown with cleanup
   close() {
     safeLogger.info('Shutting down WebSocket service...');
-    
+
     // Clear intervals
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
@@ -998,7 +986,7 @@ export class WebSocketService {
 
     // Close server
     this.io.close();
-    
+
     safeLogger.info('WebSocket service shut down complete');
   }
 }
@@ -1012,12 +1000,12 @@ export type { WebSocketServiceConfig };
 export const initializeWebSocket = (httpServer: HttpServer, config?: WebSocketServiceConfig): WebSocketService => {
   if (!webSocketService) {
     // Detect resource constraints from environment
-    const isRenderFree = process.env.RENDER_SERVICE_TYPE === 'free' || 
-                        process.env.NODE_ENV === 'production' && !process.env.RENDER_SERVICE_TYPE;
+    const isRenderFree = process.env.RENDER_SERVICE_TYPE === 'free' ||
+      process.env.NODE_ENV === 'production' && !process.env.RENDER_SERVICE_TYPE;
     const isRenderStandard = process.env.RENDER_SERVICE_TYPE === 'standard';
-    const isResourceConstrained = isRenderFree || 
-                                 process.env.DISABLE_WEBSOCKET_FEATURES === 'true' ||
-                                 process.env.NODE_ENV === 'production' && !process.env.RENDER_SERVICE_TYPE;
+    const isResourceConstrained = isRenderFree ||
+      process.env.DISABLE_WEBSOCKET_FEATURES === 'true' ||
+      process.env.NODE_ENV === 'production' && !process.env.RENDER_SERVICE_TYPE;
 
     const defaultConfig: WebSocketServiceConfig = {
       resourceAware: true,
@@ -1031,14 +1019,14 @@ export const initializeWebSocket = (httpServer: HttpServer, config?: WebSocketSe
     };
 
     webSocketService = new WebSocketService(httpServer, defaultConfig);
-    
+
     // Start periodic cleanup with resource-aware intervals
     const cleanupIntervalMs = isResourceConstrained ? 5 * 60 * 1000 : 10 * 60 * 1000; // 5 or 10 minutes
-    
+
     cleanupInterval = setInterval(() => {
       if (webSocketService) {
         webSocketService.cleanup();
-        
+
         // Check resource health and enable degradation if needed
         const health = webSocketService.checkResourceHealth();
         if (!health.healthy && !webSocketService.shouldDisableFeatures()) {
@@ -1046,7 +1034,7 @@ export const initializeWebSocket = (httpServer: HttpServer, config?: WebSocketSe
         }
       }
     }, cleanupIntervalMs);
-    
+
     safeLogger.info('WebSocket service initialized with resource-aware configuration', {
       renderServiceType: process.env.RENDER_SERVICE_TYPE,
       isRenderFree,
@@ -1067,7 +1055,7 @@ export const shutdownWebSocket = (): void => {
     clearInterval(cleanupInterval);
     cleanupInterval = null;
   }
-  
+
   if (webSocketService) {
     webSocketService.close();
     webSocketService = null;

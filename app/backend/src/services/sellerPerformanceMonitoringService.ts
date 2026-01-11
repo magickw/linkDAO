@@ -142,15 +142,46 @@ export interface PerformanceTestResult {
 }
 
 export class SellerPerformanceMonitoringService {
-  private redis: Redis;
+  private redis: Redis | null = null;
   private readonly CACHE_TTL = 300; // 5 minutes
   private readonly METRICS_RETENTION_DAYS = 30;
   private performanceBaselines: Map<string, Map<string, number>> = new Map();
   private alertThresholds: Map<string, number> = new Map();
 
   constructor() {
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    this.initializeRedis();
     this.initializeAlertThresholds();
+  }
+
+  private initializeRedis(): void {
+    const redisEnabled = process.env.REDIS_ENABLED;
+    if (redisEnabled === 'false' || redisEnabled === '0') {
+      return;
+    }
+
+    const redisUrl = process.env.REDIS_URL;
+    if (!redisUrl || redisUrl === 'redis://localhost:6379' || redisUrl === 'your_redis_url') {
+      return;
+    }
+
+    try {
+      this.redis = new Redis(redisUrl, {
+        maxRetriesPerRequest: 2,
+        lazyConnect: true,
+        retryStrategy: (times) => {
+          if (times > 2) return null;
+          return Math.min(times * 500, 2000);
+        }
+      });
+
+      this.redis.on('error', () => {
+        if (this.redis) {
+          this.redis = null;
+        }
+      });
+    } catch {
+      this.redis = null;
+    }
   }
 
   /**
@@ -178,12 +209,14 @@ export class SellerPerformanceMonitoringService {
       }
 
       // Store in Redis for real-time access
-      const cacheKey = `seller:performance:${sellerId}:latest`;
-      await this.redis.setex(
-        cacheKey,
-        this.CACHE_TTL,
-        JSON.stringify(metrics[metrics.length - 1])
-      );
+      if (this.redis) {
+        const cacheKey = `seller:performance:${sellerId}:latest`;
+        await this.redis.setex(
+          cacheKey,
+          this.CACHE_TTL,
+          JSON.stringify(metrics[metrics.length - 1])
+        );
+      }
 
       // Check for performance regressions
       await this.checkPerformanceRegressions(sellerId, metrics);
@@ -203,10 +236,12 @@ export class SellerPerformanceMonitoringService {
   async getPerformanceDashboard(sellerId: string): Promise<PerformanceDashboardData> {
     try {
       const cacheKey = `seller:performance:dashboard:${sellerId}`;
-      const cached = await this.redis.get(cacheKey);
-      
-      if (cached) {
-        return JSON.parse(cached);
+
+      if (this.redis) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       const [
@@ -235,7 +270,9 @@ export class SellerPerformanceMonitoringService {
         recommendations
       };
 
-      await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(dashboardData));
+      if (this.redis) {
+        await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(dashboardData));
+      }
       return dashboardData;
 
     } catch (error) {
@@ -816,10 +853,12 @@ export class SellerPerformanceMonitoringService {
   private async sendAlertNotification(alert: PerformanceAlert): Promise<void> {
     try {
       // Send to Redis pub/sub for real-time notifications
-      await this.redis.publish(
-        `seller:alerts:${alert.sellerId}`,
-        JSON.stringify(alert)
-      );
+      if (this.redis) {
+        await this.redis.publish(
+          `seller:alerts:${alert.sellerId}`,
+          JSON.stringify(alert)
+        );
+      }
 
       // Could also integrate with email, Slack, etc.
     } catch (error) {

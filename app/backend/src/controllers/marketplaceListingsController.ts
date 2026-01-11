@@ -78,7 +78,53 @@ export class MarketplaceListingsController {
               } catch (sellerError) {
                 // Continue without seller profile data
               }
-      
+
+              // Transform shipping data
+              let shippingData: any = {
+                weight: 0.5,
+                freeShipping: false
+              };
+
+              if (listing.shipping) {
+                const shippingConfig = listing.shipping as any;
+                if (shippingConfig.methods) {
+                  const standardMethod = shippingConfig.methods.standard;
+                  const expressMethod = shippingConfig.methods.express;
+                  const internationalMethod = shippingConfig.methods.international;
+
+                  if (standardMethod?.enabled) {
+                    shippingData = {
+                      ...shippingData,
+                      freeShipping: standardMethod.cost === 0,
+                      cost: standardMethod.cost,
+                      estimatedDays: standardMethod.estimatedDays || '5-7 business days'
+                    };
+                  } else if (expressMethod?.enabled) {
+                    shippingData = {
+                      ...shippingData,
+                      freeShipping: expressMethod.cost === 0,
+                      cost: expressMethod.cost,
+                      estimatedDays: expressMethod.estimatedDays || '2-3 business days'
+                    };
+                  } else if (internationalMethod?.enabled) {
+                    shippingData = {
+                      ...shippingData,
+                      freeShipping: internationalMethod.cost === 0,
+                      cost: internationalMethod.cost,
+                      estimatedDays: internationalMethod.estimatedDays || '10-15 business days'
+                    };
+                  }
+                } else {
+                  // Handle legacy flat shipping format
+                  shippingData = {
+                    ...shippingData,
+                    freeShipping: shippingConfig.free || shippingConfig.freeShipping || false,
+                    cost: shippingConfig.cost || 0,
+                    estimatedDays: shippingConfig.estimatedDays || '3-5 business days'
+                  };
+                }
+              }
+
               return {
                 id: listing.id,
                 sellerId: listing.sellerAddress,
@@ -95,10 +141,7 @@ export class MarketplaceListingsController {
                 inventory: listing.inventory || 0,
                 status: listing.isActive ? 'active' : 'inactive',
                 tags: [],
-                shipping: {
-                  weight: 0.5,
-                  freeShipping: true
-                },
+                shipping: shippingData,
                 nft: null,
                 views: listing.views || 0,
                 favorites: listing.favorites || 0,
@@ -195,6 +238,65 @@ export class MarketplaceListingsController {
       }
 
       // Map the listing to the expected response format
+      // Transform shipping data from ShippingConfiguration format to frontend format
+      let shippingData: any = {
+        weight: 0.5,
+        freeShipping: false
+      };
+
+      if (listing.shipping) {
+        const shippingConfig = listing.shipping as any;
+        // Handle ShippingConfiguration format (with methods property)
+        if (shippingConfig.methods) {
+          const standardMethod = shippingConfig.methods.standard;
+          const expressMethod = shippingConfig.methods.express;
+          const internationalMethod = shippingConfig.methods.international;
+
+          // Use the primary enabled shipping method
+          if (standardMethod?.enabled) {
+            shippingData = {
+              ...shippingData,
+              freeShipping: standardMethod.cost === 0,
+              cost: standardMethod.cost,
+              estimatedDays: standardMethod.estimatedDays || '5-7 business days'
+            };
+          } else if (expressMethod?.enabled) {
+            shippingData = {
+              ...shippingData,
+              freeShipping: expressMethod.cost === 0,
+              cost: expressMethod.cost,
+              estimatedDays: expressMethod.estimatedDays || '2-3 business days'
+            };
+          } else if (internationalMethod?.enabled) {
+            shippingData = {
+              ...shippingData,
+              freeShipping: internationalMethod.cost === 0,
+              cost: internationalMethod.cost,
+              estimatedDays: internationalMethod.estimatedDays || '10-15 business days'
+            };
+          }
+
+          // Include processing time if available
+          if (shippingConfig.processingTime !== undefined) {
+            shippingData.processingTime = shippingConfig.processingTime;
+          }
+
+          // Include full shipping config for frontend that needs it
+          shippingData.methods = shippingConfig.methods;
+          if (shippingConfig.freeShippingThreshold) {
+            shippingData.freeShippingThreshold = shippingConfig.freeShippingThreshold;
+          }
+        } else {
+          // Handle legacy flat shipping format
+          shippingData = {
+            ...shippingData,
+            freeShipping: shippingConfig.free || shippingConfig.freeShipping || false,
+            cost: shippingConfig.cost || 0,
+            estimatedDays: shippingConfig.estimatedDays || '3-5 business days'
+          };
+        }
+      }
+
       const responseListing = {
         id: listing.id,
         sellerId: listing.sellerAddress,
@@ -211,10 +313,7 @@ export class MarketplaceListingsController {
         inventory: listing.inventory || 0,
         status: listing.isActive ? 'active' : 'inactive',
         tags: [],
-        shipping: {
-          weight: 0.5,
-          freeShipping: true
-        },
+        shipping: shippingData,
         nft: null,
         views: listing.views || 0,
         favorites: listing.favorites || 0,

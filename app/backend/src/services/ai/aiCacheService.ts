@@ -30,34 +30,51 @@ export class AICacheService {
 
   private initializeRedis() {
     try {
-      if (process.env.REDIS_URL) {
-        this.redis = new Redis(process.env.REDIS_URL, {
-          maxRetriesPerRequest: 3,
-          retryStrategy: (times) => {
-            if (times > 3) {
-              safeLogger.warn('Redis connection failed after 3 retries. Caching disabled.');
-              return null;
-            }
-            return Math.min(times * 100, 2000);
-          },
-        });
-
-        this.redis.on('connect', () => {
-          safeLogger.info('✅ AI Cache (Redis) connected successfully');
-          this.useCache = true;
-        });
-
-        this.redis.on('error', (err) => {
-          safeLogger.error('Redis connection error:', err.message);
-          this.useCache = false;
-        });
-      } else {
-        safeLogger.warn('REDIS_URL not configured. AI caching disabled.');
+      // Check if Redis is disabled via environment variable
+      const redisEnabled = process.env.REDIS_ENABLED;
+      if (redisEnabled === 'false' || redisEnabled === '0') {
+        safeLogger.info('Redis is disabled, AI caching disabled');
         this.useCache = false;
+        return;
       }
+
+      const redisUrl = process.env.REDIS_URL;
+
+      // Don't connect to localhost in production - that's a sign Redis isn't configured
+      if (!redisUrl || redisUrl === 'redis://localhost:6379' || redisUrl === 'your_redis_url') {
+        safeLogger.info('Redis URL not configured, AI caching disabled');
+        this.useCache = false;
+        return;
+      }
+
+      this.redis = new Redis(redisUrl, {
+        maxRetriesPerRequest: 2,
+        lazyConnect: true,
+        retryStrategy: (times) => {
+          if (times > 2) {
+            return null; // Stop retrying
+          }
+          return Math.min(times * 500, 2000);
+        },
+      });
+
+      this.redis.on('connect', () => {
+        safeLogger.info('AI Cache (Redis) connected successfully');
+        this.useCache = true;
+      });
+
+      this.redis.on('error', (err) => {
+        // Log once, then disable to prevent log spam
+        if (this.redis) {
+          safeLogger.warn('AI Cache Redis connection error, caching disabled');
+          this.useCache = false;
+          this.redis = null;
+        }
+      });
     } catch (error) {
-      safeLogger.error('Failed to initialize Redis:', error);
+      safeLogger.warn('Failed to initialize AI Cache Redis');
       this.useCache = false;
+      this.redis = null;
     }
   }
 

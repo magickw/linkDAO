@@ -623,9 +623,7 @@ export class SellerController {
           priceAmount: listingData.priceCrypto.toString(),
           priceCurrency: 'USDC', // Defaulting to USDC for now as products table uses priceCurrency
           currency: listingData.currency || 'USDC',
-          // products table might not have all fields yet, checking schema...
-          // I added mainCategory, priceFiat, isPhysical, stock(inventory), etc.
-          inventory: listingData.stock || 1,
+          inventory: listingData.inventory ?? 1,
           isPhysical: listingData.isPhysical || false,
           metadata: JSON.stringify({ uri: listingData.metadataUri }), // Mapping metadataUri to metadata JSON
           status: 'active',
@@ -648,7 +646,7 @@ export class SellerController {
           priceCrypto: parseFloat(newListing.priceAmount),
           currency: newListing.priceCurrency,
           isPhysical: newListing.isPhysical,
-          stock: newListing.inventory,
+          inventory: newListing.inventory,
           status: newListing.status,
           createdAt: newListing.createdAt
         }
@@ -699,7 +697,7 @@ export class SellerController {
         price: updates.price || updates.priceCrypto,
         currency: updates.currency,
         categoryId: updates.category, // frontend sends 'category' as ID/Slug
-        inventory: updates.stock !== undefined ? updates.stock : updates.quantity,
+        inventory: updates.inventory,
         status: updates.status,
         images: updates.images,
         tags: updates.tags,
@@ -928,7 +926,7 @@ export class SellerController {
         description: products.description,
         priceCrypto: products.priceAmount, // Mapping priceAmount to priceCrypto for frontend compatibility
         currency: products.priceCurrency,
-        stock: products.inventory,
+        inventory: products.inventory,
         status: products.status,
         createdAt: products.createdAt,
         updatedAt: products.updatedAt,

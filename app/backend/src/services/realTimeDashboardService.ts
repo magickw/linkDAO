@@ -48,15 +48,46 @@ export interface SystemHealth {
 }
 
 export class RealTimeDashboardService extends EventEmitter {
-  private redis: Redis;
+  private redis: Redis | null = null;
   private updateInterval: NodeJS.Timeout | null = null;
   private readonly UPDATE_FREQUENCY = 30000; // 30 seconds
   private readonly METRICS_TTL = 300; // 5 minutes
 
   constructor() {
     super();
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    this.initializeRedis();
     this.startRealTimeUpdates();
+  }
+
+  private initializeRedis(): void {
+    const redisEnabled = process.env.REDIS_ENABLED;
+    if (redisEnabled === 'false' || redisEnabled === '0') {
+      return;
+    }
+
+    const redisUrl = process.env.REDIS_URL;
+    if (!redisUrl || redisUrl === 'redis://localhost:6379' || redisUrl === 'your_redis_url') {
+      return;
+    }
+
+    try {
+      this.redis = new Redis(redisUrl, {
+        maxRetriesPerRequest: 2,
+        lazyConnect: true,
+        retryStrategy: (times) => {
+          if (times > 2) return null;
+          return Math.min(times * 500, 2000);
+        }
+      });
+
+      this.redis.on('error', () => {
+        if (this.redis) {
+          this.redis = null;
+        }
+      });
+    } catch {
+      this.redis = null;
+    }
   }
 
   /**
@@ -90,15 +121,20 @@ export class RealTimeDashboardService extends EventEmitter {
    */
   async getDashboardMetrics(): Promise<DashboardMetrics> {
     try {
-      const cached = await this.redis.get('dashboard:metrics');
-      if (cached) {
-        return JSON.parse(cached);
+      if (this.redis) {
+        const cached = await this.redis.get('dashboard:metrics');
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       // If no cached data, generate fresh metrics
       await this.updateDashboardMetrics();
-      const fresh = await this.redis.get('dashboard:metrics');
-      return fresh ? JSON.parse(fresh) : this.getDefaultMetrics();
+      if (this.redis) {
+        const fresh = await this.redis.get('dashboard:metrics');
+        return fresh ? JSON.parse(fresh) : this.getDefaultMetrics();
+      }
+      return this.getDefaultMetrics();
     } catch (error) {
       safeLogger.error('Error getting dashboard metrics:', error);
       return this.getDefaultMetrics();
@@ -110,14 +146,19 @@ export class RealTimeDashboardService extends EventEmitter {
    */
   async getSystemHealth(): Promise<SystemHealth> {
     try {
-      const cached = await this.redis.get('dashboard:health');
-      if (cached) {
-        return JSON.parse(cached);
+      if (this.redis) {
+        const cached = await this.redis.get('dashboard:health');
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       await this.updateSystemHealth();
-      const fresh = await this.redis.get('dashboard:health');
-      return fresh ? JSON.parse(fresh) : this.getDefaultHealth();
+      if (this.redis) {
+        const fresh = await this.redis.get('dashboard:health');
+        return fresh ? JSON.parse(fresh) : this.getDefaultHealth();
+      }
+      return this.getDefaultHealth();
     } catch (error) {
       safeLogger.error('Error getting system health:', error);
       return this.getDefaultHealth();
@@ -180,7 +221,9 @@ export class RealTimeDashboardService extends EventEmitter {
         }))
       };
 
-      await this.redis.setex('dashboard:metrics', this.METRICS_TTL, JSON.stringify(metrics));
+      if (this.redis) {
+        await this.redis.setex('dashboard:metrics', this.METRICS_TTL, JSON.stringify(metrics));
+      }
     } catch (error) {
       safeLogger.error('Error updating dashboard metrics:', error);
     }
@@ -220,10 +263,12 @@ export class RealTimeDashboardService extends EventEmitter {
         }
       };
 
-      await this.redis.setex('dashboard:health', this.METRICS_TTL, JSON.stringify(health));
+      if (this.redis) {
+        await this.redis.setex('dashboard:health', this.METRICS_TTL, JSON.stringify(health));
+      }
     } catch (error) {
       safeLogger.error('Error updating system health:', error);
-      
+
       // Store error state
       const errorHealth: SystemHealth = {
         status: 'critical',
@@ -238,7 +283,9 @@ export class RealTimeDashboardService extends EventEmitter {
         }
       };
 
-      await this.redis.setex('dashboard:health', this.METRICS_TTL, JSON.stringify(errorHealth));
+      if (this.redis) {
+        await this.redis.setex('dashboard:health', this.METRICS_TTL, JSON.stringify(errorHealth));
+      }
     }
   }
 
@@ -253,13 +300,15 @@ export class RealTimeDashboardService extends EventEmitter {
         timestamp: new Date().toISOString()
       };
 
-      // Store in Redis stream for real-time processing
-      await this.redis.xadd('events:stream', '*', 'event', JSON.stringify(event));
+      if (this.redis) {
+        // Store in Redis stream for real-time processing
+        await this.redis.xadd('events:stream', '*', 'event', JSON.stringify(event));
 
-      // Update counters
-      const counterKey = `counter:${eventType}:${new Date().toISOString().split('T')[0]}`;
-      await this.redis.incr(counterKey);
-      await this.redis.expire(counterKey, 86400); // 24 hours
+        // Update counters
+        const counterKey = `counter:${eventType}:${new Date().toISOString().split('T')[0]}`;
+        await this.redis.incr(counterKey);
+        await this.redis.expire(counterKey, 86400); // 24 hours
+      }
 
       // Emit event for WebSocket clients
       this.emit('event', event);
@@ -273,6 +322,7 @@ export class RealTimeDashboardService extends EventEmitter {
    */
   async getEventStream(lastId: string = '0'): Promise<any[]> {
     try {
+      if (!this.redis) return [];
       const events = await this.redis.xread('STREAMS', 'events:stream', lastId);
       return events || [];
     } catch (error) {
@@ -287,16 +337,20 @@ export class RealTimeDashboardService extends EventEmitter {
   async getTrendingMetrics(timeframe: '1h' | '24h' | '7d' = '24h'): Promise<any> {
     try {
       const cacheKey = `trending:${timeframe}`;
-      const cached = await this.redis.get(cacheKey);
-      
-      if (cached) {
-        return JSON.parse(cached);
+
+      if (this.redis) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       // Calculate trending metrics based on timeframe
       const trends = await this.calculateTrendingMetrics(timeframe);
-      
-      await this.redis.setex(cacheKey, 300, JSON.stringify(trends)); // 5 min cache
+
+      if (this.redis) {
+        await this.redis.setex(cacheKey, 300, JSON.stringify(trends)); // 5 min cache
+      }
       return trends;
     } catch (error) {
       safeLogger.error('Error getting trending metrics:', error);
@@ -307,6 +361,7 @@ export class RealTimeDashboardService extends EventEmitter {
   // Private helper methods
   private async getOrderCountByStatus(status: string): Promise<number> {
     try {
+      if (!this.redis) return 0;
       const count = await this.redis.get(`orders:count:${status}`);
       return count ? parseInt(count) : 0;
     } catch (error) {
@@ -316,6 +371,7 @@ export class RealTimeDashboardService extends EventEmitter {
 
   private async getOnlineUserCount(): Promise<number> {
     try {
+      if (!this.redis) return 0;
       const count = await this.redis.scard('users:online');
       return count || 0;
     } catch (error) {
@@ -325,6 +381,7 @@ export class RealTimeDashboardService extends EventEmitter {
 
   private async getAvgProcessingTime(): Promise<number> {
     try {
+      if (!this.redis) return 0;
       const avg = await this.redis.get('metrics:avg_processing_time');
       return avg ? parseFloat(avg) : 0;
     } catch (error) {
@@ -334,6 +391,7 @@ export class RealTimeDashboardService extends EventEmitter {
 
   private async getFailedTransactionCount(): Promise<number> {
     try {
+      if (!this.redis) return 0;
       const count = await this.redis.get('transactions:failed:24h');
       return count ? parseInt(count) : 0;
     } catch (error) {
@@ -371,6 +429,8 @@ export class RealTimeDashboardService extends EventEmitter {
 
   private async calculateErrorRate(): Promise<number> {
     try {
+      if (!this.redis) return 0;
+
       const [total, errors] = await Promise.all([
         this.redis.get('requests:total:1h'),
         this.redis.get('requests:errors:1h')
@@ -387,6 +447,7 @@ export class RealTimeDashboardService extends EventEmitter {
 
   private async calculateThroughput(): Promise<number> {
     try {
+      if (!this.redis) return 0;
       const requests = await this.redis.get('requests:total:1m');
       return requests ? parseInt(requests) / 60 : 0; // requests per second
     } catch (error) {

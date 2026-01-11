@@ -35,7 +35,7 @@ export interface CacheStats {
  * Provides fast access to frequently used data and reduces API calls
  */
 export class ModerationCacheService {
-  private redis: Redis;
+  private redis: Redis | null = null;
   private stats = {
     totalRequests: 0,
     totalHits: 0
@@ -64,24 +64,57 @@ export class ModerationCacheService {
   };
 
   constructor(redisUrl?: string) {
-    this.redis = new Redis(redisUrl || process.env.REDIS_URL || 'redis://localhost:6379');
+    // Check if Redis is disabled via environment variable
+    const redisEnabled = process.env.REDIS_ENABLED;
+    if (redisEnabled === 'false' || redisEnabled === '0') {
+      safeLogger.info('Redis is disabled, ModerationCacheService will not cache');
+      return;
+    }
 
-    this.redis.on('error', (error) => {
-      safeLogger.error('Redis connection error:', error);
-    });
+    // Don't connect to localhost in production
+    const url = redisUrl || process.env.REDIS_URL;
+    if (!url || url === 'redis://localhost:6379' || url === 'your_redis_url') {
+      safeLogger.info('Redis URL not configured, ModerationCacheService will not cache');
+      return;
+    }
 
-    this.redis.on('connect', () => {
-      safeLogger.info('Connected to Redis cache');
-    });
+    try {
+      this.redis = new Redis(url, {
+        maxRetriesPerRequest: 2,
+        lazyConnect: true,
+        retryStrategy(times) {
+          if (times > 2) {
+            return null; // Stop retrying
+          }
+          return Math.min(times * 500, 2000);
+        }
+      });
+
+      this.redis.on('error', (error) => {
+        // Log once, then disable
+        if (this.redis) {
+          safeLogger.warn('ModerationCacheService Redis error, caching disabled');
+          this.redis = null;
+        }
+      });
+
+      this.redis.on('connect', () => {
+        safeLogger.info('ModerationCacheService connected to Redis');
+      });
+    } catch (error) {
+      safeLogger.warn('Failed to initialize ModerationCacheService Redis');
+      this.redis = null;
+    }
   }
 
   /**
    * Cache moderation result
    */
   async cacheModerationResult(result: CachedModerationResult): Promise<void> {
+    if (!this.redis) return;
     const key = `${this.KEYS.MODERATION}${result.contentId}`;
     const value = JSON.stringify(result);
-    
+
     await this.redis.setex(key, this.TTL_CONFIG.MODERATION_RESULT, value);
   }
 
@@ -90,15 +123,16 @@ export class ModerationCacheService {
    */
   async getModerationResult(contentId: string): Promise<CachedModerationResult | null> {
     this.stats.totalRequests++;
-    
+    if (!this.redis) return null;
+
     const key = `${this.KEYS.MODERATION}${contentId}`;
     const cached = await this.redis.get(key);
-    
+
     if (cached) {
       this.stats.totalHits++;
       return JSON.parse(cached);
     }
-    
+
     return null;
   }
 
@@ -106,9 +140,10 @@ export class ModerationCacheService {
    * Cache user reputation data
    */
   async cacheUserReputation(reputation: CachedUserReputation): Promise<void> {
+    if (!this.redis) return;
     const key = `${this.KEYS.REPUTATION}${reputation.userId}`;
     const value = JSON.stringify(reputation);
-    
+
     await this.redis.setex(key, this.TTL_CONFIG.USER_REPUTATION, value);
   }
 
@@ -117,15 +152,16 @@ export class ModerationCacheService {
    */
   async getUserReputation(userId: string): Promise<CachedUserReputation | null> {
     this.stats.totalRequests++;
-    
+    if (!this.redis) return null;
+
     const key = `${this.KEYS.REPUTATION}${userId}`;
     const cached = await this.redis.get(key);
-    
+
     if (cached) {
       this.stats.totalHits++;
       return JSON.parse(cached);
     }
-    
+
     return null;
   }
 
@@ -133,9 +169,10 @@ export class ModerationCacheService {
    * Cache text content hash for duplicate detection
    */
   async cacheTextHash(contentId: string, hashResult: TextHashResult): Promise<void> {
+    if (!this.redis) return;
     const key = `${this.KEYS.TEXT_HASH}${hashResult.contentHash}`;
     const value = JSON.stringify({ contentId, ...hashResult });
-    
+
     await this.redis.setex(key, this.TTL_CONFIG.CONTENT_HASH, value);
   }
 
@@ -144,10 +181,11 @@ export class ModerationCacheService {
    */
   async checkTextDuplicate(contentHash: string): Promise<{ contentId: string; hashResult: TextHashResult } | null> {
     this.stats.totalRequests++;
-    
+    if (!this.redis) return null;
+
     const key = `${this.KEYS.TEXT_HASH}${contentHash}`;
     const cached = await this.redis.get(key);
-    
+
     if (cached) {
       this.stats.totalHits++;
       const data = JSON.parse(cached);
@@ -161,7 +199,7 @@ export class ModerationCacheService {
         }
       };
     }
-    
+
     return null;
   }
 
@@ -169,9 +207,10 @@ export class ModerationCacheService {
    * Cache image perceptual hash
    */
   async cacheImageHash(contentId: string, hashResult: PerceptualHashResult): Promise<void> {
+    if (!this.redis) return;
     const key = `${this.KEYS.IMAGE_HASH}${hashResult.hash}`;
     const value = JSON.stringify({ contentId, ...hashResult });
-    
+
     await this.redis.setex(key, this.TTL_CONFIG.CONTENT_HASH, value);
   }
 
@@ -180,10 +219,11 @@ export class ModerationCacheService {
    */
   async checkImageDuplicate(hash: string): Promise<{ contentId: string; hashResult: PerceptualHashResult } | null> {
     this.stats.totalRequests++;
-    
+    if (!this.redis) return null;
+
     const key = `${this.KEYS.IMAGE_HASH}${hash}`;
     const cached = await this.redis.get(key);
-    
+
     if (cached) {
       this.stats.totalHits++;
       const data = JSON.parse(cached);
@@ -196,7 +236,7 @@ export class ModerationCacheService {
         }
       };
     }
-    
+
     return null;
   }
 
@@ -204,12 +244,13 @@ export class ModerationCacheService {
    * Cache vendor API result
    */
   async cacheVendorResult(vendor: string, contentHash: string, result: any): Promise<void> {
+    if (!this.redis) return;
     const key = `${this.KEYS.VENDOR}${vendor}:${contentHash}`;
     const value = JSON.stringify({
       result,
       timestamp: Date.now()
     });
-    
+
     await this.redis.setex(key, this.TTL_CONFIG.VENDOR_RESULT, value);
   }
 
@@ -218,16 +259,17 @@ export class ModerationCacheService {
    */
   async getVendorResult(vendor: string, contentHash: string): Promise<any | null> {
     this.stats.totalRequests++;
-    
+    if (!this.redis) return null;
+
     const key = `${this.KEYS.VENDOR}${vendor}:${contentHash}`;
     const cached = await this.redis.get(key);
-    
+
     if (cached) {
       this.stats.totalHits++;
       const data = JSON.parse(cached);
       return data.result;
     }
-    
+
     return null;
   }
 
@@ -235,14 +277,15 @@ export class ModerationCacheService {
    * Batch cache multiple moderation results
    */
   async batchCacheModerationResults(results: CachedModerationResult[]): Promise<void> {
+    if (!this.redis) return;
     const pipeline = this.redis.pipeline();
-    
+
     results.forEach(result => {
       const key = `${this.KEYS.MODERATION}${result.contentId}`;
       const value = JSON.stringify(result);
       pipeline.setex(key, this.TTL_CONFIG.MODERATION_RESULT, value);
     });
-    
+
     await pipeline.exec();
   }
 
@@ -251,12 +294,12 @@ export class ModerationCacheService {
    */
   async batchGetModerationResults(contentIds: string[]): Promise<Map<string, CachedModerationResult>> {
     this.stats.totalRequests += contentIds.length;
-    
+    const resultMap = new Map<string, CachedModerationResult>();
+    if (!this.redis) return resultMap;
+
     const keys = contentIds.map(id => `${this.KEYS.MODERATION}${id}`);
     const results = await this.redis.mget(...keys);
-    
-    const resultMap = new Map<string, CachedModerationResult>();
-    
+
     results.forEach((result, index) => {
       if (result) {
         this.stats.totalHits++;
@@ -264,7 +307,7 @@ export class ModerationCacheService {
         resultMap.set(contentId, JSON.parse(result));
       }
     });
-    
+
     return resultMap;
   }
 
@@ -272,11 +315,12 @@ export class ModerationCacheService {
    * Invalidate cache for specific content
    */
   async invalidateContent(contentId: string): Promise<void> {
+    if (!this.redis) return;
     const keys = [
       `${this.KEYS.MODERATION}${contentId}`,
       `${this.KEYS.DUPLICATE}${contentId}`
     ];
-    
+
     await this.redis.del(...keys);
   }
 
@@ -284,6 +328,7 @@ export class ModerationCacheService {
    * Invalidate user reputation cache
    */
   async invalidateUserReputation(userId: string): Promise<void> {
+    if (!this.redis) return;
     const key = `${this.KEYS.REPUTATION}${userId}`;
     await this.redis.del(key);
   }
@@ -292,17 +337,27 @@ export class ModerationCacheService {
    * Get cache statistics
    */
   async getCacheStats(): Promise<CacheStats> {
+    const hitRate = this.stats.totalRequests > 0
+      ? this.stats.totalHits / this.stats.totalRequests
+      : 0;
+
+    if (!this.redis) {
+      return {
+        hitRate,
+        totalRequests: this.stats.totalRequests,
+        totalHits: this.stats.totalHits,
+        memoryUsage: 0,
+        keyCount: 0
+      };
+    }
+
     const info = await this.redis.info('memory');
     const keyCount = await this.redis.dbsize();
-    
+
     // Parse memory usage from Redis info
     const memoryMatch = info.match(/used_memory:(\d+)/);
     const memoryUsage = memoryMatch ? parseInt(memoryMatch[1]) : 0;
-    
-    const hitRate = this.stats.totalRequests > 0 
-      ? this.stats.totalHits / this.stats.totalRequests 
-      : 0;
-    
+
     return {
       hitRate,
       totalRequests: this.stats.totalRequests,
@@ -316,7 +371,9 @@ export class ModerationCacheService {
    * Clear all cache data (use with caution)
    */
   async clearAll(): Promise<void> {
-    await this.redis.flushdb();
+    if (this.redis) {
+      await this.redis.flushdb();
+    }
     this.stats.totalRequests = 0;
     this.stats.totalHits = 0;
   }
@@ -325,12 +382,13 @@ export class ModerationCacheService {
    * Set cache expiration for specific key pattern
    */
   async expirePattern(pattern: string, ttl: number): Promise<number> {
+    if (!this.redis) return 0;
     const keys = await this.redis.keys(pattern);
     if (keys.length === 0) return 0;
-    
+
     const pipeline = this.redis.pipeline();
     keys.forEach(key => pipeline.expire(key, ttl));
-    
+
     await pipeline.exec();
     return keys.length;
   }
@@ -339,25 +397,29 @@ export class ModerationCacheService {
    * Get memory usage by key pattern
    */
   async getMemoryUsageByPattern(pattern: string): Promise<{ pattern: string; keyCount: number; estimatedSize: number }> {
+    if (!this.redis) {
+      return { pattern, keyCount: 0, estimatedSize: 0 };
+    }
+
     const keys = await this.redis.keys(pattern);
     let estimatedSize = 0;
-    
+
     // Sample a few keys to estimate average size
     const sampleSize = Math.min(keys.length, 10);
     if (sampleSize > 0) {
       const sampleKeys = keys.slice(0, sampleSize);
       const pipeline = this.redis.pipeline();
       sampleKeys.forEach(key => pipeline.memory('USAGE', key));
-      
+
       const results = await pipeline.exec();
       const totalSampleSize = results?.reduce((sum, result) => {
         return sum + (result?.[1] as number || 0);
       }, 0) || 0;
-      
+
       const avgSize = totalSampleSize / sampleSize;
       estimatedSize = avgSize * keys.length;
     }
-    
+
     return {
       pattern,
       keyCount: keys.length,
@@ -369,7 +431,9 @@ export class ModerationCacheService {
    * Close Redis connection
    */
   async close(): Promise<void> {
-    await this.redis.quit();
+    if (this.redis) {
+      await this.redis.quit();
+    }
   }
 }
 

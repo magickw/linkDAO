@@ -73,11 +73,42 @@ export interface SessionEvent {
 }
 
 export class UserJourneyService {
-  private redis: Redis;
+  private redis: Redis | null = null;
   private readonly CACHE_TTL = 300; // 5 minutes
 
   constructor() {
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    this.initializeRedis();
+  }
+
+  private initializeRedis(): void {
+    const redisEnabled = process.env.REDIS_ENABLED;
+    if (redisEnabled === 'false' || redisEnabled === '0') {
+      return;
+    }
+
+    const redisUrl = process.env.REDIS_URL;
+    if (!redisUrl || redisUrl === 'redis://localhost:6379' || redisUrl === 'your_redis_url') {
+      return;
+    }
+
+    try {
+      this.redis = new Redis(redisUrl, {
+        maxRetriesPerRequest: 2,
+        lazyConnect: true,
+        retryStrategy: (times) => {
+          if (times > 2) return null;
+          return Math.min(times * 500, 2000);
+        }
+      });
+
+      this.redis.on('error', () => {
+        if (this.redis) {
+          this.redis = null;
+        }
+      });
+    } catch {
+      this.redis = null;
+    }
   }
 
   /**
@@ -133,10 +164,12 @@ export class UserJourneyService {
   ): Promise<JourneyMap[]> {
     try {
       const cacheKey = `journey:maps:${startDate.toISOString()}:${endDate.toISOString()}:${pathType || 'all'}`;
-      const cached = await this.redis.get(cacheKey);
-      
-      if (cached) {
-        return JSON.parse(cached);
+
+      if (this.redis) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       // Get journey paths using SQL window functions
@@ -206,7 +239,9 @@ export class UserJourneyService {
         });
       }
 
-      await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(journeyMaps));
+      if (this.redis) {
+        await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(journeyMaps));
+      }
       return journeyMaps;
     } catch (error) {
       safeLogger.error('Error getting user journey maps:', error);
@@ -224,10 +259,12 @@ export class UserJourneyService {
   ): Promise<ConversionFunnel> {
     try {
       const cacheKey = `funnel:${funnelSteps.join(',')}:${startDate.toISOString()}:${endDate.toISOString()}`;
-      const cached = await this.redis.get(cacheKey);
-      
-      if (cached) {
-        return JSON.parse(cached);
+
+      if (this.redis) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       const funnelData = await db.execute(sql`
@@ -322,7 +359,9 @@ export class UserJourneyService {
         totalConversions
       };
 
-      await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(funnel));
+      if (this.redis) {
+        await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(funnel));
+      }
       return funnel;
     } catch (error) {
       safeLogger.error('Error getting conversion funnel:', error);
@@ -651,6 +690,8 @@ export class UserJourneyService {
 
   private async updateRealTimeJourneyMetrics(eventType: string, pageUrl: string): Promise<void> {
     try {
+      if (!this.redis) return;
+
       // Update real-time metrics in Redis
       const hourKey = `journey:hourly:${new Date().toISOString().substring(0, 13)}`;
       const eventKey = `${hourKey}:${eventType}`;

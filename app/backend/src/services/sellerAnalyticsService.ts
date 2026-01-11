@@ -138,11 +138,42 @@ export interface SellerBottleneckAnalysis {
 }
 
 export class SellerAnalyticsService {
-  private redis: Redis;
+  private redis: Redis | null = null;
   private readonly CACHE_TTL = 300; // 5 minutes
 
   constructor() {
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    this.initializeRedis();
+  }
+
+  private initializeRedis(): void {
+    const redisEnabled = process.env.REDIS_ENABLED;
+    if (redisEnabled === 'false' || redisEnabled === '0') {
+      return;
+    }
+
+    const redisUrl = process.env.REDIS_URL;
+    if (!redisUrl || redisUrl === 'redis://localhost:6379' || redisUrl === 'your_redis_url') {
+      return;
+    }
+
+    try {
+      this.redis = new Redis(redisUrl, {
+        maxRetriesPerRequest: 2,
+        lazyConnect: true,
+        retryStrategy: (times) => {
+          if (times > 2) return null;
+          return Math.min(times * 500, 2000);
+        }
+      });
+
+      this.redis.on('error', () => {
+        if (this.redis) {
+          this.redis = null;
+        }
+      });
+    } catch {
+      this.redis = null;
+    }
   }
 
   /**
@@ -155,13 +186,15 @@ export class SellerAnalyticsService {
   ): Promise<SellerPerformanceMetrics> {
     try {
       const cacheKey = `seller:analytics:${sellerId}:${startDate?.toISOString()}:${endDate?.toISOString()}`;
-      const cached = await this.redis.get(cacheKey);
-      
-      if (cached) {
-        return JSON.parse(cached);
+
+      if (this.redis) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
-      const dateFilter = startDate && endDate 
+      const dateFilter = startDate && endDate
         ? and(gte(orders.createdAt, startDate), lte(orders.createdAt, endDate))
         : undefined;
 
@@ -186,7 +219,9 @@ export class SellerAnalyticsService {
         customerInsights
       };
 
-      await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(metrics));
+      if (this.redis) {
+        await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(metrics));
+      }
       return metrics;
     } catch (error) {
       safeLogger.error('Error getting seller performance metrics:', error);
@@ -200,16 +235,20 @@ export class SellerAnalyticsService {
   async getSellerTierProgression(sellerId: string): Promise<SellerTierProgression> {
     try {
       const cacheKey = `seller:tier:${sellerId}`;
-      const cached = await this.redis.get(cacheKey);
-      
-      if (cached) {
-        return JSON.parse(cached);
+
+      if (this.redis) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       const metrics = await this.getSellerPerformanceMetrics(sellerId);
       const tierProgression = await this.analyzeTierProgression(sellerId, metrics);
 
-      await this.redis.setex(cacheKey, this.CACHE_TTL * 2, JSON.stringify(tierProgression));
+      if (this.redis) {
+        await this.redis.setex(cacheKey, this.CACHE_TTL * 2, JSON.stringify(tierProgression));
+      }
       return tierProgression;
     } catch (error) {
       safeLogger.error('Error getting seller tier progression:', error);
@@ -223,10 +262,12 @@ export class SellerAnalyticsService {
   async getSellerPerformanceInsights(sellerId: string): Promise<SellerPerformanceInsights> {
     try {
       const cacheKey = `seller:insights:${sellerId}`;
-      const cached = await this.redis.get(cacheKey);
-      
-      if (cached) {
-        return JSON.parse(cached);
+
+      if (this.redis) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       const [
@@ -245,7 +286,9 @@ export class SellerAnalyticsService {
         benchmarks
       };
 
-      await this.redis.setex(cacheKey, this.CACHE_TTL * 2, JSON.stringify(performanceInsights));
+      if (this.redis) {
+        await this.redis.setex(cacheKey, this.CACHE_TTL * 2, JSON.stringify(performanceInsights));
+      }
       return performanceInsights;
     } catch (error) {
       safeLogger.error('Error getting seller performance insights:', error);
@@ -259,16 +302,20 @@ export class SellerAnalyticsService {
   async detectPerformanceBottlenecks(sellerId: string): Promise<SellerBottleneckAnalysis> {
     try {
       const cacheKey = `seller:bottlenecks:${sellerId}`;
-      const cached = await this.redis.get(cacheKey);
-      
-      if (cached) {
-        return JSON.parse(cached);
+
+      if (this.redis) {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       const metrics = await this.getSellerPerformanceMetrics(sellerId);
       const bottlenecks = await this.analyzeBottlenecks(sellerId, metrics);
 
-      await this.redis.setex(cacheKey, this.CACHE_TTL * 2, JSON.stringify(bottlenecks));
+      if (this.redis) {
+        await this.redis.setex(cacheKey, this.CACHE_TTL * 2, JSON.stringify(bottlenecks));
+      }
       return bottlenecks;
     } catch (error) {
       safeLogger.error('Error detecting performance bottlenecks:', error);
@@ -295,9 +342,11 @@ export class SellerAnalyticsService {
       `);
 
       // Update real-time metrics cache
-      const metricKey = `seller:realtime:${sellerId}:${metricType}`;
-      await this.redis.zadd(metricKey, Date.now(), value);
-      await this.redis.expire(metricKey, 86400); // 24 hours
+      if (this.redis) {
+        const metricKey = `seller:realtime:${sellerId}:${metricType}`;
+        await this.redis.zadd(metricKey, Date.now(), value);
+        await this.redis.expire(metricKey, 86400); // 24 hours
+      }
     } catch (error) {
       safeLogger.error('Error tracking seller performance:', error);
     }
