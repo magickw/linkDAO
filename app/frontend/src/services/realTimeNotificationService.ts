@@ -7,9 +7,11 @@ import {
   LiveUpdateIndicator,
   NotificationState
 } from '../types/realTimeNotifications';
+import { io, Socket } from 'socket.io-client';
+import { ENV_CONFIG } from '../config/environment';
 
 class RealTimeNotificationService {
-  private ws: WebSocket | null = null;
+  private socket: Socket | null = null;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
@@ -118,35 +120,79 @@ class RealTimeNotificationService {
   connect(userId: string, token: string): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
-        const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001'}/notifications?userId=${userId}&token=${token}`;
-        this.ws = new WebSocket(wsUrl);
+        // Use Socket.IO client instead of raw WebSocket
+        const wsUrl = ENV_CONFIG.WS_URL || 'ws://localhost:10000';
+        
+        this.socket = io(wsUrl, {
+          path: '/socket.io/',
+          transports: ['websocket', 'polling'],
+          auth: {
+            userId,
+            token
+          },
+          reconnection: true,
+          reconnectionAttempts: this.maxReconnectAttempts,
+          reconnectionDelay: this.reconnectDelay,
+          timeout: 30000
+        });
 
-        this.ws.onopen = () => {
-          console.log('Real-time notification service connected');
+        this.socket.on('connect', () => {
+          console.log('[RealTimeNotification] Socket.IO connected:', this.socket?.id);
           this.reconnectAttempts = 0;
           this.startHeartbeat();
           this.syncOfflineNotifications();
           this.emit('connection', { status: 'connected' });
           resolve();
-        };
+        });
 
-        this.ws.onmessage = (event) => {
-          this.handleMessage(event);
-        };
-
-        this.ws.onclose = () => {
-          console.log('Real-time notification service disconnected');
-          this.stopHeartbeat();
-          this.emit('connection', { status: 'disconnected' });
-          this.attemptReconnect(userId, token);
-        };
-
-        this.ws.onerror = (error) => {
-          const errorMsg = 'WebSocket connection error';
-          console.error('[RealTimeNotification] WebSocket error:', errorMsg);
+        this.socket.on('connect_error', (error) => {
+          const errorMsg = error.message || 'Socket.IO connection error';
+          console.error('[RealTimeNotification] Socket.IO error:', errorMsg);
           this.emit('connection', { status: 'error', error: errorMsg });
-          reject(new Error(errorMsg));
-        };
+          if (this.reconnectAttempts === 0) {
+            reject(new Error(errorMsg));
+          }
+        });
+
+        this.socket.on('disconnect', (reason) => {
+          console.log('[RealTimeNotification] Socket.IO disconnected:', reason);
+          this.stopHeartbeat();
+          this.emit('connection', { status: 'disconnected', reason });
+        });
+
+        this.socket.on('reconnect', (attemptNumber) => {
+          console.log('[RealTimeNotification] Socket.IO reconnected after', attemptNumber, 'attempts');
+          this.reconnectAttempts = 0;
+          this.emit('connection', { status: 'connected' });
+        });
+
+        this.socket.on('reconnect_attempt', (attemptNumber) => {
+          console.log('[RealTimeNotification] Socket.IO reconnect attempt:', attemptNumber);
+          this.reconnectAttempts = attemptNumber;
+          this.emit('connection', { status: 'reconnecting', attempt: attemptNumber });
+        });
+
+        this.socket.on('reconnect_failed', () => {
+          console.error('[RealTimeNotification] Socket.IO reconnection failed');
+          this.emit('connection', { status: 'error', error: 'Max reconnection attempts reached' });
+        });
+
+        // Listen for notification events from the server
+        this.socket.on('notification', (data: any) => {
+          this.handleNotification(data);
+        });
+
+        this.socket.on('live_update', (data: any) => {
+          this.handleLiveUpdate(data);
+        });
+
+        this.socket.on('batch_notifications', (data: any) => {
+          this.handleBatchNotifications(data);
+        });
+
+        this.socket.on('pong', () => {
+          // Heartbeat response
+        });
 
       } catch (error) {
         reject(error);
@@ -155,35 +201,17 @@ class RealTimeNotificationService {
   }
 
   disconnect(): void {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
     }
     this.stopHeartbeat();
   }
 
-  private attemptReconnect(userId: string, token: string): void {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('Max reconnection attempts reached');
-      return;
-    }
-
-    this.reconnectAttempts++;
-    const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-    
-    this.emit('connection', { status: 'reconnecting', attempt: this.reconnectAttempts });
-    
-    setTimeout(() => {
-      this.connect(userId, token).catch(() => {
-        // Reconnection failed, will try again
-      });
-    }, delay);
-  }
-
   private startHeartbeat(): void {
     this.heartbeatInterval = setInterval(() => {
-      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        this.ws.send(JSON.stringify({ type: 'ping' }));
+      if (this.socket && this.socket.connected) {
+        this.socket.emit('ping');
       }
     }, 30000);
   }
@@ -192,33 +220,6 @@ class RealTimeNotificationService {
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = null;
-    }
-  }
-
-  // Message Handling
-  private handleMessage(event: MessageEvent): void {
-    try {
-      const data = JSON.parse(event.data);
-      
-      switch (data.type) {
-        case 'notification':
-          this.handleNotification(data.payload);
-          break;
-        case 'live_update':
-          this.handleLiveUpdate(data.payload);
-          break;
-        case 'batch_notifications':
-          this.handleBatchNotifications(data.payload);
-          break;
-        case 'pong':
-          // Heartbeat response
-          break;
-        default:
-          console.warn('Unknown message type:', data.type);
-      }
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[RealTimeNotification] Parse error:', errorMsg);
     }
   }
 
@@ -771,47 +772,32 @@ class RealTimeNotificationService {
 
   // Public API Methods
   markAsRead(notificationId: string): void {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({
-        type: 'mark_read',
-        payload: { notificationId }
-      }));
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('mark_read', { notificationId });
     }
   }
 
   markAllAsRead(category?: NotificationCategory): void {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({
-        type: 'mark_all_read',
-        payload: { category }
-      }));
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('mark_all_read', { category });
     }
   }
 
   dismissNotification(notificationId: string): void {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({
-        type: 'dismiss',
-        payload: { notificationId }
-      }));
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('dismiss', { notificationId });
     }
   }
 
   subscribeToPost(postId: string): void {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({
-        type: 'subscribe_post',
-        payload: { postId }
-      }));
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('subscribe_post', { postId });
     }
   }
 
   unsubscribeFromPost(postId: string): void {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({
-        type: 'unsubscribe_post',
-        payload: { postId }
-      }));
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('unsubscribe_post', { postId });
     }
   }
 

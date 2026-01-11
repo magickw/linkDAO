@@ -259,9 +259,10 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Token Selection */}
-            <div>
+          {/* Token Selection */}
+          <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Asset
               </label>
@@ -340,9 +341,10 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
                   <span>≈ ${((maxAmount * (selectedToken?.valueUSD || 0)) / (selectedToken?.balance || 1)).toFixed(2)}</span>
                 </div>
               </div>
+          </div>
 
-              {/* Amount */}
-              <div>
+          {/* Amount */}
+          <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Amount
                 </label>

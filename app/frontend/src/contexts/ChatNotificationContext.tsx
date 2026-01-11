@@ -8,6 +8,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useAccount } from 'wagmi';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/router';
+import { io, Socket } from 'socket.io-client';
+import { ENV_CONFIG } from '@/config/environment';
 
 export interface ChatNotification {
   id: string;
@@ -48,7 +50,7 @@ export const ChatNotificationProvider: React.FC<{ children: React.ReactNode }> =
   const { isAuthenticated } = useAuth();
   const router = useRouter();
   const [notifications, setNotifications] = useState<ChatNotification[]>([]);
-  const wsRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef<number>(0);
   const connectionStateRef = useRef<ConnectionState>('disconnected');
@@ -156,8 +158,7 @@ export const ChatNotificationProvider: React.FC<{ children: React.ReactNode }> =
     }
 
     // Don't reconnect if already connected or connecting
-    if (wsRef.current?.readyState === WebSocket.OPEN ||
-        wsRef.current?.readyState === WebSocket.CONNECTING) {
+    if (socketRef.current?.connected) {
       return;
     }
 
@@ -171,135 +172,116 @@ export const ChatNotificationProvider: React.FC<{ children: React.ReactNode }> =
     lastConnectionAttemptRef.current = now;
     updateConnectionState('connecting');
 
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL ||
-                  (typeof window !== 'undefined'
-                    ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`
-                    : '');
-
-    if (!wsUrl) {
-      console.warn('[ChatNotifications] WebSocket URL not configured');
-      connectionLockRef.current = false;
-      return;
-    }
-
     try {
-      const ws = new WebSocket(`${wsUrl}?address=${address}&type=notifications`);
+      const socket = io(ENV_CONFIG.WS_URL, {
+        path: '/socket.io/',
+        transports: ['websocket', 'polling'],
+        auth: {
+          address,
+          type: 'notifications'
+        },
+        reconnection: true,
+        reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
+        reconnectionDelay: INITIAL_RECONNECT_DELAY,
+        reconnectionDelayMax: MAX_RECONNECT_DELAY,
+        timeout: 30000
+      });
 
-      ws.onopen = () => {
-        console.log('[ChatNotifications] WebSocket connected');
+      socket.on('connect', () => {
+        console.log('[ChatNotifications] Socket.IO connected:', socket.id);
         updateConnectionState('connected');
         reconnectAttemptsRef.current = 0; // Reset attempts on successful connection
         connectionLockRef.current = false;
 
         // Subscribe to notification events
-        ws.send(JSON.stringify({
-          type: 'subscribe',
+        socket.emit('subscribe', {
           channel: 'notifications',
           address: address,
-        }));
-      };
+        });
+      });
 
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-
-          // Handle different message types
-          if (data.type === 'new_message' && data.message) {
-            // Don't notify for own messages
-            if (data.message.fromAddress?.toLowerCase() === address?.toLowerCase()) {
-              return;
-            }
-
-            // Don't notify if user is on the chat page viewing this conversation
-            if (router.pathname.startsWith('/chat') &&
-                router.query.slug?.[1] === data.message.conversationId) {
-              return;
-            }
-
-            const truncateAddress = (addr: string) =>
-              addr.length > 10 ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : addr;
-
-            addNotification({
-              type: 'new_message',
-              title: 'New Message',
-              message: data.message.content?.substring(0, 100) || 'New message received',
-              fromAddress: data.message.fromAddress,
-              fromName: data.message.fromName || truncateAddress(data.message.fromAddress),
-              conversationId: data.message.conversationId,
-              timestamp: new Date(data.message.timestamp || Date.now()),
-              avatarUrl: data.message.avatarUrl,
-            });
-          }
-
-          if (data.type === 'mention') {
-            addNotification({
-              type: 'mention',
-              title: 'You were mentioned',
-              message: data.content?.substring(0, 100) || 'Someone mentioned you in a conversation',
-              fromAddress: data.fromAddress,
-              fromName: data.fromName,
-              conversationId: data.conversationId,
-              timestamp: new Date(data.timestamp || Date.now()),
-              avatarUrl: data.avatarUrl,
-            });
-          }
-
-          if (data.type === 'channel_message') {
-            addNotification({
-              type: 'channel_message',
-              title: `New message in #${data.channelName || 'channel'}`,
-              message: data.content?.substring(0, 100) || 'New channel message',
-              fromAddress: data.fromAddress,
-              fromName: data.fromName,
-              conversationId: data.channelId,
-              timestamp: new Date(data.timestamp || Date.now()),
-              avatarUrl: data.avatarUrl,
-            });
-          }
-        } catch (error) {
-          console.error('[ChatNotifications] Error parsing WebSocket message:', error);
-        }
-      };
-
-      ws.onclose = (event) => {
-        console.log('[ChatNotifications] WebSocket closed:', event.code);
-        updateConnectionState('disconnected');
-        wsRef.current = null;
+      socket.on('connect_error', (error) => {
+        console.error('[ChatNotifications] Socket.IO connection error:', error.message);
         connectionLockRef.current = false;
-
-        // Only attempt reconnect if we haven't exceeded max attempts and user is still connected
-        if (isConnected && isAuthenticated && reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
-          reconnectAttemptsRef.current++;
-          const delay = Math.min(
-            INITIAL_RECONNECT_DELAY * Math.pow(2, reconnectAttemptsRef.current - 1),
-            MAX_RECONNECT_DELAY
-          );
-          console.log(`[ChatNotifications] Reconnecting (attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS}) in ${delay}ms`);
-
-          // Clear any existing timeout
-          if (reconnectTimeoutRef.current) {
-            clearTimeout(reconnectTimeoutRef.current);
-          }
-
-          reconnectTimeoutRef.current = setTimeout(() => {
-            updateConnectionState('reconnecting');
-            connectWebSocket();
-          }, delay);
-        } else if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
-          console.error('[ChatNotifications] Max reconnection attempts reached, stopping');
+        
+        reconnectAttemptsRef.current++;
+        if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
           updateConnectionState('failed');
+        } else {
+          updateConnectionState('reconnecting');
         }
-      };
+      });
 
-      ws.onerror = () => {
-        // Silently handle errors - onclose will be called after this
+      socket.on('disconnect', (reason) => {
+        console.log('[ChatNotifications] Socket.IO disconnected:', reason);
+        updateConnectionState('disconnected');
         connectionLockRef.current = false;
-      };
+      });
 
-      wsRef.current = ws;
+      socket.on('reconnect', (attemptNumber) => {
+        console.log('[ChatNotifications] Socket.IO reconnected after', attemptNumber, 'attempts');
+        updateConnectionState('connected');
+        reconnectAttemptsRef.current = 0;
+      });
+
+      socket.on('reconnect_attempt', (attemptNumber) => {
+        console.log('[ChatNotifications] Socket.IO reconnect attempt:', attemptNumber);
+        updateConnectionState('reconnecting');
+      });
+
+      socket.on('reconnect_failed', () => {
+        console.error('[ChatNotifications] Socket.IO reconnection failed');
+        updateConnectionState('failed');
+        connectionLockRef.current = false;
+      });
+
+      // Listen for chat notifications
+      socket.on('new_message', (data) => {
+        addNotification({
+          type: 'new_message',
+          title: 'New Message',
+          message: data.content || 'You have a new message',
+          fromAddress: data.fromAddress,
+          fromName: data.fromName,
+          conversationId: data.conversationId,
+          timestamp: new Date(data.timestamp),
+          avatarUrl: data.avatarUrl
+        });
+      });
+
+      socket.on('mention', (data) => {
+        addNotification({
+          type: 'mention',
+          title: 'Mention',
+          message: data.content || 'You were mentioned',
+          fromAddress: data.fromAddress,
+          fromName: data.fromName,
+          conversationId: data.conversationId,
+          timestamp: new Date(data.timestamp),
+          avatarUrl: data.avatarUrl
+        });
+      });
+
+      socket.on('channel_message', (data) => {
+        addNotification({
+          type: 'channel_message',
+          title: 'Channel Message',
+          message: data.content || 'New message in channel',
+          fromAddress: data.fromAddress,
+          fromName: data.fromName,
+          conversationId: data.conversationId,
+          timestamp: new Date(data.timestamp),
+          avatarUrl: data.avatarUrl
+        });
+      });
+
+      socketRef.current = socket;
     } catch (error) {
-      console.error('[ChatNotifications] Failed to create WebSocket:', error);
+      console.error('[ChatNotifications] Failed to create Socket.IO connection:', error);
       updateConnectionState('disconnected');
+      connectionLockRef.current = false;
+    }
+  }, [address, isAuthenticated, updateConnectionState, addNotification, router]);
       connectionLockRef.current = false;
     }
   }, [address, isAuthenticated, isConnected, addNotification, router, updateConnectionState]);
@@ -311,9 +293,9 @@ export const ChatNotificationProvider: React.FC<{ children: React.ReactNode }> =
       reconnectTimeoutRef.current = null;
     }
 
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+      socketRef.current = null;
     }
 
     reconnectAttemptsRef.current = 0; // Reset attempts on manual disconnect
