@@ -3847,25 +3847,6 @@ export const blockedUsers = pgTable("blocked_users", {
   blockedIdx: index("idx_blocked_users_blocked").on(t.blockedAddress),
 }));
 
-// Phase 5: Conversation participants with roles
-export const conversationParticipants = pgTable("conversation_participants", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  conversationId: uuid("conversation_id").references(() => conversations.id, { onDelete: "cascade" }).notNull(),
-  userAddress: varchar("user_address", { length: 66 }).notNull(),
-  role: varchar("role", { length: 32 }).default("member"), // admin, moderator, member
-  nickname: varchar("nickname", { length: 100 }),
-  joinedAt: timestamp("joined_at").defaultNow(),
-  lastReadAt: timestamp("last_read_at"),
-  isMuted: boolean("is_muted").default(false),
-  mutedUntil: timestamp("muted_until"),
-  notificationsEnabled: boolean("notifications_enabled").default(true),
-}, (t) => ({
-  conversationIdx: index("idx_conversation_participants_conversation").on(t.conversationId),
-  userIdx: index("idx_conversation_participants_user").on(t.userAddress),
-  roleIdx: index("idx_conversation_participants_role").on(t.conversationId, t.role),
-  uniqueParticipant: unique("unique_conversation_participant").on(t.conversationId, t.userAddress),
-}));
-
 // Phase 5: Typing indicators (ephemeral)
 export const typingIndicators = pgTable("typing_indicators", {
   conversationId: uuid("conversation_id").references(() => conversations.id, { onDelete: "cascade" }).notNull(),

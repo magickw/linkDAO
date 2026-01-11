@@ -115,79 +115,56 @@ ON conversations(channel_name) WHERE channel_name IS NOT NULL;
 -- ============================================================================
 -- Create or update conversation_participants for role-based access
 
--- Note: conversation_participants table may already exist with different column names
--- This creates it if it doesn't exist, dynamically detecting conversations.id type
+-- Note: conversation_participants table may already exist
+-- Use dynamic SQL to create with correct type if it doesn't exist
 
 DO $$
 DECLARE
-    v_id_type TEXT;
+    v_col_type TEXT;
+    v_create_sql TEXT;
 BEGIN
-    -- Get the data type of conversations.id
-    SELECT data_type INTO v_id_type
-    FROM information_schema.columns
-    WHERE table_name = 'conversations' AND column_name = 'id';
-
     -- Only create if table doesn't exist
-    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'conversation_participants') THEN
-        IF v_id_type = 'uuid' THEN
-            CREATE TABLE conversation_participants (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-                wallet_address VARCHAR(66) NOT NULL,
-                user_id UUID,
-                role VARCHAR(32) DEFAULT 'member',
-                nickname VARCHAR(100),
-                custom_title VARCHAR(255),
-                joined_at TIMESTAMP DEFAULT NOW(),
-                left_at TIMESTAMP,
-                last_read_at TIMESTAMP,
-                is_muted BOOLEAN DEFAULT FALSE,
-                muted_until TIMESTAMP,
-                notifications_enabled BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT NOW(),
-                updated_at TIMESTAMP DEFAULT NOW(),
-                UNIQUE(conversation_id, wallet_address)
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'conversation_participants'
+    ) THEN
+        SELECT format_type(atttypid, atttypmod) INTO v_col_type
+        FROM pg_attribute
+        WHERE attrelid = 'public.conversations'::regclass
+        AND attname = 'id';
+
+        RAISE NOTICE 'Creating conversation_participants with conversation_id type: %', COALESCE(v_col_type, 'NULL');
+
+        IF v_col_type IS NOT NULL THEN
+            v_create_sql := format(
+                'CREATE TABLE public.conversation_participants (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    conversation_id %s NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
+                    wallet_address VARCHAR(66) NOT NULL,
+                    user_id UUID,
+                    role VARCHAR(32) DEFAULT ''member'',
+                    nickname VARCHAR(100),
+                    custom_title VARCHAR(255),
+                    joined_at TIMESTAMP DEFAULT NOW(),
+                    left_at TIMESTAMP,
+                    last_read_at TIMESTAMP,
+                    is_muted BOOLEAN DEFAULT FALSE,
+                    muted_until TIMESTAMP,
+                    notifications_enabled BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW(),
+                    UNIQUE(conversation_id, wallet_address)
+                )',
+                v_col_type
             );
-        ELSIF v_id_type IN ('integer', 'bigint') THEN
-            CREATE TABLE conversation_participants (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-                wallet_address VARCHAR(66) NOT NULL,
-                user_id UUID,
-                role VARCHAR(32) DEFAULT 'member',
-                nickname VARCHAR(100),
-                custom_title VARCHAR(255),
-                joined_at TIMESTAMP DEFAULT NOW(),
-                left_at TIMESTAMP,
-                last_read_at TIMESTAMP,
-                is_muted BOOLEAN DEFAULT FALSE,
-                muted_until TIMESTAMP,
-                notifications_enabled BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT NOW(),
-                updated_at TIMESTAMP DEFAULT NOW(),
-                UNIQUE(conversation_id, wallet_address)
-            );
+
+            EXECUTE v_create_sql;
+            RAISE NOTICE 'Successfully created conversation_participants table';
         ELSE
-            CREATE TABLE conversation_participants (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-                wallet_address VARCHAR(66) NOT NULL,
-                user_id UUID,
-                role VARCHAR(32) DEFAULT 'member',
-                nickname VARCHAR(100),
-                custom_title VARCHAR(255),
-                joined_at TIMESTAMP DEFAULT NOW(),
-                left_at TIMESTAMP,
-                last_read_at TIMESTAMP,
-                is_muted BOOLEAN DEFAULT FALSE,
-                muted_until TIMESTAMP,
-                notifications_enabled BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT NOW(),
-                updated_at TIMESTAMP DEFAULT NOW(),
-                UNIQUE(conversation_id, wallet_address)
-            );
+            RAISE WARNING 'Could not determine conversations.id type, skipping conversation_participants creation';
         END IF;
-        RAISE NOTICE 'Created conversation_participants table with conversation_id type: %', v_id_type;
+    ELSE
+        RAISE NOTICE 'conversation_participants table already exists';
     END IF;
 END $$;
 
@@ -266,49 +243,43 @@ WHERE search_vector IS NULL;
 -- 5. MESSAGE REACTIONS TABLE (Ensure exists with all columns)
 -- ============================================================================
 -- This table may already exist, but ensure it has all required columns
--- Dynamically detect chat_messages.id type for proper foreign key
+-- Use dynamic SQL to match exact type of chat_messages.id
+
+-- First, drop table if it exists but has wrong structure (to fix partial migrations)
+DROP TABLE IF EXISTS public.message_reactions CASCADE;
 
 DO $$
 DECLARE
-    v_id_type TEXT;
+    v_col_type TEXT;
+    v_create_sql TEXT;
 BEGIN
-    -- Get the data type of chat_messages.id
-    SELECT data_type INTO v_id_type
-    FROM information_schema.columns
-    WHERE table_name = 'chat_messages' AND column_name = 'id';
+    -- Get the exact column type definition from pg_catalog
+    SELECT format_type(atttypid, atttypmod) INTO v_col_type
+    FROM pg_attribute
+    WHERE attrelid = 'public.chat_messages'::regclass
+    AND attname = 'id';
 
-    -- Only create if table doesn't exist
-    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'message_reactions') THEN
-        IF v_id_type = 'uuid' THEN
-            CREATE TABLE message_reactions (
+    RAISE NOTICE 'chat_messages.id exact type: %', COALESCE(v_col_type, 'NULL');
+
+    IF v_col_type IS NOT NULL THEN
+        -- Build dynamic CREATE TABLE statement with exact type
+        v_create_sql := format(
+            'CREATE TABLE public.message_reactions (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                message_id UUID NOT NULL REFERENCES chat_messages(id) ON DELETE CASCADE,
+                message_id %s NOT NULL REFERENCES public.chat_messages(id) ON DELETE CASCADE,
                 user_address VARCHAR(66) NOT NULL,
                 emoji VARCHAR(32) NOT NULL,
                 created_at TIMESTAMP DEFAULT NOW(),
                 UNIQUE(message_id, user_address, emoji)
-            );
-        ELSIF v_id_type IN ('integer', 'bigint') THEN
-            CREATE TABLE message_reactions (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                message_id INTEGER NOT NULL REFERENCES chat_messages(id) ON DELETE CASCADE,
-                user_address VARCHAR(66) NOT NULL,
-                emoji VARCHAR(32) NOT NULL,
-                created_at TIMESTAMP DEFAULT NOW(),
-                UNIQUE(message_id, user_address, emoji)
-            );
-        ELSE
-            -- Default to UUID if type is unknown
-            CREATE TABLE message_reactions (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                message_id UUID NOT NULL REFERENCES chat_messages(id) ON DELETE CASCADE,
-                user_address VARCHAR(66) NOT NULL,
-                emoji VARCHAR(32) NOT NULL,
-                created_at TIMESTAMP DEFAULT NOW(),
-                UNIQUE(message_id, user_address, emoji)
-            );
-        END IF;
-        RAISE NOTICE 'Created message_reactions table with message_id type: %', v_id_type;
+            )',
+            v_col_type
+        );
+
+        RAISE NOTICE 'Creating message_reactions with SQL: %', v_create_sql;
+        EXECUTE v_create_sql;
+        RAISE NOTICE 'Successfully created message_reactions table';
+    ELSE
+        RAISE WARNING 'Could not determine chat_messages.id type, skipping message_reactions creation';
     END IF;
 END $$;
 
@@ -321,42 +292,37 @@ ON message_reactions(user_address);
 -- ============================================================================
 -- 6. MESSAGE READ STATUS TABLE (Ensure exists)
 -- ============================================================================
--- Dynamically detect chat_messages.id type for proper foreign key
+-- Use dynamic SQL to match exact type of chat_messages.id
+
+DROP TABLE IF EXISTS public.message_read_status CASCADE;
 
 DO $$
 DECLARE
-    v_id_type TEXT;
+    v_col_type TEXT;
+    v_create_sql TEXT;
 BEGIN
-    -- Get the data type of chat_messages.id
-    SELECT data_type INTO v_id_type
-    FROM information_schema.columns
-    WHERE table_name = 'chat_messages' AND column_name = 'id';
+    SELECT format_type(atttypid, atttypmod) INTO v_col_type
+    FROM pg_attribute
+    WHERE attrelid = 'public.chat_messages'::regclass
+    AND attname = 'id';
 
-    -- Only create if table doesn't exist
-    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'message_read_status') THEN
-        IF v_id_type = 'uuid' THEN
-            CREATE TABLE message_read_status (
-                message_id UUID NOT NULL REFERENCES chat_messages(id) ON DELETE CASCADE,
+    RAISE NOTICE 'Creating message_read_status with message_id type: %', COALESCE(v_col_type, 'NULL');
+
+    IF v_col_type IS NOT NULL THEN
+        v_create_sql := format(
+            'CREATE TABLE public.message_read_status (
+                message_id %s NOT NULL REFERENCES public.chat_messages(id) ON DELETE CASCADE,
                 user_address VARCHAR(66) NOT NULL,
                 read_at TIMESTAMP DEFAULT NOW(),
                 PRIMARY KEY(message_id, user_address)
-            );
-        ELSIF v_id_type IN ('integer', 'bigint') THEN
-            CREATE TABLE message_read_status (
-                message_id INTEGER NOT NULL REFERENCES chat_messages(id) ON DELETE CASCADE,
-                user_address VARCHAR(66) NOT NULL,
-                read_at TIMESTAMP DEFAULT NOW(),
-                PRIMARY KEY(message_id, user_address)
-            );
-        ELSE
-            CREATE TABLE message_read_status (
-                message_id UUID NOT NULL REFERENCES chat_messages(id) ON DELETE CASCADE,
-                user_address VARCHAR(66) NOT NULL,
-                read_at TIMESTAMP DEFAULT NOW(),
-                PRIMARY KEY(message_id, user_address)
-            );
-        END IF;
-        RAISE NOTICE 'Created message_read_status table with message_id type: %', v_id_type;
+            )',
+            v_col_type
+        );
+
+        EXECUTE v_create_sql;
+        RAISE NOTICE 'Successfully created message_read_status table';
+    ELSE
+        RAISE WARNING 'Could not determine chat_messages.id type, skipping message_read_status creation';
     END IF;
 END $$;
 
@@ -429,32 +395,34 @@ END $$;
 -- ============================================================================
 -- 9. THREADING COLUMNS (Ensure reply_to_id exists)
 -- ============================================================================
--- Dynamically detect chat_messages.id type for proper self-reference
+-- Use dynamic SQL to match exact type of chat_messages.id for self-reference
 
 DO $$
 DECLARE
-    v_id_type TEXT;
+    v_col_type TEXT;
+    v_alter_sql TEXT;
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'chat_messages' AND column_name = 'reply_to_id'
+        WHERE table_schema = 'public' AND table_name = 'chat_messages' AND column_name = 'reply_to_id'
     ) THEN
-        -- Get the data type of chat_messages.id
-        SELECT data_type INTO v_id_type
-        FROM information_schema.columns
-        WHERE table_name = 'chat_messages' AND column_name = 'id';
+        SELECT format_type(atttypid, atttypmod) INTO v_col_type
+        FROM pg_attribute
+        WHERE attrelid = 'public.chat_messages'::regclass
+        AND attname = 'id';
 
-        IF v_id_type = 'uuid' THEN
-            ALTER TABLE chat_messages
-            ADD COLUMN reply_to_id UUID REFERENCES chat_messages(id);
-        ELSIF v_id_type IN ('integer', 'bigint') THEN
-            ALTER TABLE chat_messages
-            ADD COLUMN reply_to_id INTEGER REFERENCES chat_messages(id);
-        ELSE
-            ALTER TABLE chat_messages
-            ADD COLUMN reply_to_id UUID REFERENCES chat_messages(id);
+        RAISE NOTICE 'Adding reply_to_id column with type: %', COALESCE(v_col_type, 'NULL');
+
+        IF v_col_type IS NOT NULL THEN
+            v_alter_sql := format(
+                'ALTER TABLE public.chat_messages ADD COLUMN reply_to_id %s REFERENCES public.chat_messages(id)',
+                v_col_type
+            );
+            EXECUTE v_alter_sql;
+            RAISE NOTICE 'Successfully added reply_to_id column';
         END IF;
-        RAISE NOTICE 'Added reply_to_id column with type: %', v_id_type;
+    ELSE
+        RAISE NOTICE 'reply_to_id column already exists';
     END IF;
 END $$;
 
@@ -499,43 +467,37 @@ CREATE TRIGGER chat_messages_reply_count_update
 -- ============================================================================
 -- 10. TYPING INDICATORS TABLE
 -- ============================================================================
--- Ephemeral table for tracking who is typing
--- Dynamically detect conversations.id type for proper foreign key
+-- Use dynamic SQL to match exact type of conversations.id
+
+DROP TABLE IF EXISTS public.typing_indicators CASCADE;
 
 DO $$
 DECLARE
-    v_id_type TEXT;
+    v_col_type TEXT;
+    v_create_sql TEXT;
 BEGIN
-    -- Get the data type of conversations.id
-    SELECT data_type INTO v_id_type
-    FROM information_schema.columns
-    WHERE table_name = 'conversations' AND column_name = 'id';
+    SELECT format_type(atttypid, atttypmod) INTO v_col_type
+    FROM pg_attribute
+    WHERE attrelid = 'public.conversations'::regclass
+    AND attname = 'id';
 
-    -- Only create if table doesn't exist
-    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'typing_indicators') THEN
-        IF v_id_type = 'uuid' THEN
-            CREATE TABLE typing_indicators (
-                conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    RAISE NOTICE 'Creating typing_indicators with conversation_id type: %', COALESCE(v_col_type, 'NULL');
+
+    IF v_col_type IS NOT NULL THEN
+        v_create_sql := format(
+            'CREATE TABLE public.typing_indicators (
+                conversation_id %s NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
                 user_address VARCHAR(66) NOT NULL,
                 started_at TIMESTAMP DEFAULT NOW(),
                 PRIMARY KEY(conversation_id, user_address)
-            );
-        ELSIF v_id_type IN ('integer', 'bigint') THEN
-            CREATE TABLE typing_indicators (
-                conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-                user_address VARCHAR(66) NOT NULL,
-                started_at TIMESTAMP DEFAULT NOW(),
-                PRIMARY KEY(conversation_id, user_address)
-            );
-        ELSE
-            CREATE TABLE typing_indicators (
-                conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-                user_address VARCHAR(66) NOT NULL,
-                started_at TIMESTAMP DEFAULT NOW(),
-                PRIMARY KEY(conversation_id, user_address)
-            );
-        END IF;
-        RAISE NOTICE 'Created typing_indicators table with conversation_id type: %', v_id_type;
+            )',
+            v_col_type
+        );
+
+        EXECUTE v_create_sql;
+        RAISE NOTICE 'Successfully created typing_indicators table';
+    ELSE
+        RAISE WARNING 'Could not determine conversations.id type, skipping typing_indicators creation';
     END IF;
 END $$;
 
@@ -546,46 +508,38 @@ ON typing_indicators(started_at);
 -- ============================================================================
 -- 11. USER PRESENCE TABLE
 -- ============================================================================
--- Track user online/offline status
--- Dynamically detect conversations.id type for proper foreign key
+-- Use dynamic SQL to match exact type of conversations.id
+
+DROP TABLE IF EXISTS public.user_presence CASCADE;
 
 DO $$
 DECLARE
-    v_id_type TEXT;
+    v_col_type TEXT;
+    v_create_sql TEXT;
 BEGIN
-    -- Get the data type of conversations.id
-    SELECT data_type INTO v_id_type
-    FROM information_schema.columns
-    WHERE table_name = 'conversations' AND column_name = 'id';
+    SELECT format_type(atttypid, atttypmod) INTO v_col_type
+    FROM pg_attribute
+    WHERE attrelid = 'public.conversations'::regclass
+    AND attname = 'id';
 
-    -- Only create if table doesn't exist
-    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_presence') THEN
-        IF v_id_type = 'uuid' THEN
-            CREATE TABLE user_presence (
+    RAISE NOTICE 'Creating user_presence with current_conversation_id type: %', COALESCE(v_col_type, 'NULL');
+
+    IF v_col_type IS NOT NULL THEN
+        v_create_sql := format(
+            'CREATE TABLE public.user_presence (
                 user_address VARCHAR(66) PRIMARY KEY,
-                status VARCHAR(20) DEFAULT 'offline',
+                status VARCHAR(20) DEFAULT ''offline'',
                 last_seen TIMESTAMP DEFAULT NOW(),
-                current_conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL,
-                device_info JSONB DEFAULT '{}'
-            );
-        ELSIF v_id_type IN ('integer', 'bigint') THEN
-            CREATE TABLE user_presence (
-                user_address VARCHAR(66) PRIMARY KEY,
-                status VARCHAR(20) DEFAULT 'offline',
-                last_seen TIMESTAMP DEFAULT NOW(),
-                current_conversation_id INTEGER REFERENCES conversations(id) ON DELETE SET NULL,
-                device_info JSONB DEFAULT '{}'
-            );
-        ELSE
-            CREATE TABLE user_presence (
-                user_address VARCHAR(66) PRIMARY KEY,
-                status VARCHAR(20) DEFAULT 'offline',
-                last_seen TIMESTAMP DEFAULT NOW(),
-                current_conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL,
-                device_info JSONB DEFAULT '{}'
-            );
-        END IF;
-        RAISE NOTICE 'Created user_presence table with current_conversation_id type: %', v_id_type;
+                current_conversation_id %s REFERENCES public.conversations(id) ON DELETE SET NULL,
+                device_info JSONB DEFAULT ''{}''
+            )',
+            v_col_type
+        );
+
+        EXECUTE v_create_sql;
+        RAISE NOTICE 'Successfully created user_presence table';
+    ELSE
+        RAISE WARNING 'Could not determine conversations.id type, skipping user_presence creation';
     END IF;
 END $$;
 
@@ -665,7 +619,7 @@ RETURNS TABLE (
     conversation_id UUID,
     content TEXT,
     sender_address VARCHAR(66),
-    timestamp TIMESTAMP,
+    message_timestamp TIMESTAMP,
     rank REAL
 ) AS $$
 BEGIN
