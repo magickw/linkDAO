@@ -282,9 +282,6 @@ export const ChatNotificationProvider: React.FC<{ children: React.ReactNode }> =
       connectionLockRef.current = false;
     }
   }, [address, isAuthenticated, updateConnectionState, addNotification, router]);
-      connectionLockRef.current = false;
-    }
-  }, [address, isAuthenticated, isConnected, addNotification, router, updateConnectionState]);
 
   // Disconnect WebSocket
   const disconnectWebSocket = useCallback(() => {
