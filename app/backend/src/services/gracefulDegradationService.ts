@@ -55,7 +55,7 @@ export class GracefulDegradationService extends EventEmitter {
 
   constructor(config?: Partial<DegradationConfig>) {
     super();
-    
+
     this.config = {
       enableFallbacks: true,
       fallbackTimeout: 10000, // 10 seconds
@@ -126,7 +126,7 @@ export class GracefulDegradationService extends EventEmitter {
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const result = await operation();
-        
+
         if (attempt > 0) {
           this.emit('retrySuccess', {
             operationName,
@@ -134,11 +134,11 @@ export class GracefulDegradationService extends EventEmitter {
             totalAttempts: attempt + 1
           });
         }
-        
+
         return result;
       } catch (error) {
         lastError = error as Error;
-        
+
         // Don't retry on certain errors
         if (this.isNonRetryableError(error as Error)) {
           throw error;
@@ -175,13 +175,13 @@ export class GracefulDegradationService extends EventEmitter {
     if (!this.fallbackStrategies.has(operationName)) {
       this.fallbackStrategies.set(operationName, []);
     }
-    
+
     const strategies = this.fallbackStrategies.get(operationName)!;
     strategies.push(strategy);
-    
+
     // Sort by priority (higher priority first)
     strategies.sort((a, b) => b.priority - a.priority);
-    
+
     this.emit('fallbackRegistered', {
       operationName,
       strategyName: strategy.name,
@@ -194,7 +194,7 @@ export class GracefulDegradationService extends EventEmitter {
    */
   private async executeFallback(operationName: string, context: any): Promise<any> {
     const strategies = this.fallbackStrategies.get(operationName) || [];
-    
+
     if (strategies.length === 0) {
       throw new Error(`No fallback strategies available for ${operationName}`);
     }
@@ -226,7 +226,7 @@ export class GracefulDegradationService extends EventEmitter {
           strategyName: strategy.name,
           error: (error as Error).message
         });
-        
+
         // Continue to next strategy
         continue;
       }
@@ -256,7 +256,7 @@ export class GracefulDegradationService extends EventEmitter {
       currentHealth.status = 'healthy';
     } else {
       currentHealth.consecutiveFailures++;
-      
+
       if (currentHealth.consecutiveFailures >= 3) {
         currentHealth.status = 'failed';
       } else if (currentHealth.consecutiveFailures >= 1) {
@@ -266,7 +266,7 @@ export class GracefulDegradationService extends EventEmitter {
 
     this.serviceHealth.set(serviceName, currentHealth);
     this.updateDegradationState();
-    
+
     this.emit('serviceHealthUpdated', {
       serviceName,
       status: currentHealth.status,
@@ -285,17 +285,17 @@ export class GracefulDegradationService extends EventEmitter {
   } {
     const services = Array.from(this.serviceHealth.values());
     const circuitBreakerStats = this.circuitBreakerService.getAllStates();
-    
+
     let overallStatus: 'healthy' | 'degraded' | 'critical' = 'healthy';
-    
+
     const failedCount = services.filter(s => s.status === 'failed').length;
     const degradedCount = services.filter(s => s.status === 'degraded').length;
     const totalCount = services.length;
-    
+
     if (totalCount > 0) {
       const failureRate = failedCount / totalCount;
       const degradationRate = (failedCount + degradedCount) / totalCount;
-      
+
       if (failureRate >= 0.5) {
         overallStatus = 'critical';
       } else if (degradationRate >= 0.3) {
@@ -330,48 +330,48 @@ export class GracefulDegradationService extends EventEmitter {
   /**
    * Attempt to recover from degraded mode
    */
+  /**
+   * Attempt to recover from degraded mode
+   */
   async attemptRecovery(): Promise<boolean> {
     this.emit('recoveryAttemptStarted');
-    
+
     try {
-      // Check health of all services
-      const healthChecks = Array.from(this.serviceHealth.keys()).map(async (serviceName) => {
-        try {
-          // This would call the actual health check for each service
-          // For now, we'll simulate it
-          await this.sleep(100);
-          return { serviceName, healthy: Math.random() > 0.3 };
-        } catch (error) {
-          return { serviceName, healthy: false };
-        }
-      });
+      // Re-run health checks for all known services
+      // This updates internal state based on current circuit breaker stats
+      await this.performHealthCheck();
 
-      const results = await Promise.allSettled(healthChecks);
-      let recoveredServices = 0;
+      // Check if we have recovered enough to exit degraded mode
+      // recoverySuccess is true if we are no longer in critical state 
+      // i.e., > 70% of services are healthy
 
-      results.forEach((result) => {
-        if (result.status === 'fulfilled') {
-          const { serviceName, healthy } = result.value;
-          this.updateServiceHealth(serviceName, healthy);
-          if (healthy) recoveredServices++;
-        }
-      });
+      const services = Array.from(this.serviceHealth.values());
+      const healthyServices = services.filter(s => s.status === 'healthy').length;
+      const totalServices = services.length;
 
-      const recoverySuccess = recoveredServices >= this.serviceHealth.size * 0.7;
-      
+      // If we have no services registered, we assume healthy
+      if (totalServices === 0) {
+        this.degradationState.mode = 'normal';
+        this.degradationState.reason = 'No services registered';
+        this.degradationState.lastStateChange = new Date();
+        return true;
+      }
+
+      const recoverySuccess = healthyServices >= totalServices * 0.7;
+
       if (recoverySuccess) {
         this.degradationState.mode = 'normal';
-        this.degradationState.reason = 'Recovery successful';
+        this.degradationState.reason = 'Recovery successful: Majority of services are healthy';
         this.degradationState.lastStateChange = new Date();
-        
+
         this.emit('recoverySuccess', {
-          recoveredServices,
-          totalServices: this.serviceHealth.size
+          recoveredServices: healthyServices,
+          totalServices
         });
       } else {
         this.emit('recoveryFailed', {
-          recoveredServices,
-          totalServices: this.serviceHealth.size
+          recoveredServices: healthyServices,
+          totalServices
         });
       }
 
@@ -473,7 +473,7 @@ export class GracefulDegradationService extends EventEmitter {
    */
   private async performHealthCheck(): Promise<void> {
     this.emit('healthCheckStarted');
-    
+
     try {
       // This would integrate with actual service health checks
       // For now, we'll update based on circuit breaker states
@@ -483,7 +483,7 @@ export class GracefulDegradationService extends EventEmitter {
         const isHealthy = stats.state === 'closed' && stats.failureCount < 3;
         this.updateServiceHealth(serviceName, isHealthy, stats.averageResponseTime);
       }
-      
+
       this.emit('healthCheckCompleted');
     } catch (error) {
       this.emit('healthCheckFailed', { error: (error as Error).message });
@@ -498,13 +498,13 @@ export class GracefulDegradationService extends EventEmitter {
     const failedServices = services.filter(s => s.status === 'failed');
     const degradedServices = services.filter(s => s.status === 'degraded');
     const healthyServices = services.filter(s => s.status === 'healthy');
-    
+
     const failureRate = services.length > 0 ? failedServices.length / services.length : 0;
     const previousMode = this.degradationState.mode;
-    
+
     let newMode: 'normal' | 'degraded' | 'emergency' = 'normal';
     let reason = 'System operating normally';
-    
+
     if (failureRate >= 0.8) {
       newMode = 'emergency';
       reason = `Critical system failure: ${failedServices.length}/${services.length} services failed`;
@@ -515,7 +515,7 @@ export class GracefulDegradationService extends EventEmitter {
       newMode = 'degraded';
       reason = `System degraded: ${degradedServices.length} services experiencing issues`;
     }
-    
+
     if (newMode !== previousMode) {
       this.degradationState = {
         mode: newMode,
@@ -525,7 +525,7 @@ export class GracefulDegradationService extends EventEmitter {
         lastStateChange: new Date(),
         reason
       };
-      
+
       this.emit('degradationStateChanged', {
         previousMode,
         newMode,
@@ -548,7 +548,7 @@ export class GracefulDegradationService extends EventEmitter {
    */
   private recordFailure(operationName: string, error: Error): void {
     this.updateServiceHealth(operationName, false);
-    
+
     this.emit('operationFailed', {
       operationName,
       error: error.message,
@@ -567,8 +567,8 @@ export class GracefulDegradationService extends EventEmitter {
       'BadRequestError',
       'NotFoundError'
     ];
-    
-    return nonRetryableErrors.some(errorType => 
+
+    return nonRetryableErrors.some(errorType =>
       error.name === errorType || error.message.includes(errorType)
     );
   }

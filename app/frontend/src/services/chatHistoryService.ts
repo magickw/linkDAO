@@ -13,10 +13,15 @@
  * ```
  */
 
-console.warn(
-  '[DEPRECATED] chatHistoryService.ts is deprecated. ' +
-  'Please migrate to unifiedMessagingService.ts for consistent messaging functionality.'
-);
+// Only show deprecation warning once per session
+const DEPRECATION_KEY = '__chatHistoryService_deprecated_warned__';
+if (typeof window !== 'undefined' && !(window as any)[DEPRECATION_KEY]) {
+  (window as any)[DEPRECATION_KEY] = true;
+  console.warn(
+    '[DEPRECATED] chatHistoryService.ts is deprecated. ' +
+    'Please migrate to unifiedMessagingService.ts for consistent messaging functionality.'
+  );
+}
 
 import { Message as ChatMessage, Conversation, ChatHistoryRequest, ChatHistoryResponse } from '@/types/messaging';
 import { OfflineManager } from './OfflineManager';
