@@ -1290,6 +1290,9 @@ app.use('/api/social-media', socialMediaOAuthRoutes);
 // Socket.io fallback route (WebSockets may be disabled on resource-constrained environments)
 // NOTE: Only handle this if Socket.IO is not initialized
 // Socket.IO will handle its own /socket.io/* routes when enabled
+// Track whether Socket.IO has initialized
+let socketIOInitialized = false;
+
 app.all('/socket.io/*', (req, res) => {
   // Check if WebSockets should be enabled
   // Render Pro has sufficient resources for WebSockets
@@ -1308,13 +1311,24 @@ app.all('/socket.io/*', (req, res) => {
     });
   }
 
-  // If WebSockets are enabled, Socket.IO should be handling this route
-  // This code should not be reached - if it is, Socket.IO failed to initialize
+  // If WebSockets are enabled but Socket.IO hasn't initialized yet (startup race condition)
+  // Return 503 (Service Unavailable) instead of 500 to indicate temporary unavailability
+  if (!socketIOInitialized) {
+    return res.status(503).json({
+      success: false,
+      error: 'WebSocket service starting',
+      message: 'Socket.IO is initializing. Please retry in a moment.',
+      code: 'SOCKETIO_STARTING',
+      retryAfter: 2
+    });
+  }
+
+  // If Socket.IO is initialized but this route is still hit, something is wrong
   res.status(500).json({
     success: false,
     error: 'Socket.IO service error',
-    message: 'Socket.IO failed to initialize properly. Contact support.',
-    code: 'SOCKETIO_INIT_FAILED'
+    message: 'Socket.IO failed to handle request. Contact support.',
+    code: 'SOCKETIO_ROUTING_ERROR'
   });
 });
 
@@ -1395,6 +1409,7 @@ httpServer.listen(PORT, () => {
           // CRITICAL FIX: Initialize main WebSocket service FIRST
           // This creates the single shared Socket.IO instance that all other services will use
           const webSocketService = initializeWebSocket(httpServer, productionConfig.webSocket);
+          socketIOInitialized = true; // Mark Socket.IO as initialized to prevent fallback route 500 errors
           console.log('✅ WebSocket service initialized (shared Socket.IO instance created)');
           console.log(`🔌 WebSocket ready for real-time updates`);
           console.log(`📊 WebSocket config: maxConnections=${productionConfig.webSocket.maxConnections}, memoryThreshold=${productionConfig.webSocket.memoryThreshold}MB`);

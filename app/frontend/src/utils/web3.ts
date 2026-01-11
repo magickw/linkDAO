@@ -30,6 +30,7 @@ export function wrapProvider(provider: any): any {
       // Create a completely new request object to ensure it's mutable
       // Some extensions like LastPass freeze the args object
       const method = args.method;
+      // Deep copy params to ensure no references to frozen objects remain
       const params = args.params ? JSON.parse(JSON.stringify(args.params)) : [];
 
       return provider.request({ method, params });
@@ -72,25 +73,13 @@ export async function getProvider() {
       console.log('Injected provider:', injectedProvider);
 
       if (injectedProvider) {
-        // Create BrowserProvider with proper network configuration to prevent detection issues
-        const provider = new ethers.BrowserProvider(injectedProvider as any);
-        try {
-          // Attempt to detect network but don't block if it fails
-          await provider.getNetwork().catch(() => {
-            console.warn('Network detection failed, using default configuration');
-          });
-          console.log('Created BrowserProvider');
-          cachedProvider = provider;
-          providerCreationAttempts = 0; // Reset on success
-          return provider;
-        } catch (e) {
-          console.warn('Failed to initialize BrowserProvider with network detection:', e);
-          // Create provider without network detection as fallback
-          const fallbackProvider = new ethers.BrowserProvider(injectedProvider as any);
-          cachedProvider = fallbackProvider;
-          providerCreationAttempts = 0;
-          return fallbackProvider;
-        }
+        // Create BrowserProvider with "any" network to prevent detection issues
+        // This is crucial for fixing "JsonRpcProvider failed to detect network" errors
+        const provider = new ethers.BrowserProvider(injectedProvider as any, "any");
+        console.log('Created BrowserProvider with "any" network');
+        cachedProvider = provider;
+        providerCreationAttempts = 0; // Reset on success
+        return provider;
       }
     }
 
@@ -99,12 +88,9 @@ export async function getProvider() {
       const injectedProvider = getInjectedProvider();
       if (injectedProvider) {
         try {
-          const provider = new ethers.BrowserProvider(injectedProvider);
-          // Attempt to detect network but don't block if it fails
-          await provider.getNetwork().catch(() => {
-            console.warn('Network detection failed for injected provider, using default configuration');
-          });
-          console.log('Created BrowserProvider from direct injected provider');
+          // Use "any" network here as well
+          const provider = new ethers.BrowserProvider(injectedProvider, "any");
+          console.log('Created BrowserProvider from direct injected provider with "any" network');
           cachedProvider = provider;
           providerCreationAttempts = 0;
           return provider;
@@ -201,23 +187,17 @@ export async function getSigner() {
           try {
             // Wrap provider to avoid read-only property errors
             const wrappedProvider = wrapProvider(injectedProvider);
-            const provider = new ethers.BrowserProvider(wrappedProvider as any);
+            // Use "any" network to avoid strict detection
+            const provider = new ethers.BrowserProvider(wrappedProvider as any, "any");
 
-            // Create provider with network detection disabled to prevent JsonRpcProvider issues
+            const signer = await provider.getSigner();
+            // Verify that the signer has the necessary methods
             try {
-              // Disable network detection by setting polling: false and staticNetwork
-              const signer = await provider.getSigner();
-              // Verify that the signer has the necessary methods
-              try {
-                await signer.getAddress();
-                return signer;
-              } catch (addressError) {
-                console.warn('Could not get address from signer:', addressError);
-                // Continue to fallback
-              }
-            } catch (signerError) {
-              console.error('Error getting signer from provider:', signerError);
-              // Don't return null here, try fallback approach
+              await signer.getAddress();
+              return signer;
+            } catch (addressError) {
+              console.warn('Could not get address from signer:', addressError);
+              // Continue to fallback
             }
           } catch (e) {
             console.warn('Failed to create signer from wagmi client:', e);
@@ -235,7 +215,8 @@ export async function getSigner() {
         try {
           // Wrap provider to avoid read-only property errors and create provider with explicit network configuration
           const wrappedProvider = wrapProvider(injectedProvider);
-          const provider = new ethers.BrowserProvider(wrappedProvider as any);
+          // Use "any" network here as well
+          const provider = new ethers.BrowserProvider(wrappedProvider as any, "any");
 
           // Try to get signer with timeout to prevent hanging
           const signerPromise = provider.getSigner();
@@ -265,7 +246,8 @@ export async function getSigner() {
       try {
         // Wrap provider to avoid read-only property errors
         const wrappedProvider = wrapProvider((window as any).ethereum);
-        const provider = new ethers.BrowserProvider(wrappedProvider);
+        // Use "any" network here as well
+        const provider = new ethers.BrowserProvider(wrappedProvider, "any");
         const signer = await provider.getSigner();
         const address = await signer.getAddress();
         console.log('Last resort signer created with address:', address);

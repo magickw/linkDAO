@@ -17,7 +17,7 @@ if (typeof self !== 'undefined' && self.location && self.location.hostname === '
 }
 
 // Service Worker Version - increment to force update
-const SW_VERSION = '2.0.2';
+const SW_VERSION = '2.0.3';
 
 const CACHE_NAME = 'linkdao-v1';
 const STATIC_CACHE = 'static-v1';
@@ -307,11 +307,42 @@ self.addEventListener('fetch', (event) => {
   if (isEnhancedNavigation(request)) {
     console.debug('SW: Bypassing navigation request:', request.url);
     // CRITICAL: Always respond with fetch for navigation requests to prevent frameId errors
-    event.respondWith(fetch(request).catch(error => {
+    event.respondWith(fetch(request).catch(async (error) => {
       console.error('Navigation request failed:', error);
-      // Even on failure, we must respond to prevent service worker errors
-      // Return the original request to let the browser handle it
-      return fetch(request);
+      // Return a proper fallback response instead of retrying (which would also fail)
+      try {
+        const cache = await caches.open(STATIC_CACHE);
+        const offlineResponse = await cache.match('/offline.html');
+        if (offlineResponse) {
+          return offlineResponse;
+        }
+      } catch (cacheError) {
+        console.warn('Failed to load offline page from cache:', cacheError);
+      }
+      // Return inline offline page as ultimate fallback
+      return new Response(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>You are offline</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+              h1 { color: #333; }
+              p { color: #666; }
+            </style>
+          </head>
+          <body>
+            <h1>You are offline</h1>
+            <p>Please check your internet connection and try again.</p>
+            <button onclick="window.location.reload()">Retry</button>
+          </body>
+        </html>
+      `, {
+        status: 503,
+        headers: { 'Content-Type': 'text/html' }
+      });
     }));
     return; // Early return to bypass service worker completely
   }
@@ -319,13 +350,28 @@ self.addEventListener('fetch', (event) => {
   // Skip Socket.IO requests - let them go directly to the server
   // Socket.IO needs to handle its own transport mechanism (websocket/polling)
   if (url.pathname.startsWith('/socket.io/')) {
-    event.respondWith(fetch(request)); // MUST call event.respondWith
+    event.respondWith(fetch(request).catch(error => {
+      console.warn('Socket.IO request failed (expected during reconnection):', error.message);
+      // Return empty response to prevent FetchEvent error - Socket.IO handles its own fallback
+      return new Response('', { status: 503, statusText: 'Service Unavailable' });
+    }));
     return; // Don't intercept - let Socket.IO handle it
   }
 
   // Skip non-GET requests
   if (request.method !== 'GET') {
-    event.respondWith(fetch(request)); // MUST call event.respondWith
+    event.respondWith(fetch(request).catch(error => {
+      console.warn('Non-GET request failed:', request.method, error.message);
+      // Return error response instead of letting the promise reject
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Network error',
+        message: error.message || 'Request failed'
+      }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }));
     return;
   }
 
@@ -649,7 +695,9 @@ async function networkFirst(request, cacheName) {
       return result;
     } catch (error) {
       pendingRequests.delete(requestKey);
-      throw error;
+      console.warn('Geolocation request failed/timeout, returning cached response:', error.message);
+      // Return cached response instead of throwing to prevent FetchEvent errors
+      return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
     }
   }
 
@@ -671,7 +719,9 @@ async function networkFirst(request, cacheName) {
     return result;
   } catch (error) {
     pendingRequests.delete(requestKey);
-    throw error;
+    console.warn('Request failed/timeout, returning cached response:', error.message);
+    // Return cached response instead of throwing to prevent FetchEvent errors
+    return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
   }
 }
 
