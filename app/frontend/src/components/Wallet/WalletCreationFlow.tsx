@@ -41,6 +41,17 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
   const [walletAddress, setWalletAddress] = useState('');
   const [enableBiometric, setEnableBiometric] = useState(false);
   const [isBiometricSupported, setIsBiometricSupported] = useState(false);
+  const [shuffledMnemonic, setShuffledMnemonic] = useState<string[]>([]);
+
+  // Fisher-Yates shuffle algorithm
+  const shuffleArray = (array: string[]) => {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
+  };
 
   // Ref to track clipboard clear timeout
   const clipboardClearTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -109,6 +120,7 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
   const handleCreateNew = () => {
     const newMnemonic = generateMnemonic();
     setMnemonic(newMnemonic);
+    setShuffledMnemonic(shuffleArray(newMnemonic.split(' ')));
     setStep('create');
   };
 
@@ -369,9 +381,9 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
                 className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-xl"
               >
                 {showMnemonic ? (
-                  <EyeOff className="w-8 h-8 text-gray-600 dark:text-gray-400" />
-                ) : (
                   <Eye className="w-8 h-8 text-gray-600 dark:text-gray-400" />
+                ) : (
+                  <EyeOff className="w-8 h-8 text-gray-600 dark:text-gray-400" />
                 )}
               </button>
             </div>
@@ -415,18 +427,22 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
                 Select the words in the correct order to verify your backup:
               </p>
               <div className="grid grid-cols-3 gap-2">
-                {mnemonic.split(' ').map((word, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleWordClick(index)}
-                    className={`p-2 rounded-lg text-sm font-medium transition-all ${verifiedWords.has(index)
-                      ? 'bg-green-500 text-white'
-                      : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }`}
-                  >
-                    {word}
-                  </button>
-                ))}
+                {shuffledMnemonic.map((word, index) => {
+                  // Find original index for this word
+                  const originalIndex = mnemonic.split(' ').indexOf(word);
+                  return (
+                    <button
+                      key={`${word}-${index}`}
+                      onClick={() => handleWordClick(originalIndex)}
+                      className={`p-2 rounded-lg text-sm font-medium transition-all ${verifiedWords.has(originalIndex)
+                        ? 'bg-green-500 text-white'
+                        : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                        }`}
+                    >
+                      {word}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -682,8 +698,6 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   <span>Creating...</span>
                 </>
-              ) : step === 'complete' ? (
-                'Done'
               ) : (
                 <>
                   <span>{step === 'intro' ? 'Create Wallet' : 'Continue'}</span>

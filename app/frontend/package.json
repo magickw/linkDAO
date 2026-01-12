@@ -26,7 +26,9 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "generate:wagmi": "cd ../.. && npx @wagmi/cli generate --config ./app/frontend/wagmi.config.ts",
-    "generate:wagmi:all": "cd ../.. && npx @wagmi/cli generate --config ./app/frontend/wagmi.config.ts"
+    "generate:wagmi:all": "cd ../.. && npx @wagmi/cli generate --config ./app/frontend/wagmi.config.ts",
+    "security:scan": "./scripts/security-scan.sh",
+    "security:audit": "npm audit --json"
   },
   "dependencies": {
     "@coinbase/onchainkit": "^1.1.2",

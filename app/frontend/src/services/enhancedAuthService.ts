@@ -26,6 +26,7 @@ export interface SessionData {
   timestamp: number;
   expiresAt: number;
   refreshToken?: string;
+  sessionId?: string; // Unique session ID to prevent session fixation
 }
 
 export interface AuthenticationOptions {
@@ -124,8 +125,29 @@ class EnhancedAuthService {
             return;
           }
 
+          // Session fixation protection: Validate session ID
+          // If session was created in a different context, we should regenerate it
+          if (!sessionData.sessionId) {
+            console.log('⚠️ Legacy session detected (no session ID), regenerating...');
+            this.clearStoredSession();
+            return;
+          }
+
+          // Store session ID for validation
+          const currentSessionId = sessionStorage.getItem(this.STORAGE_KEYS.SESSION_DATA + '_id');
+          if (currentSessionId && currentSessionId !== sessionData.sessionId) {
+            console.log('🚨 Session fixation detected! Session ID mismatch.');
+            console.log('Expected:', currentSessionId);
+            console.log('Got:', sessionData.sessionId);
+            this.clearStoredSession();
+            return;
+          }
+
           this.sessionData = sessionData;
           this.token = sessionData.token;
+
+          // Store session ID for future validation
+          sessionStorage.setItem(this.STORAGE_KEYS.SESSION_DATA + '_id', sessionData.sessionId);
 
           if (!this.sessionData.refreshToken) {
             const storedRefreshToken = sessionStorage.getItem(this.STORAGE_KEYS.REFRESH_TOKEN);
@@ -665,6 +687,9 @@ class EnhancedAuthService {
     const now = Date.now();
     const expiresAt = now + this.SESSION_EXPIRY;
 
+    // Generate new session ID to prevent session fixation
+    const sessionId = crypto.randomUUID();
+
     // Normalize address to lowercase for consistency
     const normalizedUser = {
       ...user,
@@ -678,7 +703,8 @@ class EnhancedAuthService {
       timeUntilExpiry: expiresAt - now,
       tokenLength: token.length,
       userAddress: user.address,
-      normalizedAddress: normalizedUser.address
+      normalizedAddress: normalizedUser.address,
+      sessionId
     });
 
     this.sessionData = {
@@ -686,7 +712,8 @@ class EnhancedAuthService {
       user: normalizedUser,
       timestamp: now,
       expiresAt,
-      refreshToken
+      refreshToken,
+      sessionId // Add session ID
     };
 
     this.token = token;
@@ -694,6 +721,9 @@ class EnhancedAuthService {
     // Persist to sessionStorage (safer than localStorage)
     if (typeof window !== 'undefined') {
       try {
+        // Clear old session data to prevent session fixation
+        this.clearStoredSession();
+
         sessionStorage.setItem(this.STORAGE_KEYS.SESSION_DATA, JSON.stringify(this.sessionData));
         sessionStorage.setItem(this.STORAGE_KEYS.ACCESS_TOKEN, token);
 
@@ -735,6 +765,8 @@ class EnhancedAuthService {
       Object.values(this.STORAGE_KEYS).forEach(key => {
         sessionStorage.removeItem(key);
       });
+      // Clear session ID to prevent session fixation
+      sessionStorage.removeItem(this.STORAGE_KEYS.SESSION_DATA + '_id');
     }
     this.storeTokenInDB(null);
   }
