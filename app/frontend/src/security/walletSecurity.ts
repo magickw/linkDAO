@@ -4,6 +4,7 @@
  */
 
 import { ethers } from 'ethers';
+import { SecureString, clearObject } from './SecureString';
 
 export interface WalletSecurityConfig {
   sessionTimeout: number; // milliseconds
@@ -80,7 +81,7 @@ export class WalletSecurity {
    */
   static async initialize(config: Partial<WalletSecurityConfig> = {}): Promise<void> {
     const finalConfig = { ...this.DEFAULT_CONFIG, ...config };
-    
+
     // Initialize encryption key if needed
     if (finalConfig.encryptStorage) {
       await this.initializeEncryption();
@@ -119,7 +120,7 @@ export class WalletSecurity {
       if (!networkValidation.valid) {
         errors.push(...networkValidation.errors);
         warnings.push(...networkValidation.warnings);
-        
+
         if (networkValidation.requiresSwitch) {
           return {
             success: false,
@@ -136,7 +137,7 @@ export class WalletSecurity {
         // Update activity
         existingSession.lastActivity = new Date();
         await this.saveSession(existingSession);
-        
+
         return {
           success: true,
           session: existingSession,
@@ -256,7 +257,7 @@ export class WalletSecurity {
       const session = sessionResult.session;
 
       // Check if permission already exists
-      const existingPermission = session.permissions.find(p => 
+      const existingPermission = session.permissions.find(p =>
         p.type === permission.type && p.scope === permission.scope
       );
 
@@ -315,7 +316,7 @@ export class WalletSecurity {
       }
 
       const session = sessionResult.session;
-      const permission = session.permissions.find(p => 
+      const permission = session.permissions.find(p =>
         p.type === permissionType && p.scope === scope
       );
 
@@ -353,7 +354,7 @@ export class WalletSecurity {
       }
 
       const session = sessionResult.session;
-      const permission = session.permissions.find(p => 
+      const permission = session.permissions.find(p =>
         p.type === permissionType && p.scope === scope
       );
 
@@ -384,6 +385,9 @@ export class WalletSecurity {
           details: { sessionId },
           riskLevel: 'low'
         });
+
+        // Clear sensitive data from memory
+        clearObject(session);
       }
 
       // Remove from memory
@@ -463,7 +467,7 @@ export class WalletSecurity {
   ): SecureSession | null {
     for (const session of this.sessions.values()) {
       if (session.walletAddress.toLowerCase() === walletAddress.toLowerCase() &&
-          session.networkId === networkId) {
+        session.networkId === networkId) {
         return session;
       }
     }
@@ -488,7 +492,7 @@ export class WalletSecurity {
     ];
 
     const fingerprint = components.join('|');
-    
+
     try {
       const encoder = new TextEncoder();
       const data = encoder.encode(fingerprint);
@@ -572,7 +576,7 @@ export class WalletSecurity {
         const stored = localStorage.getItem(`wallet_session_${sessionId}`);
         if (stored) {
           let sessionData: string;
-          
+
           if (this.DEFAULT_CONFIG.encryptStorage) {
             sessionData = await this.decryptData(stored);
           } else {
@@ -580,15 +584,15 @@ export class WalletSecurity {
           }
 
           const session = JSON.parse(sessionData) as SecureSession;
-          
+
           // Convert date strings back to Date objects
           session.createdAt = new Date(session.createdAt);
           session.lastActivity = new Date(session.lastActivity);
           session.expiresAt = new Date(session.expiresAt);
-          
+
           // Save to memory
           this.sessions.set(sessionId, session);
-          
+
           return session;
         }
       } catch (error) {
@@ -601,7 +605,7 @@ export class WalletSecurity {
 
   private static logSecurityEvent(event: SecurityEvent): void {
     this.securityEvents.push(event);
-    
+
     // Keep only last 1000 events
     if (this.securityEvents.length > 1000) {
       this.securityEvents = this.securityEvents.slice(-1000);
@@ -698,6 +702,61 @@ export class WalletSecurity {
       const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days
       this.securityEvents = this.securityEvents.filter(event => event.timestamp > cutoff);
     }, 60 * 60 * 1000); // Check every hour
+  }
+
+  /**
+   * Rotate session ID to prevent session fixation attacks
+   */
+  private static async rotateSession(oldSession: SecureSession): Promise<SecureSession> {
+    // Create new session with new ID but same data
+    const newSession: SecureSession = {
+      ...oldSession,
+      id: this.generateSessionId(),
+      lastActivity: new Date(),
+    };
+
+    // Save new session
+    await this.saveSession(newSession);
+
+    // Destroy old session
+    await this.destroySession(oldSession.id);
+
+    // Log session rotation
+    this.logSecurityEvent({
+      type: 'permission_change',
+      timestamp: new Date(),
+      walletAddress: oldSession.walletAddress,
+      details: { action: 'session_rotation', oldSessionId: oldSession.id, newSessionId: newSession.id },
+      riskLevel: 'low'
+    });
+
+    return newSession;
+  }
+
+  /**
+   * Set secure cookie for session (if in browser environment)
+   */
+  static setSecureCookie(sessionId: string, maxAge: number): void {
+    if (typeof document === 'undefined') return;
+
+    const cookieOptions = [
+      `session_id=${sessionId}`,
+      `Max-Age=${maxAge}`,
+      'Path=/',
+      'SameSite=Strict',
+      'Secure', // HTTPS only
+      'HttpOnly', // Not accessible via JavaScript (note: this won't work client-side)
+    ];
+
+    document.cookie = cookieOptions.join('; ');
+  }
+
+  /**
+   * Clear session cookie
+   */
+  static clearSecureCookie(): void {
+    if (typeof document === 'undefined') return;
+    document.cookie = 'session_id=; Max-Age=0; Path=/; SameSite=Strict; Secure';
   }
 }
 

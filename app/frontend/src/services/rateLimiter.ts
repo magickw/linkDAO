@@ -53,6 +53,13 @@ export class RateLimiter {
       decayAfterMs: 30 * 1000 // 30 seconds
     });
 
+    this.limits.set('recovery', {
+      maxAttempts: 3,
+      windowMs: 60 * 60 * 1000, // 1 hour
+      blockDurationMs: 2 * 60 * 60 * 1000, // 2 hours
+      decayAfterMs: 15 * 60 * 1000 // 15 minutes
+    });
+
     // Load states from localStorage
     this.loadStates();
 
@@ -323,7 +330,7 @@ export class RateLimiter {
 
     for (const [key, state] of this.states.entries()) {
       const config = this.limits.get(key.split(':')[0]);
-      
+
       if (!config) {
         keysToDelete.push(key);
         continue;
