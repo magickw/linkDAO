@@ -225,7 +225,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
       // Get participant profile to fetch avatar
       let participantAvatar: string | null = null;
-      if (getParticipantProfile) {
+      if (getParticipantProfile && participantAddress) {
         const profile = getParticipantProfile(participantAddress);
         if (profile?.avatarCid || profile?.profileCid) {
           participantAvatar = `https://ipfs.io/ipfs/${profile.avatarCid || profile.profileCid}`;

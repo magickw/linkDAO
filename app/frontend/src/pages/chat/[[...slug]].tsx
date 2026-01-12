@@ -148,8 +148,9 @@ export default function ChatPage() {
 
   // Helper function to get profile for a specific address
   const getParticipantProfile = useCallback((participantAddress: string): UserProfile | undefined => {
+    if (!participantAddress) return undefined;
     return participantProfiles?.find(
-      p => p.walletAddress.toLowerCase() === participantAddress.toLowerCase()
+      p => p.walletAddress && p.walletAddress.toLowerCase() === participantAddress.toLowerCase()
     );
   }, [participantProfiles]);
 
