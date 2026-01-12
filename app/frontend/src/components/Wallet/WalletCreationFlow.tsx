@@ -167,28 +167,28 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
 
   const handleComplete = async () => {
     // Check rate limit
-    const rateCheck = rateLimiter.isAllowed('wallet_creation', 'password_set');
+    const rateCheck = rateLimiter.isAllowed('wallet_creation', 'password');
     if (!rateCheck.allowed) {
-      const timeUntilUnblock = rateLimiter.getTimeUntilUnblocked('wallet_creation', 'password_set');
+      const timeUntilUnblock = rateLimiter.getTimeUntilUnblocked('wallet_creation', 'password');
       const minutes = Math.ceil((timeUntilUnblock || 0) / 60000);
       addToast(`Too many attempts. Please wait ${minutes} minutes.`, 'error');
       return;
     }
 
     if (!password || password !== confirmPassword) {
-      rateLimiter.recordAttempt('wallet_creation', 'password_set', false);
+      rateLimiter.recordAttempt('wallet_creation', 'password', false);
       addToast('Passwords do not match', 'error');
       return;
     }
 
     if (!isPasswordStrong(password)) {
-      rateLimiter.recordAttempt('wallet_creation', 'password_set', false);
+      rateLimiter.recordAttempt('wallet_creation', 'password', false);
       addToast('Password is not strong enough', 'error');
       return;
     }
 
     // Success - record attempt but don't block
-    rateLimiter.recordAttempt('wallet_creation', 'password_set', true);
+    rateLimiter.recordAttempt('wallet_creation', 'password', true);
 
     if (password.length < 8) {
       addToast('Password must be at least 8 characters', 'error');

@@ -4,6 +4,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { 
   ArrowLeft, 
+  ArrowRight,
   Clock, 
   CheckCircle, 
   XCircle, 
@@ -27,7 +28,10 @@ import {
   PieChart,
   Globe,
   Shield,
-  Plus
+  Plus,
+  BookOpen,
+  HelpCircle,
+  ChevronDown
 } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import { Proposal, ProposalStatus, VoteChoice } from '@/types/governance';
@@ -48,34 +52,39 @@ const GovernanceDashboard: NextPage = () => {
   const [participationRate, setParticipationRate] = useState(0);
   const [totalProposals, setTotalProposals] = useState(0);
 
-  // Load governance data
+  // Load governance overview data
   const loadGovernanceData = useCallback(async () => {
     if (!isConnected || !address) return;
     
     try {
       setIsLoading(true);
       
-      // Fetch real data from governance service
-      const [activeProposals, votingPower, participation] = await Promise.all([
-        governanceService.getAllActiveProposals(),
+      // Fetch overview metrics only (lighter data)
+      const [votingPower, participation] = await Promise.all([
         governanceService.getUserVotingPower('general', address),
         governanceService.getCommunityParticipationRate('general')
       ]);
       
-      setProposals(activeProposals);
+      // Get proposal counts instead of full proposal data
+      const activeCount = await getActiveProposalCount();
+      const totalCount = await getTotalProposalCount();
+      
       setUserVotingPower(votingPower);
       setParticipationRate(participation);
-      setTotalProposals(activeProposals.length);
+      setTotalProposals(totalCount);
+      
+      // Don't load full proposals here - keep it lightweight
+      setProposals([]);
       
     } catch (error) {
-      console.error('Error loading governance data:', error);
-      addToast('Failed to load governance data', 'error');
+      console.error('Error loading governance overview:', error);
+      addToast('Failed to load governance overview', 'error');
       
-      // Fallback to empty state
-      setProposals([]);
+      // Fallback values
       setUserVotingPower(0);
       setParticipationRate(0);
       setTotalProposals(0);
+      setProposals([]);
     } finally {
       setIsLoading(false);
     }
@@ -85,22 +94,70 @@ const GovernanceDashboard: NextPage = () => {
     loadGovernanceData();
   }, [loadGovernanceData]);
 
-  // Handle voting on proposals
-  const handleVote = async (proposalId: string, support: boolean) => {
-    if (!address) return;
-    
+  // Helper functions for lightweight data fetching
+  const getActiveProposalCount = async (): Promise<number> => {
     try {
-      const result = await governanceService.voteOnProposal(proposalId, support);
-      if (result.success) {
-        addToast('Vote submitted successfully!', 'success');
-        // Reload data to show updated vote counts
-        loadGovernanceData();
-      } else {
-        addToast(result.error || 'Failed to submit vote', 'error');
-      }
+      const proposals = await governanceService.getAllActiveProposals();
+      return proposals.length;
     } catch (error) {
-      console.error('Error voting:', error);
-      addToast('Failed to submit vote', 'error');
+      console.error('Error getting active proposal count:', error);
+      return 0;
+    }
+  };
+
+  // Fetch recent governance activity
+  const getRecentActivity = async () => {
+    try {
+      // TODO: Implement real API call to get recent governance events
+      // This should fetch recent proposals, votes, and governance actions
+      // const response = await fetch(`${ENV_CONFIG.BACKEND_URL}/api/governance/activity/recent`);
+      // return await response.json();
+      
+      // Return empty array until backend endpoint is ready
+      return [];
+    } catch (error) {
+      console.error('Error fetching recent activity:', error);
+      return [];
+    }
+  };
+
+  // Fetch top voters/community insights
+  const getCommunityInsights = async () => {
+    try {
+      // TODO: Implement real API call to get community voting statistics
+      // This should fetch top voters, participation rates, and trends
+      // const response = await fetch(`${ENV_CONFIG.BACKEND_URL}/api/governance/insights`);
+      // return await response.json();
+      
+      // Return empty data until backend endpoint is ready
+      return {
+        topVoters: [],
+        participationTrends: [],
+        successRates: null
+      };
+    } catch (error) {
+      console.error('Error fetching community insights:', error);
+      return {
+        topVoters: [],
+        participationTrends: [],
+        successRates: null
+      };
+    }
+  };
+
+  const getTotalProposalCount = async (): Promise<number> => {
+    try {
+      // TODO: Implement real API call to get total proposal count
+      // This should call a dedicated endpoint like:
+      // const response = await fetch(`${ENV_CONFIG.BACKEND_URL}/api/governance/proposals/count`);
+      // const data = await response.json();
+      // return data.totalCount;
+      
+      // For now, return 0 until backend endpoint is implemented
+      return 0;
+    } catch (error) {
+      console.error('Error getting total proposal count:', error);
+      return 0;
     }
   };
 
@@ -271,220 +328,218 @@ const GovernanceDashboard: NextPage = () => {
             
             {/* Tabs */}
             <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-              {(['active', 'past', 'delegation'] as const).map((tab) => (
+              {([
+                { key: 'active', label: 'Overview' },
+                { key: 'past', label: 'Resources' },
+                { key: 'delegation', label: 'Insights' }
+              ] as const).map((tab) => (
                 <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium capitalize transition-all ${
-                    activeTab === tab
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key as 'active' | 'past' | 'delegation')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                    activeTab === tab.key
                       ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
-                  {tab}
+                  {tab.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Active Proposals Tab */}
+          {/* Governance Overview Tab */}
           {activeTab === 'active' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Active Proposals</h2>
+            <div className="space-y-8">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Governance Overview</h2>
+                <p className="text-gray-600 dark:text-gray-400">Your gateway to decentralized decision-making</p>
+              </div>
+              
+              {/* Quick Actions Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <Link 
+                  href="/governance?tab=active" 
+                  className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all hover:border-blue-300 dark:hover:border-blue-500 group"
+                >
+                  <div className="flex items-center mb-3">
+                    <Vote className="w-8 h-8 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Active Proposals</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Participate in current governance decisions</p>
+                </Link>
+                
+                <Link 
+                  href="/governance?tab=ended" 
+                  className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all hover:border-green-300 dark:hover:border-green-500 group"
+                >
+                  <div className="flex items-center mb-3">
+                    <History className="w-8 h-8 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Past Decisions</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Review historical governance outcomes</p>
+                </Link>
+                
                 <Link 
                   href="/governance?tab=create" 
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center transition-colors"
+                  className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all hover:border-purple-300 dark:hover:border-purple-500 group"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Proposal
+                  <div className="flex items-center mb-3">
+                    <Plus className="w-8 h-8 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Create Proposal</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Submit your ideas for community voting</p>
+                </Link>
+                
+                <Link 
+                  href="/governance?tab=delegation" 
+                  className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all hover:border-yellow-300 dark:hover:border-yellow-500 group"
+                >
+                  <div className="flex items-center mb-3">
+                    <UserCheck className="w-8 h-8 text-yellow-600 dark:text-yellow-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Delegation</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Assign your voting power to trusted members</p>
                 </Link>
               </div>
               
-              {isLoading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 animate-pulse">
-                      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4"></div>
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2"></div>
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
-                    </div>
-                  ))}
+              {/* Governance Statistics */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center mb-3">
+                    <Vote className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Active Proposals</h3>
+                  <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{proposals.filter(p => p.status === ProposalStatus.ACTIVE).length}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Current voting opportunities</p>
                 </div>
-              ) : filteredProposals.length === 0 ? (
-                <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 border-dashed">
-                  <Vote className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No active proposals</h3>
-                  <p className="text-gray-500 dark:text-gray-400">
-                    {searchQuery ? 'Try adjusting your search terms.' : 'There are currently no active proposals.'}
-                  </p>
+                
+                <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl p-6 border border-green-200 dark:border-green-800">
+                  <div className="flex items-center mb-3">
+                    <Users className="w-8 h-8 text-green-600 dark:text-green-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Participation Rate</h3>
+                  <p className="text-3xl font-bold text-green-600 dark:text-green-400">{participationRate.toFixed(1)}%</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Community engagement level</p>
                 </div>
-              ) : (
-                <div className="grid gap-6">
-                  {filteredProposals.map((proposal) => (
-                    <div key={proposal.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl transition-shadow">
-                      <div className="p-6">
-                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              {getStatusBadge(proposal.status)}
-                              <span className="text-sm text-gray-500 dark:text-gray-400">
-                                Proposed by {proposal.proposerENS || `${proposal.proposer.substring(0, 6)}...${proposal.proposer.substring(38)}`}
-                              </span>
-                            </div>
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer">
-                              {proposal.title}
-                            </h3>
-                            <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
-                              {proposal.description}
-                            </p>
-                            
-                            {/* Tags */}
-                            {proposal.tags && (
-                              <div className="flex flex-wrap gap-2 mb-4">
-                                {proposal.tags.map((tag) => (
-                                  <span key={tag} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full">
-                                    {tag}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Time Remaining */}
-                          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 lg:ml-6">
-                            <Clock className="w-4 h-4 mr-1" />
-                            {getTimeRemaining(proposal.endTime)}
-                          </div>
+                
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-xl p-6 border border-purple-200 dark:border-purple-800">
+                  <div className="flex items-center mb-3">
+                    <History className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Total Proposals</h3>
+                  <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">{totalProposals}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Governance history</p>
+                </div>
+              </div>
+              
+              {/* Recent Activity - Will fetch real data */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Recent Governance Activity</h3>
+                  <Link 
+                    href="/governance" 
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium flex items-center"
+                  >
+                    View All
+                    <ArrowRight className="w-4 h-4 ml-1" />
+                  </Link>
+                </div>
+                
+                {isLoading ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg animate-pulse">
+                        <div className="flex-shrink-0 w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded-full mr-3"></div>
+                        <div className="flex-1">
+                          <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4 mb-2"></div>
+                          <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/2"></div>
                         </div>
-                        
-                        {/* Voting Progress */}
-                        <div className="mb-6">
-                          <div className="flex justify-between text-sm mb-2">
-                            <span className="text-gray-600 dark:text-gray-400">Voting Progress</span>
-                            <span className="font-medium text-gray-900 dark:text-white">
-                              {proposal.participationRate.toFixed(1)}% participation
-                            </span>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            {/* Progress bars */}
-                            <div className="flex items-center gap-4">
-                              <div className="flex-1">
-                                <div className="flex justify-between text-xs mb-1">
-                                  <span className="text-green-600 dark:text-green-400 font-medium">For</span>
-                                  <span className="text-gray-600 dark:text-gray-400">{formatNumber(proposal.forVotes)}</span>
-                                </div>
-                                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                  <div 
-                                    className="bg-green-500 h-2 rounded-full" 
-                                    style={{ 
-                                      width: `${(parseInt(proposal.forVotes) / (parseInt(proposal.forVotes) + parseInt(proposal.againstVotes) + parseInt(proposal.abstainVotes || '0'))) * 100}%` 
-                                    }}
-                                  ></div>
-                                </div>
-                              </div>
-                              
-                              <div className="flex-1">
-                                <div className="flex justify-between text-xs mb-1">
-                                  <span className="text-red-600 dark:text-red-400 font-medium">Against</span>
-                                  <span className="text-gray-600 dark:text-gray-400">{formatNumber(proposal.againstVotes)}</span>
-                                </div>
-                                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                  <div 
-                                    className="bg-red-500 h-2 rounded-full" 
-                                    style={{ 
-                                      width: `${(parseInt(proposal.againstVotes) / (parseInt(proposal.forVotes) + parseInt(proposal.againstVotes) + parseInt(proposal.abstainVotes || '0'))) * 100}%` 
-                                    }}
-                                  ></div>
-                                </div>
-                              </div>
-                              
-                              {proposal.abstainVotes && parseInt(proposal.abstainVotes) > 0 && (
-                                <div className="flex-1">
-                                  <div className="flex justify-between text-xs mb-1">
-                                    <span className="text-gray-600 dark:text-gray-400 font-medium">Abstain</span>
-                                    <span className="text-gray-600 dark:text-gray-400">{formatNumber(proposal.abstainVotes)}</span>
-                                  </div>
-                                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                    <div 
-                                      className="bg-gray-500 h-2 rounded-full" 
-                                      style={{ 
-                                        width: `${(parseInt(proposal.abstainVotes) / (parseInt(proposal.forVotes) + parseInt(proposal.againstVotes) + parseInt(proposal.abstainVotes))) * 100}%` 
-                                      }}
-                                    ></div>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* Quorum indicator */}
-                            <div className="flex items-center justify-between text-xs mt-2">
-                              <span className="text-gray-500 dark:text-gray-400">
-                                Quorum: {formatNumber(proposal.quorum)}
-                              </span>
-                              <div className={`flex items-center ${parseInt(proposal.forVotes) >= parseInt(proposal.quorum) ? 'text-green-600' : 'text-yellow-600'}`}>
-                                {parseInt(proposal.forVotes) >= parseInt(proposal.quorum) ? (
-                                  <>
-                                    <CheckCircle className="w-3 h-3 mr-1" />
-                                    Quorum Reached
-                                  </>
-                                ) : (
-                                  <>
-                                    <AlertCircle className="w-3 h-3 mr-1" />
-                                    Quorum Needed
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Action Buttons */}
-                        <div className="flex flex-wrap gap-3">
-                          {proposal.status === ProposalStatus.ACTIVE && proposal.canVote && (
-                            <>
-                              <button 
-                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium flex items-center transition-colors"
-                                onClick={() => handleVote(proposal.id, true)}
-                              >
-                                <ThumbsUp className="w-4 h-4 mr-2" />
-                                Vote For
-                              </button>
-                              <button 
-                                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium flex items-center transition-colors"
-                                onClick={() => handleVote(proposal.id, false)}
-                              >
-                                <ThumbsDown className="w-4 h-4 mr-2" />
-                                Vote Against
-                              </button>
-                            </>
-                          )}
-                          
-                          <button className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium flex items-center transition-colors">
-                            <ExternalLink className="w-4 h-4 mr-2" />
-                            View Details
-                          </button>
-                          
-                          {proposal.discussionUrl && (
-                            <button className="px-4 py-2 bg-blue-100 dark:bg-blue-900 hover:bg-blue-200 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-300 rounded-lg font-medium flex items-center transition-colors">
-                              <Globe className="w-4 h-4 mr-2" />
-                              Discuss
-                            </button>
-                          )}
-                        </div>
+                        <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-16"></div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Calendar className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
+                    <p className="text-gray-600 dark:text-gray-400">No recent activity to display</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Check back later for governance updates</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
-          {/* Past Proposals Tab */}
+          {/* Governance Resources Tab */}
           {activeTab === 'past' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Past Proposals</h2>
+            <div className="space-y-8">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Governance Resources</h2>
+                <p className="text-gray-600 dark:text-gray-400">Everything you need to participate effectively</p>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Governance Guide */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center mb-4">
+                    <BookOpen className="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Getting Started Guide</h3>
+                  </div>
+                  
+                  <div className="space-y-3 mb-6">
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3"></div>
+                      <p className="text-gray-700 dark:text-gray-300">Understand how governance works</p>
+                    </div>
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3"></div>
+                      <p className="text-gray-700 dark:text-gray-300">Learn about voting power and delegation</p>
+                    </div>
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3"></div>
+                      <p className="text-gray-700 dark:text-gray-300">Discover proposal creation best practices</p>
+                    </div>
+                  </div>
+                  
+                  <button className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                    Read Guide
+                  </button>
+                </div>
+                
+                {/* FAQ Section */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center mb-4">
+                    <HelpCircle className="w-6 h-6 text-green-600 dark:text-green-400 mr-3" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Frequently Asked Questions</h3>
+                  </div>
+                  
+                  <div className="space-y-4 mb-6">
+                    <details className="group">
+                      <summary className="font-medium text-gray-900 dark:text-white cursor-pointer flex items-center justify-between">
+                        How do I get voting power?
+                        <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
+                      </summary>
+                      <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
+                        Voting power is typically earned by holding LDAO tokens. The more tokens you hold, the more voting power you have.
+                      </p>
+                    </details>
+                    
+                    <details className="group">
+                      <summary className="font-medium text-gray-900 dark:text-white cursor-pointer flex items-center justify-between">
+                        What happens if I don't vote?
+                        <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
+                      </summary>
+                      <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
+                        You can delegate your voting power to someone you trust, or your tokens won't count toward the vote outcome.
+                      </p>
+                    </details>
+                  </div>
+                  
+                  <button className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors">
+                    View All FAQs
+                  </button>
+                </div>
+              </div>
               
               {isLoading ? (
                 <div className="text-center py-12">
@@ -575,10 +630,108 @@ const GovernanceDashboard: NextPage = () => {
             </div>
           )}
 
-          {/* Delegation Tab */}
+          {/* Community Insights Tab */}
           {activeTab === 'delegation' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Delegation</h2>
+            <div className="space-y-8">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Community Insights</h2>
+                <p className="text-gray-600 dark:text-gray-400">Understanding our governance ecosystem</p>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Top Voters */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center mb-4">
+                    <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400 mr-3" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Most Active Voters</h3>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {isLoading ? (
+                      <>
+                        {[1, 2, 3].map((i) => (
+                          <div key={i} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded-lg animate-pulse">
+                            <div className="flex items-center">
+                              <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 mr-3"></div>
+                              <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-24"></div>
+                            </div>
+                            <div className="text-right">
+                              <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-12 mb-1"></div>
+                              <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-8"></div>
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    ) : (
+                      <div className="text-center py-4">
+                        <Users className="w-8 h-8 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                        <p className="text-gray-600 dark:text-gray-400 text-sm">Voter data not available</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Voting Trends */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center mb-4">
+                    <BarChart3 className="w-6 h-6 text-orange-600 dark:text-orange-400 mr-3" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Voting Trends</h3>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-600 dark:text-gray-400">Participation Rate</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{participationRate.toFixed(1)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div 
+                          className="bg-orange-500 h-2 rounded-full" 
+                          style={{ width: `${participationRate}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-600 dark:text-gray-400">Proposal Success Rate</span>
+                        <span className="font-medium text-gray-900 dark:text-white">--</span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div 
+                          className="bg-gray-400 h-2 rounded-full" 
+                          style={{ width: '0%' }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Quick Stats */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center mb-4">
+                    <Award className="w-6 h-6 text-yellow-600 dark:text-yellow-400 mr-3" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Quick Stats</h3>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalProposals}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">Total Proposals</div>
+                    </div>
+                    
+                    <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">--</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">Avg Voting Period</div>
+                    </div>
+                    
+                    <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                      <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">--</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">Quorum Achievement</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Delegate Your Votes */}
@@ -654,36 +807,31 @@ const GovernanceDashboard: NextPage = () => {
                 </div>
               </div>
               
-              {/* Top Delegates */}
+              {/* Top Delegates - Will fetch real data */}
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center mb-4">
                   <Trophy className="w-6 h-6 text-yellow-600 dark:text-yellow-400 mr-3" />
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Top Community Delegates</h3>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {[
-                    { rank: 1, name: 'vitalik.dao.eth', votes: '250K', reputation: 98 },
-                    { rank: 2, name: 'maker.dao.eth', votes: '180K', reputation: 95 },
-                    { rank: 3, name: 'compound.dao.eth', votes: '150K', reputation: 92 }
-                  ].map((delegate) => (
-                    <div key={delegate.rank} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                      <div className="flex items-center justify-center mb-2">
-                        <Trophy className={`w-5 h-5 mr-1 ${
-                          delegate.rank === 1 ? 'text-yellow-500' : 
-                          delegate.rank === 2 ? 'text-gray-400' : 'text-amber-700'
-                        }`} />
-                        <span className="font-bold text-lg">#{delegate.rank}</span>
+                {isLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center animate-pulse">
+                        <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-1/3 mx-auto mb-3"></div>
+                        <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4 mx-auto mb-2"></div>
+                        <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/2 mx-auto mb-3"></div>
+                        <div className="h-5 bg-gray-200 dark:bg-gray-600 rounded w-2/3 mx-auto"></div>
                       </div>
-                      <div className="font-medium text-gray-900 dark:text-white mb-1">{delegate.name}</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">{formatNumber(delegate.votes)} votes</div>
-                      <div className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                        <Target className="w-3 h-3 mr-1" />
-                        {delegate.reputation}% reputation
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Trophy className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
+                    <p className="text-gray-600 dark:text-gray-400">Delegate data not available</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Real-time delegate rankings coming soon</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
