@@ -137,6 +137,16 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
+  console.log('MessagingInterface Render:', {
+    conversationId,
+    participantName,
+    participantAddress,
+    isViewingDM,
+    selectedDM,
+    dmConversation: dmConversations.find(dm => dm.id === selectedDM),
+    parentParticipantNameProp: participantName
+  });
+
   // Add typing timeout ref for channel messages
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -189,7 +199,9 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     if (!hookConversations) return;
     const mapped: DirectMessageConversation[] = hookConversations.map(c => ({
       id: c.id,
-      participant: Array.isArray(c.participants) ? c.participants[0] : (c.participants as any),
+      participant: Array.isArray(c.participants)
+        ? (c.participants.find((p: any) => p !== address) || c.participants[0])
+        : (c.participants as any),
       participantEnsName: undefined,
       isOnline: false,
       isTyping: false,
@@ -205,7 +217,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     }));
 
     setDmConversations(mapped);
-  }, [hookConversations]);
+  }, [hookConversations, address]);
 
   // When viewing a DM, load messages via hook
   useEffect(() => {
