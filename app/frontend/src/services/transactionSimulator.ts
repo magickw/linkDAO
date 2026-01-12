@@ -32,7 +32,8 @@ export const simulateTransaction = async (
   to: `0x${string}`,
   data: `0x${string}`,
   value: bigint = 0n,
-  options: SimulationOptions = {}
+  options: SimulationOptions = {},
+  from?: `0x${string}`
 ): Promise<SimulationResult> => {
   const warnings: string[] = [];
 
@@ -42,7 +43,7 @@ export const simulateTransaction = async (
       to,
       data,
       value,
-      account: to, // Use 'to' as account for estimation
+      account: from || to, // Use 'from' if provided, otherwise 'to'
     });
 
     // Simulate the call
@@ -50,7 +51,7 @@ export const simulateTransaction = async (
       to,
       data,
       value,
-      account: to,
+      account: from || to,
     });
 
     // Calculate estimated cost
@@ -61,7 +62,7 @@ export const simulateTransaction = async (
 
     return {
       success: true,
-      gasUsed: result.gasUsed || 0n,
+      gasUsed: gasEstimate, // Use estimate as proxy for gas used
       gasEstimate,
       warnings,
       estimatedCost: {

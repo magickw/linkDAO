@@ -385,8 +385,16 @@ function parseEther(eth: string): bigint {
 if (typeof window !== 'undefined') {
   // Initialize in browser environment
   loadFromLocalStorage();
+  
   // Fetch fresh data in background (don't block)
   refreshMaliciousAddresses().catch(() => {
     // Ignore initialization errors
   });
+
+  // Periodically update every 4 hours
+  setInterval(() => {
+    refreshMaliciousAddresses().catch((err) => {
+      console.warn('Failed to update malicious addresses:', err);
+    });
+  }, 4 * 60 * 60 * 1000);
 }

@@ -101,8 +101,40 @@ router.get('/api/messages/conversations', authMiddleware, (_req: Request, res: R
   res.status(500).json({ error: 'Use /api/chat/conversations' });
 });
 
-router.get('/api/messaging/conversations', authMiddleware, (_req: Request, res: Response) => {
-  res.status(500).json({ error: 'Use /api/chat/conversations' });
+router.get('/api/messaging/conversations', authMiddleware, async (_req: Request, res: Response) => {
+  try {
+    if (hasDb) {
+      try {
+        const rows = await db.select({
+          id: conversations.id,
+          title: conversations.title,
+          subject: conversations.subject,
+          participants: conversations.participants,
+          lastMessageId: conversations.lastMessageId,
+          lastActivity: conversations.lastActivity,
+          unreadCount: conversations.unreadCount,
+          createdAt: conversations.createdAt,
+        }).from(conversations).orderBy(desc(conversations.lastActivity));
+
+        safeLogger.info(`[compatibilityChat] Successfully fetched ${rows.length} conversations from DB`);
+        return res.json(rows);
+      } catch (dbError) {
+        safeLogger.error('[compatibilityChat] DB error fetching conversations', {
+          error: dbError instanceof Error ? dbError.message : String(dbError),
+          stack: dbError instanceof Error ? dbError.stack : undefined
+        });
+        return res.status(500).json({ error: 'Database error fetching conversations' });
+      }
+    }
+
+    return res.status(500).json({ error: 'Database Not Available' });
+  } catch (error) {
+    safeLogger.error('[compatibilityChat] Unexpected error in conversations endpoint', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
 // POST endpoint for creating conversations (matches frontend expectation)
@@ -344,7 +376,7 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
         try {
           const { getWebSocketService } = require('../services/webSocketService');
           const wsService = getWebSocketService();
-          
+
           if (wsService) {
             // We need participants to broadcast to
             try {
@@ -361,7 +393,7 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
                 deliveryStatus: 'sent'
               };
 
-              safeLogger.info('[compatibilityChat] Broadcasting message', { conversationId, participantCount: participants?.length });
+              safeLogger.info('[compatibilityChat] Broadcasting message', { conversationId, participantCount: (participants as string[] | undefined)?.length ?? 0 });
 
               // 1. Send to conversation room
               wsService.sendToConversation(conversationId, 'new_message', broadcastMsg);

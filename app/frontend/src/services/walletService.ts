@@ -886,6 +886,47 @@ export class WalletService {
   }
 
   /**
+   * Resolve ENS name to address
+   */
+  async resolveEnsName(name: string): Promise<string | null> {
+    if (this.chainId !== 1 && this.chainId !== 11155111) {
+      // ENS is primarily on Mainnet and Sepolia
+      // However, for other chains, we could use a Mainnet provider if we had one handy.
+      // For now, restrict to supported chains to avoid errors.
+      return null;
+    }
+
+    try {
+      const address = await this.publicClient.getEnsAddress({
+        name: name,
+      });
+      return address;
+    } catch (error) {
+      console.warn('ENS resolution failed:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Lookup ENS name from address
+   */
+  async lookupEnsAddress(address: Address): Promise<string | null> {
+    if (this.chainId !== 1 && this.chainId !== 11155111) {
+      return null;
+    }
+
+    try {
+      const name = await this.publicClient.getEnsName({
+        address: address,
+      });
+      return name;
+    } catch (error) {
+      console.warn('ENS lookup failed:', error);
+      return null;
+    }
+  }
+
+  /**
    * Get portfolio performance data (mock implementation for now)
    */
   async getPortfolioPerformance(address: Address, timeframe: '1d' | '1w' | '1m' | '1y' = '1d'): Promise<{

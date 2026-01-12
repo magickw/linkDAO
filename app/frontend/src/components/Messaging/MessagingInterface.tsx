@@ -1100,14 +1100,14 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   {participantAvatar ? (
                     <img
                       src={participantAvatar}
-                                          alt={participantName || "User"}
-                                          className="w-full h-full object-cover"
-                                          onError={(e) => {
-                                            e.currentTarget.style.display = 'none';
-                                            e.currentTarget.parentElement?.classList.remove('overflow-hidden');
-                                            e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'justify-center');
-                                            const icon = document.createElement('div');
-                                            icon.innerHTML = DOMPurify.sanitize('<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>');                        e.currentTarget.parentElement?.appendChild(icon.firstChild!);
+                      alt={participantName || "User"}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.parentElement?.classList.remove('overflow-hidden');
+                        e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'justify-center');
+                        const icon = document.createElement('div');
+                        icon.innerHTML = DOMPurify.sanitize('<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'); e.currentTarget.parentElement?.appendChild(icon.firstChild!);
                       }}
                     />
                   ) : (
@@ -1171,7 +1171,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
               // Resolve sender profile for avatar and name
               let senderProfile: UserProfile | undefined;
               let senderAvatarUrl: string | null = null;
-              let senderDisplayName: string = message.fromAddress.slice(0, 6) + '...' + message.fromAddress.slice(-4);
+              let senderDisplayName: string = message.fromAddress ? (message.fromAddress.slice(0, 6) + '...' + message.fromAddress.slice(-4)) : 'Unknown';
 
               if (message.fromAddress === address) {
                 senderDisplayName = 'You';

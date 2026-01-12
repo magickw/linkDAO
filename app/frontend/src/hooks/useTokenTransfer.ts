@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react';
 import { useSendTransaction, useWriteContract, useChainId, useAccount, useConfig } from 'wagmi';
-import { parseUnits } from 'viem';
+import { parseUnits, encodeFunctionData } from 'viem';
+import { SecureKeyStorage } from '../security/secureKeyStorage';
+import { localWalletTransactionService } from '../services/localWalletTransactionService';
 
 const ERC20_TRANSFER_ABI = [
     {
@@ -21,6 +23,7 @@ interface TransferOptions {
     amount: string;
     decimals?: number;
     chainId?: number; // Optional chain ID, defaults to current connected chain
+    password?: string; // Optional password for local wallet
 }
 
 export function useTokenTransfer() {
@@ -42,7 +45,7 @@ export function useTokenTransfer() {
         isPending: isErc20Pending
     } = useWriteContract();
 
-    const transfer = useCallback(async ({ tokenAddress, recipient, amount, decimals = 18, chainId }: TransferOptions & { chainId?: number }) => {
+    const transfer = useCallback(async ({ tokenAddress, recipient, amount, decimals = 18, chainId, password }: TransferOptions & { chainId?: number, password?: string }) => {
         setIsPending(true);
         setTxHash(null);
 
@@ -55,12 +58,51 @@ export function useTokenTransfer() {
             // Parse amount
             const amountBigInt = parseUnits(amount, decimals);
 
-            let hash: `0x${string}`;
-
             // Check if Native Token (ETH)
             const isNative = !tokenAddress ||
                 tokenAddress === '0x0000000000000000000000000000000000000000' ||
                 tokenAddress.toLowerCase() === 'eth';
+
+            const activeLocalWallet = SecureKeyStorage.getActiveWallet();
+
+            // Local Wallet Transaction
+            if (activeLocalWallet && password) {
+                const targetChainId = chainId || currentChainId;
+                let data = '0x';
+                let to = recipient;
+                let value = amountBigInt;
+
+                if (!isNative) {
+                    // ERC20 Transfer
+                    to = tokenAddress!;
+                    value = 0n;
+                    data = encodeFunctionData({
+                        abi: ERC20_TRANSFER_ABI,
+                        functionName: 'transfer',
+                        args: [recipient as `0x${string}`, amountBigInt]
+                    });
+                }
+
+                const result = await localWalletTransactionService.sendTransaction({
+                    to,
+                    value,
+                    data,
+                    chainId: targetChainId,
+                    walletAddress: activeLocalWallet,
+                    password
+                });
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Transaction failed');
+                }
+
+                const hash = result.hash as `0x${string}`;
+                setTxHash(hash);
+                return hash;
+            }
+
+            // Wagmi Transaction (Injected Wallet)
+            let hash: `0x${string}`;
 
             if (isNative) {
                 hash = await sendTransactionAsync({
@@ -71,7 +113,6 @@ export function useTokenTransfer() {
             } else {
                 // For ERC20 transfers on a different chain, we need to get the correct chain config
                 const targetChainId = chainId || currentChainId;
-                const targetChain = config.chains.find(c => c.id === targetChainId);
                 
                 hash = await writeContractAsync({
                     address: tokenAddress as `0x${string}`,

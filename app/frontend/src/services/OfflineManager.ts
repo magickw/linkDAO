@@ -35,13 +35,13 @@ export class OfflineManager {
   private constructor() {
     // Check if we're in a browser environment before accessing window
     const isBrowser = typeof window !== 'undefined';
-    
+
     if (isBrowser) {
       this.initializeEventListeners();
       this.loadQueueFromStorage();
       this.startPeriodicSync();
     }
-    
+
     // Initialize online status based on environment
     this.state.isOnline = isBrowser ? navigator.onLine : true;
   }
@@ -59,7 +59,7 @@ export class OfflineManager {
   private initializeEventListeners(): void {
     // Check if we're in a browser environment
     const isBrowser = typeof window !== 'undefined';
-    
+
     if (isBrowser && typeof window !== 'undefined') {
       window.addEventListener('online', this.handleOnline.bind(this));
       window.addEventListener('offline', this.handleOffline.bind(this));
@@ -295,14 +295,16 @@ export class OfflineManager {
     }
   }
 
-  /**
-   * Execute send message action
-   */
   private async executeSendMessage(payload: any): Promise<void> {
-    const response = await fetch('/api/chat/messages', {
+    const { conversationId, ...messageData } = payload;
+    if (!conversationId) {
+      throw new Error('conversationId is required for sending messages');
+    }
+
+    const response = await fetch(`/api/messaging/conversations/${conversationId}/messages`, {
       method: 'POST',
       headers: await enhancedAuthService.getAuthHeaders(),
-      body: JSON.stringify(payload)
+      body: JSON.stringify(messageData)
     });
 
     if (!response.ok) {

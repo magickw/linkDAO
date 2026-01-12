@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Fragment, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { Listbox, Transition } from '@headlessui/react';
-import { Check, ChevronDown, AlertTriangle, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Check, ChevronDown, AlertTriangle, ShieldCheck, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 import { TokenBalance } from '../../types/wallet';
 import { useToast } from '@/context/ToastContext';
 import { useTokenTransfer } from '../../hooks/useTokenTransfer';
@@ -9,6 +9,7 @@ import { useNetworkSwitch, CHAIN_NAMES } from '../../hooks/useNetworkSwitch';
 import { getTokenLogoWithFallback } from '@/utils/tokenLogoUtils';
 import { isAddress, parseUnits, formatEther, encodeFunctionData } from 'viem';
 import { useEstimateGas } from 'wagmi';
+import { SecureKeyStorage } from '../../security/secureKeyStorage';
 
 // Basic ERC20 ABI for transfer encoding
 const ERC20_TRANSFER_ABI = [
@@ -55,6 +56,11 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
   const [recipient, setRecipient] = useState('');
   const [error, setError] = useState('');
   const [selectedChainId, setSelectedChainId] = useState<number>(currentChainId);
+  
+  // Local Wallet State
+  const [isLocalWallet, setIsLocalWallet] = useState(false);
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Define available networks with icons
   const networks = [
@@ -67,7 +73,7 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
   ];
 
   const selectedNetwork = networks.find(network => network.id === selectedChainId) || networks[0];
-  const needsNetworkSwitch = selectedChainId !== currentChainId;
+  const needsNetworkSwitch = selectedChainId !== currentChainId && !isLocalWallet; // Don't enforce switch for local wallet (handled by service)
 
   const selectedToken = tokens.find(t => t.symbol === selectedTokenSymbol);
   const maxAmount = selectedToken ? getTokenBalanceForChain(selectedToken, selectedChainId) : 0;
@@ -76,11 +82,19 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
   // Determine if native token (ETH/MATIC)
   const isNative = useMemo(() => {
     if (!selectedToken) return true;
-    return !selectedToken.address ||
-      selectedToken.address === '0x0000000000000000000000000000000000000000' ||
+    return !selectedToken.contractAddress ||
+      selectedToken.contractAddress === '0x0000000000000000000000000000000000000000' ||
       (selectedChainId === 137 && selectedToken.symbol === 'MATIC') ||
       (selectedToken.symbol === 'ETH' && selectedChainId !== 137); // Simple heuristic
   }, [selectedToken, selectedChainId]);
+
+  // Check for local wallet on mount/open
+  useEffect(() => {
+    if (isOpen) {
+      const active = SecureKeyStorage.getActiveWallet();
+      setIsLocalWallet(!!active);
+    }
+  }, [isOpen]);
 
   // Prepare transaction data for gas estimation
   const estimateParams = useMemo(() => {
@@ -116,7 +130,7 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
   const { data: gasData, error: gasError, isLoading: isGasLoading } = useEstimateGas({
     ...estimateParams,
     query: {
-      enabled: !!estimateParams && !needsNetworkSwitch, // Don't estimate if we need to switch network first (RPC mismatch)
+      enabled: !!estimateParams && !needsNetworkSwitch && !isLocalWallet, // Don't estimate via wagmi if local wallet (handled by service simulation)
       retry: false
     }
   });
@@ -151,6 +165,8 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
       setAmount('');
       setRecipient('');
       setError('');
+      setPassword('');
+      setShowPassword(false);
     }
   }, [isOpen]);
 
@@ -180,6 +196,11 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
       return;
     }
 
+    if (isLocalWallet && !password) {
+      setError('Password is required for local wallet transactions');
+      return;
+    }
+
     if (parseFloat(amount) > maxAmount) {
       setError(`Insufficient balance on ${selectedNetwork.name}. Available: ${maxAmount.toFixed(4)} ${selectedTokenSymbol}`);
       return;
@@ -204,8 +225,8 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
 
     setError('');
 
-    // Auto-switch network if needed
-    if (needsNetworkSwitch) {
+    // Auto-switch network if needed (only for injected wallets)
+    if (needsNetworkSwitch && !isLocalWallet) {
       const switchResult = await ensureNetwork(selectedChainId);
       if (!switchResult.success) {
         setError(switchResult.error || 'Failed to switch network');
@@ -221,7 +242,8 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
         recipient,
         amount,
         decimals: selectedTokenSymbol === 'USDC' ? 6 : 18, // Simple heuristic
-        chainId: selectedChainId
+        chainId: selectedChainId,
+        password: isLocalWallet ? password : undefined
       });
 
       if (hash) {
@@ -255,6 +277,7 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Send Tokens</h2>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Connected: {getChainName(currentChainId)}
+              {isLocalWallet && ' (Local Wallet)'}
             </p>
           </div>
           <button
@@ -346,7 +369,7 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
               </Listbox>
 
               {/* Network switch indicator */}
-              {needsNetworkSwitch && (
+              {needsNetworkSwitch && !isLocalWallet && (
                 <div className="mt-2 flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                   <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -495,8 +518,36 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
             )}
           </div>
 
+          {/* Password Input for Local Wallet */}
+          {isLocalWallet && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Wallet Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your wallet password"
+                  className="w-full p-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Required to sign the transaction with your local wallet
+              </p>
+            </div>
+          )}
+
           {/* Gas Estimation & Simulation */}
-          {estimateParams && !needsNetworkSwitch && (
+          {estimateParams && !needsNetworkSwitch && !isLocalWallet && (
             <div className={`p-3 rounded-lg text-sm border ${gasError
                 ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                 : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
@@ -549,7 +600,7 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
           {/* Submit Button */}
           <button
             onClick={handleSend}
-            disabled={isPending || isSwitching || !amount || !recipient || !!gasError || isGasLoading}
+            disabled={isPending || isSwitching || !amount || !recipient || (!!gasError && !isLocalWallet) || (isGasLoading && !isLocalWallet)}
             className="w-full py-3.5 px-4 bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
           >
             {isSwitching ? (
@@ -564,12 +615,12 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
               </>
             ) : (
               <>
-                {needsNetworkSwitch && (
+                {needsNetworkSwitch && !isLocalWallet && (
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 )}
-                {needsNetworkSwitch ? `Switch & Send ${selectedTokenSymbol}` : `Send ${selectedTokenSymbol}`}
+                {needsNetworkSwitch && !isLocalWallet ? `Switch & Send ${selectedTokenSymbol}` : `Send ${selectedTokenSymbol}`}
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>

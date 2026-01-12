@@ -292,7 +292,7 @@ class UnifiedMessagingService {
     }
 
     try {
-      const response = await this.makeRequest(`/api/messaging/conversations/${conversationId}`);
+      const response = await this.makeRequest(`/api/chat/conversations/${conversationId}`);
       if (!response.ok) {
         if (response.status === 404) return null;
         throw new Error(`Failed to fetch conversation: ${response.statusText}`);
@@ -1100,7 +1100,7 @@ class UnifiedMessagingService {
       offset: offset.toString()
     });
 
-    const response = await this.makeRequest(`/api/messaging/conversations?${params}`);
+    const response = await this.makeRequest(`/api/chat/conversations?${params}`);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch conversations: ${response.statusText}`);

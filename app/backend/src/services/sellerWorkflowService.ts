@@ -66,30 +66,12 @@ export class SellerWorkflowService {
                 walletAddress: user.walletAddress
             });
 
-            const orders = await this.orderService.getOrdersByUser(user.walletAddress);
+            // Pass 'seller' role to only fetch orders where user is the seller
+            const sellerOrders = await this.orderService.getOrdersByUser(user.walletAddress, 'seller');
 
-            safeLogger.info('[SellerWorkflowService] Raw orders retrieved', {
-                count: orders.length,
+            safeLogger.info('[SellerWorkflowService] Seller orders retrieved', {
+                count: sellerOrders.length,
                 userAddress: user.walletAddress
-            });
-
-            // We need to filter for seller role - compare wallet addresses
-            const sellerOrders = orders.filter(o => {
-                const isMatch = o.sellerWalletAddress?.toLowerCase() === user.walletAddress.toLowerCase();
-                if (!isMatch) {
-                    // Optional: log mismatch for debugging if needed
-                    // safeLogger.debug('Filtering out order', { 
-                    //    orderId: o.id, 
-                    //    orderSeller: o.sellerWalletAddress, 
-                    //    userAddress: user.walletAddress 
-                    // });
-                }
-                return isMatch;
-            });
-
-            safeLogger.info('[SellerWorkflowService] Filtered seller orders', {
-                total: orders.length,
-                sellerOrders: sellerOrders.length
             });
 
             // Transform orders to match SellerOrder frontend interface
