@@ -117,6 +117,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
     { name: 'Communities', href: '/communities', icon: '👥' },
     { name: 'Governance', href: '/governance', icon: '🗳️' },
     { name: 'Marketplace', href: '/marketplace', icon: '🛒' },
+    { name: 'Wallet', href: '/wallet/manage', icon: '💼' },
     // Docs removed from navbar - moved to footer
   ]), []);
 

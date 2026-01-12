@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { Upload, Key, FileText, Eye, EyeOff, CheckCircle, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react';
-import { validateMnemonic, deriveAddress } from '@/utils/cryptoUtils';
+import { validateMnemonic, derivePrivateKeyFromMnemonic, deriveAddressFromPrivateKey } from '@/utils/bip39Utils';
 import { SecureKeyStorage } from '@/security/secureKeyStorage';
 import { useToast } from '@/context/ToastContext';
 
@@ -86,11 +86,11 @@ export const WalletImportFlow: React.FC<WalletImportFlowProps> = ({
       let address = '';
 
       if (importMethod === 'mnemonic') {
-        // Derive private key from mnemonic (simplified - use proper BIP-39 in production)
-        privateKeyToUse = privateKey; // In production, derive from mnemonic
-        address = deriveAddress(privateKeyToUse);
+        // Derive private key from mnemonic using proper BIP-39
+        privateKeyToUse = derivePrivateKeyFromMnemonic(mnemonic, "m/44'/60'/0'/0/0", 0);
+        address = deriveAddressFromPrivateKey(privateKeyToUse);
       } else if (importMethod === 'privateKey') {
-        address = deriveAddress(privateKeyToUse);
+        address = deriveAddressFromPrivateKey(privateKeyToUse);
       } else {
         throw new Error('Hardware wallet import not yet implemented');
       }

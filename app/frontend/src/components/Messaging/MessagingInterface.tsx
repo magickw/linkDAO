@@ -137,15 +137,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
-  console.log('MessagingInterface Render:', {
-    conversationId,
-    participantName,
-    participantAddress,
-    isViewingDM,
-    selectedDM,
-    dmConversation: dmConversations.find(dm => dm.id === selectedDM),
-    parentParticipantNameProp: participantName
-  });
+
 
   // Add typing timeout ref for channel messages
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);

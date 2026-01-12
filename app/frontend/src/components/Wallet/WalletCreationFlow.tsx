@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Eye, EyeOff, Copy, CheckCircle, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react';
-import { generateMnemonic, validateMnemonic, generatePrivateKey, deriveAddress } from '@/utils/cryptoUtils';
+import { generateMnemonic, validateMnemonic, derivePrivateKeyFromMnemonic, deriveAddressFromPrivateKey } from '@/utils/bip39Utils';
 import { SecureKeyStorage } from '@/security/secureKeyStorage';
 import { useToast } from '@/context/ToastContext';
 
@@ -115,9 +115,9 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
     setIsCreating(true);
 
     try {
-      // Generate private key from mnemonic (simplified - use proper BIP-39 in production)
-      const privateKey = generatePrivateKey();
-      const address = deriveAddress(privateKey);
+      // Derive private key from mnemonic using proper BIP-39
+      const privateKey = derivePrivateKeyFromMnemonic(mnemonic, "m/44'/60'/0'/0/0", 0);
+      const address = deriveAddressFromPrivateKey(privateKey);
 
       // Store wallet securely
       await SecureKeyStorage.storeWallet(address, privateKey, password, {
