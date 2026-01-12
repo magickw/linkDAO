@@ -5,6 +5,7 @@
 
 import { encrypt, decrypt } from '@/utils/cryptoUtils';
 import { wipeString } from '@/utils/secureMemory';
+import { rateLimiter } from '@/services/rateLimiter';
 
 export interface EncryptedWalletData {
   address: string;
@@ -140,12 +141,24 @@ export class SecureKeyStorage {
       const metadataData = localStorage.getItem(metadataKey);
       const metadata = metadataData ? JSON.parse(metadataData) : undefined;
 
-      const result = { privateKey, mnemonic, metadata };
+      // Convert to secure buffers for proper memory clearing
+      const privateKeyBuffer = privateKey ? stringToSecureBuffer(privateKey) : null;
+      const mnemonicBuffer = mnemonic ? stringToSecureBuffer(mnemonic) : null;
 
-      // Attempt to wipe sensitive data from memory
-      // Note: In JS strings are immutable, so this is a best-effort approach
-      if (privateKey) wipeString(privateKey);
-      if (mnemonic) wipeString(mnemonic);
+      // Create result with secure buffers
+      const result = {
+        privateKey: privateKeyBuffer ? secureBufferToString(privateKeyBuffer) : null,
+        mnemonic: mnemonicBuffer ? secureBufferToString(mnemonicBuffer) : null,
+        metadata
+      };
+
+      // Securely wipe the buffers
+      if (privateKeyBuffer) {
+        privateKeyBuffer.fill(0);
+      }
+      if (mnemonicBuffer) {
+        mnemonicBuffer.fill(0);
+      }
 
       return result;
     } catch (error) {
@@ -225,10 +238,25 @@ export class SecureKeyStorage {
    */
   static async verifyPassword(address: string, password: string): Promise<boolean> {
     try {
+      // Check rate limit before verifying password
+      const rateCheck = rateLimiter.isAllowed(address.toLowerCase(), 'password');
+      if (!rateCheck.allowed) {
+        const timeUntilUnblock = rateLimiter.getTimeUntilUnblocked(address.toLowerCase(), 'password');
+        const minutes = Math.ceil((timeUntilUnblock || 0) / 60000);
+        throw new Error(`Too many password attempts. Please try again in ${minutes} minutes.`);
+      }
+
       const { privateKey } = await this.getWallet(address, password);
-      return !!privateKey;
-    } catch {
-      return false;
+      const isValid = !!privateKey;
+
+      // Record attempt (success or failure)
+      rateLimiter.recordAttempt(address.toLowerCase(), 'password', isValid);
+
+      return isValid;
+    } catch (error: any) {
+      // Record failed attempt
+      rateLimiter.recordAttempt(address.toLowerCase(), 'password', false);
+      throw error;
     }
   }
 

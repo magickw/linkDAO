@@ -3,6 +3,8 @@
  * Handles WebSocket connections with automatic reconnection, heartbeat, and fallback mechanisms
  */
 
+import { webSocketAuthService } from '../webSocketAuthService';
+
 type WebSocketConfig = {
   url: string;
   fallbackUrls?: string[];
@@ -27,11 +29,13 @@ export class WebSocketManager {
   private fallbackUrls: string[] = [];
   private currentUrlIndex = 0;
   private messageQueue: any[] = [];
+  private connectionId: string;
   private readonly options: Required<WebSocketConfig['options']>;
 
   private constructor(config: WebSocketConfig) {
     this.currentUrl = config.url;
     this.fallbackUrls = config.fallbackUrls || [];
+    this.connectionId = `ws_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     this.options = {
       reconnectAttempts: config.options?.reconnectAttempts || 10,
       reconnectInterval: config.options?.reconnectInterval || 1000,
@@ -80,12 +84,24 @@ export class WebSocketManager {
         this.state = 'CONNECTING';
         this.socket = new WebSocket(this.currentUrl);
 
-        this.socket.onopen = () => {
+        this.socket.onopen = async () => {
           this.state = 'CONNECTED';
           this.reconnectAttempt = 0;
-          this.startHeartbeat();
-          this.processMessageQueue();
-          resolve();
+
+          // Authenticate the connection
+          const isAuthenticated = await webSocketAuthService.authenticate(this.connectionId);
+          if (isAuthenticated) {
+            const authMessage = webSocketAuthService.createAuthMessage(this.connectionId);
+            if (authMessage) {
+              this.socket?.send(JSON.stringify(authMessage));
+            }
+            this.startHeartbeat();
+            this.processMessageQueue();
+          } else {
+            console.error('WebSocket authentication failed');
+            this.handleDisconnection();
+            reject(new Error('Authentication failed'));
+          }
         };
 
         this.socket.onclose = () => {
@@ -159,9 +175,24 @@ export class WebSocketManager {
   private handleMessage(event: MessageEvent) {
     try {
       const data = JSON.parse(event.data);
+
+      // Handle heartbeat response
       if (data.type === 'pong') {
-        return; // Heartbeat response
+        return;
       }
+
+      // Validate message from authenticated connection
+      if (!webSocketAuthService.validateMessage(data, this.connectionId)) {
+        console.error('Invalid or unauthorized WebSocket message:', data);
+        return;
+      }
+
+      // Check rate limit
+      if (!webSocketAuthService.checkRateLimit(this.connectionId)) {
+        console.error('WebSocket rate limit exceeded');
+        return;
+      }
+
       // Handle other message types
       this.emit('message', data);
     } catch (error) {

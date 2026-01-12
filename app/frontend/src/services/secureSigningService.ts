@@ -9,7 +9,8 @@ import { SecureKeyStorage } from '@/security/secureKeyStorage';
 import { detectPhishing } from '@/security/phishingDetector';
 import { validateTransaction, validateGasParameters } from '@/security/transactionValidator';
 import { PublicClient } from 'viem';
-import { secureClear, wipeString } from '@/utils/secureMemory';
+import { secureClear, wipeString, stringToSecureBuffer, secureBufferToString } from '@/utils/secureMemory';
+import { simulateTransaction, SimulationResult } from '@/services/transactionSimulator';
 
 export interface SigningRequest {
   to: `0x${string}`;
@@ -73,14 +74,25 @@ export class SecureSigningService {
 
       // Use secureClear to wipe private key after use
       const result = await secureClear(async () => {
-        // Security checks
+        // Security checks - phishing detection
         const phishingCheck = detectPhishing(request.to, request.value, request.data);
         if (phishingCheck.isSuspicious) {
           warnings.push(...phishingCheck.warnings);
+          
+          // Block high-risk transactions
           if (phishingCheck.riskLevel === 'high') {
             return {
               success: false,
-              error: 'Transaction blocked: High security risk detected',
+              error: `Transaction blocked: High security risk detected. ${phishingCheck.warnings.join('. ')}`,
+              warnings: phishingCheck.warnings,
+            };
+          }
+          
+          // Block medium-risk transactions by default (require explicit user acknowledgment)
+          if (phishingCheck.riskLevel === 'medium') {
+            return {
+              success: false,
+              error: `Transaction blocked: Medium security risk detected. ${phishingCheck.warnings.join('. ')} Please review and confirm if you wish to proceed.`,
               warnings: phishingCheck.warnings,
             };
           }
@@ -120,6 +132,43 @@ export class SecureSigningService {
         }
 
         warnings.push(...gasValidation.warnings);
+
+        // Mandatory transaction simulation
+        const simulationResult: SimulationResult = await simulateTransaction(
+          publicClient,
+          request.to,
+          request.data,
+          request.value,
+          {
+            gasPrice: request.gasPrice,
+            maxFeePerGas: request.maxFeePerGas,
+            maxPriorityFeePerGas: request.maxPriorityFeePerGas,
+          }
+        );
+
+        if (!simulationResult.success) {
+          return {
+            success: false,
+            error: `Transaction simulation failed: ${simulationResult.revertReason || 'Unknown error'}`,
+            warnings: [
+              ...warnings,
+              `Simulation failed: ${simulationResult.revertReason || 'Unknown error'}`
+            ],
+          };
+        }
+
+        // Add simulation warnings
+        warnings.push(...simulationResult.warnings);
+
+        // Warn about high gas costs
+        if (simulationResult.estimatedCost.wei > 1000000000000000000n) { // > 1 ETH
+          warnings.push(`High gas cost estimated: ${simulationResult.estimatedCost.eth} ETH (~$${simulationResult.estimatedCost.usd.toFixed(2)})`);
+        }
+
+        // Warn about very high gas usage
+        if (simulationResult.gasEstimate > 200000n) {
+          warnings.push(`High gas usage estimated: ${simulationResult.gasEstimate.toString()} units`);
+        }
 
         // Sign transaction
         const hash = await this.signWithPrivateKey(privateKey, request, publicClient);

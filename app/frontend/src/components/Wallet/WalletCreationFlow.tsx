@@ -4,13 +4,14 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Eye, EyeOff, Copy, CheckCircle, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Plus, Eye, EyeOff, Copy, CheckCircle, AlertCircle, ArrowRight, ArrowLeft, Fingerprint } from 'lucide-react';
 import { generateMnemonic, validateMnemonic, derivePrivateKeyFromMnemonic, deriveAddressFromPrivateKey } from '@/utils/bip39Utils';
 import { SecureKeyStorage } from '@/security/secureKeyStorage';
 import { useToast } from '@/context/ToastContext';
 import { PasswordStrengthIndicator } from './PasswordStrengthIndicator';
 import { rateLimiter } from '@/services/rateLimiter';
 import { isPasswordStrong } from '@/utils/passwordStrength';
+import { webAuthnService } from '@/services/webAuthnService';
 
 type Step = 'intro' | 'create' | 'backup' | 'verify' | 'password' | 'complete';
 
@@ -38,6 +39,8 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
   const [copied, setCopied] = useState(false);
   const [verifiedWords, setVerifiedWords] = useState<Set<number>>(new Set());
   const [walletAddress, setWalletAddress] = useState('');
+  const [enableBiometric, setEnableBiometric] = useState(false);
+  const [isBiometricSupported, setIsBiometricSupported] = useState(false);
 
   // Ref to track clipboard clear timeout
   const clipboardClearTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -64,6 +67,15 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
         // Ignore if clipboard API not available
       }
     };
+  }, []);
+
+  // Check if biometric authentication is supported
+  useEffect(() => {
+    const checkBiometricSupport = async () => {
+      const supported = await webAuthnService.isPlatformAuthenticatorAvailable();
+      setIsBiometricSupported(supported);
+    };
+    checkBiometricSupport();
   }, []);
 
   // Security: Clear clipboard after timeout
@@ -122,7 +134,7 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
   const handleNext = () => {
     switch (step) {
       case 'intro':
-        setStep('create');
+        handleCreateNew();
         break;
       case 'create':
         setStep('backup');
@@ -208,6 +220,26 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
         isHardwareWallet: false,
         chainIds: [1, 8453, 137, 42161], // Ethereum, Base, Polygon, Arbitrum
       }, mnemonic);
+
+      // Register biometric credentials if enabled
+      if (enableBiometric && isBiometricSupported) {
+        try {
+          const result = await webAuthnService.registerCredential({
+            username: address,
+            displayName: walletName || 'My Wallet',
+            userId: address
+          });
+
+          if (result.success) {
+            addToast('Biometric authentication enabled successfully', 'success');
+          } else {
+            addToast(`Biometric registration failed: ${result.error}`, 'warning');
+          }
+        } catch (error: any) {
+          console.error('Biometric registration error:', error);
+          addToast('Failed to enable biometric authentication', 'warning');
+        }
+      }
 
       setWalletAddress(address);
       setStep('complete');
@@ -496,6 +528,28 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
                 <p className="text-sm text-red-600 dark:text-red-400">
                   Passwords do not match
                 </p>
+              )}
+
+              {/* Biometric Authentication Option */}
+              {isBiometricSupported && (
+                <div className="flex items-start space-x-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600">
+                  <input
+                    type="checkbox"
+                    id="biometric"
+                    checked={enableBiometric}
+                    onChange={(e) => setEnableBiometric(e.target.checked)}
+                    className="mt-1 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <div className="flex-1">
+                    <label htmlFor="biometric" className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                      <Fingerprint className="w-4 h-4" />
+                      <span>Enable biometric authentication</span>
+                    </label>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Use Face ID, Touch ID, or Windows Hello to unlock your wallet without entering your password
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           </div>

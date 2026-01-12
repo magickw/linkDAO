@@ -4,9 +4,28 @@
  */
 
 /**
+ * Convert a string to a secure ArrayBuffer that can be wiped
+ * This is the recommended approach for handling sensitive strings
+ */
+export function stringToSecureBuffer(str: string): Uint8Array {
+  const encoder = new TextEncoder();
+  return encoder.encode(str);
+}
+
+/**
+ * Convert a secure ArrayBuffer back to a string
+ * Use this sparingly and immediately wipe the buffer after
+ */
+export function secureBufferToString(buffer: Uint8Array): string {
+  const decoder = new TextDecoder();
+  return decoder.decode(buffer);
+}
+
+/**
  * Securely wipe a string from memory by overwriting it with random data
  * Note: JavaScript strings are immutable, so this creates a new string
  * The original string may still exist in memory until garbage collected
+ * DEPRECATED: Use stringToSecureBuffer() and SecureBuffer instead
  */
 export function wipeString(str: string): void {
   if (!str || typeof str !== 'string') return;
