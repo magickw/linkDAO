@@ -37,7 +37,7 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [verifiedWords, setVerifiedWords] = useState<Set<number>>(new Set());
+  const [verifiedCount, setVerifiedCount] = useState(0); // Track how many words verified in order
   const [walletAddress, setWalletAddress] = useState('');
   const [enableBiometric, setEnableBiometric] = useState(false);
   const [isBiometricSupported, setIsBiometricSupported] = useState(false);
@@ -179,14 +179,22 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
     }
   };
 
-  const handleWordClick = (index: number) => {
-    const newVerified = new Set(verifiedWords);
-    if (newVerified.has(index)) {
-      newVerified.delete(index);
+  const handleWordClick = (word: string) => {
+    const originalWords = mnemonic.split(' ');
+    const correctWord = originalWords[verifiedCount];
+
+    if (word === correctWord) {
+      setVerifiedCount(prev => prev + 1);
+      if (verifiedCount + 1 === 12) {
+        addToast('Backup verified successfully!', 'success');
+      }
     } else {
-      newVerified.add(index);
+      addToast('Incorrect word order. Please try again.', 'error');
+      // Optional: Reset progress on error? 
+      // For now, just error message allows them to retry the next word without full reset.
+      // But purely strictly, we could reset: setVerifiedCount(0);
+      setVerifiedCount(0); // STRICT: Reset on error to force them to know the full sequence
     }
-    setVerifiedWords(newVerified);
   };
 
   const handleComplete = async () => {
@@ -378,7 +386,10 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
 
               <button
                 onClick={() => setShowMnemonic(!showMnemonic)}
-                className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-xl"
+                className={`absolute inset-0 flex items-center justify-center rounded-xl transition-all duration-300 ${showMnemonic
+                    ? 'bg-transparent'
+                    : 'bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm'
+                  }`}
               >
                 {showMnemonic ? (
                   <Eye className="w-8 h-8 text-gray-600 dark:text-gray-400" />
@@ -428,18 +439,24 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
               </p>
               <div className="grid grid-cols-3 gap-2">
                 {shuffledMnemonic.map((word, index) => {
-                  // Find original index for this word
-                  const originalIndex = mnemonic.split(' ').indexOf(word);
+                  const originalWords = mnemonic.split(' ');
+                  const isVerified = originalWords.indexOf(word) < verifiedCount;
+
+                  // Disable if already verified to prevent double clicking
+                  // Hide if already verified? Or just style it? Stying is better UX.
+
                   return (
                     <button
                       key={`${word}-${index}`}
-                      onClick={() => handleWordClick(originalIndex)}
-                      className={`p-2 rounded-lg text-sm font-medium transition-all ${verifiedWords.has(originalIndex)
-                        ? 'bg-green-500 text-white'
-                        : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                      onClick={() => !isVerified && handleWordClick(word)}
+                      disabled={isVerified}
+                      className={`p-2 rounded-lg text-sm font-medium transition-all ${isVerified
+                          ? 'bg-green-500 text-white opacity-50 cursor-not-allowed'
+                          : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 hover:scale-105 transform'
                         }`}
                     >
                       {word}
+                      {isVerified && <CheckCircle className="inline-block w-3 h-3 ml-1" />}
                     </button>
                   );
                 })}
@@ -448,7 +465,7 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
 
             <div className="text-center">
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                {verifiedWords.size} / 12 words verified
+                {verifiedCount} / 12 words verified
               </p>
             </div>
           </div>
@@ -622,7 +639,7 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
       case 'create':
         return true;
       case 'backup':
-        return verifiedWords.size === 12;
+        return verifiedCount === 12;
       case 'password':
         const { isPasswordStrong } = require('@/utils/passwordStrength');
         return (
