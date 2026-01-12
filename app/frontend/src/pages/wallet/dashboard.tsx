@@ -17,7 +17,7 @@ export default function WalletDashboard() {
 
   useEffect(() => {
     const address = searchParams.get('address');
-    
+
     if (!address) {
       // If no address provided, use active wallet
       const activeWallet = SecureKeyStorage.getActiveWallet();
@@ -31,8 +31,8 @@ export default function WalletDashboard() {
     } else {
       // Validate that the wallet exists
       const wallets = SecureKeyStorage.listWallets();
-      const walletExists = wallets.some((w) => w.address.toLowerCase() === address.toLowerCase());
-      
+      const walletExists = wallets.some((walletAddr) => walletAddr.toLowerCase() === address.toLowerCase());
+
       if (walletExists) {
         setWalletAddress(address);
         // Set as active wallet
