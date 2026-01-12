@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Message as ChatMessage, Conversation, ChatHistoryRequest, MessageReaction } from '@/types/messaging';
-import { chatHistoryService } from '@/services/chatHistoryService';
-import { OfflineManager } from '@/services/OfflineManager';
+import { unifiedMessagingService } from '@/services/unifiedMessagingService'; // Use the new unified service
 import { useAuth } from '@/context/AuthContext';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -21,7 +20,7 @@ interface UseChatHistoryReturn {
   markAsRead: (conversationId: string, messageIds: string[]) => Promise<void>;
   addReaction: (messageId: string, emoji: string) => Promise<void>;
   removeReaction: (messageId: string, emoji: string) => Promise<void>;
-  deleteMessage: (messageId: string) => Promise<void>;
+  deleteMessage: (messageId: string, conversationId: string) => Promise<void>;
 }
 
 export const useChatHistory = (): UseChatHistoryReturn => {
@@ -35,7 +34,6 @@ export const useChatHistory = (): UseChatHistoryReturn => {
   const [nextCursor, setNextCursor] = useState<string | undefined>();
   const [isOnline, setIsOnline] = useState(true);
   const [messageReactions, setMessageReactions] = useState<Map<string, MessageReaction[]>>(new Map());
-  const offlineManager = OfflineManager.getInstance();
   const conversationLimit = 20;
 
   // React Query for conversations
@@ -50,49 +48,43 @@ export const useChatHistory = (): UseChatHistoryReturn => {
     queryKey: ['conversations', user?.address],
     queryFn: async ({ pageParam = 0 }) => {
       if (!user?.address) return { conversations: [], hasMore: false };
-      return chatHistoryService.getConversations({
+      // Use the new unified service
+      const conversations = await unifiedMessagingService.getConversations({
         limit: conversationLimit,
         offset: pageParam as number
       });
+      return { conversations, hasMore: conversations.length === conversationLimit };
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
-      // If the service explicitly says hasMore, calculate next offset
       if (lastPage.hasMore) {
-        // Simple offset calculation: current total fetched so far
         return allPages.reduce((acc, page) => acc + page.conversations.length, 0);
       }
       return undefined;
     },
     enabled: !!user?.address,
-    staleTime: 30000, // Consider data fresh for 30 seconds
-    gcTime: 1000 * 60 * 5, // Keep unused data for 5 minutes (renamed from cacheTime in v5)
+    staleTime: 30000,
+    gcTime: 1000 * 60 * 5,
   });
 
-  // Flatten conversations from pages
   const conversations = useMemo(() => {
     return conversationsData?.pages.flatMap(page => page.conversations) || [];
   }, [conversationsData]);
 
   useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      offlineManager.syncQueuedActions();
-    };
+    const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
     setIsOnline(navigator.onLine);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [offlineManager]);
+  }, []);
 
-  // Backward compatibility wrapper for loadConversations
   const loadConversations = useCallback(async (append = false) => {
     if (append) {
       await fetchNextPage();
@@ -112,7 +104,8 @@ export const useChatHistory = (): UseChatHistoryReturn => {
       setError(null);
       setCurrentConversationId(request.conversationId);
 
-      const response = await chatHistoryService.getChatHistory(request);
+      // Use the new unified service
+      const response = await unifiedMessagingService.getMessages(request.conversationId, { limit: request.limit, before: request.before });
       setMessages(response.messages);
       setHasMore(response.hasMore);
       setNextCursor(response.nextCursor);
@@ -128,9 +121,9 @@ export const useChatHistory = (): UseChatHistoryReturn => {
 
     try {
       setLoading(true);
-      const response = await chatHistoryService.getChatHistory({
-        conversationId: currentConversationId,
-        offset: nextCursor ? parseInt(nextCursor) : 0,
+      // Use the new unified service
+      const response = await unifiedMessagingService.getMessages(currentConversationId, {
+        before: nextCursor,
         limit: 50
       });
 
@@ -146,15 +139,11 @@ export const useChatHistory = (): UseChatHistoryReturn => {
 
   const sendMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => Promise<void> = useCallback(async (message) => {
     try {
-      const newMessage = await chatHistoryService.sendMessage(message);
+      // Use the new unified service
+      const newMessage = await unifiedMessagingService.sendMessage(message);
 
-      // Add to local state immediately for better UX
       setMessages(prev => [newMessage, ...prev]);
 
-      // Update/Invalidate conversations query to reflect new lastMessage
-      // Optimistic update involves messing with query cache complexly, 
-      // simple invalidation is safer for now but might cause refetch
-      // Instead, let's manually update the cache data for immediate feedback
       queryClient.setQueryData(['conversations', user?.address], (oldData: any) => {
         if (!oldData) return oldData;
         return {
@@ -180,13 +169,9 @@ export const useChatHistory = (): UseChatHistoryReturn => {
     if (!user?.address) return;
 
     try {
-      if (isOnline) {
-        await chatHistoryService.markMessagesAsRead(conversationId, messageIds);
-      } else {
-        offlineManager.queueAction('MARK_MESSAGES_READ', { conversationId, messageIds }, { priority: 'medium' });
-      }
+      // Use the new unified service
+      await unifiedMessagingService.markAsRead(conversationId, messageIds);
 
-      // Update cache locally
       queryClient.setQueryData(['conversations', user?.address], (oldData: any) => {
         if (!oldData) return oldData;
         return {
@@ -195,12 +180,12 @@ export const useChatHistory = (): UseChatHistoryReturn => {
             ...page,
             conversations: page.conversations.map((conv: Conversation) => {
               if (conv.id === conversationId) {
-                const currentCount = conv.unreadCounts[user.address] || 0;
+                const currentCount = (conv.unreadCounts && conv.unreadCounts[user.address]) || 0;
                 return {
                   ...conv,
                   unreadCounts: {
                     ...conv.unreadCounts,
-                    [user.address]: Math.max(0, currentCount - messageIds.length)
+                    [user.address]: 0 // Mark all as read
                   }
                 };
               }
@@ -212,71 +197,36 @@ export const useChatHistory = (): UseChatHistoryReturn => {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to mark messages as read');
     }
-  }, [user, isOnline, offlineManager, queryClient]);
+  }, [user, queryClient]);
 
   const addReaction = useCallback(async (messageId: string, emoji: string) => {
     if (!user?.address) return;
-
     try {
-      if (isOnline) {
-        await chatHistoryService.addReaction(messageId, emoji);
-      } else {
-        offlineManager.queueAction('ADD_REACTION', { messageId, emoji }, { priority: 'low' });
-      }
-
-      setMessageReactions(prev => {
-        const reactions = prev.get(messageId) || [];
-        const newReaction: MessageReaction = {
-          id: `${messageId}_${emoji}_${Date.now()}`,
-          messageId,
-          fromAddress: user.address,
-          emoji,
-          timestamp: new Date()
-        };
-        return new Map(prev).set(messageId, [...reactions, newReaction]);
-      });
+      await unifiedMessagingService.addReaction(messageId, emoji);
+      // Real-time updates should handle the UI change via WebSocket listener
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add reaction');
     }
-  }, [user, isOnline, offlineManager]);
+  }, [user]);
 
   const removeReaction = useCallback(async (messageId: string, emoji: string) => {
     if (!user?.address) return;
-
     try {
-      if (isOnline) {
-        await chatHistoryService.removeReaction(messageId, emoji);
-      } else {
-        offlineManager.queueAction('REMOVE_REACTION', { messageId, emoji }, { priority: 'low' });
-      }
-
-      setMessageReactions(prev => {
-        const reactions = prev.get(messageId) || [];
-        const filtered = reactions.filter(r => !(r.emoji === emoji && r.fromAddress === user.address));
-        return new Map(prev).set(messageId, filtered);
-      });
+      await unifiedMessagingService.removeReaction(messageId, emoji);
+      // Real-time updates should handle the UI change via WebSocket listener
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to remove reaction');
     }
-  }, [user, isOnline, offlineManager]);
+  }, [user]);
 
-  const deleteMessage = useCallback(async (messageId: string) => {
+  const deleteMessage = useCallback(async (messageId: string, conversationId: string) => {
     try {
-      if (isOnline) {
-        await chatHistoryService.deleteMessage(messageId);
-      } else {
-        offlineManager.queueAction('DELETE_MESSAGE', { messageId }, { priority: 'medium' });
-      }
-
-      setMessages(prev => prev.map(msg =>
-        msg.id === messageId
-          ? { ...msg, content: '[Message deleted]' }
-          : msg
-      ));
+      await unifiedMessagingService.deleteMessage(messageId, conversationId);
+      setMessages(prev => prev.filter(msg => msg.id !== messageId));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete message');
     }
-  }, [isOnline, offlineManager]);
+  }, []);
 
   return {
     messages,

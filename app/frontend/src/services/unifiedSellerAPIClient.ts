@@ -377,21 +377,17 @@ export class UnifiedSellerAPIClient {
 
   async requestWithFormData<T>(endpoint: string, formData: FormData, options?: Omit<RequestInit, 'body'>): Promise<T> {
     try {
-      // Get authentication token if available
-      const token = localStorage.getItem('linkdao_access_token') ||
-        localStorage.getItem('token') ||
-        localStorage.getItem('authToken');
-
-      // Get wallet address for authentication
+      // Use the centralized auth service to get headers
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
       const walletAddress = enhancedAuthService.getWalletAddress();
 
       const response = await fetch(endpoint, {
         ...options,
-        method: 'POST', // Changed from PUT to POST for form data
+        method: 'POST',
         body: formData,
         headers: {
           'Accept': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...authHeaders, // Use the correct headers
           ...(walletAddress ? { 'X-Wallet-Address': walletAddress } : {}),
           ...options?.headers,
         },

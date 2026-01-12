@@ -491,6 +491,11 @@ const CommunitiesPage: React.FC = () => {
     const shouldWaitForAuth = isAuthLoading && !forceLoad;
 
     if (shouldWaitForAuth) return;
+    
+    // Don't fetch if auth state is still resolving on initial load
+    if (!isAuthLoading && address === undefined && !forceLoad) {
+      return;
+    }
 
     console.log('[CommunitiesPage] useEffect triggered, fetching posts...', { isAuthLoading, forceLoad });
     fetchPosts(1, false);

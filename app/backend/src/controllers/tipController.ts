@@ -14,13 +14,15 @@ export class TipController {
   async createTip(req: Request, res: Response): Promise<Response> {
     try {
       safeLogger.info('Creating tip request:', { body: req.body, user: req.user });
-      const { postId, creatorAddress, amount, message } = req.body;
+      const { postId, creatorAddress, amount, message, transactionHash, token, currency } = req.body;
       const { walletAddress: fromAddress } = req.user as { walletAddress: string };
 
       // Validate input
       if (!postId || !creatorAddress || !amount) {
         return res.status(400).json({ error: 'Missing required fields: postId, creatorAddress, amount' });
       }
+
+      const tokenSymbol = token || currency || 'LDAO';
 
       if (parseFloat(amount) <= 0) {
         return res.status(400).json({ error: 'Tip amount must be greater than 0' });
@@ -41,8 +43,9 @@ export class TipController {
         fromUser.id,
         toUser.id,
         amount.toString(),
-        'LDAO',
-        message
+        tokenSymbol,
+        message,
+        transactionHash
       );
 
       safeLogger.info('Tip recorded:', newTip);

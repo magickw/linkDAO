@@ -4,6 +4,7 @@
  */
 
 import { ethers } from 'ethers';
+import { getProvider } from '@/utils/web3'; // Import the central provider
 
 export interface ENSProfile {
   name: string;
@@ -36,29 +37,12 @@ export interface ResolvedName {
 }
 
 class ENSService {
-  private provider: ethers.JsonRpcProvider | null = null;
   private cache = new Map<string, ResolvedName>();
   private cacheExpiry = new Map<string, number>();
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   constructor() {
-    this.initializeProvider();
-  }
-
-  private initializeProvider() {
-    try {
-      // Use public provider for ENS resolution
-      // Always use mainnet (chainId 1) for ENS resolution
-      this.provider = new ethers.JsonRpcProvider(
-        process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || 'https://cloudflare-eth.com',
-        1, // Mainnet for ENS resolution
-        {
-          staticNetwork: true // Prevent network detection issues
-        }
-      );
-    } catch (error) {
-      console.warn('Failed to initialize ENS provider:', error);
-    }
+    // Provider is now fetched on-demand
   }
 
   /**
@@ -129,11 +113,12 @@ class ENSService {
     if (cached) return cached;
 
     try {
-      if (!this.provider) {
+      const provider = await getProvider();
+      if (!provider) {
         throw new Error('ENS provider not available');
       }
 
-      const address = await this.provider.resolveName(ensName);
+      const address = await provider.resolveName(ensName);
       
       if (!address) {
         const result: ResolvedName = {
@@ -147,7 +132,7 @@ class ENSService {
       }
 
       // Get ENS profile data
-      const resolver = await this.provider.getResolver(ensName);
+      const resolver = await provider.getResolver(ensName);
       let profile: ENSProfile | undefined;
 
       if (resolver) {
@@ -254,11 +239,12 @@ class ENSService {
     if (cached) return cached.resolved || null;
 
     try {
-      if (!this.provider || !this.isEthereumAddress(address)) {
+      const provider = await getProvider();
+      if (!provider || !this.isEthereumAddress(address)) {
         return null;
       }
 
-      const ensName = await this.provider.lookupAddress(address);
+      const ensName = await provider.lookupAddress(address);
       
       const result: ResolvedName = {
         type: 'address',

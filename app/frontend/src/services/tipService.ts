@@ -108,19 +108,19 @@ export class TipService {
 
     // Check if environment variables are available
     const missingVars = requiredVars.filter(varName => !process.env[varName]);
-    
+
     // Additional check for empty values
     const emptyVars = requiredVars.filter(varName => process.env[varName] === '');
-    
+
     // Combine missing and empty vars
     const invalidVars = [...missingVars, ...emptyVars];
-    
+
     // Warn about missing optional vars
     const missingOptionalVars = optionalVars.filter(varName => !process.env[varName]);
     if (missingOptionalVars.length > 0) {
       console.warn('Missing optional environment variables:', missingOptionalVars);
     }
-    
+
     // Log environment variables for debugging
     console.log('Environment check:', {
       tipRouter: process.env.NEXT_PUBLIC_TIP_ROUTER_ADDRESS,
@@ -128,7 +128,7 @@ export class TipService {
       usdc: process.env.NEXT_PUBLIC_USDC_ADDRESS,
       usdt: process.env.NEXT_PUBLIC_USDT_TOKEN_ADDRESS
     });
-    
+
     return {
       isValid: invalidVars.length === 0,
       missingVars: invalidVars
@@ -141,16 +141,16 @@ export class TipService {
   static async initialize(provider: ethers.BrowserProvider): Promise<void> {
     try {
       console.log('Initializing TipService with provider:', provider);
-      
+
       if (!provider) {
         throw new Error('Provider is required');
       }
-      
+
       TipService.provider = provider;
       const signer = await provider.getSigner();
       const address = await signer.getAddress();
       TipService.currentAddress = address.toLowerCase();
-      
+
       console.log('TipService initialized with address:', TipService.currentAddress);
       console.log('Environment variables:', {
         tipRouter: process.env.NEXT_PUBLIC_TIP_ROUTER_ADDRESS,
@@ -158,7 +158,7 @@ export class TipService {
         usdc: process.env.NEXT_PUBLIC_USDC_ADDRESS,
         usdt: process.env.NEXT_PUBLIC_USDT_TOKEN_ADDRESS
       });
-      
+
       // Check network health
       await TipService.checkNetworkHealth();
     } catch (error) {
@@ -178,21 +178,21 @@ export class TipService {
       console.warn('Cannot check network health: No provider available');
       return;
     }
-    
+
     try {
       console.log('Checking network health...');
       const network = await TipService.provider.getNetwork();
       console.log('Network info:', network);
-      
+
       // Check if we're on the expected network (Sepolia testnet)
       if (network.chainId !== 11155111n) {
         console.warn('Unexpected network detected. Expected Sepolia (11155111), got:', network.chainId);
       }
-      
+
       // Check block number
       const blockNumber = await TipService.provider.getBlockNumber();
       console.log('Current block number:', blockNumber);
-      
+
       console.log('Network health check completed successfully');
     } catch (error) {
       console.error('Network health check failed:', error);
@@ -227,10 +227,10 @@ export class TipService {
 
       // Get token contract
       const tokenContract = (await TipService.getTokenContract(currency)) as any;
-      
+
       // Get the correct decimals for the token (USDC and USDT use 6 decimals, others use 18)
       const tokenDecimals = currency === 'USDC' || currency === 'USDT' ? 6 : 18;
-      
+
       // Convert amount to proper units
       const amountInUnits = ethers.parseUnits(amount, tokenDecimals);
 
@@ -239,14 +239,14 @@ export class TipService {
         spender: process.env.NEXT_PUBLIC_TIP_ROUTER_ADDRESS,
         amount: amountInUnits.toString()
       });
-      
+
       try {
         const approveTx = await tokenContract.connect(signer).approve(
           process.env.NEXT_PUBLIC_TIP_ROUTER_ADDRESS,
           amountInUnits
         );
         console.log('Approval transaction sent:', approveTx.hash);
-        
+
         // Wait for approval with better error handling
         const approvalReceipt = await approveTx.wait();
         console.log('Approval confirmed:', approvalReceipt);
@@ -257,7 +257,7 @@ export class TipService {
 
       // Send tip through TipRouter contract
       const tipRouterContract = await TipService.getTipRouterContract();
-      
+
       // Convert currency string to PaymentMethod enum (0 = LDAO, 1 = USDC, 2 = USDT)
       let paymentMethod = 0; // Default to LDAO
       if (currency === 'USDC') {
@@ -265,10 +265,10 @@ export class TipService {
       } else if (currency === 'USDT') {
         paymentMethod = 2;
       }
-      
+
       // Convert postId string to bytes32
       const postIdBytes32 = ethers.id(postId);
-      
+
       // Use the correct contract method with individual parameters
       let tipTx;
       try {
@@ -280,7 +280,7 @@ export class TipService {
             paymentMethod,
             comment: message.trim()
           });
-          
+
           tipTx = await (tipRouterContract.connect(signer) as any).tipWithComment(
             postIdBytes32,
             creatorAddress,
@@ -295,7 +295,7 @@ export class TipService {
             amount: amountInUnits.toString(),
             paymentMethod
           });
-          
+
           tipTx = await (tipRouterContract.connect(signer) as any).tip(
             postIdBytes32,
             creatorAddress,
@@ -303,7 +303,7 @@ export class TipService {
             paymentMethod
           );
         }
-        
+
         console.log('Tip transaction sent:', tipTx.hash);
       } catch (tipError: any) {
         console.error('Tip transaction failed:', tipError);
@@ -315,10 +315,13 @@ export class TipService {
       console.log('Tip transaction confirmed:', receipt);
 
       // Create tip record in database
+      const sessionToken = typeof window !== 'undefined' ? sessionStorage.getItem('linkdao_access_token') : null;
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/tips`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': sessionToken ? `Bearer ${sessionToken}` : ''
         },
         body: JSON.stringify({
           postId,
@@ -376,7 +379,7 @@ export class TipService {
         tipRouterAddress: process.env.NEXT_PUBLIC_TIP_ROUTER_ADDRESS,
         ldaoTokenAddress: process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS
       });
-      
+
       // Provide more user-friendly error messages
       let userMessage = 'Failed to send tip. Please try again.';
       if (error.message && error.message.includes('user rejected')) {
@@ -390,7 +393,7 @@ export class TipService {
       } else if (error.message && error.message.includes('contract')) {
         userMessage = 'Contract error. Please check console for details.';
       }
-      
+
       throw new Error(userMessage);
     }
   }
@@ -502,10 +505,13 @@ export class TipService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
     try {
+      const sessionToken = typeof window !== 'undefined' ? sessionStorage.getItem('linkdao_access_token') : null;
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/tips/rewards/claim`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': sessionToken ? `Bearer ${sessionToken}` : ''
         },
         body: JSON.stringify({ userAddress }),
         signal: controller.signal,
@@ -601,14 +607,14 @@ export class TipService {
 
     const envVarName = tokenEnvVars[currency as keyof typeof tokenEnvVars];
     console.log('Getting token contract for currency:', currency, 'using env var:', envVarName);
-    
+
     if (!envVarName) {
       throw new Error(`Unsupported currency: ${currency}`);
     }
 
     const address = process.env[envVarName];
     console.log('Token address from env:', address);
-    
+
     if (!address) {
       throw new Error(`Token address not configured for ${currency} (${envVarName})`);
     }
@@ -626,7 +632,7 @@ export class TipService {
       ],
       TipService.provider!
     );
-    
+
     console.log('Token contract created successfully for:', currency);
     return contract;
   }
@@ -637,7 +643,7 @@ export class TipService {
   private static async getTipRouterContract(): Promise<ethers.Contract> {
     const address = process.env.NEXT_PUBLIC_TIP_ROUTER_ADDRESS;
     console.log('Getting TipRouter contract with address:', address);
-    
+
     if (!address) {
       throw new Error('TipRouter contract address not configured');
     }
@@ -654,7 +660,7 @@ export class TipService {
       ],
       TipService.provider!
     );
-    
+
     console.log('TipRouter contract created successfully');
     return contract;
   }

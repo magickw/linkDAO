@@ -66,7 +66,10 @@ export interface RefreshTokenResponse {
  */
 const getAuthToken = (): string | null => {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('linkdao_access_token');
+  return localStorage.getItem('linkdao_access_token') ||
+         localStorage.getItem('token') ||
+         localStorage.getItem('authToken') ||
+         localStorage.getItem('auth_token');
 };
 
 /**

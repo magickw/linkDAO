@@ -3,6 +3,8 @@
  * Handles offline functionality with sync capabilities
  */
 
+import { enhancedAuthService } from './enhancedAuthService';
+
 export interface QueuedAction {
   id: string;
   type: string;
@@ -222,9 +224,7 @@ export class OfflineManager {
   private async executeCreatePost(payload: any): Promise<void> {
     const response = await fetch('/api/posts', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: await enhancedAuthService.getAuthHeaders(),
       body: JSON.stringify(payload)
     });
 
@@ -237,19 +237,9 @@ export class OfflineManager {
    * Execute react to post action
    */
   private async executeReactToPost(payload: any): Promise<void> {
-    // Get auth token from localStorage
-    const token = 
-      localStorage.getItem('token') ||
-      localStorage.getItem('authToken') ||
-      localStorage.getItem('auth_token') ||
-      localStorage.getItem('linkdao-auth-token');
-    
     const response = await fetch(`/api/posts/${payload.postId}/reactions`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      },
+      headers: await enhancedAuthService.getAuthHeaders(),
       body: JSON.stringify({
         type: payload.reactionType,
         amount: payload.amount
@@ -267,9 +257,7 @@ export class OfflineManager {
   private async executeTipUser(payload: any): Promise<void> {
     const response = await fetch('/api/tips', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: await enhancedAuthService.getAuthHeaders(),
       body: JSON.stringify(payload)
     });
 
@@ -284,9 +272,7 @@ export class OfflineManager {
   private async executeUpdateProfile(payload: any): Promise<void> {
     const response = await fetch('/api/profile', {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: await enhancedAuthService.getAuthHeaders(),
       body: JSON.stringify(payload)
     });
 
@@ -301,9 +287,7 @@ export class OfflineManager {
   private async executeJoinCommunity(payload: any): Promise<void> {
     const response = await fetch(`/api/communities/${payload.communityId}/join`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      }
+      headers: await enhancedAuthService.getAuthHeaders()
     });
 
     if (!response.ok) {
@@ -317,10 +301,7 @@ export class OfflineManager {
   private async executeSendMessage(payload: any): Promise<void> {
     const response = await fetch('/api/chat/messages', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || ''}`
-      },
+      headers: await enhancedAuthService.getAuthHeaders(),
       body: JSON.stringify(payload)
     });
 
@@ -335,10 +316,7 @@ export class OfflineManager {
   private async executeMarkMessagesRead(payload: any): Promise<void> {
     const response = await fetch('/api/chat/messages/read', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || ''}`
-      },
+      headers: await enhancedAuthService.getAuthHeaders(),
       body: JSON.stringify(payload)
     });
 
@@ -354,10 +332,7 @@ export class OfflineManager {
     const { messageId, emoji } = payload;
     const response = await fetch(`/api/chat/messages/${messageId}/reactions`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || ''}`
-      },
+      headers: await enhancedAuthService.getAuthHeaders(),
       body: JSON.stringify({ emoji })
     });
 
@@ -373,10 +348,7 @@ export class OfflineManager {
     const { messageId, emoji } = payload;
     const response = await fetch(`/api/chat/messages/${messageId}/reactions`, {
       method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || ''}`
-      },
+      headers: await enhancedAuthService.getAuthHeaders(),
       body: JSON.stringify({ emoji })
     });
 
@@ -392,9 +364,7 @@ export class OfflineManager {
     const { messageId } = payload;
     const response = await fetch(`/api/chat/messages/${messageId}`, {
       method: 'DELETE',
-      headers: {
-                  'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || ''}`
-      }
+      headers: await enhancedAuthService.getAuthHeaders()
     });
 
     if (!response.ok) {
@@ -526,7 +496,7 @@ export class OfflineManager {
   } {
     const stats = {
       total: this.state.queuedActions.length,
-      byPriority: { high: 0, medium: 0, low: 0 },
+      byPriority: { high: 0, medium: 0, low: 1 },
       oldestAction: undefined as Date | undefined
     };
 

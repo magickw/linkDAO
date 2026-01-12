@@ -1392,17 +1392,21 @@ class UnifiedMessagingService {
     });
   }
 
-  private getAuthToken(): string {
-    if (typeof window === 'undefined') return '';
+import { enhancedAuthService } from './enhancedAuthService';
 
-    return localStorage.getItem('linkdao_access_token') ||
-      localStorage.getItem('token') ||
-      localStorage.getItem('authToken') ||
-      localStorage.getItem('auth_token') || '';
+// ... (rest of imports)
+
+// ... (rest of class)
+
+  // Private helper methods
+  private getAuthToken(): string {
+    // CRITICAL: Use the centralized auth service to get the token
+    return enhancedAuthService.getToken() || '';
   }
 
-  // Transform helpers
   private transformMessage(data: any): Message {
+// ... (rest of file)
+
     return {
       ...data,
       timestamp: new Date(data.timestamp || data.createdAt),

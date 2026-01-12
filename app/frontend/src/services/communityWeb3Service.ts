@@ -383,6 +383,35 @@ export class CommunityWeb3Service {
       const receipt = await tx.wait();
       console.log('Tip transaction confirmed:', receipt.hash);
 
+      // Record tip to backend
+      try {
+        const sessionToken = typeof window !== 'undefined' ? sessionStorage.getItem('linkdao_access_token') : null;
+        if (sessionToken) {
+          const backendUrl = ENV_CONFIG.BACKEND_URL || 'http://localhost:10000';
+
+          // Fire and forget - or await? Await is safer to ensure it's recorded before UI updates
+          await fetch(`${backendUrl}/api/tips`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionToken}`
+            },
+            body: JSON.stringify({
+              postId: input.postId,
+              creatorAddress: input.recipientAddress,
+              amount: input.amount,
+              message: input.message,
+              token: input.token,
+              transactionHash: receipt.hash
+            })
+          });
+          console.log('Tip recorded to backend');
+        }
+      } catch (backendError) {
+        console.error('Failed to record tip to backend:', backendError);
+        // We don't throw here because the on-chain transaction succeeded
+      }
+
       return receipt.hash;
     } catch (error) {
       console.error('Error tipping community post:', error);

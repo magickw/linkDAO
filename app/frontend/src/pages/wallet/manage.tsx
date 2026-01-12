@@ -19,7 +19,17 @@ export default function WalletManage() {
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
   const loadWallets = () => {
-    const walletList = SecureKeyStorage.listWallets();
+    const walletAddresses = SecureKeyStorage.listWallets();
+    // Fetch wallet metadata for each address
+    const walletList = walletAddresses.map(address => {
+      const metadata = SecureKeyStorage.getWalletMetadata(address);
+      return {
+        address,
+        name: metadata?.name || 'Unnamed Wallet',
+        chainIds: metadata?.chainIds || [1], // Default to Ethereum mainnet
+        isHardwareWallet: metadata?.isHardwareWallet || false,
+      };
+    });
     setWallets(walletList);
     setActiveWallet(SecureKeyStorage.getActiveWallet());
   };
@@ -87,7 +97,11 @@ export default function WalletManage() {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
-  const getChainNames = (chainIds: number[]) => {
+  const getChainNames = (chainIds?: number[]) => {
+    if (!chainIds || !Array.isArray(chainIds) || chainIds.length === 0) {
+      return 'Unknown';
+    }
+
     const chainNames: Record<number, string> = {
       1: 'ETH',
       8453: 'Base',
