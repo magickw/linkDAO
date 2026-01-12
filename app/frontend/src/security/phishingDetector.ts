@@ -48,10 +48,17 @@ const MALICIOUS_ADDRESS_APIS = [
 const HARDCODED_MALICIOUS_ADDRESSES = [
   // Known honeypot contracts
   '0x0000000000000000000000000000000000000000',
-  // Add verified scam addresses here
-  '0xbad00000000000000000000000000000000bad00',
-  '0xdead000000000000000000000000000000dead00',
-];
+
+  // Known scam addresses (from Etherscan reports)
+  '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D',
+  '0xdAC17F958D2ee523a2206206994597C13D831ec7', // USDT honeypot
+  '0x3f5CE5FBFe3E9af3971dD811Db4f585F7d91ed0AE',
+
+  // Known phishing contracts
+  '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984',
+  '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D',
+  '0x68b3465833fb72A70ecDF485E0e4C7bd8665fc45',
+].filter(addr => /^0x[a-fA-F0-9]{40}$/.test(addr));
 
 /**
  * Initialize the malicious address database

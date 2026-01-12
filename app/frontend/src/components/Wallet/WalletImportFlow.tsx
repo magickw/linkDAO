@@ -9,6 +9,8 @@ import { validateMnemonic, derivePrivateKeyFromMnemonic, deriveAddressFromPrivat
 import { SecureKeyStorage } from '@/security/secureKeyStorage';
 import { useToast } from '@/context/ToastContext';
 import { PasswordStrengthIndicator } from './PasswordStrengthIndicator';
+import { rateLimiter } from '@/services/rateLimiter';
+import { isPasswordStrong } from '@/utils/passwordStrength';
 
 type ImportMethod = 'mnemonic' | 'privateKey' | 'hardware';
 type Step = 'method' | 'input' | 'password' | 'complete';
@@ -70,10 +72,29 @@ export const WalletImportFlow: React.FC<WalletImportFlowProps> = ({
   };
 
   const handleComplete = async () => {
+    // Check rate limit
+    const rateCheck = rateLimiter.isAllowed('wallet_import', 'password_set');
+    if (!rateCheck.allowed) {
+      const timeUntilUnblock = rateLimiter.getTimeUntilUnblocked('wallet_import', 'password_set');
+      const minutes = Math.ceil((timeUntilUnblock || 0) / 60000);
+      addToast(`Too many attempts. Please wait ${minutes} minutes.`, 'error');
+      return;
+    }
+
     if (!password || password !== confirmPassword) {
+      rateLimiter.recordAttempt('wallet_import', 'password_set', false);
       addToast('Passwords do not match', 'error');
       return;
     }
+
+    if (!isPasswordStrong(password)) {
+      rateLimiter.recordAttempt('wallet_import', 'password_set', false);
+      addToast('Password is not strong enough', 'error');
+      return;
+    }
+
+    // Success - record attempt but don't block
+    rateLimiter.recordAttempt('wallet_import', 'password_set', true);
 
     if (password.length < 8) {
       addToast('Password must be at least 8 characters', 'error');
@@ -323,7 +344,7 @@ export const WalletImportFlow: React.FC<WalletImportFlowProps> = ({
                     )}
                   </button>
                 </div>
-                
+
                 {/* Password Strength Indicator */}
                 {password && (
                   <div className="mt-2">
@@ -448,13 +469,12 @@ export const WalletImportFlow: React.FC<WalletImportFlowProps> = ({
             {['method', 'input', 'password', 'complete'].map((s, index) => (
               <div
                 key={s}
-                className={`w-2 h-2 rounded-full ${
-                  step === s
-                    ? 'bg-blue-500'
-                    : ['method', 'input', 'password', 'complete'].indexOf(step) > index
+                className={`w-2 h-2 rounded-full ${step === s
+                  ? 'bg-blue-500'
+                  : ['method', 'input', 'password', 'complete'].indexOf(step) > index
                     ? 'bg-blue-200 dark:bg-blue-800'
                     : 'bg-gray-200 dark:bg-gray-700'
-                }`}
+                  }`}
               />
             ))}
           </div>

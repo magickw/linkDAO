@@ -33,7 +33,7 @@ export interface SigningResult {
 export class SecureSigningService {
   private static instance: SecureSigningService;
 
-  private constructor() {}
+  private constructor() { }
 
   static getInstance(): SecureSigningService {
     if (!SecureSigningService.instance) {
@@ -167,13 +167,18 @@ export class SecureSigningService {
         };
       }
 
-      // Sign message using ethers.js
-      const signature = await this.signMessageWithPrivateKey(privateKey, message);
+      // Use secureClear to wipe private key after use
+      const result = await secureClear(async () => {
+        // Sign message using ethers.js
+        const signature = await this.signMessageWithPrivateKey(privateKey, message);
 
-      return {
-        success: true,
-        signature,
-      };
+        return {
+          success: true,
+          signature,
+        };
+      }, [privateKey]);
+
+      return result;
     } catch (error: any) {
       return {
         success: false,
@@ -210,18 +215,23 @@ export class SecureSigningService {
         };
       }
 
-      // Sign typed data using ethers.js
-      const signature = await this.signTypedDataWithPrivateKey(
-        privateKey,
-        domain,
-        types,
-        value
-      );
+      // Use secureClear to wipe private key after use
+      const result = await secureClear(async () => {
+        // Sign typed data using ethers.js
+        const signature = await this.signTypedDataWithPrivateKey(
+          privateKey,
+          domain,
+          types,
+          value
+        );
 
-      return {
-        success: true,
-        signature,
-      };
+        return {
+          success: true,
+          signature,
+        };
+      }, [privateKey]);
+
+      return result;
     } catch (error: any) {
       return {
         success: false,

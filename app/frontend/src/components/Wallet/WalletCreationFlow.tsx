@@ -9,6 +9,8 @@ import { generateMnemonic, validateMnemonic, derivePrivateKeyFromMnemonic, deriv
 import { SecureKeyStorage } from '@/security/secureKeyStorage';
 import { useToast } from '@/context/ToastContext';
 import { PasswordStrengthIndicator } from './PasswordStrengthIndicator';
+import { rateLimiter } from '@/services/rateLimiter';
+import { isPasswordStrong } from '@/utils/passwordStrength';
 
 type Step = 'intro' | 'create' | 'backup' | 'verify' | 'password' | 'complete';
 
@@ -164,10 +166,29 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
   };
 
   const handleComplete = async () => {
+    // Check rate limit
+    const rateCheck = rateLimiter.isAllowed('wallet_creation', 'password_set');
+    if (!rateCheck.allowed) {
+      const timeUntilUnblock = rateLimiter.getTimeUntilUnblocked('wallet_creation', 'password_set');
+      const minutes = Math.ceil((timeUntilUnblock || 0) / 60000);
+      addToast(`Too many attempts. Please wait ${minutes} minutes.`, 'error');
+      return;
+    }
+
     if (!password || password !== confirmPassword) {
+      rateLimiter.recordAttempt('wallet_creation', 'password_set', false);
       addToast('Passwords do not match', 'error');
       return;
     }
+
+    if (!isPasswordStrong(password)) {
+      rateLimiter.recordAttempt('wallet_creation', 'password_set', false);
+      addToast('Password is not strong enough', 'error');
+      return;
+    }
+
+    // Success - record attempt but don't block
+    rateLimiter.recordAttempt('wallet_creation', 'password_set', true);
 
     if (password.length < 8) {
       addToast('Password must be at least 8 characters', 'error');
@@ -289,11 +310,10 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
 
             <div className="relative">
               <div
-                className={`p-4 bg-gray-50 dark:bg-gray-700 rounded-xl border-2 ${
-                  showMnemonic
-                    ? 'border-gray-200 dark:border-gray-600'
-                    : 'border-gray-200 dark:border-gray-600 blur-sm select-none'
-                }`}
+                className={`p-4 bg-gray-50 dark:bg-gray-700 rounded-xl border-2 ${showMnemonic
+                  ? 'border-gray-200 dark:border-gray-600'
+                  : 'border-gray-200 dark:border-gray-600 blur-sm select-none'
+                  }`}
               >
                 <div className="grid grid-cols-3 gap-3">
                   {mnemonic.split(' ').map((word, index) => (
@@ -367,11 +387,10 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
                   <button
                     key={index}
                     onClick={() => handleWordClick(index)}
-                    className={`p-2 rounded-lg text-sm font-medium transition-all ${
-                      verifiedWords.has(index)
-                        ? 'bg-green-500 text-white'
-                        : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
+                    className={`p-2 rounded-lg text-sm font-medium transition-all ${verifiedWords.has(index)
+                      ? 'bg-green-500 text-white'
+                      : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
                   >
                     {word}
                   </button>
@@ -439,7 +458,7 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
                     )}
                   </button>
                 </div>
-                
+
                 {/* Password Strength Indicator */}
                 {password && (
                   <div className="mt-2">
@@ -564,13 +583,12 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
               (s, index) => (
                 <div
                   key={s}
-                  className={`w-2 h-2 rounded-full ${
-                    step === s
-                      ? 'bg-blue-500'
-                      : ['intro', 'create', 'backup', 'verify', 'password', 'complete'].indexOf(step) > index
+                  className={`w-2 h-2 rounded-full ${step === s
+                    ? 'bg-blue-500'
+                    : ['intro', 'create', 'backup', 'verify', 'password', 'complete'].indexOf(step) > index
                       ? 'bg-blue-200 dark:bg-blue-800'
                       : 'bg-gray-200 dark:bg-gray-700'
-                  }`}
+                    }`}
                 />
               )
             )}

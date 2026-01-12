@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import { VideoInfo, extractVideoInfo, getVideoEmbedHtml } from '@/utils/videoUtils';
 import { Youtube, Play, ExternalLink, X } from 'lucide-react';
 
@@ -110,7 +111,7 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({
 
   if (showPlaceholderState) {
     return (
-      <div 
+      <div
         className={`relative bg-gray-900 rounded-lg overflow-hidden cursor-pointer group ${className}`}
         onClick={handleThumbnailClick}
       >
@@ -131,14 +132,14 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({
               {getPlatformIcon(videoInfo.platform)}
             </div>
           )}
-          
+
           {/* Play button overlay */}
           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 hover:bg-opacity-20 transition-all">
             <div className={`w-16 h-16 ${getPlatformColor(videoInfo.platform)} rounded-full flex items-center justify-center transform hover:scale-110 transition-all`}>
               <Play className="w-8 h-8 text-white ml-1" />
             </div>
           </div>
-          
+
           {/* Platform branding */}
           <div className="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
             {getPlatformIcon(videoInfo.platform)}
@@ -154,9 +155,9 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({
     <div className={`relative ${className}`}>
       {/* For platforms that need custom embed handling */}
       {videoInfo.platform === 'tiktok' || videoInfo.platform === 'instagram' || videoInfo.platform === 'twitter' || videoInfo.platform === 'facebook' ? (
-        <div 
+        <div
           className="video-embed-container"
-          dangerouslySetInnerHTML={{ __html: embedHtml }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(embedHtml) }}
           onLoad={handleLoad}
         />
       ) : (
@@ -173,7 +174,7 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({
           className="rounded-lg w-full max-w-full"
         />
       )}
-      
+
       {/* Video info overlay */}
       <div className="absolute top-2 left-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded flex items-center gap-1 opacity-0 hover:opacity-100 transition-opacity">
         {getPlatformIcon(videoInfo.platform)}

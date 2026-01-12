@@ -4,6 +4,7 @@
  */
 
 import { encrypt, decrypt } from '@/utils/cryptoUtils';
+import { wipeString } from '@/utils/secureMemory';
 
 export interface EncryptedWalletData {
   address: string;
@@ -139,7 +140,14 @@ export class SecureKeyStorage {
       const metadataData = localStorage.getItem(metadataKey);
       const metadata = metadataData ? JSON.parse(metadataData) : undefined;
 
-      return { privateKey, mnemonic, metadata };
+      const result = { privateKey, mnemonic, metadata };
+
+      // Attempt to wipe sensitive data from memory
+      // Note: In JS strings are immutable, so this is a best-effort approach
+      if (privateKey) wipeString(privateKey);
+      if (mnemonic) wipeString(mnemonic);
+
+      return result;
     } catch (error) {
       console.error('Failed to get wallet:', error);
       throw error;
@@ -245,6 +253,9 @@ export class SecureKeyStorage {
 
       // Store with new password
       await this.storeWallet(address, privateKey, newPassword, metadata);
+
+      // Wipe key from memory
+      wipeString(privateKey);
     } catch (error) {
       console.error('Failed to change password:', error);
       throw new Error('Failed to change password');
@@ -282,6 +293,9 @@ export class SecureKeyStorage {
         salt,
         exportedAt: Date.now(),
       };
+
+      // Wipe potentially sensitive data
+      wipeString(privateKey);
 
       return btoa(JSON.stringify(exportPackage));
     } catch (error) {
