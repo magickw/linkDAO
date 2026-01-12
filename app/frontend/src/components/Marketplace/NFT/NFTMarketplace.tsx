@@ -97,7 +97,7 @@ export default function NFTMarketplace({
             id: '1',
             name: 'Cosmic Wanderer #1234',
             description: 'A beautiful cosmic wanderer exploring the digital universe.',
-            imageUrl: 'https://placehold.co/400x400/6366f1/ffffff?text=NFT+1'
+            imageUrl: 'https://placehold.co/400x400/6366f1/ffffff?text=NFT+1',
             price: '2.5',
             currency: 'ETH',
             creator: {
@@ -124,7 +124,7 @@ export default function NFTMarketplace({
             id: '2',
             name: 'Digital Dreams #0567',
             description: 'An abstract representation of digital consciousness.',
-            imageUrl: 'https://placehold.co/400x400/8b5cf6/ffffff?text=NFT+2'
+            imageUrl: 'https://placehold.co/400x400/8b5cf6/ffffff?text=NFT+2',
             price: '1.8',
             currency: 'ETH',
             creator: {
@@ -377,8 +377,8 @@ export default function NFTMarketplace({
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
                 className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedCategory === category.id
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
               >
                 {category.name} ({category.count})

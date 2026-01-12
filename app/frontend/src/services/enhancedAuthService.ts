@@ -84,14 +84,14 @@ class EnhancedAuthService {
     if (typeof window === 'undefined') return;
 
     try {
-      const sessionDataStr = localStorage.getItem(this.STORAGE_KEYS.SESSION_DATA);
+      const sessionDataStr = sessionStorage.getItem(this.STORAGE_KEYS.SESSION_DATA);
       if (sessionDataStr) {
         const sessionData: SessionData = JSON.parse(sessionDataStr);
 
         // Check if session is still valid
         if (Date.now() < sessionData.expiresAt) {
           // Check if the stored session is for the same backend (prevent cross-backend auth issues)
-          const storedBackendUrl = localStorage.getItem(this.STORAGE_KEYS.BACKEND_URL);
+          const storedBackendUrl = sessionStorage.getItem(this.STORAGE_KEYS.BACKEND_URL);
           const currentBackendUrl = this.baseUrl;
 
           if (storedBackendUrl && storedBackendUrl !== currentBackendUrl) {
@@ -105,21 +105,21 @@ class EnhancedAuthService {
 
           this.sessionData = sessionData;
           this.token = sessionData.token;
-          
+
           // Fallback: ensure refresh token is loaded from separate storage if missing from sessionData
           if (!this.sessionData.refreshToken) {
-            const storedRefreshToken = localStorage.getItem(this.STORAGE_KEYS.REFRESH_TOKEN);
+            const storedRefreshToken = sessionStorage.getItem(this.STORAGE_KEYS.REFRESH_TOKEN);
             if (storedRefreshToken) {
               this.sessionData.refreshToken = storedRefreshToken;
               console.log('🔄 Restored refresh token from separate storage');
             }
           }
-          
+
           console.log('✅ Restored valid session from storage');
-          
+
           // Ensure wallet address is also stored separately for API client access
           if (this.sessionData.user?.address) {
-            localStorage.setItem(this.STORAGE_KEYS.WALLET_ADDRESS, this.sessionData.user.address);
+            sessionStorage.setItem(this.STORAGE_KEYS.WALLET_ADDRESS, this.sessionData.user.address);
           }
         } else {
           console.log('⏰ Stored session expired, clearing...');
@@ -596,7 +596,7 @@ class EnhancedAuthService {
    */
   private hasValidSession(address: string): boolean {
     const now = Date.now();
-    
+
     if (!this.sessionData || !this.token) {
       console.log('❌ Session invalid: no session data or token');
       return false;
@@ -661,18 +661,18 @@ class EnhancedAuthService {
 
     this.token = token;
 
-    // Persist to localStorage
+    // Persist to sessionStorage (safer than localStorage)
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem(this.STORAGE_KEYS.SESSION_DATA, JSON.stringify(this.sessionData));
-        localStorage.setItem(this.STORAGE_KEYS.ACCESS_TOKEN, token);
-        localStorage.setItem(this.STORAGE_KEYS.WALLET_ADDRESS, user.address);
-        localStorage.setItem(this.STORAGE_KEYS.SIGNATURE_TIMESTAMP, now.toString());
-        localStorage.setItem(this.STORAGE_KEYS.USER_DATA, JSON.stringify(user));
-        localStorage.setItem(this.STORAGE_KEYS.BACKEND_URL, this.baseUrl); // Store current backend URL
+        sessionStorage.setItem(this.STORAGE_KEYS.SESSION_DATA, JSON.stringify(this.sessionData));
+        sessionStorage.setItem(this.STORAGE_KEYS.ACCESS_TOKEN, token);
+        sessionStorage.setItem(this.STORAGE_KEYS.WALLET_ADDRESS, user.address);
+        sessionStorage.setItem(this.STORAGE_KEYS.SIGNATURE_TIMESTAMP, now.toString());
+        sessionStorage.setItem(this.STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+        sessionStorage.setItem(this.STORAGE_KEYS.BACKEND_URL, this.baseUrl); // Store current backend URL
 
         if (refreshToken) {
-          localStorage.setItem(this.STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+          sessionStorage.setItem(this.STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
         }
 
         this.storeTokenInDB(token);
@@ -693,15 +693,15 @@ class EnhancedAuthService {
 
     if (typeof window !== 'undefined') {
       Object.values(this.STORAGE_KEYS).forEach(key => {
-        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
       });
     }
     this.storeTokenInDB(null);
   }
 
-/**
-   * Refresh authentication token
-   */
+  /**
+     * Refresh authentication token
+     */
   async refreshToken(): Promise<AuthResponse> {
     if (!this.sessionData?.refreshToken) {
       console.error('No refresh token available in session data');
@@ -712,7 +712,7 @@ class EnhancedAuthService {
       console.log('Attempting to refresh authentication token...');
       // Use global fetch wrapper with skipAuth to avoid circular dependency
       const { globalFetch } = await import('./globalFetchWrapper');
-      
+
       const response = await globalFetch(`${this.baseUrl}/api/auth/refresh`, {
         method: 'POST',
         skipAuth: true, // Don't add auth headers to refresh request
@@ -752,11 +752,11 @@ class EnhancedAuthService {
       console.error('Token refresh failed:', error);
       // Clear the invalid session to force re-authentication
       this.clearStoredSession();
-      
+
       // Don't extend session temporarily - this was causing issues
       // Instead, force the user to re-authenticate
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: error instanceof Error ? error.message : 'Token refresh failed. Please log in again.',
         retryable: false
       };
@@ -828,10 +828,10 @@ class EnhancedAuthService {
     // First check in-memory state
     if (this.token && this.sessionData && Date.now() < this.sessionData.expiresAt) {
       // Check if the stored session is for the same backend
-      const storedBackendUrl = typeof window !== 'undefined' 
-        ? localStorage.getItem(this.STORAGE_KEYS.BACKEND_URL) 
+      const storedBackendUrl = typeof window !== 'undefined'
+        ? localStorage.getItem(this.STORAGE_KEYS.BACKEND_URL)
         : null;
-      
+
       if (storedBackendUrl && storedBackendUrl !== this.baseUrl) {
         console.log('🔄 Backend URL changed, clearing authentication', {
           storedUrl: storedBackendUrl,
@@ -840,7 +840,7 @@ class EnhancedAuthService {
         this.clearStoredSession();
         return false;
       }
-      
+
       return true;
     }
 
@@ -851,7 +851,7 @@ class EnhancedAuthService {
         const sessionDataStr = localStorage.getItem(this.STORAGE_KEYS.SESSION_DATA);
         if (sessionDataStr) {
           const sessionData = JSON.parse(sessionDataStr);
-          
+
           // Check if session is still valid
           if (Date.now() < sessionData.expiresAt) {
             // Check if the stored session is for the same backend
@@ -864,11 +864,11 @@ class EnhancedAuthService {
               this.clearStoredSession();
               return false;
             }
-            
+
             // Restore in-memory state
             this.sessionData = sessionData;
             this.token = sessionData.token;
-            
+
             // Fallback: ensure refresh token is loaded from separate storage if missing from sessionData
             if (!this.sessionData.refreshToken) {
               const storedRefreshToken = localStorage.getItem(this.STORAGE_KEYS.REFRESH_TOKEN);
@@ -877,12 +877,12 @@ class EnhancedAuthService {
                 console.log('🔄 Restored refresh token from separate storage in checkAuth');
               }
             }
-            
+
             // Ensure wallet address is also stored separately for API client access
             if (this.sessionData.user?.address) {
               localStorage.setItem(this.STORAGE_KEYS.WALLET_ADDRESS, this.sessionData.user.address);
             }
-            
+
             return true;
           }
         }
@@ -901,10 +901,10 @@ class EnhancedAuthService {
     // If we have the token in memory, return it
     if (this.token && this.sessionData) {
       // Check if the stored session is for the same backend
-      const storedBackendUrl = typeof window !== 'undefined' 
-        ? localStorage.getItem(this.STORAGE_KEYS.BACKEND_URL) 
+      const storedBackendUrl = typeof window !== 'undefined'
+        ? localStorage.getItem(this.STORAGE_KEYS.BACKEND_URL)
         : null;
-      
+
       if (storedBackendUrl && storedBackendUrl !== this.baseUrl) {
         console.log('🔄 Backend URL changed, clearing token', {
           storedUrl: storedBackendUrl,
@@ -913,7 +913,7 @@ class EnhancedAuthService {
         this.clearStoredSession();
         return null;
       }
-      
+
       return this.token;
     }
 
@@ -938,11 +938,11 @@ class EnhancedAuthService {
                 this.clearStoredSession();
                 return null;
               }
-              
+
               console.log('🔄 Restored token from localStorage');
               this.token = storedToken;
               this.sessionData = sessionData;
-              
+
               // Fallback: ensure refresh token is loaded from separate storage if missing from sessionData
               if (!this.sessionData.refreshToken) {
                 const storedRefreshToken = localStorage.getItem(this.STORAGE_KEYS.REFRESH_TOKEN);
@@ -951,12 +951,12 @@ class EnhancedAuthService {
                   console.log('🔄 Restored refresh token from separate storage in getValidToken');
                 }
               }
-              
+
               // Ensure wallet address is also stored separately for API client access
               if (this.sessionData.user?.address) {
                 localStorage.setItem(this.STORAGE_KEYS.WALLET_ADDRESS, this.sessionData.user.address);
               }
-              
+
               return storedToken;
             }
           }
@@ -1365,10 +1365,10 @@ class EnhancedAuthService {
         return reject(new Error('IndexedDB not supported'));
       }
       const request = window.indexedDB.open('OfflineData', 2);
-  
+
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve(request.result);
-  
+
       request.onupgradeneeded = (event: any) => {
         const db = event.target.result;
         if (!db.objectStoreNames.contains('authTokens')) {
@@ -1377,7 +1377,7 @@ class EnhancedAuthService {
       };
     });
   }
-  
+
   private async storeTokenInDB(token: string | null) {
     try {
       const db = await this.openDB();

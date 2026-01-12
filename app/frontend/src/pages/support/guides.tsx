@@ -27,8 +27,28 @@ const UserGuides: NextPage = () => {
       difficulty: 'Beginner' as const,
       rating: 4.8,
       views: 12500,
-      href: '/support/guides/beginners',
-      category: 'LDAO'
+      href: '/docs/getting-started',
+      category: 'Getting Started'
+    },
+    {
+      title: 'Wallet Connection Guide',
+      description: 'Step-by-step illustrated guide to safely connecting your Web3 wallet to LinkDAO.',
+      readTime: '12 min',
+      difficulty: 'Beginner' as const,
+      rating: 4.9,
+      views: 15200,
+      href: '/support/guides/wallet-connection',
+      category: 'Wallet'
+    },
+    {
+      title: 'Marketplace Complete Guide',
+      description: 'Comprehensive guide to buying, selling, and navigating the LinkDAO marketplace safely.',
+      readTime: '20 min',
+      difficulty: 'Beginner' as const,
+      rating: 4.8,
+      views: 18400,
+      href: '/support/guides/marketplace',
+      category: 'Marketplace'
     },
     {
       title: 'LDAO Token Acquisition Guide',
@@ -49,16 +69,6 @@ const UserGuides: NextPage = () => {
       views: 5600,
       href: '/support/guides/advanced-staking',
       category: 'LDAO'
-    },
-    {
-      title: 'Marketplace Seller Guide',
-      description: 'Complete guide to selling digital and physical items on the LinkDAO marketplace with crypto payments.',
-      readTime: '18 min',
-      difficulty: 'Intermediate' as const,
-      rating: 4.6,
-      views: 7200,
-      href: '/support/guides/marketplace-seller',
-      category: 'Marketplace'
     },
     {
       title: 'Wallet Security Best Practices',
@@ -102,7 +112,7 @@ const UserGuides: NextPage = () => {
     }
   ];
 
-  const categories = ['all', 'LDAO', 'Marketplace', 'Wallet', 'Technical'];
+  const categories = ['all', 'Getting Started', 'Wallet', 'Marketplace', 'LDAO', 'Technical'];
   const difficulties = ['all', 'Beginner', 'Intermediate', 'Advanced'];
 
   const filteredGuides = userGuides.filter(guide => {

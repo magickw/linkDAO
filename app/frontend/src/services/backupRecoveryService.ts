@@ -83,7 +83,7 @@ export class BackupRecoveryService {
       const mnemonic = await this.getMnemonicFromStorage(address, password);
       if (!mnemonic) {
         return {
-          success: success: false,
+          success: false,
           error: 'Mnemonic not found in storage',
         };
       }

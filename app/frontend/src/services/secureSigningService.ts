@@ -62,7 +62,7 @@ export class SecureSigningService {
         };
       }
 
-// Get private key
+      // Get private key
       const { privateKey } = await SecureKeyStorage.getWallet(activeWallet, password);
       if (!privateKey) {
         return {
@@ -122,103 +122,16 @@ export class SecureSigningService {
         warnings.push(...gasValidation.warnings);
 
         // Sign transaction
-        const signature = await this.signWithPrivateKey(privateKey, request, publicClient);
+        const hash = await this.signWithPrivateKey(privateKey, request, publicClient);
 
         return {
           success: true,
-          signature,
+          hash,
           warnings,
         };
       }, [privateKey]);
 
       return result;
-      if (phishingCheck.isSuspicious) {
-        warnings.push(...phishingCheck.warnings);
-        if (phishingCheck.riskLevel === 'high') {
-          return {
-            success: false,
-            error: 'Transaction blocked: High security risk detected',
-            warnings: phishingCheck.warnings,
-          };
-        }
-      }
-
-      // Validate transaction
-      const txValidation = validateTransaction({
-        to: request.to,
-        value: request.value,
-        data: request.data,
-      });
-
-      if (!txValidation.valid) {
-        return {
-          success: false,
-          error: txValidation.errors.join(', '),
-          warnings: txValidation.warnings,
-        };
-      }
-
-      warnings.push(...txValidation.warnings);
-
-      // Validate gas parameters
-      const gasValidation = validateGasParameters({
-        gasLimit: request.gasLimit,
-        gasPrice: request.gasPrice,
-        maxFeePerGas: request.maxFeePerGas,
-        maxPriorityFeePerGas: request.maxPriorityFeePerGas,
-      });
-
-      if (!gasValidation.valid) {
-        return {
-          success: false,
-          error: gasValidation.errors.join(', '),
-          warnings: gasValidation.warnings,
-        };
-      }
-
-      warnings.push(...gasValidation.warnings);
-
-      // Estimate gas if not provided
-      let gasLimit = request.gasLimit;
-      if (!gasLimit) {
-        try {
-          gasLimit = await publicClient.estimateGas({
-            to: request.to,
-            data: request.data,
-            value: request.value,
-            account: activeWallet as `0x${string}`,
-          });
-        } catch (error: any) {
-          return {
-            success: false,
-            error: `Gas estimation failed: ${error.message}`,
-          };
-        }
-      }
-
-      // Create wallet client (in production, use ethers.js or viem wallet client)
-      // This is a simplified version
-      const hash = await this.signWithPrivateKey(
-        privateKey,
-        {
-          to: request.to,
-          value: request.value,
-          data: request.data,
-          gas: gasLimit,
-          gasPrice: request.gasPrice,
-          maxFeePerGas: request.maxFeePerGas,
-          maxPriorityFeePerGas: request.maxPriorityFeePerGas,
-          nonce: request.nonce,
-          chainId: request.chainId,
-        },
-        publicClient
-      );
-
-      return {
-        success: true,
-        hash,
-        warnings,
-      };
     } catch (error: any) {
       return {
         success: false,
@@ -254,7 +167,7 @@ export class SecureSigningService {
         };
       }
 
-      // Sign message (in production, use ethers.js or viem)
+      // Sign message using ethers.js
       const signature = await this.signMessageWithPrivateKey(privateKey, message);
 
       return {
@@ -297,7 +210,7 @@ export class SecureSigningService {
         };
       }
 
-      // Sign typed data (in production, use ethers.js or viem)
+      // Sign typed data using ethers.js
       const signature = await this.signTypedDataWithPrivateKey(
         privateKey,
         domain,
@@ -328,7 +241,7 @@ export class SecureSigningService {
     try {
       // Create wallet from private key
       const wallet = new ethers.Wallet(privateKey);
-      
+
       // Sign the transaction
       const signedTx = await wallet.signTransaction(transaction);
       return signedTx as Hash;
@@ -347,7 +260,7 @@ export class SecureSigningService {
     try {
       // Create wallet from private key
       const wallet = new ethers.Wallet(privateKey);
-      
+
       // Sign the message
       const signature = await wallet.signMessage(message);
       return signature;
@@ -357,7 +270,7 @@ export class SecureSigningService {
   }
 
   /**
-   * Sign typed data with private key using ethers.js
+   * Sign typed data with private key using ethers.js (EIP-712)
    */
   private async signTypedDataWithPrivateKey(
     privateKey: string,
@@ -368,19 +281,13 @@ export class SecureSigningService {
     try {
       // Create wallet from private key
       const wallet = new ethers.Wallet(privateKey);
-      
+
       // Sign the typed data
       const signature = await wallet.signTypedData(domain, types, value);
       return signature;
     } catch (error: any) {
       throw new Error(`Typed data signing failed: ${error.message}`);
     }
-  }
-    // const wallet = new ethers.Wallet(privateKey);
-    // return await wallet._signTypedData(domain, types, value);
-
-    // For now, return a mock signature
-    return '0x' + Array.from({ length: 130 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
   }
 
   /**

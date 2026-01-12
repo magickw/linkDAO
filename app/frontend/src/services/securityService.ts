@@ -62,7 +62,8 @@ export interface PrivacySettings {
 class SecurityService {
     // Helper method to get auth headers
     private getAuthHeaders(): HeadersInit {
-        const token = localStorage.getItem('linkdao_access_token') ||
+        const token = sessionStorage.getItem('linkdao_access_token') ||
+            localStorage.getItem('linkdao_access_token') || // Fallback for migration
             localStorage.getItem('authToken') ||
             localStorage.getItem('token') ||
             localStorage.getItem('auth_token');
@@ -247,7 +248,7 @@ class SecurityService {
         return response.json();
     }
 
-async getAlerts(params?: { limit?: number; unreadOnly?: boolean }): Promise<SecurityAlert[]> {
+    async getAlerts(params?: { limit?: number; unreadOnly?: boolean }): Promise<SecurityAlert[]> {
         const queryParams = new URLSearchParams();
         if (params?.limit) queryParams.append('limit', params.limit.toString());
         if (params?.unreadOnly !== undefined) queryParams.append('unreadOnly', params.unreadOnly.toString());

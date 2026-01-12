@@ -119,7 +119,7 @@ export default function NFTDetailModal({ isOpen, onClose, nftId }: NFTDetailModa
         id: nftId,
         name: 'Cosmic Wanderer #1234',
         description: 'A beautiful cosmic wanderer exploring the digital universe. This unique piece represents the journey of consciousness through the vast expanse of cyberspace, where digital souls find their purpose among the stars.',
-        imageUrl: 'https://placehold.co/600x600/6366f1/ffffff?text=NFT+Detail'
+        imageUrl: 'https://placehold.co/600x600/6366f1/ffffff?text=NFT+Detail',
         animationUrl: undefined,
         price: '2.5',
         currency: 'ETH',
@@ -127,7 +127,7 @@ export default function NFTDetailModal({ isOpen, onClose, nftId }: NFTDetailModa
           id: 'creator1',
           handle: 'cosmicartist',
           walletAddress: '0x1234567890123456789012345678901234567890',
-          avatar: 'https://placehold.co/40x40/8b5cf6/ffffff?text=CA'
+          avatar: 'https://placehold.co/40x40/8b5cf6/ffffff?text=CA',
           verified: true,
         },
         owner: {
@@ -198,7 +198,7 @@ export default function NFTDetailModal({ isOpen, onClose, nftId }: NFTDetailModa
           date: '2024-01-10',
         },
       };
-      
+
       setNft(mockNFT);
     } catch (error) {
       console.error('Error fetching NFT details:', error);
@@ -250,13 +250,13 @@ export default function NFTDetailModal({ isOpen, onClose, nftId }: NFTDetailModa
     const now = new Date().getTime();
     const end = new Date(endTime).getTime();
     const diff = end - now;
-    
+
     if (diff <= 0) return 'Ended';
-    
+
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (days > 0) return `${days}d ${hours}h ${minutes}m`;
     if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m`;
@@ -310,7 +310,7 @@ export default function NFTDetailModal({ isOpen, onClose, nftId }: NFTDetailModa
                       >
                         <XMarkIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
                       </button>
-                      
+
                       <div className="aspect-square">
                         <img
                           src={nft.imageUrl}
@@ -334,11 +334,11 @@ export default function NFTDetailModal({ isOpen, onClose, nftId }: NFTDetailModa
                             )}
                           </div>
                         )}
-                        
+
                         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                           {nft.name}
                         </h1>
-                        
+
                         <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                           <div className="flex items-center">
                             <EyeIcon className="h-4 w-4 mr-1" />
@@ -373,7 +373,7 @@ export default function NFTDetailModal({ isOpen, onClose, nftId }: NFTDetailModa
                             </div>
                           </div>
                         </div>
-                        
+
                         <div>
                           <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Owner</p>
                           <div className="flex items-center">
@@ -450,7 +450,7 @@ export default function NFTDetailModal({ isOpen, onClose, nftId }: NFTDetailModa
                           )}
                           {nft.likes}
                         </button>
-                        
+
                         <button
                           onClick={handleShare}
                           className="flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -468,11 +468,10 @@ export default function NFTDetailModal({ isOpen, onClose, nftId }: NFTDetailModa
                               <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
-                                className={`py-2 px-1 border-b-2 font-medium text-sm capitalize ${
-                                  activeTab === tab
+                                className={`py-2 px-1 border-b-2 font-medium text-sm capitalize ${activeTab === tab
                                     ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                                     : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                                }`}
+                                  }`}
                               >
                                 {tab}
                               </button>
@@ -492,7 +491,7 @@ export default function NFTDetailModal({ isOpen, onClose, nftId }: NFTDetailModa
                                   {nft.description}
                                 </p>
                               </div>
-                              
+
                               <div>
                                 <h4 className="font-medium text-gray-900 dark:text-white mb-2">
                                   Contract Details

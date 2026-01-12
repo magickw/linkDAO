@@ -4,6 +4,7 @@ import { useToast } from '@/context/ToastContext';
 import { communityWeb3Service, CommunityGovernanceProposal } from '@/services/communityWeb3Service';
 import { Community } from '@/models/Community';
 import AdvancedRichTextEditor from './EnhancedPostComposer/AdvancedRichTextEditor';
+import DOMPurify from 'dompurify';
 
 interface CommunityGovernanceProps {
   community: Community;
@@ -33,11 +34,11 @@ export default function CommunityGovernance({ community, className = '' }: Commu
   const loadGovernanceData = async () => {
     try {
       setLoading(true);
-      
+
       // Load proposals
       const proposalsData = await communityWeb3Service.getCommunityProposals(community.id);
       setProposals(proposalsData);
-      
+
       // Load user's voting power if connected
       if (address) {
         const power = await communityWeb3Service.getVotingPower(community.id, address);
@@ -53,7 +54,7 @@ export default function CommunityGovernance({ community, className = '' }: Commu
 
   const handleCreateProposal = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!isConnected || !address) {
       addToast('Please connect your wallet to create proposals', 'error');
       return;
@@ -66,18 +67,18 @@ export default function CommunityGovernance({ community, className = '' }: Commu
 
     try {
       setSubmittingProposal(true);
-      
+
       const proposalId = await communityWeb3Service.createGovernanceProposal(
         community.id,
         newProposal.title,
         newProposal.description,
         [] // No actions for now
       );
-      
+
       addToast('Proposal created successfully!', 'success');
       setNewProposal({ title: '', description: '' });
       setShowCreateProposal(false);
-      
+
       // Reload proposals
       await loadGovernanceData();
     } catch (error) {
@@ -96,11 +97,11 @@ export default function CommunityGovernance({ community, className = '' }: Commu
 
     try {
       setVotingOnProposal(proposalId);
-      
+
       const txHash = await communityWeb3Service.voteOnProposal(proposalId, support, votingPower);
-      
+
       addToast(`Vote cast successfully! Transaction: ${txHash.slice(0, 10)}...`, 'success');
-      
+
       // Reload proposals to update vote counts
       await loadGovernanceData();
     } catch (error) {
@@ -168,7 +169,7 @@ export default function CommunityGovernance({ community, className = '' }: Commu
               Participate in community decision making
             </p>
           </div>
-          
+
           {isConnected && (
             <div className="text-right">
               <div className="text-sm text-gray-500 dark:text-gray-400">Your Voting Power</div>
@@ -196,7 +197,7 @@ export default function CommunityGovernance({ community, className = '' }: Commu
             <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Create New Proposal
             </h4>
-            
+
             <form onSubmit={handleCreateProposal} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -211,7 +212,7 @@ export default function CommunityGovernance({ community, className = '' }: Commu
                   disabled={submittingProposal}
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Description
@@ -224,7 +225,7 @@ export default function CommunityGovernance({ community, className = '' }: Commu
                   className="border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700"
                 />
               </div>
-              
+
               <div className="flex space-x-3 pt-4">
                 <button
                   type="submit"
@@ -274,15 +275,15 @@ export default function CommunityGovernance({ community, className = '' }: Commu
                       by {proposal.proposer.slice(0, 6)}...{proposal.proposer.slice(-4)}
                     </p>
                   </div>
-                  
+
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getProposalStatusColor(proposal.status)}`}>
                     {proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1)}
                   </span>
                 </div>
 
                 {/* Proposal Description */}
-                <div className="text-gray-700 dark:text-gray-300 text-sm mb-4 prose max-w-none" 
-                     dangerouslySetInnerHTML={{ __html: proposal.description }} />
+                <div className="text-gray-700 dark:text-gray-300 text-sm mb-4 prose max-w-none"
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(proposal.description) }} />
 
                 {/* Vote Progress */}
                 <div className="mb-4">
@@ -290,14 +291,14 @@ export default function CommunityGovernance({ community, className = '' }: Commu
                     <span>For: {formatVotes(proposal.forVotes)}</span>
                     <span>Against: {formatVotes(proposal.againstVotes)}</span>
                   </div>
-                  
+
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                     <div
                       className="bg-green-500 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${calculateVotePercentage(proposal.forVotes, proposal.againstVotes)}%` }}
                     ></div>
                   </div>
-                  
+
                   <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
                     <span>Quorum: {formatVotes(proposal.quorum)}</span>
                     <span>

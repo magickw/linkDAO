@@ -1,650 +1,337 @@
 /**
- * Enhanced Session Manager
- * Handles session persistence, CORS authentication, and cross-origin token storage
- * with proper security measures and recovery mechanisms
+ * Session Manager Service
+ * Handles session timeout, auto-lock, and session security
  */
 
-import { enhancedRequestManager } from './enhancedRequestManager';
-import { apiCircuitBreaker } from './circuitBreaker';
-
-export interface SessionData {
-  token: string;
-  refreshToken?: string;
-  user: any;
-  expiresAt: number;
-  createdAt: number;
-  lastRefresh: number;
-  walletAddress: string;
-  chainId?: number;
+export interface SessionConfig {
+  timeoutMinutes: number;
+  warningSeconds: number;
+  lockOnInactivity: boolean;
+  lockOnTabBlur: boolean;
+  requireReauth: boolean;
 }
 
-export interface SessionOptions {
-  secure?: boolean;
-  sameSite?: 'strict' | 'lax' | 'none';
-  domain?: string;
-  maxAge?: number;
+export interface SessionState {
+  isActive: boolean;
+  lastActivity: number;
+  warningShown: boolean;
+  lockedAt: number | null;
 }
 
-export interface CrossOriginAuthConfig {
-  allowedOrigins: string[];
-  trustedDomains: string[];
-  corsCredentials: boolean;
-  secureTokenStorage: boolean;
-}
+export type SessionEvent = 'activity' | 'warning' | 'lock' | 'unlock' | 'expire';
 
-/**
- * Enhanced Session Manager with CORS support
- */
-class SessionManager {
-  private readonly STORAGE_PREFIX = 'linkdao_';
-  private readonly SESSION_KEY = 'session_data';
-  private readonly TOKEN_KEY = 'access_token';
-  private readonly REFRESH_KEY = 'refresh_token';
-  private readonly SIGNATURE_KEY = 'signature_timestamp';
-  private readonly WALLET_KEY = 'wallet_address';
-  
-  private readonly DEFAULT_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
-  private readonly REFRESH_THRESHOLD = 2 * 60 * 60 * 1000; // 2 hours before expiry
-  private readonly CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
+export class SessionManager {
+  private static instance: SessionManager;
+  private config: SessionConfig;
+  private state: SessionState;
+  private timeoutId: NodeJS.Timeout | null = null;
+  private warningTimeoutId: NodeJS.Timeout | null = null;
+  private listeners: Map<SessionEvent, Set<Function>> = new Map();
 
-  private corsConfig: CrossOriginAuthConfig;
-  private cleanupTimer?: NodeJS.Timeout;
-
-  constructor(corsConfig?: Partial<CrossOriginAuthConfig>) {
-    this.corsConfig = {
-      allowedOrigins: [
-        'https://linkdao.io',
-        'https://www.linkdao.io',
-        'https://app.linkdao.io',
-        'https://marketplace.linkdao.io',
-        'https://linkdao.vercel.app',
-        'http://localhost:3000',
-        'http://localhost:3001'
-      ],
-      trustedDomains: ['linkdao.io', 'vercel.app'],
-      corsCredentials: true,
-      secureTokenStorage: process.env.NODE_ENV === 'production',
-      ...corsConfig
+  private constructor() {
+    this.config = {
+      timeoutMinutes: 15, // 15 minutes default
+      warningSeconds: 60, // 1 minute warning
+      lockOnInactivity: true,
+      lockOnTabBlur: false,
+      requireReauth: true
     };
 
-    this.initializeCleanup();
-    this.setupCrossOriginListener();
-  }
-
-  /**
-   * Store session data with CORS-compatible storage
-   */
-  async storeSession(sessionData: Omit<SessionData, 'createdAt' | 'lastRefresh'>): Promise<void> {
-    const now = Date.now();
-    const fullSessionData: SessionData = {
-      ...sessionData,
-      createdAt: now,
-      lastRefresh: now
+    this.state = {
+      isActive: true,
+      lastActivity: Date.now(),
+      warningShown: false,
+      lockedAt: null
     };
 
-    try {
-      // Store in localStorage with encryption if secure mode
-      if (typeof window !== 'undefined') {
-        const dataToStore = this.corsConfig.secureTokenStorage 
-          ? this.encryptSessionData(fullSessionData)
-          : JSON.stringify(fullSessionData);
+    this.initializeEventListeners();
+  }
 
-        localStorage.setItem(this.getStorageKey(this.SESSION_KEY), dataToStore);
-        localStorage.setItem(this.getStorageKey(this.TOKEN_KEY), sessionData.token);
-        localStorage.setItem(this.getStorageKey(this.WALLET_KEY), sessionData.walletAddress);
-        localStorage.setItem(this.getStorageKey(this.SIGNATURE_KEY), now.toString());
-
-        if (sessionData.refreshToken) {
-          localStorage.setItem(this.getStorageKey(this.REFRESH_KEY), sessionData.refreshToken);
-        }
-
-        console.log('✅ Session stored successfully');
-      }
-
-      // Store in secure cross-origin storage if available
-      await this.storeCrossOriginSession(fullSessionData);
-
-    } catch (error) {
-      console.error('Failed to store session:', error);
-      throw new Error('Session storage failed');
+  static getInstance(): SessionManager {
+    if (!SessionManager.instance) {
+      SessionManager.instance = new SessionManager();
     }
+    return SessionManager.instance;
   }
 
   /**
-   * Retrieve session data with validation
+   * Initialize event listeners for activity tracking
    */
-  async getSession(): Promise<SessionData | null> {
-    try {
-      // Try localStorage first
-      const localSession = this.getLocalSession();
-      if (localSession && this.isSessionValid(localSession)) {
-        return localSession;
-      }
-
-      // Try cross-origin storage
-      const crossOriginSession = await this.getCrossOriginSession();
-      if (crossOriginSession && this.isSessionValid(crossOriginSession)) {
-        // Sync back to localStorage
-        await this.storeSession(crossOriginSession);
-        return crossOriginSession;
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Failed to retrieve session:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Get session from localStorage
-   */
-  private getLocalSession(): SessionData | null {
-    if (typeof window === 'undefined') return null;
-
-    try {
-      const sessionDataStr = localStorage.getItem(this.getStorageKey(this.SESSION_KEY));
-      if (!sessionDataStr) return null;
-
-      const sessionData = this.corsConfig.secureTokenStorage
-        ? this.decryptSessionData(sessionDataStr)
-        : JSON.parse(sessionDataStr);
-
-      return sessionData;
-    } catch (error) {
-      console.error('Failed to parse local session:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Validate session data
-   */
-  private isSessionValid(session: SessionData): boolean {
-    const now = Date.now();
-    
-    // Check expiration
-    if (now >= session.expiresAt) {
-      console.log('Session expired');
-      return false;
-    }
-
-    // Check required fields
-    if (!session.token || !session.walletAddress) {
-      console.log('Session missing required fields');
-      return false;
-    }
-
-    return true;
-  }
-
-  /**
-   * Refresh session token
-   */
-  async refreshSession(currentSession: SessionData): Promise<SessionData | null> {
-    if (!currentSession.refreshToken) {
-      throw new Error('No refresh token available');
-    }
-
-    try {
-      return await apiCircuitBreaker.execute(
-        async () => {
-          const response = await enhancedRequestManager.request<any>(
-            '/api/auth/refresh',
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${currentSession.token}`,
-                'X-Wallet-Address': currentSession.walletAddress
-              },
-              body: JSON.stringify({
-                refreshToken: currentSession.refreshToken,
-                walletAddress: currentSession.walletAddress
-              })
-            },
-            {
-              timeout: 10000,
-              retries: 2,
-              fallbackData: null
-            }
-          );
-
-          if (!response.success || !response.token) {
-            throw new Error(response.error || 'Token refresh failed');
-          }
-
-          const refreshedSession: SessionData = {
-            ...currentSession,
-            token: response.token,
-            refreshToken: response.refreshToken || currentSession.refreshToken,
-            lastRefresh: Date.now(),
-            expiresAt: Date.now() + this.DEFAULT_EXPIRY
-          };
-
-          await this.storeSession(refreshedSession);
-          return refreshedSession;
-        },
-        async () => {
-          // Fallback: extend current session temporarily
-          console.warn('Token refresh failed, extending current session');
-          const extendedSession: SessionData = {
-            ...currentSession,
-            expiresAt: Date.now() + (30 * 60 * 1000), // Extend by 30 minutes
-            lastRefresh: Date.now()
-          };
-          
-          await this.storeSession(extendedSession);
-          return extendedSession;
-        }
-      );
-    } catch (error: any) {
-      console.error('Session refresh failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Check if session needs refresh
-   */
-  shouldRefreshSession(session: SessionData): boolean {
-    const timeUntilExpiry = session.expiresAt - Date.now();
-    return timeUntilExpiry < this.REFRESH_THRESHOLD && timeUntilExpiry > 0;
-  }
-
-  /**
-   * Clear session data
-   */
-  async clearSession(): Promise<void> {
-    try {
-      if (typeof window !== 'undefined') {
-        // Clear localStorage
-        const keys = [
-          this.SESSION_KEY,
-          this.TOKEN_KEY,
-          this.REFRESH_KEY,
-          this.SIGNATURE_KEY,
-          this.WALLET_KEY
-        ];
-
-        keys.forEach(key => {
-          localStorage.removeItem(this.getStorageKey(key));
-        });
-      }
-
-      // Clear cross-origin storage
-      await this.clearCrossOriginSession();
-
-      console.log('✅ Session cleared successfully');
-    } catch (error) {
-      console.error('Failed to clear session:', error);
-    }
-  }
-
-  /**
-   * Handle cross-origin authentication
-   */
-  async authenticateWithCORS(
-    walletAddress: string,
-    signature: string,
-    nonce: string,
-    origin?: string
-  ): Promise<SessionData> {
-    // Validate origin if provided
-    if (origin && !this.isOriginAllowed(origin)) {
-      throw new Error('Origin not allowed for cross-origin authentication');
-    }
-
-    try {
-      const response = await enhancedRequestManager.request<any>(
-        '/api/auth/wallet',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Origin': origin || window.location.origin,
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-Wallet-Address': walletAddress
-          },
-          credentials: this.corsConfig.corsCredentials ? 'include' : 'same-origin',
-          body: JSON.stringify({
-            walletAddress,
-            signature,
-            nonce,
-            origin: origin || window.location.origin
-          })
-        },
-        {
-          timeout: 15000,
-          retries: 2
-        }
-      );
-
-      if (!response.success || !response.sessionToken) {
-        throw new Error(response.error || 'Authentication failed');
-      }
-
-      const sessionData: SessionData = {
-        token: response.sessionToken,
-        refreshToken: response.refreshToken,
-        user: response.user || { address: walletAddress },
-        expiresAt: Date.now() + this.DEFAULT_EXPIRY,
-        createdAt: Date.now(),
-        lastRefresh: Date.now(),
-        walletAddress,
-        chainId: response.chainId
-      };
-
-      await this.storeSession(sessionData);
-      return sessionData;
-
-    } catch (error: any) {
-      console.error('CORS authentication failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Store session in cross-origin storage (postMessage API)
-   */
-  private async storeCrossOriginSession(sessionData: SessionData): Promise<void> {
+  private initializeEventListeners(): void {
     if (typeof window === 'undefined') return;
 
-    try {
-      // Only store in trusted domains
-      const trustedFrames = this.getTrustedFrames();
-      
-      for (const frame of trustedFrames) {
-        frame.postMessage({
-          type: 'STORE_SESSION',
-          sessionData: this.corsConfig.secureTokenStorage 
-            ? this.encryptSessionData(sessionData)
-            : sessionData,
-          origin: window.location.origin
-        }, '*');
-      }
-    } catch (error) {
-      console.warn('Cross-origin session storage failed:', error);
+    // Track user activity
+    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    activityEvents.forEach(event => {
+      document.addEventListener(event, this.handleActivity.bind(this), { passive: true });
+    });
+
+    // Track visibility change
+    document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
+
+    // Track before unload
+    window.addEventListener('beforeunload', this.handleBeforeUnload.bind(this));
+  }
+
+  /**
+   * Handle user activity
+   */
+  private handleActivity(): void {
+    if (!this.state.isActive) return;
+
+    this.state.lastActivity = Date.now();
+    this.resetTimeouts();
+  }
+
+  /**
+   * Handle visibility change
+   */
+  private handleVisibilityChange(): void {
+    if (document.visibilityState === 'hidden' && this.config.lockOnTabBlur) {
+      this.lock();
     }
   }
 
   /**
-   * Get session from cross-origin storage
+   * Handle before unload
    */
-  private async getCrossOriginSession(): Promise<SessionData | null> {
-    if (typeof window === 'undefined') return null;
+  private handleBeforeUnload(): void {
+    this.clearTimeouts();
+  }
 
-    return new Promise((resolve) => {
-      const timeout = setTimeout(() => resolve(null), 2000);
+  /**
+   * Reset all timeouts
+   */
+  private resetTimeouts(): void {
+    this.clearTimeouts();
 
-      const messageHandler = (event: MessageEvent) => {
-        if (!this.isOriginAllowed(event.origin)) return;
+    if (!this.state.isActive) return;
 
-        if (event.data.type === 'SESSION_DATA' && event.data.sessionData) {
-          clearTimeout(timeout);
-          window.removeEventListener('message', messageHandler);
-          
-          try {
-            const sessionData = this.corsConfig.secureTokenStorage
-              ? this.decryptSessionData(event.data.sessionData)
-              : event.data.sessionData;
-            resolve(sessionData);
-          } catch (error) {
-            resolve(null);
-          }
-        }
-      };
+    const timeoutMs = this.config.timeoutMinutes * 60 * 1000;
+    const warningMs = timeoutMs - (this.config.warningSeconds * 1000);
 
-      window.addEventListener('message', messageHandler);
+    // Set warning timeout
+    if (warningMs > 0) {
+      this.warningTimeoutId = setTimeout(() => {
+        this.showWarning();
+      }, warningMs);
+    }
 
-      // Request session from trusted frames
-      const trustedFrames = this.getTrustedFrames();
-      for (const frame of trustedFrames) {
-        frame.postMessage({
-          type: 'GET_SESSION',
-          origin: window.location.origin
-        }, '*');
-      }
+    // Set lock timeout
+    this.timeoutId = setTimeout(() => {
+      this.lock();
+    }, timeoutMs);
+  }
+
+  /**
+   * Clear all timeouts
+   */
+  private clearTimeouts(): void {
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+    if (this.warningTimeoutId) {
+      clearTimeout(this.warningTimeoutId);
+      this.warningTimeoutId = null;
+    }
+  }
+
+  /**
+   * Show timeout warning
+   */
+  private showWarning(): void {
+    if (this.state.warningShown) return;
+
+    this.state.warningShown = true;
+    this.emit('warning', {
+      timeRemaining: this.config.warningSeconds
     });
   }
 
   /**
-   * Clear cross-origin session
+   * Lock the session
    */
-  private async clearCrossOriginSession(): Promise<void> {
-    if (typeof window === 'undefined') return;
+  private lock(): void {
+    if (!this.state.isActive) return;
 
-    try {
-      const trustedFrames = this.getTrustedFrames();
-      
-      for (const frame of trustedFrames) {
-        frame.postMessage({
-          type: 'CLEAR_SESSION',
-          origin: window.location.origin
-        }, '*');
-      }
-    } catch (error) {
-      console.warn('Cross-origin session clearing failed:', error);
-    }
-  }
-
-  /**
-   * Setup cross-origin message listener
-   */
-  private setupCrossOriginListener(): void {
-    if (typeof window === 'undefined') return;
-
-    window.addEventListener('message', (event) => {
-      if (!this.isOriginAllowed(event.origin)) return;
-
-      switch (event.data.type) {
-        case 'GET_SESSION':
-          this.handleCrossOriginSessionRequest(event);
-          break;
-        case 'STORE_SESSION':
-          this.handleCrossOriginSessionStore(event);
-          break;
-        case 'CLEAR_SESSION':
-          this.handleCrossOriginSessionClear(event);
-          break;
-      }
+    this.state.isActive = false;
+    this.state.lockedAt = Date.now();
+    this.clearTimeouts();
+    this.emit('lock', {
+      lockedAt: this.state.lockedAt,
+      reason: 'timeout'
     });
   }
 
   /**
-   * Handle cross-origin session request
+   * Unlock the session
    */
-  private handleCrossOriginSessionRequest(event: MessageEvent): void {
-    const session = this.getLocalSession();
-    
-    event.source?.postMessage({
-      type: 'SESSION_DATA',
-      sessionData: session ? (this.corsConfig.secureTokenStorage 
-        ? this.encryptSessionData(session)
-        : session) : null,
-      origin: window.location.origin
-    }, { targetOrigin: event.origin });
-  }
+  unlock(): void {
+    if (this.state.isActive) return;
 
-  /**
-   * Handle cross-origin session store
-   */
-  private handleCrossOriginSessionStore(event: MessageEvent): void {
-    try {
-      const sessionData = this.corsConfig.secureTokenStorage
-        ? this.decryptSessionData(event.data.sessionData)
-        : event.data.sessionData;
-      
-      this.storeSession(sessionData);
-    } catch (error) {
-      console.error('Failed to store cross-origin session:', error);
-    }
-  }
+    const wasLocked = this.state.lockedAt;
+    this.state.isActive = true;
+    this.state.warningShown = false;
+    this.state.lockedAt = null;
+    this.state.lastActivity = Date.now();
 
-  /**
-   * Handle cross-origin session clear
-   */
-  private handleCrossOriginSessionClear(event: MessageEvent): void {
-    this.clearSession();
-  }
-
-  /**
-   * Check if origin is allowed
-   */
-  private isOriginAllowed(origin: string): boolean {
-    return this.corsConfig.allowedOrigins.some(allowed => {
-      if (typeof allowed === 'string') {
-        return allowed === origin;
-      }
-      return false;
+    this.resetTimeouts();
+    this.emit('unlock', {
+      unlockedAt: Date.now(),
+      wasLocked: wasLocked,
+      reason: 'user_action'
     });
   }
 
   /**
-   * Get trusted frames for cross-origin communication
+   * Force lock the session
    */
-  private getTrustedFrames(): Window[] {
-    if (typeof window === 'undefined') return [];
+  forceLock(reason: string = 'manual'): void {
+    this.lock();
+    this.emit('lock', {
+      lockedAt: this.state.lockedAt,
+      reason
+    });
+  }
 
-    const frames: Window[] = [];
-    
-    try {
-      // Check for trusted iframes
-      const iframes = document.querySelectorAll('iframe');
-      for (const iframe of iframes) {
-        if (iframe.contentWindow && this.isTrustedDomain(iframe.src)) {
-          frames.push(iframe.contentWindow);
+  /**
+   * Check if session is active
+   */
+  isSessionActive(): boolean {
+    return this.state.isActive;
+  }
+
+  /**
+   * Get session state
+   */
+  getSessionState(): SessionState {
+    return { ...this.state };
+  }
+
+  /**
+   * Get time until lock
+   */
+  getTimeUntilLock(): number {
+    if (!this.state.isActive) return 0;
+
+    const timeoutMs = this.config.timeoutMinutes * 60 * 1000;
+    const elapsedMs = Date.now() - this.state.lastActivity;
+    return Math.max(0, timeoutMs - elapsedMs);
+  }
+
+  /**
+   * Get time until warning
+   */
+  getTimeUntilWarning(): number {
+    if (!this.state.isActive || this.state.warningShown) return 0;
+
+    const timeoutMs = this.config.timeoutMinutes * 60 * 1000;
+    const warningMs = timeoutMs - (this.config.warningSeconds * 1000);
+    const elapsedMs = Date.now() - this.state.lastActivity;
+    return Math.max(0, warningMs - elapsedMs);
+  }
+
+  /**
+   * Update configuration
+   */
+  updateConfig(config: Partial<SessionConfig>): void {
+    this.config = { ...this.config, ...config };
+    this.resetTimeouts();
+  }
+
+  /**
+   * Get configuration
+   */
+  getConfig(): SessionConfig {
+    return { ...this.config };
+  }
+
+  /**
+   * Add event listener
+   */
+  on(event: SessionEvent, callback: Function): void {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, new Set());
+    }
+    this.listeners.get(event)!.add(callback);
+  }
+
+  /**
+   * Remove event listener
+   */
+  off(event: SessionEvent, callback: Function): void {
+    const callbacks = this.listeners.get(event);
+    if (callbacks) {
+      callbacks.delete(callback);
+    }
+  }
+
+  /**
+   * Emit event
+   */
+  private emit(event: SessionEvent, data?: any): void {
+    const callbacks = this.listeners.get(event);
+    if (callbacks) {
+      callbacks.forEach(callback => {
+        try {
+          callback(data);
+        } catch (error) {
+          console.error(`Error in session event listener (${event}):`, error);
         }
-      }
-
-      // Check parent window if in iframe
-      if (window.parent !== window && this.isTrustedDomain(document.referrer)) {
-        frames.push(window.parent);
-      }
-    } catch (error) {
-      console.warn('Failed to get trusted frames:', error);
-    }
-
-    return frames;
-  }
-
-  /**
-   * Check if domain is trusted
-   */
-  private isTrustedDomain(url: string): boolean {
-    try {
-      const urlObj = new URL(url);
-      return this.corsConfig.trustedDomains.some(domain => 
-        urlObj.hostname === domain || urlObj.hostname.endsWith(`.${domain}`)
-      );
-    } catch {
-      return false;
+      });
     }
   }
 
   /**
-   * Initialize cleanup timer
+   * Start session monitoring
    */
-  private initializeCleanup(): void {
-    if (typeof window === 'undefined') return;
-
-    this.cleanupTimer = setInterval(() => {
-      this.cleanupExpiredSessions();
-    }, this.CLEANUP_INTERVAL);
-
-    // Cleanup on page unload
-    window.addEventListener('beforeunload', () => {
-      if (this.cleanupTimer) {
-        clearInterval(this.cleanupTimer);
-      }
-    });
+  start(): void {
+    this.state.isActive = true;
+    this.state.lastActivity = Date.now();
+    this.resetTimeouts();
   }
 
   /**
-   * Cleanup expired sessions
+   * Stop session monitoring
    */
-  private cleanupExpiredSessions(): void {
-    try {
-      const session = this.getLocalSession();
-      if (session && !this.isSessionValid(session)) {
-        console.log('Cleaning up expired session');
-        this.clearSession();
-      }
-    } catch (error) {
-      console.error('Session cleanup error:', error);
-    }
+  stop(): void {
+    this.clearTimeouts();
+    this.state.isActive = false;
   }
 
   /**
-   * Get storage key with prefix
+   * Reset session
    */
-  private getStorageKey(key: string): string {
-    return `${this.STORAGE_PREFIX}${key}`;
+  reset(): void {
+    this.stop();
+    this.start();
   }
 
   /**
-   * Encrypt session data (basic implementation)
+   * Get session duration
    */
-  private encryptSessionData(data: SessionData): string {
-    // In production, use proper encryption
-    // This is a basic implementation for demonstration
-    try {
-      const jsonString = JSON.stringify(data);
-      return btoa(jsonString);
-    } catch {
-      return JSON.stringify(data);
-    }
+  getSessionDuration(): number {
+    if (!this.state.lockedAt) return 0;
+    return Date.now() - this.state.lockedAt;
   }
 
   /**
-   * Decrypt session data (basic implementation)
+   * Check if re-authentication is required
    */
-  private decryptSessionData(encryptedData: string): SessionData {
-    // In production, use proper decryption
-    // This is a basic implementation for demonstration
-    try {
-      const jsonString = atob(encryptedData);
-      return JSON.parse(jsonString);
-    } catch {
-      return JSON.parse(encryptedData);
-    }
+  isReauthRequired(): boolean {
+    return this.config.requireReauth && !this.state.isActive;
   }
 
   /**
-   * Get session status for debugging
+   * Extend session
    */
-  getSessionStatus(): {
-    hasSession: boolean;
-    isValid: boolean;
-    expiresAt?: number;
-    timeUntilExpiry?: number;
-    needsRefresh: boolean;
-    walletAddress?: string;
-  } {
-    const session = this.getLocalSession();
-    
-    if (!session) {
-      return {
-        hasSession: false,
-        isValid: false,
-        needsRefresh: false
-      };
-    }
-
-    const isValid = this.isSessionValid(session);
-    const timeUntilExpiry = session.expiresAt - Date.now();
-
-    return {
-      hasSession: true,
-      isValid,
-      expiresAt: session.expiresAt,
-      timeUntilExpiry: timeUntilExpiry > 0 ? timeUntilExpiry : 0,
-      needsRefresh: this.shouldRefreshSession(session),
-      walletAddress: session.walletAddress
-    };
+  extendSession(): void {
+    this.state.lastActivity = Date.now();
+    this.state.warningShown = false;
+    this.resetTimeouts();
   }
 }
 
-// Create singleton instance
-export const sessionManager = new SessionManager();
-export default sessionManager;
+// Export singleton instance
+export const sessionManager = SessionManager.getInstance();

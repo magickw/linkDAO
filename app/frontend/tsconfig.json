@@ -40,7 +40,6 @@
     // Additional optimizations for build performance
     "disableSizeLimit": true,
     "noImplicitAny": false,
-    "strictNullChecks": false,
     "types": []
   },
   "include": [

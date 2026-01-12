@@ -52,7 +52,7 @@ export const StakingSystemDemo: React.FC = () => {
     symbol: 'LNK',
     decimals: 18,
     name: 'LinkDAO Token',
-    logoUrl: 'https://placehold.co/32x32/3B82F6/FFFFFF?text=LNK'
+    logoUrl: 'https://placehold.co/32x32/3B82F6/FFFFFF?text=LNK',
     priceUSD: 1.25,
     priceChange24h: 5.67
   };
@@ -63,16 +63,16 @@ export const StakingSystemDemo: React.FC = () => {
   // Handler functions
   const handleBoost = async (postId: string, amount: number) => {
     console.log(`Boosting post ${postId} with ${amount} tokens`);
-    
+
     // Simulate staking transaction
     setStakingInfo(prev => ({
       ...prev,
       totalStaked: prev.totalStaked + amount,
       userStake: (prev.userStake || 0) + amount,
       stakerCount: prev.userStake ? prev.stakerCount : prev.stakerCount + 1,
-      stakingTier: prev.totalStaked + amount >= 1000 ? 'gold' : 
-                   prev.totalStaked + amount >= 100 ? 'silver' : 
-                   prev.totalStaked + amount >= 10 ? 'bronze' : 'none'
+      stakingTier: prev.totalStaked + amount >= 1000 ? 'gold' :
+        prev.totalStaked + amount >= 100 ? 'silver' :
+          prev.totalStaked + amount >= 10 ? 'bronze' : 'none'
     }));
   };
 
@@ -91,7 +91,7 @@ export const StakingSystemDemo: React.FC = () => {
 
   const handleUnstake = async (amount: number) => {
     console.log(`Unstaking ${amount} tokens`);
-    
+
     setStakingInfo(prev => ({
       ...prev,
       totalStaked: Math.max(0, prev.totalStaked - amount),
@@ -126,11 +126,11 @@ export const StakingSystemDemo: React.FC = () => {
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
           Basic Staking Indicators
         </h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border">
             <h3 className="font-medium mb-3">Staking Indicator</h3>
-            <StakingIndicator 
+            <StakingIndicator
               stakingInfo={stakingInfo}
               token={mockToken}
               size="md"
@@ -141,7 +141,7 @@ export const StakingSystemDemo: React.FC = () => {
           <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border">
             <h3 className="font-medium mb-3">Tier Badge</h3>
             <div className="flex items-center space-x-4">
-              <StakingTierBadge 
+              <StakingTierBadge
                 stakingInfo={stakingInfo}
                 showLabel={true}
                 size="lg"
@@ -151,7 +151,7 @@ export const StakingSystemDemo: React.FC = () => {
 
           <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border">
             <h3 className="font-medium mb-3">Progress Bar</h3>
-            <StakingProgressBar 
+            <StakingProgressBar
               stakingInfo={stakingInfo}
               showLabels={true}
               height="md"
@@ -166,7 +166,7 @@ export const StakingSystemDemo: React.FC = () => {
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
           Interactive Staking Components
         </h2>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border">
             <h3 className="font-medium mb-3">Boost Button</h3>
@@ -199,7 +199,7 @@ export const StakingSystemDemo: React.FC = () => {
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
           Real-time Updates & Multi-staker Support
         </h2>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white dark:bg-gray-800 rounded-lg border p-4">
             <RealTimeStakingUpdates
@@ -226,7 +226,7 @@ export const StakingSystemDemo: React.FC = () => {
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
           User Staking Status & Analytics
         </h2>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white dark:bg-gray-800 rounded-lg border p-4">
             <UserStakingStatus
@@ -256,12 +256,12 @@ export const StakingSystemDemo: React.FC = () => {
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
           Tooltip Integration
         </h2>
-        
+
         <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border">
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             Hover over the elements below to see detailed staking information:
           </p>
-          
+
           <div className="flex items-center space-x-6">
             <StakingTooltip
               stakingInfo={stakingInfo}
@@ -293,7 +293,7 @@ export const StakingSystemDemo: React.FC = () => {
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
           Complete Integration Example
         </h2>
-        
+
         <div className="p-6 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center space-x-3">
@@ -307,8 +307,8 @@ export const StakingSystemDemo: React.FC = () => {
                 </p>
               </div>
             </div>
-            
-            <StakingIndicator 
+
+            <StakingIndicator
               stakingInfo={stakingInfo}
               token={mockToken}
               size="sm"
@@ -316,7 +316,7 @@ export const StakingSystemDemo: React.FC = () => {
           </div>
 
           <div className="mb-4">
-            <StakingProgressBar 
+            <StakingProgressBar
               stakingInfo={stakingInfo}
               showLabels={true}
               height="sm"
@@ -328,7 +328,7 @@ export const StakingSystemDemo: React.FC = () => {
             <div className="text-sm text-gray-600 dark:text-gray-400">
               {stakingInfo.stakerCount} stakers • {stakingInfo.totalStaked.toFixed(2)} {mockToken.symbol} staked
             </div>
-            
+
             <BoostButton
               postId="demo-post"
               currentStake={stakingInfo.userStake}
@@ -347,7 +347,7 @@ export const StakingSystemDemo: React.FC = () => {
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
           Implementation Notes
         </h2>
-        
+
         <div className="p-6 bg-gray-50 dark:bg-gray-800/50 rounded-lg border">
           <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
             <p><strong>✅ Completed Features:</strong></p>
@@ -362,7 +362,7 @@ export const StakingSystemDemo: React.FC = () => {
               <li>User personal staking status and potential rewards</li>
               <li>Staking history and analytics for users</li>
             </ul>
-            
+
             <p className="mt-4"><strong>🔧 Integration Requirements:</strong></p>
             <ul className="list-disc list-inside space-y-1 ml-4">
               <li>Import staking CSS animations: <code>@import './styles/staking-animations.css'</code></li>

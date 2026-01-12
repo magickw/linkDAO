@@ -3,7 +3,7 @@
  * Handles creating new wallets with secure key generation
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, Eye, EyeOff, Copy, CheckCircle, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import { generateMnemonic, validateMnemonic, derivePrivateKeyFromMnemonic, deriveAddressFromPrivateKey } from '@/utils/bip39Utils';
 import { SecureKeyStorage } from '@/security/secureKeyStorage';
@@ -37,6 +37,61 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
   const [verifiedWords, setVerifiedWords] = useState<Set<number>>(new Set());
   const [walletAddress, setWalletAddress] = useState('');
 
+  // Ref to track clipboard clear timeout
+  const clipboardClearTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Security: Clear sensitive data on component unmount
+  useEffect(() => {
+    return () => {
+      // Clear mnemonic from state
+      setMnemonic('');
+      setPassword('');
+      setConfirmPassword('');
+
+      // Clear any pending clipboard timeout
+      if (clipboardClearTimeoutRef.current) {
+        clearTimeout(clipboardClearTimeoutRef.current);
+      }
+
+      // Attempt to clear clipboard if we copied mnemonic
+      try {
+        navigator.clipboard.writeText('').catch(() => {
+          // Ignore clipboard clear errors on unmount
+        });
+      } catch {
+        // Ignore if clipboard API not available
+      }
+    };
+  }, []);
+
+  // Security: Clear clipboard after timeout
+  const clearClipboardAfterDelay = useCallback(() => {
+    // Clear any existing timeout
+    if (clipboardClearTimeoutRef.current) {
+      clearTimeout(clipboardClearTimeoutRef.current);
+    }
+
+    // Set new timeout to clear clipboard after 60 seconds
+    clipboardClearTimeoutRef.current = setTimeout(async () => {
+      try {
+        // Only clear if clipboard still contains sensitive data
+        const clipboardText = await navigator.clipboard.readText();
+        if (clipboardText === mnemonic && mnemonic) {
+          await navigator.clipboard.writeText('');
+          addToast('Clipboard cleared for security', 'info');
+        }
+      } catch {
+        // Clipboard read may fail due to permissions - just clear anyway
+        try {
+          await navigator.clipboard.writeText('');
+        } catch {
+          // Ignore errors
+        }
+      }
+      clipboardClearTimeoutRef.current = null;
+    }, 60000); // 60 seconds
+  }, [mnemonic, addToast]);
+
   const handleCreateNew = () => {
     const newMnemonic = generateMnemonic();
     setMnemonic(newMnemonic);
@@ -64,6 +119,9 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
 
   const handleNext = () => {
     switch (step) {
+      case 'intro':
+        setStep('create');
+        break;
       case 'create':
         setStep('backup');
         break;
@@ -86,7 +144,10 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
       await navigator.clipboard.writeText(mnemonic);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      addToast('Mnemonic copied to clipboard', 'success');
+      addToast('Mnemonic copied - clipboard will clear in 60 seconds', 'success');
+
+      // Security: Start clipboard clear countdown
+      clearClipboardAfterDelay();
     } catch (error) {
       addToast('Failed to copy mnemonic', 'error');
     }
@@ -473,14 +534,15 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
         return true;
       case 'backup':
         return verifiedWords.size === 12;
-      case 'verify':
+      case 'password':
         const { isPasswordStrong } = require('@/utils/passwordStrength');
         return (
           password.length >= 8 &&
           password === confirmPassword &&
-          isPasswordStrong(password) &&
-          walletName.trim()
+          isPasswordStrong(password)
         );
+      case 'verify':
+        return true;
       default:
         return true;
     }

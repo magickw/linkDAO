@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '@/components/Layout';
+import Link from 'next/link';
 import { useAccount } from 'wagmi';
+import { BarChart3 } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
 import { governanceService } from '@/services/governanceService';
 import { aiGovernanceService, AIProposalAnalysis } from '@/services/aiGovernanceService';
@@ -35,7 +37,7 @@ function GovernanceContent() {
   const [activeTab, setActiveTab] = useState<'active' | 'ended' | 'create' | 'delegation' | 'charity'>('active');
   const [searchTerm, setSearchTerm] = useState('');
   const [proposals, setProposals] = useState<Proposal[]>([]);
-  const [proposalAnalyses, setProposalAnalyses] = useState<Record<string, AIProposalAnalysis>>({});
+  const [proposalAnalyses, setProposalAnalyses] = useState<Record<string, AIProposalAnalysis | null>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isProposing, setIsProposing] = useState(false);
   const [proposalData, setProposalData] = useState<ProposalData | null>(null);
@@ -68,7 +70,9 @@ function GovernanceContent() {
       for (const proposal of contractProposals) {
         try {
           const analysis = await aiGovernanceService.analyzeProposal(proposal);
-          analyses[proposal.id] = analysis;
+          if (analysis) {
+            analyses[proposal.id] = analysis;
+          }
         } catch (error) {
           console.error(`Failed to analyze proposal ${proposal.id}:`, error);
         }
@@ -242,15 +246,24 @@ function GovernanceContent() {
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Governance</h1>
-            {address && (
-              <div className="text-sm text-gray-600 dark:text-gray-300">
-                {isVotingPowerLoading ? (
-                  <span>Loading voting power...</span>
-                ) : (
-                  <span>Your Voting Power: {votingPower || '0'}</span>
-                )}
-              </div>
-            )}
+            <div className="flex items-center gap-4">
+              <Link 
+                href="/governance/dashboard" 
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center transition-colors"
+              >
+                <BarChart3 className="w-4 h-4 mr-2" />
+                Dashboard
+              </Link>
+              {address && (
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  {isVotingPowerLoading ? (
+                    <span>Loading voting power...</span>
+                  ) : (
+                    <span>Your Voting Power: {votingPower || '0'}</span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {(isLoading || isCountLoading || isProposalsLoading) && (

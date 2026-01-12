@@ -426,8 +426,7 @@ export const WalletImportFlow: React.FC<WalletImportFlowProps> = ({
         return (
           password.length >= 8 &&
           password === confirmPassword &&
-          isPasswordStrong(password) &&
-          walletName.trim()
+          isPasswordStrong(password)
         );
       default:
         return true;

@@ -13,12 +13,12 @@ const CACHE_DURATION = 60000; // 60 seconds
 function getCachedData(key: string) {
   const cached = requestCache.get(key);
   if (!cached) return null;
-  
+
   const now = Date.now();
   if (now - cached.timestamp < CACHE_DURATION) {
     return cached.data;
   }
-  
+
   // Cache expired, remove it
   requestCache.delete(key);
   return null;
@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   console.log('API route called:', req.method, req.url);
   console.log('Request query:', req.query);
   console.log('Request body:', req.body);
-  
+
   const { method } = req;
   const { walletAddress } = req.query;
 
@@ -41,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (method === 'GET' && walletAddress && typeof walletAddress === 'string' && walletAddress !== 'undefined' && walletAddress !== 'profile' && walletAddress !== 'unknown') {
     try {
       console.log(`Fetching seller profile with caching for: ${walletAddress}`);
-      
+
       // Check if profile is already cached in this request context
       const cacheKey = `profile_${walletAddress}`;
       const cachedProfile = getCachedData(cacheKey);
@@ -49,23 +49,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         console.log(`Returning cached profile for ${walletAddress} from request cache`);
         return res.status(200).json({ success: true, data: cachedProfile });
       }
-      
+
       // Check if profile is already cached in the service
       const isCached = sellerService.isProfileCached(walletAddress);
       console.log(`Profile is cached in service: ${isCached}`);
-      
+
       const profile = await sellerService.getSellerProfile(walletAddress);
-      
+
       // Cache the result in this request context as well
       if (profile !== null) {
         setCachedData(cacheKey, profile);
       }
-      
+
       if (profile === null) {
         // Profile not found (could be cached 404)
         return res.status(404).json({ success: false, message: 'Seller profile not found' });
       }
-      
+
       return res.status(200).json({ success: true, data: profile });
     } catch (error) {
       console.error('Error fetching seller profile:', error);
@@ -85,25 +85,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
   }
-  
+
   // Handle POST requests (creating a new profile)
   if (method === 'POST') {
     try {
       // Construct the backend URL for creating a profile
       const backendEndpoint = `${BACKEND_URL}/api/marketplace/seller/profile`;
       console.log(`Proxying POST request to: ${backendEndpoint}`);
-      
-      // Forward the request to the backend
+
+      // Forward the request to the backend with auth header
       const backendResponse = await fetch(backendEndpoint, {
         method,
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': req.headers.authorization as string || '',
         },
         body: JSON.stringify(req.body),
       });
 
       console.log(`Backend response status: ${backendResponse.status}`);
-      
+
       // Get the response data
       const data = await backendResponse.json();
       console.log(`Backend response data:`, data);
@@ -115,25 +116,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Failed to proxy request to backend' });
     }
   }
-  
+
   // Handle PUT requests (updating an existing profile)
   if (method === 'PUT' && walletAddress && typeof walletAddress === 'string' && walletAddress !== 'undefined' && walletAddress !== 'profile' && walletAddress !== 'unknown') {
     try {
       // Construct the backend URL for updating a profile
       const backendEndpoint = `${BACKEND_URL}/api/marketplace/seller/${walletAddress}`;
       console.log(`Proxying PUT request to: ${backendEndpoint}`);
-      
-      // Forward the request to the backend
+
+      // Forward the request to the backend with auth header
       const backendResponse = await fetch(backendEndpoint, {
         method,
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': req.headers.authorization as string || '',
         },
         body: JSON.stringify(req.body),
       });
 
       console.log(`Backend response status: ${backendResponse.status}`);
-      
+
       // Get the response data
       const data = await backendResponse.json();
       console.log(`Backend response data:`, data);

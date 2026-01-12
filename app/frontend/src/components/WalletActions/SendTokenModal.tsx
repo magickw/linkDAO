@@ -1,13 +1,40 @@
-import React, { useState, useEffect, Fragment } from 'react';
+import React, { useState, useEffect, Fragment, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { Listbox, Transition } from '@headlessui/react';
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, AlertTriangle, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { TokenBalance } from '../../types/wallet';
 import { useToast } from '@/context/ToastContext';
 import { useTokenTransfer } from '../../hooks/useTokenTransfer';
 import { useNetworkSwitch, CHAIN_NAMES } from '../../hooks/useNetworkSwitch';
 import { getTokenLogoWithFallback } from '@/utils/tokenLogoUtils';
+import { isAddress, parseUnits, formatEther, encodeFunctionData } from 'viem';
+import { useEstimateGas } from 'wagmi';
 
+// Basic ERC20 ABI for transfer encoding
+const ERC20_TRANSFER_ABI = [
+  {
+    name: 'transfer',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'to', type: 'address' },
+      { name: 'amount', type: 'uint256' }
+    ],
+    outputs: [{ name: '', type: 'bool' }]
+  }
+] as const;
+
+// Placeholder for a real phishing detection service
+// In production, this should check against a real-time blocklist API
+const MALICIOUS_ADDRESSES = [
+  '0x000000000000000000000000000000000000dead', // Example
+  '0x0000000000000000000000000000000000000000'
+];
+
+const isMaliciousAddress = (address: string): boolean => {
+  if (!address) return false;
+  return MALICIOUS_ADDRESSES.includes(address.toLowerCase());
+};
 
 interface SendTokenModalProps {
   isOpen: boolean;
@@ -41,6 +68,58 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
 
   const selectedNetwork = networks.find(network => network.id === selectedChainId) || networks[0];
   const needsNetworkSwitch = selectedChainId !== currentChainId;
+
+  const selectedToken = tokens.find(t => t.symbol === selectedTokenSymbol);
+  const maxAmount = selectedToken ? getTokenBalanceForChain(selectedToken, selectedChainId) : 0;
+  const estimatedValue = parseFloat(amount || '0') * (selectedToken?.valueUSD || 0) / (selectedToken?.balance || 1);
+
+  // Determine if native token (ETH/MATIC)
+  const isNative = useMemo(() => {
+    if (!selectedToken) return true;
+    return !selectedToken.address ||
+      selectedToken.address === '0x0000000000000000000000000000000000000000' ||
+      (selectedChainId === 137 && selectedToken.symbol === 'MATIC') ||
+      (selectedToken.symbol === 'ETH' && selectedChainId !== 137); // Simple heuristic
+  }, [selectedToken, selectedChainId]);
+
+  // Prepare transaction data for gas estimation
+  const estimateParams = useMemo(() => {
+    if (!amount || !recipient || !isAddress(recipient) || parseFloat(amount) <= 0) return undefined;
+
+    try {
+      if (isNative) {
+        return {
+          to: recipient as `0x${string}`,
+          value: parseUnits(amount, 18), // Native is always 18 mostly
+          chainId: selectedChainId
+        };
+      } else {
+        // ERC20
+        const decimals = selectedTokenSymbol === 'USDC' ? 6 : 18; // Logic from handleSend
+        const data = encodeFunctionData({
+          abi: ERC20_TRANSFER_ABI,
+          functionName: 'transfer',
+          args: [recipient as `0x${string}`, parseUnits(amount, decimals)]
+        });
+        return {
+          to: selectedToken?.contractAddress as `0x${string}`,
+          data,
+          chainId: selectedChainId
+        };
+      }
+    } catch (e) {
+      return undefined;
+    }
+  }, [amount, recipient, isNative, selectedChainId, selectedTokenSymbol, selectedToken]);
+
+  // Estimate Gas
+  const { data: gasData, error: gasError, isLoading: isGasLoading } = useEstimateGas({
+    ...estimateParams,
+    query: {
+      enabled: !!estimateParams && !needsNetworkSwitch, // Don't estimate if we need to switch network first (RPC mismatch)
+      retry: false
+    }
+  });
 
   // Pre-select current network when modal opens
   useEffect(() => {
@@ -76,7 +155,7 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
   }, [isOpen]);
 
   // Get token balance for selected chain
-  const getTokenBalanceForChain = (token: TokenBalance, chainId: number): number => {
+  function getTokenBalanceForChain(token: TokenBalance, chainId: number): number {
     // Check if token has chain breakdown
     if (token.chainBreakdown) {
       const chainData = token.chainBreakdown.find(cb => cb.chainId === chainId);
@@ -87,11 +166,7 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
       return token.balance;
     }
     return 0;
-  };
-
-  const selectedToken = tokens.find(t => t.symbol === selectedTokenSymbol);
-  const maxAmount = selectedToken ? getTokenBalanceForChain(selectedToken, selectedChainId) : 0;
-  const estimatedValue = parseFloat(amount || '0') * (selectedToken?.valueUSD || 0) / (selectedToken?.balance || 1);
+  }
 
   // Handle network change with auto-switch
   const handleNetworkChange = async (newChainId: number) => {
@@ -115,8 +190,15 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
       return;
     }
 
-    if (!recipient.match(/^0x[a-fA-F0-9]{40}$/)) {
-      setError('Invalid recipient address');
+    // UPDATED: EIP-55 Address Validation
+    if (!isAddress(recipient)) {
+      setError('Invalid recipient address (Checksum failed or invalid format)');
+      return;
+    }
+
+    // UPDATED: Phishing Detection
+    if (isMaliciousAddress(recipient)) {
+      setError('Security Alert: This address is flagged as malicious!');
       return;
     }
 
@@ -279,169 +361,223 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
 
           {/* Token Selection */}
           <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Asset
-              </label>
-              <div className="relative">
-                <Listbox value={selectedTokenSymbol} onChange={setSelectedTokenSymbol}>
-                  <div className="relative mt-1">
-                    <Listbox.Button className="relative w-full cursor-default rounded-xl bg-white dark:bg-gray-700 py-3 pl-3 pr-10 text-left border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent sm:text-sm">
-                      <span className="flex items-center truncate">
-                        {(() => {
-                          const logo = getTokenLogoWithFallback(selectedTokenSymbol);
-                          return logo ? (
-                            <img src={logo} alt={selectedTokenSymbol} className="mr-2 h-5 w-5 rounded-full" />
-                          ) : (
-                            <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-xs font-bold text-primary-600 dark:text-primary-400">
-                              {selectedTokenSymbol.slice(0, 1)}
-                            </div>
-                          );
-                        })()}
-                        <span className="block truncate text-gray-900 dark:text-gray-100">{selectedTokenSymbol}</span>
-                      </span>
-                      <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                        <ChevronDown
-                          className="h-5 w-5 text-gray-400"
-                          aria-hidden="true"
-                        />
-                      </span>
-                    </Listbox.Button>
-                    <Transition
-                      as={Fragment}
-                      leave="transition ease-in duration-100"
-                      leaveFrom="opacity-100"
-                      leaveTo="opacity-0"
-                    >
-                      <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50">
-                        {tokens.map((token, tokenIdx) => (
-                          <Listbox.Option
-                            key={tokenIdx}
-                            className={({ active }) =>
-                              `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-900 dark:text-primary-100' : 'text-gray-900 dark:text-gray-100'
-                              }`
-                            }
-                            value={token.symbol}
-                          >
-                            {({ selected }) => (
-                              <>
-                                <span className="flex items-center truncate">
-                                  {(() => {
-                                    const logo = getTokenLogoWithFallback(token.symbol);
-                                    return logo ? (
-                                      <img src={logo} alt={token.symbol} className="mr-2 h-5 w-5 rounded-full" />
-                                    ) : (
-                                      <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-[10px] font-bold text-gray-600 dark:text-gray-300">
-                                        {token.symbol.slice(0, 1)}
-                                      </div>
-                                    );
-                                  })()}
-                                  <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
-                                    {token.symbol}
-                                  </span>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Asset
+            </label>
+            <div className="relative">
+              <Listbox value={selectedTokenSymbol} onChange={setSelectedTokenSymbol}>
+                <div className="relative mt-1">
+                  <Listbox.Button className="relative w-full cursor-default rounded-xl bg-white dark:bg-gray-700 py-3 pl-3 pr-10 text-left border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent sm:text-sm">
+                    <span className="flex items-center truncate">
+                      {(() => {
+                        const logo = getTokenLogoWithFallback(selectedTokenSymbol);
+                        return logo ? (
+                          <img src={logo} alt={selectedTokenSymbol} className="mr-2 h-5 w-5 rounded-full" />
+                        ) : (
+                          <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-xs font-bold text-primary-600 dark:text-primary-400">
+                            {selectedTokenSymbol.slice(0, 1)}
+                          </div>
+                        );
+                      })()}
+                      <span className="block truncate text-gray-900 dark:text-gray-100">{selectedTokenSymbol}</span>
+                    </span>
+                    <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                      <ChevronDown
+                        className="h-5 w-5 text-gray-400"
+                        aria-hidden="true"
+                      />
+                    </span>
+                  </Listbox.Button>
+                  <Transition
+                    as={Fragment}
+                    leave="transition ease-in duration-100"
+                    leaveFrom="opacity-100"
+                    leaveTo="opacity-0"
+                  >
+                    <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50">
+                      {tokens.map((token, tokenIdx) => (
+                        <Listbox.Option
+                          key={tokenIdx}
+                          className={({ active }) =>
+                            `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-900 dark:text-primary-100' : 'text-gray-900 dark:text-gray-100'
+                            }`
+                          }
+                          value={token.symbol}
+                        >
+                          {({ selected }) => (
+                            <>
+                              <span className="flex items-center truncate">
+                                {(() => {
+                                  const logo = getTokenLogoWithFallback(token.symbol);
+                                  return logo ? (
+                                    <img src={logo} alt={token.symbol} className="mr-2 h-5 w-5 rounded-full" />
+                                  ) : (
+                                    <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                                      {token.symbol.slice(0, 1)}
+                                    </div>
+                                  );
+                                })()}
+                                <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                                  {token.symbol}
                                 </span>
-                                {selected ? (
-                                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-600 dark:text-primary-400">
-                                    <Check className="h-5 w-5" aria-hidden="true" />
-                                  </span>
-                                ) : null}
-                              </>
-                            )}
-                          </Listbox.Option>
-                        ))}
-                      </Listbox.Options>
-                    </Transition>
-                  </div>
-                </Listbox>
-                <div className="mt-2 flex justify-between text-xs text-gray-500 dark:text-gray-400 px-1">
-                  <span>Balance on {selectedNetwork.name}: {maxAmount.toFixed(4)} {selectedTokenSymbol}</span>
-                  <span>≈ ${((maxAmount * (selectedToken?.valueUSD || 0)) / (selectedToken?.balance || 1)).toFixed(2)}</span>
+                              </span>
+                              {selected ? (
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-600 dark:text-primary-400">
+                                  <Check className="h-5 w-5" aria-hidden="true" />
+                                </span>
+                              ) : null}
+                            </>
+                          )}
+                        </Listbox.Option>
+                      ))}
+                    </Listbox.Options>
+                  </Transition>
                 </div>
+              </Listbox>
+              <div className="mt-2 flex justify-between text-xs text-gray-500 dark:text-gray-400 px-1">
+                <span>Balance on {selectedNetwork.name}: {maxAmount.toFixed(4)} {selectedTokenSymbol}</span>
+                <span>≈ ${((maxAmount * (selectedToken?.valueUSD || 0)) / (selectedToken?.balance || 1)).toFixed(2)}</span>
               </div>
+            </div>
           </div>
 
           {/* Amount */}
           <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Amount
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full p-3 pr-16 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono"
-                  />
-                  <button
-                    onClick={handleMax}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 text-xs font-bold rounded hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors"
-                  >
-                    MAX
-                  </button>
-                </div>
-                {amount && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right">
-                    ≈ ${estimatedValue.toFixed(2)} USD
-                  </p>
-                )}
-              </div>
-
-              {/* Recipient */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Recipient Address
-                </label>
-                <input
-                  type="text"
-                  value={recipient}
-                  onChange={(e) => setRecipient(e.target.value)}
-                  placeholder="0x..."
-                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono text-sm"
-                />
-              </div>
-
-              {/* Error */}
-              {error && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
-                  <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="text-sm text-red-700 dark:text-red-200">{error}</p>
-                </div>
-              )}
-
-              {/* Submit Button */}
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Amount
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                className="w-full p-3 pr-16 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono"
+              />
               <button
-                onClick={handleSend}
-                disabled={isPending || isSwitching || !amount || !recipient}
-                className="w-full py-3.5 px-4 bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
+                onClick={handleMax}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 text-xs font-bold rounded hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors"
               >
-                {isSwitching ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Switching Network...
-                  </>
-                ) : isPending ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    {needsNetworkSwitch && (
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                    )}
-                    {needsNetworkSwitch ? `Switch & Send ${selectedTokenSymbol}` : `Send ${selectedTokenSymbol}`}
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
-                  </>
-                )}
+                MAX
               </button>
             </div>
+            {amount && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right">
+                ≈ ${estimatedValue.toFixed(2)} USD
+              </p>
+            )}
           </div>
+
+          {/* Recipient */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Recipient Address
+            </label>
+            <input
+              type="text"
+              value={recipient}
+              onChange={(e) => setRecipient(e.target.value)}
+              placeholder="0x..."
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono text-sm"
+            />
+            {/* Security Indicators */}
+            {recipient && isAddress(recipient) && !isMaliciousAddress(recipient) && (
+              <div className="mt-1 flex items-center text-xs text-green-600 dark:text-green-400">
+                <ShieldCheck className="w-3 h-3 mr-1" />
+                Valid checksummed address
+              </div>
+            )}
+            {recipient && isMaliciousAddress(recipient) && (
+              <div className="mt-1 flex items-center text-xs text-red-600 dark:text-red-400 font-bold">
+                <ShieldAlert className="w-3 h-3 mr-1" />
+                Security Risk: Suspicious address
+              </div>
+            )}
+          </div>
+
+          {/* Gas Estimation & Simulation */}
+          {estimateParams && !needsNetworkSwitch && (
+            <div className={`p-3 rounded-lg text-sm border ${gasError
+                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+              }`}>
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-gray-700 dark:text-gray-300">Transaction Simulation:</span>
+                {isGasLoading ? (
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-2" />
+                    <span className="text-gray-500">Estimating gas...</span>
+                  </div>
+                ) : gasError ? (
+                  <span className="text-red-600 dark:text-red-400 font-bold flex items-center">
+                    <AlertTriangle className="w-3 h-3 mr-1" />
+                    Execution Will Fail
+                  </span>
+                ) : (
+                  <span className="text-green-600 dark:text-green-400 font-bold flex items-center">
+                    <Check className="w-3 h-3 mr-1" />
+                    Likely to Succeed
+                  </span>
+                )}
+              </div>
+              {gasData && !gasError && (
+                <div className="mt-1 flex justify-between text-xs text-gray-600 dark:text-gray-400">
+                  <span>Estimated Gas Cost:</span>
+                  <span className="font-mono">
+                    {formatEther(gasData * BigInt(2000000000))} {networks.find(n => n.id === selectedChainId)?.symbol} (approx)
+                  </span>
+                </div>
+              )}
+              {gasError && (
+                <div className="mt-1 text-xs text-red-500 break-words">
+                  Error: Transaction invalid or likely to revert. Check balance and permissions.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
+              <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-sm text-red-700 dark:text-red-200">{error}</p>
+            </div>
+          )}
+
+          {/* Submit Button */}
+          <button
+            onClick={handleSend}
+            disabled={isPending || isSwitching || !amount || !recipient || !!gasError || isGasLoading}
+            className="w-full py-3.5 px-4 bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
+          >
+            {isSwitching ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Switching Network...
+              </>
+            ) : isPending ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                {needsNetworkSwitch && (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                )}
+                {needsNetworkSwitch ? `Switch & Send ${selectedTokenSymbol}` : `Send ${selectedTokenSymbol}`}
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </>
+            )}
+          </button>
         </div>
-        );
+      </div>
+    </div>
+  );
 }
