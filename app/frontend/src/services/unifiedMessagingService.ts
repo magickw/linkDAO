@@ -1382,23 +1382,25 @@ class UnifiedMessagingService {
   // API helpers
   private async makeRequest(endpoint: string, options: RequestInit = {}): Promise<Response> {
     const authHeaders = await enhancedAuthService.getAuthHeaders();
-    
+
     // Ensure Content-Type is not manually set for FormData
     const isFormData = options.body instanceof FormData;
-    const contentTypeHeader = isFormData ? {} : { 'Content-Type': 'application/json' };
+
+    // Build headers in correct order: base headers, auth headers, then allow options to override
+    const headers: Record<string, string> = {
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+      ...authHeaders,
+      ...(options.headers as Record<string, string> || {})
+    };
 
     return fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
-      headers: {
-        ...contentTypeHeader,
-        ...authHeaders,
-        ...options.headers,
-      },
+      headers
     });
   }
 
   // Transform helpers
-
+  private transformMessage(data: any): Message {
     return {
       ...data,
       timestamp: new Date(data.timestamp || data.createdAt),

@@ -1090,9 +1090,7 @@ class EnhancedAuthService {
    * Get authentication headers for API requests with automatic token refresh
    */
   async getAuthHeaders(): Promise<Record<string, string>> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json'
-    };
+    const headers: Record<string, string> = {};
 
     // Check if we need to refresh the token before using it
     if (this.shouldRefreshToken()) {
