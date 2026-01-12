@@ -22,6 +22,7 @@ import {
   MessageReaction
 } from '@/types/messaging';
 import { OfflineManager } from './OfflineManager';
+import { enhancedAuthService } from './enhancedAuthService';
 
 // Event types for real-time updates
 export type MessagingEvent =
@@ -1379,33 +1380,24 @@ class UnifiedMessagingService {
   }
 
   // API helpers
-  private async makeRequest(endpoint: string, options?: RequestInit): Promise<Response> {
-    const token = this.getAuthToken();
+  private async makeRequest(endpoint: string, options: RequestInit = {}): Promise<Response> {
+    const authHeaders = await enhancedAuthService.getAuthHeaders();
+    
+    // Ensure Content-Type is not manually set for FormData
+    const isFormData = options.body instanceof FormData;
+    const contentTypeHeader = isFormData ? {} : { 'Content-Type': 'application/json' };
 
     return fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
       headers: {
-        'Authorization': token ? `Bearer ${token}` : '',
-        'Content-Type': 'application/json',
-        ...options?.headers
-      }
+        ...contentTypeHeader,
+        ...authHeaders,
+        ...options.headers,
+      },
     });
   }
 
-import { enhancedAuthService } from './enhancedAuthService';
-
-// ... (rest of imports)
-
-// ... (rest of class)
-
-  // Private helper methods
-  private getAuthToken(): string {
-    // CRITICAL: Use the centralized auth service to get the token
-    return enhancedAuthService.getToken() || '';
-  }
-
-  private transformMessage(data: any): Message {
-// ... (rest of file)
+  // Transform helpers
 
     return {
       ...data,

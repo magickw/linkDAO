@@ -112,10 +112,10 @@ class EnhancedAuthService {
 
       // Proceed with normal session load
       if (sessionDataStr) {
-        const sessionData: SessionData = JSON.parse(sessionDataStr);
+        const sessionData: SessionData | null = JSON.parse(sessionDataStr);
 
         // Check validity...
-        if (Date.now() < sessionData.expiresAt) {
+        if (sessionData && Date.now() < sessionData.expiresAt) {
           const storedBackendUrl = sessionStorage.getItem(this.STORAGE_KEYS.BACKEND_URL);
           const currentBackendUrl = this.baseUrl;
 
@@ -1095,7 +1095,7 @@ class EnhancedAuthService {
     };
 
     // Check if we need to refresh the token before using it
-    if (this.token && this.shouldRefreshToken()) {
+    if (this.shouldRefreshToken()) {
       try {
         console.log('🔄 Token needs refresh, attempting automatic refresh...');
         const refreshResult = await this.refreshToken();
@@ -1106,13 +1106,13 @@ class EnhancedAuthService {
         }
       } catch (error) {
         console.error('❌ Automatic token refresh failed:', error);
-        // Don't throw here, let the request proceed with current token
-        // The 401 error will trigger proper re-authentication flow
       }
     }
 
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+    // Use getToken() to ensure token is loaded from storage if not in memory
+    const token = this.getToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
 
     return headers;

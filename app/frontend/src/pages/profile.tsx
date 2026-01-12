@@ -40,44 +40,8 @@ export default function Profile() {
   const { isAuthenticated, login, recoverSession, ensureAuthenticated, user } = useAuth();
   const { addToast } = useToast();
 
-  // Add useEffect to automatically trigger authentication when wallet is connected but not authenticated
-  useEffect(() => {
-    const authenticateIfNeeded = async () => {
-      // Only attempt authentication if:
-      // 1. Wallet is connected
-      // 2. User is not authenticated
-      // 3. We have a valid address
-      if (isConnected && !isAuthenticated && currentUserAddress) {
-        console.log('🔄 Attempting automatic authentication for profile page');
-        try {
-          // Try to recover existing session first
-          const recoveryResult = await recoverSession();
-          if (recoveryResult) {
-            console.log('✅ Session recovered successfully');
-            return;
-          }
-
-          // If recovery fails, try to authenticate
-          const account = getAccount(config);
-          if (account.connector) {
-            const result = await login(currentUserAddress, account.connector, 'connected');
-            if (result.success) {
-              console.log('✅ Authentication successful');
-              addToast('Authentication successful!', 'success');
-            } else {
-              console.error('❌ Authentication failed:', result.error);
-              addToast(result.error || 'Authentication failed', 'error');
-            }
-          }
-        } catch (error) {
-          console.error('Authentication error:', error);
-          addToast('Failed to authenticate. Please try connecting your wallet again.', 'error');
-        }
-      }
-    };
-
-    authenticateIfNeeded();
-  }, [isConnected, isAuthenticated, currentUserAddress, login, recoverSession, addToast]);
+  // This useEffect was causing a race condition with the global auth handler and has been removed.
+  // The global WalletLoginBridge is now the single source of truth for initiating authentication.
 
   // Determine which user profile to display based on query parameter
   const targetUserAddress = typeof router.query.user === 'string' ? router.query.user : currentUserAddress;
