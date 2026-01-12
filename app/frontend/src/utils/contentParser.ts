@@ -50,8 +50,7 @@ export const sanitizeConfig = {
       'padding-right': [/^\d+(\.\d+)?(px|em|rem|%|auto)$/],
       'border': [/^\d+(\.\d+)?(px|em|rem)\s+(solid|dashed|dotted|double|none)\s+#[0-9a-f]{3,6}$/i],
       'border-radius': [/^\d+(\.\d+)?(px|em|rem|%)$/],
-      'display': [/^(block|inline|inline-block|flex|none)$/],
-      'text-align': [/^(left|center|right|justify)$/]
+      'display': [/^(block|inline|inline-block|flex|none)$/]
     }
   }
 };
@@ -67,9 +66,9 @@ export const markdownComponents: Components = {
   p: ({ children }) =>
     React.createElement('p', { className: 'text-gray-700 dark:text-gray-300 leading-relaxed my-2 whitespace-pre-wrap' }, children),
   ul: ({ children }) =>
-    React.createElement('ul', { className: 'list-disc list-inside text-gray-700 dark:text-gray-300 my-2 space-y-1' }, children),
+    React.createElement('ul', { className: 'list-disc list-outside ml-5 text-gray-700 dark:text-gray-300 my-2 space-y-1' }, children),
   ol: ({ children }) =>
-    React.createElement('ol', { className: 'list-decimal list-inside text-gray-700 dark:text-gray-300 my-2 space-y-1' }, children),
+    React.createElement('ol', { className: 'list-decimal list-outside ml-5 text-gray-700 dark:text-gray-300 my-2 space-y-1' }, children),
   li: ({ children }) =>
     React.createElement('li', { className: 'text-gray-700 dark:text-gray-300' }, children),
   blockquote: ({ children }) =>
@@ -117,9 +116,9 @@ export const markdownComponents: Components = {
 
 /**
  * URL regex pattern for linkifying URLs in HTML content
- * Matches URLs that are NOT already inside anchor tags
+ * Matches URLs that are NOT already inside anchor tags or image src attributes
  */
-const URL_PATTERN = /(?<!href=["'])(https?:\/\/[^\s<>"']+)/gi;
+const URL_PATTERN = /(?<!(href|src)=["'])(https?:\/\/[^\s<>"']+)/gi;
 
 /**
  * Linkify URLs in HTML string content (convert plain URLs to anchor tags)
@@ -137,7 +136,14 @@ export const linkifyHtmlUrls = (htmlContent: string): string => {
     existingLinks.push(anchorMatch[1]);
   }
 
-  // Replace URLs that are not already in anchor tags
+  // Also extract image src URLs to avoid linking them
+  const imgRegex = /<img[^>]*src=["']([^"']+)["'][^>]*>/gi;
+  let imgMatch;
+  while ((imgMatch = imgRegex.exec(htmlContent)) !== null) {
+    existingLinks.push(imgMatch[1]);
+  }
+
+  // Replace URLs that are not already in anchor tags or image srcs
   return htmlContent.replace(URL_PATTERN, (url) => {
     // Skip if this URL is already in an existing anchor tag
     if (existingLinks.some(existingUrl => existingUrl.includes(url) || url.includes(existingUrl))) {
@@ -214,7 +220,7 @@ export const truncateHTML = (html: string, maxLength: number): string => {
     const truncateNode = (node: Node): boolean => {
       if (shouldTruncate) {
         // Remove all nodes after truncation point
-        node.remove();
+        (node as ChildNode).remove();
         return true;
       }
 

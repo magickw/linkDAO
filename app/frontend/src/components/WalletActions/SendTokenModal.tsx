@@ -29,14 +29,14 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
   const [error, setError] = useState('');
   const [selectedChainId, setSelectedChainId] = useState<number>(currentChainId);
 
-  // Define available networks
+  // Define available networks with icons
   const networks = [
-    { id: 1, name: 'Ethereum', symbol: 'ETH', explorer: 'https://etherscan.io' },
-    { id: 8453, name: 'Base', symbol: 'ETH', explorer: 'https://basescan.org' },
-    { id: 137, name: 'Polygon', symbol: 'MATIC', explorer: 'https://polygonscan.com' },
-    { id: 42161, name: 'Arbitrum', symbol: 'ETH', explorer: 'https://arbiscan.io' },
-    { id: 11155111, name: 'Sepolia', symbol: 'ETH', explorer: 'https://sepolia.etherscan.io' },
-    { id: 84532, name: 'Base Sepolia', symbol: 'ETH', explorer: 'https://sepolia.basescan.org' },
+    { id: 1, name: 'Ethereum', symbol: 'ETH', explorer: 'https://etherscan.io', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png' },
+    { id: 8453, name: 'Base', symbol: 'ETH', explorer: 'https://basescan.org', icon: 'https://raw.githubusercontent.com/base-org/brand-kit/main/logo/symbol/Base_Symbol_Blue.png' },
+    { id: 137, name: 'Polygon', symbol: 'MATIC', explorer: 'https://polygonscan.com', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png' },
+    { id: 42161, name: 'Arbitrum', symbol: 'ETH', explorer: 'https://arbiscan.io', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png' },
+    { id: 11155111, name: 'Sepolia', symbol: 'ETH', explorer: 'https://sepolia.etherscan.io', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png' },
+    { id: 84532, name: 'Base Sepolia', symbol: 'ETH', explorer: 'https://sepolia.basescan.org', icon: 'https://raw.githubusercontent.com/base-org/brand-kit/main/logo/symbol/Base_Symbol_Blue.png' },
   ];
 
   const selectedNetwork = networks.find(network => network.id === selectedChainId) || networks[0];
@@ -197,7 +197,16 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
                 <div className="relative mt-1">
                   <Listbox.Button className="relative w-full cursor-default rounded-xl bg-white dark:bg-gray-700 py-3 pl-3 pr-10 text-left border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent sm:text-sm">
                     <span className="flex items-center truncate">
-                      <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-xs font-bold text-primary-600 dark:text-primary-400">
+                      <img
+                        src={selectedNetwork.icon}
+                        alt={selectedNetwork.name}
+                        className="mr-2 h-5 w-5 rounded-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                          (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                      <div className="mr-2 hidden h-5 w-5 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-xs font-bold text-primary-600 dark:text-primary-400">
                         {selectedNetwork.symbol.slice(0, 1)}
                       </div>
                       <span className="block truncate text-gray-900 dark:text-gray-100">{selectedNetwork.name}</span>
@@ -227,11 +236,18 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
                         >
                           {({ selected }) => (
                             <>
-                              <span
-                                className={`block truncate ${selected ? 'font-medium' : 'font-normal'
-                                  }`}
-                              >
-                                {network.name}
+                              <span className="flex items-center truncate">
+                                <img
+                                  src={network.icon}
+                                  alt={network.name}
+                                  className="mr-2 h-5 w-5 rounded-full object-contain"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                                <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                                  {network.name}
+                                </span>
                               </span>
                               {selected ? (
                                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-600 dark:text-primary-400">
