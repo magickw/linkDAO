@@ -126,6 +126,18 @@ const SEOHead: React.FC<SEOHeadProps> = ({
 
   return (
     <Head>
+      {/* Google Analytics */}
+      <script async src="https://www.googletagmanager.com/gtag/js?id=G-053PFGVQ9D"></script>
+      <script>
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-053PFGVQ9D');
+        `}
+      </script>
+
       {/* Primary Meta Tags */}
       <title>{title}</title>
       <meta name="title" content={title} />
