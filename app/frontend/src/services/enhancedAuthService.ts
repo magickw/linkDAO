@@ -916,18 +916,26 @@ class EnhancedAuthService {
       return true;
     }
 
-    // If not in memory, check localStorage to recover state
+    // If not in memory, check sessionStorage first (where session data is stored), then localStorage
     // This handles cases where the service instance was recreated
     if (typeof window !== 'undefined') {
       try {
-        const sessionDataStr = localStorage.getItem(this.STORAGE_KEYS.SESSION_DATA);
+        // Check sessionStorage first (primary storage location)
+        let sessionDataStr = sessionStorage.getItem(this.STORAGE_KEYS.SESSION_DATA);
+
+        // Fallback to localStorage if not found in sessionStorage
+        if (!sessionDataStr) {
+          sessionDataStr = localStorage.getItem(this.STORAGE_KEYS.SESSION_DATA);
+        }
+
         if (sessionDataStr) {
           const sessionData = JSON.parse(sessionDataStr);
 
           // Check if session is still valid
           if (Date.now() < sessionData.expiresAt) {
             // Check if the stored session is for the same backend
-            const storedBackendUrl = localStorage.getItem(this.STORAGE_KEYS.BACKEND_URL);
+            const storedBackendUrl = sessionStorage.getItem(this.STORAGE_KEYS.BACKEND_URL) ||
+              localStorage.getItem(this.STORAGE_KEYS.BACKEND_URL);
             if (storedBackendUrl && storedBackendUrl !== this.baseUrl) {
               console.log('🔄 Backend URL changed, clearing authentication', {
                 storedUrl: storedBackendUrl,
@@ -942,17 +950,18 @@ class EnhancedAuthService {
             this.token = sessionData.token;
 
             // Fallback: ensure refresh token is loaded from separate storage if missing from sessionData
-            if (!this.sessionData.refreshToken) {
-              const storedRefreshToken = localStorage.getItem(this.STORAGE_KEYS.REFRESH_TOKEN);
+            if (!sessionData.refreshToken) {
+              const storedRefreshToken = sessionStorage.getItem(this.STORAGE_KEYS.REFRESH_TOKEN) ||
+                localStorage.getItem(this.STORAGE_KEYS.REFRESH_TOKEN);
               if (storedRefreshToken) {
-                this.sessionData.refreshToken = storedRefreshToken;
+                sessionData.refreshToken = storedRefreshToken;
                 console.log('🔄 Restored refresh token from separate storage in checkAuth');
               }
             }
 
             // Ensure wallet address is also stored separately for API client access
-            if (this.sessionData.user?.address) {
-              localStorage.setItem(this.STORAGE_KEYS.WALLET_ADDRESS, this.sessionData.user.address);
+            if (sessionData.user?.address) {
+              localStorage.setItem(this.STORAGE_KEYS.WALLET_ADDRESS, sessionData.user.address);
             }
 
             return true;
@@ -989,19 +998,30 @@ class EnhancedAuthService {
       return this.token;
     }
 
-    // Fallback: check localStorage if in-memory token is missing
+    // Fallback: check sessionStorage first (where session data is stored), then localStorage if in-memory token is missing
     // This handles cases where the service instance might be recreated
     if (typeof window !== 'undefined') {
       try {
-        const storedToken = localStorage.getItem(this.STORAGE_KEYS.ACCESS_TOKEN);
+        // Check sessionStorage first (primary storage location)
+        let storedToken = sessionStorage.getItem(this.STORAGE_KEYS.ACCESS_TOKEN);
+        let sessionDataStr = sessionStorage.getItem(this.STORAGE_KEYS.SESSION_DATA);
+
+        // Fallback to localStorage if not found in sessionStorage
+        if (!storedToken) {
+          storedToken = localStorage.getItem(this.STORAGE_KEYS.ACCESS_TOKEN);
+        }
+        if (!sessionDataStr) {
+          sessionDataStr = localStorage.getItem(this.STORAGE_KEYS.SESSION_DATA);
+        }
+
         if (storedToken) {
           // Verify the session is still valid
-          const sessionDataStr = localStorage.getItem(this.STORAGE_KEYS.SESSION_DATA);
           if (sessionDataStr) {
             const sessionData = JSON.parse(sessionDataStr);
             if (Date.now() < sessionData.expiresAt) {
               // Check if the stored session is for the same backend
-              const storedBackendUrl = localStorage.getItem(this.STORAGE_KEYS.BACKEND_URL);
+              const storedBackendUrl = sessionStorage.getItem(this.STORAGE_KEYS.BACKEND_URL) ||
+                localStorage.getItem(this.STORAGE_KEYS.BACKEND_URL);
               if (storedBackendUrl && storedBackendUrl !== this.baseUrl) {
                 console.log('🔄 Backend URL changed, clearing token', {
                   storedUrl: storedBackendUrl,
@@ -1011,22 +1031,23 @@ class EnhancedAuthService {
                 return null;
               }
 
-              console.log('🔄 Restored token from localStorage');
+              console.log('🔄 Restored token from storage');
               this.token = storedToken;
               this.sessionData = sessionData;
 
               // Fallback: ensure refresh token is loaded from separate storage if missing from sessionData
-              if (!this.sessionData.refreshToken) {
-                const storedRefreshToken = localStorage.getItem(this.STORAGE_KEYS.REFRESH_TOKEN);
+              if (!sessionData.refreshToken) {
+                const storedRefreshToken = sessionStorage.getItem(this.STORAGE_KEYS.REFRESH_TOKEN) ||
+                  localStorage.getItem(this.STORAGE_KEYS.REFRESH_TOKEN);
                 if (storedRefreshToken) {
-                  this.sessionData.refreshToken = storedRefreshToken;
+                  sessionData.refreshToken = storedRefreshToken;
                   console.log('🔄 Restored refresh token from separate storage in getValidToken');
                 }
               }
 
               // Ensure wallet address is also stored separately for API client access
-              if (this.sessionData.user?.address) {
-                localStorage.setItem(this.STORAGE_KEYS.WALLET_ADDRESS, this.sessionData.user.address);
+              if (sessionData.user?.address) {
+                localStorage.setItem(this.STORAGE_KEYS.WALLET_ADDRESS, sessionData.user.address);
               }
 
               return storedToken;

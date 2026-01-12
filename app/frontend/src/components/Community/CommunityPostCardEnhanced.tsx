@@ -1044,6 +1044,55 @@ function CommunityPostCardEnhanced({
             </div>
           )}
 
+          {/* Analytics Panel */}
+          {showAnalytics && (
+            <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Post Analytics</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    {post.views || 0}
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">Views</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    {voteScore}
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">Net Votes</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                    {comments.length}
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">Comments</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                    {post.reposts || 0}
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">Reposts</div>
+                </div>
+              </div>
+              {reactions.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                  <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Reactions Breakdown</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {reactions.map((reaction) => (
+                      <div
+                        key={reaction.type}
+                        className="flex items-center space-x-1 px-2 py-1 bg-white dark:bg-gray-700 rounded-full border border-gray-200 dark:border-gray-600"
+                      >
+                        <span className="text-lg">{reaction.emoji}</span>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{reaction.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Comment prompt when no comments and section is collapsed */}
           {!showComments && (
             <div className="mt-4 text-center py-3 px-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">

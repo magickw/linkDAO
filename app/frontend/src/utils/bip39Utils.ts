@@ -3,7 +3,7 @@
  * Proper BIP-39 mnemonic generation, validation, and key derivation
  */
 
-import { HDNodeWallet, Mnemonic, entropyToMnemonic, mnemonicToEntropy, wordlist } from 'ethers';
+import { HDNodeWallet, Mnemonic, entropyToMnemonic, mnemonicToEntropy, wordlist, Wallet } from 'ethers';
 
 /**
  * Generate a new BIP-39 mnemonic phrase
@@ -96,7 +96,7 @@ export function derivePrivateKeyFromMnemonic(
  */
 export function deriveAddressFromPrivateKey(privateKey: string): string {
   try {
-    const wallet = new HDNodeWallet(privateKey);
+    const wallet = new Wallet(privateKey);
     return wallet.address;
   } catch (error: any) {
     throw new Error(`Failed to derive address: ${error.message}`);
