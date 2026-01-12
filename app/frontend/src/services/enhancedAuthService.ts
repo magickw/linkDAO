@@ -1017,8 +1017,8 @@ class EnhancedAuthService {
         if (storedToken) {
           // Verify the session is still valid
           if (sessionDataStr) {
-            const sessionData = JSON.parse(sessionDataStr);
-            if (Date.now() < sessionData.expiresAt) {
+            const sessionData: SessionData | null = JSON.parse(sessionDataStr);
+            if (sessionData && Date.now() < sessionData.expiresAt) {
               // Check if the stored session is for the same backend
               const storedBackendUrl = sessionStorage.getItem(this.STORAGE_KEYS.BACKEND_URL) ||
                 localStorage.getItem(this.STORAGE_KEYS.BACKEND_URL);

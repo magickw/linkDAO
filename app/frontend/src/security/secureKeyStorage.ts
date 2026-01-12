@@ -109,7 +109,7 @@ export class SecureKeyStorage {
 
     let privateKey: string | undefined;
     let mnemonic: string | undefined;
-    
+
     try {
       // Decrypt private key
       privateKey = await decrypt(
@@ -132,15 +132,15 @@ export class SecureKeyStorage {
           console.warn('Failed to decrypt mnemonic, continuing without it.');
         }
       }
-      
+
       const metadata = this._getWalletMetadata(address);
 
       // Execute the callback with the decrypted data
       return await callback({ privateKey, mnemonic, metadata });
 
     } catch (error) {
-        // Re-throw decryption errors as invalid password
-        throw new Error('Invalid password');
+      // Re-throw decryption errors as invalid password
+      throw new Error('Invalid password');
     } finally {
       // SECURELY WIPE SENSITIVE DATA FROM MEMORY
       if (privateKey) {
@@ -200,7 +200,7 @@ export class SecureKeyStorage {
     // Update last accessed time
     walletData.lastAccessed = Date.now();
     localStorage.setItem(storageKey, JSON.stringify(walletData));
-    
+
     return walletData;
   }
 
@@ -212,6 +212,13 @@ export class SecureKeyStorage {
     const metadataKey = `${this.STORAGE_PREFIX}${address.toLowerCase()}_metadata`;
     const metadataData = localStorage.getItem(metadataKey);
     return metadataData ? JSON.parse(metadataData) : undefined;
+  }
+
+  /**
+   * Get wallet metadata (public accessor)
+   */
+  static getWalletMetadata(address: string): WalletMetadata | undefined {
+    return this._getWalletMetadata(address);
   }
 
 
@@ -293,7 +300,7 @@ export class SecureKeyStorage {
         const minutes = Math.ceil((timeUntilUnblock || 0) / 60000);
         throw new Error(`Too many password attempts. Please try again in ${minutes} minutes.`);
       }
-      
+
       const isValid = await this.withDecryptedWallet(address, password, async (wallet) => !!wallet.privateKey);
 
       // Record attempt (success or failure)
@@ -367,7 +374,7 @@ export class SecureKeyStorage {
           salt,
           exportedAt: Date.now(),
         };
-        
+
         return btoa(JSON.stringify(exportPackage));
       });
     } catch (error) {
@@ -394,7 +401,7 @@ export class SecureKeyStorage {
       const { decrypt } = await import('@/utils/cryptoUtils');
       let decryptedDataJson: string | undefined;
       let importData: any;
-      
+
       try {
         decryptedDataJson = await decrypt(
           importPackage.encrypted,
@@ -403,7 +410,7 @@ export class SecureKeyStorage {
           importPackage.salt
         );
         importData = JSON.parse(decryptedDataJson);
-        
+
         // Store the imported wallet
         await this.storeWallet(
           importData.address,
