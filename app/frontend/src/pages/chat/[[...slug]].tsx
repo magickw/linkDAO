@@ -735,22 +735,20 @@ export default function ChatPage() {
             <div className="flex mt-3 bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
               <button
                 onClick={() => setSidebarTab('messages')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  sidebarTab === 'messages'
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors ${sidebarTab === 'messages'
                     ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                }`}
+                  }`}
               >
                 <MessageCircle className="w-3.5 h-3.5" />
                 Messages
               </button>
               <button
                 onClick={() => setSidebarTab('contacts')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  sidebarTab === 'contacts'
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors ${sidebarTab === 'contacts'
                     ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                }`}
+                  }`}
               >
                 <BookUser className="w-3.5 h-3.5" />
                 Contacts
@@ -764,142 +762,141 @@ export default function ChatPage() {
               /* Channel Categories / Messages */
               <>
                 {channelCategories.map((category) => (
-              <div key={category.id} className="py-2">
-                {/* Category Header */}
-                <div className="group w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-300">
-                  <button
-                    onClick={() => toggleCategory(category.id)}
-                    className="flex items-center gap-1"
-                  >
-                    {category.isCollapsed ? (
-                      <ChevronRight className="w-3 h-3" />
-                    ) : (
-                      <ChevronDown className="w-3 h-3" />
-                    )}
-                    {category.name}
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (category.id === 'direct') {
-                        setShowNewConversationModal(true);
-                      } else {
-                        handleOpenCreateChannel(category.id as 'public' | 'private' | 'gated');
-                      }
-                    }}
-                    className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors"
-                    title={category.id === 'direct' ? 'New conversation' : `Create ${category.id} channel`}
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                {/* Category Items */}
-                {!category.isCollapsed && (
-                  <div className="mt-1">
-                    {category.id === 'direct' && (
-                      <>
-                        {conversationsLoading ? (
-                          <div className="flex items-center justify-center py-4">
-                            <Loader2 className="w-4 h-4 animate-spin text-gray-500 dark:text-gray-400" />
-                          </div>
-                        ) : conversationsError ? (
-                          <div className="px-3 py-2 text-xs text-red-500 dark:text-red-400">
-                            {conversationsError}
-                            <button onClick={loadConversations} className="ml-2 text-blue-500 dark:text-blue-400 hover:underline">
-                              Retry
-                            </button>
-                          </div>
-                        ) : sortedConversations.length === 0 ? (
-                          <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-500">
-                            No conversations yet
-                          </div>
+                  <div key={category.id} className="py-2">
+                    {/* Category Header */}
+                    <div className="group w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-300">
+                      <button
+                        onClick={() => toggleCategory(category.id)}
+                        className="flex items-center gap-1"
+                      >
+                        {category.isCollapsed ? (
+                          <ChevronRight className="w-3 h-3" />
                         ) : (
-                          sortedConversations.map((conversation) => {
-                            const otherParticipant = getOtherParticipant(conversation);
-                            const isUserOnline = onlineUsers.has(otherParticipant);
-                            const conversationTyping = typingUsers.get(conversation.id) || [];
-                            const isTyping = conversationTyping.length > 0;
-                            const isSelected = selectedConversation?.id === conversation.id;
-                            const avatarUrl = getAvatarUrl(otherParticipant);
-                            const displayName = getDisplayName(otherParticipant);
-
-                            return (
-                              <button
-                                key={conversation.id}
-                                onClick={() => handleConversationSelect(conversation)}
-                                className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md mx-1 transition-colors ${
-                                  isSelected
-                                    ? 'bg-blue-100 dark:bg-gray-700 text-gray-900 dark:text-white'
-                                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'
-                                }`}
-                              >
-                                <div className="relative flex-shrink-0">
-                                  <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center overflow-hidden">
-                                    {avatarUrl ? (
-                                      <img
-                                        src={avatarUrl}
-                                        alt={displayName}
-                                        className="w-full h-full object-cover"
-                                        onError={(e) => {
-                                          // Fallback to User icon if image fails to load
-                                          e.currentTarget.style.display = 'none';
-                                          const parent = e.currentTarget.parentElement;
-                                          if (parent) {
-                                            parent.innerHTML = '<svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-                                          }
-                                        }}
-                                      />
-                                    ) : (
-                                      <User className="w-4 h-4 text-gray-400" />
-                                    )}
-                                  </div>
-                                  <div className="absolute -bottom-0.5 -right-0.5">
-                                    <OnlineStatus isOnline={isUserOnline} size={10} />
-                                  </div>
-                                </div>
-                                <div className="flex-1 min-w-0 text-left">
-                                  <div className="truncate font-medium">
-                                    {displayName}
-                                  </div>
-                                  {isTyping ? (
-                                    <div className="text-xs text-blue-400">typing...</div>
-                                  ) : conversation.lastMessage?.content ? (
-                                    <div className="text-xs text-gray-500 truncate">
-                                      {conversation.lastMessage.content}
-                                    </div>
-                                  ) : null}
-                                </div>
-                                {(conversation.unreadCounts?.[address || ''] || 0) > 0 && (
-                                  <div className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                                    {conversation.unreadCounts?.[address || ''] > 9 ? '9+' : conversation.unreadCounts?.[address || '']}
-                                  </div>
-                                )}
-                              </button>
-                            );
-                          })
+                          <ChevronDown className="w-3 h-3" />
                         )}
-                      </>
-                    )}
-                    {category.id === 'public' && (
-                      <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-500">
-                        No public channels yet
-                      </div>
-                    )}
-                    {category.id === 'private' && (
-                      <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-500">
-                        No private channels yet
-                      </div>
-                    )}
-                    {category.id === 'gated' && (
-                      <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-500">
-                        No gated channels yet
+                        {category.name}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (category.id === 'direct') {
+                            setShowNewConversationModal(true);
+                          } else {
+                            handleOpenCreateChannel(category.id as 'public' | 'private' | 'gated');
+                          }
+                        }}
+                        className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors"
+                        title={category.id === 'direct' ? 'New conversation' : `Create ${category.id} channel`}
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Category Items */}
+                    {!category.isCollapsed && (
+                      <div className="mt-1">
+                        {category.id === 'direct' && (
+                          <>
+                            {conversationsLoading ? (
+                              <div className="flex items-center justify-center py-4">
+                                <Loader2 className="w-4 h-4 animate-spin text-gray-500 dark:text-gray-400" />
+                              </div>
+                            ) : conversationsError ? (
+                              <div className="px-3 py-2 text-xs text-red-500 dark:text-red-400">
+                                {conversationsError}
+                                <button onClick={loadConversations} className="ml-2 text-blue-500 dark:text-blue-400 hover:underline">
+                                  Retry
+                                </button>
+                              </div>
+                            ) : sortedConversations.length === 0 ? (
+                              <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-500">
+                                No conversations yet
+                              </div>
+                            ) : (
+                              sortedConversations.map((conversation) => {
+                                const otherParticipant = getOtherParticipant(conversation);
+                                const isUserOnline = onlineUsers.has(otherParticipant);
+                                const conversationTyping = typingUsers.get(conversation.id) || [];
+                                const isTyping = conversationTyping.length > 0;
+                                const isSelected = selectedConversation?.id === conversation.id;
+                                const avatarUrl = getAvatarUrl(otherParticipant);
+                                const displayName = getDisplayName(otherParticipant);
+
+                                return (
+                                  <button
+                                    key={conversation.id}
+                                    onClick={() => handleConversationSelect(conversation)}
+                                    className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md mx-1 transition-colors ${isSelected
+                                        ? 'bg-blue-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'
+                                      }`}
+                                  >
+                                    <div className="relative flex-shrink-0">
+                                      <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center overflow-hidden">
+                                        {avatarUrl ? (
+                                          <img
+                                            src={avatarUrl}
+                                            alt={displayName}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                              // Fallback to User icon if image fails to load
+                                              e.currentTarget.style.display = 'none';
+                                              const parent = e.currentTarget.parentElement;
+                                              if (parent) {
+                                                parent.innerHTML = '<svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+                                              }
+                                            }}
+                                          />
+                                        ) : (
+                                          <User className="w-4 h-4 text-gray-400" />
+                                        )}
+                                      </div>
+                                      <div className="absolute -bottom-0.5 -right-0.5">
+                                        <OnlineStatus isOnline={isUserOnline} size={10} />
+                                      </div>
+                                    </div>
+                                    <div className="flex-1 min-w-0 text-left">
+                                      <div className="truncate font-medium">
+                                        {displayName}
+                                      </div>
+                                      {isTyping ? (
+                                        <div className="text-xs text-blue-400">typing...</div>
+                                      ) : conversation.lastMessage?.content ? (
+                                        <div className="text-xs text-gray-500 truncate">
+                                          {conversation.lastMessage.content}
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                    {(conversation.unreadCounts?.[address || ''] || 0) > 0 && (
+                                      <div className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                        {conversation.unreadCounts?.[address || ''] > 9 ? '9+' : conversation.unreadCounts?.[address || '']}
+                                      </div>
+                                    )}
+                                  </button>
+                                );
+                              })
+                            )}
+                          </>
+                        )}
+                        {category.id === 'public' && (
+                          <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-500">
+                            No public channels yet
+                          </div>
+                        )}
+                        {category.id === 'private' && (
+                          <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-500">
+                            No private channels yet
+                          </div>
+                        )}
+                        {category.id === 'gated' && (
+                          <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-500">
+                            No gated channels yet
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-                )}
-              </div>
-            ))}
+                ))}
               </>
             ) : (
               /* Contacts View */
@@ -969,6 +966,8 @@ export default function ChatPage() {
               conversationId={selectedConversation.id}
               participantAddress={getOtherParticipant(selectedConversation)}
               participantName={getDisplayName(getOtherParticipant(selectedConversation))}
+              participantAvatar={getAvatarUrl(getOtherParticipant(selectedConversation))}
+              getParticipantProfile={getParticipantProfile}
               hideSidebar={true}
             />
           ) : (

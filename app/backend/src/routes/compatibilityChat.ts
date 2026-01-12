@@ -305,6 +305,8 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
   const { conversationId } = req.params;
   const { fromAddress, content, contentType, deliveryStatus } = req.body || {};
 
+  safeLogger.info('[compatibilityChat] Creating message', { conversationId, fromAddress, contentLength: content?.length });
+
   if (!conversationId) {
     return res.status(400).json({ error: 'valid conversation_id required' });
   }
@@ -314,6 +316,7 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
 
   if (hasDb) {
     try {
+      // Insert message into database
       const inserted = await db.insert(chatMessages).values({
         conversationId: conversationId,
         senderAddress: fromAddress,
@@ -322,6 +325,7 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
       }).returning();
 
       const created = inserted[0];
+      safeLogger.info('[compatibilityChat] Message created successfully', { messageId: created.id });
 
       // read current unreadCount then update conversation
       const convRows = await db.select({ unreadCount: conversations.unreadCount }).from(conversations).where(eq(conversations.id, conversationId)).limit(1);
@@ -333,47 +337,57 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
         unreadCount: Number(currentUnread) + 1,
       }).where(eq(conversations.id, conversationId));
 
-      // Broadcast message to WebSocket clients
-      try {
-        const { getWebSocketService } = require('../services/webSocketService');
-        const wsService = getWebSocketService();
-        if (wsService) {
-          // We need participants to broadcast to
-          try {
-            const dbConv = await db.select({ participants: conversations.participants }).from(conversations).where(eq(conversations.id, conversationId)).limit(1);
-            const participants = dbConv.length > 0 ? dbConv[0].participants : [];
+      safeLogger.info('[compatibilityChat] Conversation updated', { conversationId, newUnreadCount: Number(currentUnread) + 1 });
 
-            const broadcastMsg = {
-              id: String(created.id),
-              conversationId: String(created.conversationId ?? conversationId),
-              fromAddress: String(created.senderAddress ?? ''),
-              content: String(created.content ?? ''),
-              timestamp: (created.sentAt instanceof Date ? created.sentAt.toISOString() : String(created.sentAt)),
-              contentType: 'text',
-              deliveryStatus: 'sent'
-            };
+      // Broadcast message to WebSocket clients (non-blocking)
+      setImmediate(async () => {
+        try {
+          const { getWebSocketService } = require('../services/webSocketService');
+          const wsService = getWebSocketService();
+          
+          if (wsService) {
+            // We need participants to broadcast to
+            try {
+              const dbConv = await db.select({ participants: conversations.participants }).from(conversations).where(eq(conversations.id, conversationId)).limit(1);
+              const participants = dbConv.length > 0 ? dbConv[0].participants : [];
 
-            // 1. Send to conversation room
-            wsService.sendToConversation(conversationId, 'new_message', broadcastMsg);
+              const broadcastMsg = {
+                id: String(created.id),
+                conversationId: String(created.conversationId ?? conversationId),
+                fromAddress: String(created.senderAddress ?? ''),
+                content: String(created.content ?? ''),
+                timestamp: (created.sentAt instanceof Date ? created.sentAt.toISOString() : String(created.sentAt)),
+                contentType: 'text',
+                deliveryStatus: 'sent'
+              };
 
-            // 2. Send to individual participants
-            if (participants && Array.isArray(participants) && participants.length > 0) {
-              (participants as string[]).forEach((p: string) => {
-                wsService.sendToUser(p, 'new_message', broadcastMsg);
-              });
+              safeLogger.info('[compatibilityChat] Broadcasting message', { conversationId, participantCount: participants?.length });
+
+              // 1. Send to conversation room
+              wsService.sendToConversation(conversationId, 'new_message', broadcastMsg);
+
+              // 2. Send to individual participants
+              if (participants && Array.isArray(participants) && participants.length > 0) {
+                (participants as string[]).forEach((p: string) => {
+                  wsService.sendToUser(p, 'new_message', broadcastMsg);
+                });
+              }
+            } catch (e) {
+              safeLogger.error('[compatibilityChat] Error fetching participants for DB WS broadcast', e);
             }
-          } catch (e) {
-            safeLogger.error('[compatibilityChat] Error fetching participants for DB WS broadcast', e);
+          } else {
+            safeLogger.warn('[compatibilityChat] WebSocket service not available');
           }
+        } catch (wsError) {
+          // Don't fail the request if WebSocket broadcast fails
+          safeLogger.error('[compatibilityChat] Error broadcasting WebSocket message (DB path)', wsError);
         }
-      } catch (wsError) {
-        safeLogger.error('[compatibilityChat] Error broadcasting WebSocket message (DB path)', wsError);
-      }
+      });
 
       return res.status(201).json(created);
     } catch (err) {
-      safeLogger.error('[compatibilityChat] DB error creating message', err);
-      return res.status(500).json({ error: 'Database error creating message' });
+      safeLogger.error('[compatibilityChat] DB error creating message', { error: err, conversationId, fromAddress });
+      return res.status(500).json({ error: 'Database error creating message', details: err instanceof Error ? err.message : 'Unknown error' });
     }
   }
 

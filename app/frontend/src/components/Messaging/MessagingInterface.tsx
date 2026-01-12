@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  MessageCircle, Search, Send, User, Plus, Hash, Lock, 
+import {
+  MessageCircle, Search, Send, User, Plus, Hash, Lock,
   ThumbsUp, Heart, Zap, Rocket, Globe, Users, X, ChevronDown, ChevronRight,
   Image, Link as LinkIcon, Wallet, Vote, Calendar, Tag, Settings, ArrowLeftRight,
   Phone, Video, Shield, ArrowLeft
@@ -17,6 +17,7 @@ import { useChatHistory } from '@/hooks/useChatHistory';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import Web3SwipeGestureHandler from '@/components/Mobile/Web3SwipeGestureHandler';
 import { motion, PanInfo } from 'framer-motion';
+import { UserProfile } from '../../models/UserProfile';
 
 
 interface ChatChannel {
@@ -110,6 +111,8 @@ interface MessagingInterfaceProps {
   conversationId?: string;
   participantAddress?: string;
   participantName?: string;
+  participantAvatar?: string | null;
+  getParticipantProfile?: (address: string) => UserProfile | undefined;
   /** When true, hides the left sidebar (for use when parent component has its own sidebar) */
   hideSidebar?: boolean;
 }
@@ -120,6 +123,8 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   conversationId,
   participantAddress,
   participantName,
+  participantAvatar,
+  getParticipantProfile,
   hideSidebar = false
 }) => {
   const { address, isConnected } = useAccount();
@@ -131,10 +136,10 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     if (!addr || addr.length <= 10) return addr || '';
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
-  
+
   // Add typing timeout ref for channel messages
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Add state for DM conversations (backed by chat history hook)
   const { conversations: hookConversations, messages: hookMessages, loadMessages, sendMessage } = useChatHistory();
   const [dmConversations, setDmConversations] = useState<DirectMessageConversation[]>([]);
@@ -143,7 +148,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   const [channels, setChannels] = useState<ChatChannel[]>([]);
 
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
-  
+
   // Add state to track if we're viewing a DM or channel
   const [isViewingDM, setIsViewingDM] = useState(false);
   const [selectedDM, setSelectedDM] = useState<string | null>(null);
@@ -157,13 +162,13 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   }, [conversationId]);
 
   const [messages, setMessages] = useState<ChannelMessage[]>([]);
-  
+
   const [newMessage, setNewMessage] = useState('');
   const [conversations, setConversations] = useState([]);
-  
+
   // Mobile swipe gesture state
   const [swipeStates, setSwipeStates] = useState<Record<string, { x: number; opacity: number }>>({});
-  
+
   // Add state for channel categories
   const [channelCategories, setChannelCategories] = useState<ChannelCategory[]>([
     { id: 'direct', name: 'Direct Messages', isCollapsed: false },
@@ -172,7 +177,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     { id: 'gated', name: 'Gated Channels', isCollapsed: false }
   ]);
   const [channelMembers] = useState<ChannelMember[]>([]);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -235,7 +240,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       const participantsToResolve = dmConversations
         .filter(dm => dm.participant && !dm.participantEnsName)
         .map(dm => dm.participant);
-      
+
       if (participantsToResolve.length > 0) {
         try {
           // Resolve all participant addresses to ENS names
@@ -250,9 +255,9 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
               }
             })
           );
-          
+
           // Update DM conversations with resolved ENS names
-          setDmConversations(prev => 
+          setDmConversations(prev =>
             prev.map(dm => {
               const resolvedEntry = resolved.find(r => r.address === dm.participant);
               if (resolvedEntry && resolvedEntry.ensName) {
@@ -266,7 +271,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
         }
       }
     };
-    
+
     if (dmConversations.length > 0) {
       resolveParticipantNames();
     }
@@ -318,40 +323,40 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       if (msg.id === messageId) {
         const reactions = msg.reactions || [];
         const existingReaction = reactions.find(r => r.emoji === emoji);
-        
+
         if (existingReaction) {
           // Check if user already reacted with this emoji
           if (existingReaction.users.includes(address || '')) {
-            return { 
-              ...msg, 
-              reactions: reactions.map(r => 
-                r.emoji === emoji 
-                  ? { 
-                      ...r, 
-                      count: r.count - 1,
-                      users: r.users.filter(u => u !== address)
-                    } 
+            return {
+              ...msg,
+              reactions: reactions.map(r =>
+                r.emoji === emoji
+                  ? {
+                    ...r,
+                    count: r.count - 1,
+                    users: r.users.filter(u => u !== address)
+                  }
                   : r
               ).filter(r => r.count > 0)
             };
           } else {
-            return { 
-              ...msg, 
-              reactions: reactions.map(r => 
-                r.emoji === emoji 
-                  ? { 
-                      ...r, 
-                      count: r.count + 1,
-                      users: [...r.users, address || '']
-                    } 
+            return {
+              ...msg,
+              reactions: reactions.map(r =>
+                r.emoji === emoji
+                  ? {
+                    ...r,
+                    count: r.count + 1,
+                    users: [...r.users, address || '']
+                  }
                   : r
-              ) 
+              )
             };
           }
         } else {
-          return { 
-            ...msg, 
-            reactions: [...reactions, { emoji, count: 1, users: [address || ''] }] 
+          return {
+            ...msg,
+            reactions: [...reactions, { emoji, count: 1, users: [address || ''] }]
           };
         }
       }
@@ -408,10 +413,10 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   };
 
   const toggleCategory = (categoryId: string) => {
-    setChannelCategories((prev: ChannelCategory[]) => 
-      prev.map((cat: ChannelCategory) => 
-        cat.id === categoryId 
-          ? { ...cat, isCollapsed: !cat.isCollapsed } 
+    setChannelCategories((prev: ChannelCategory[]) =>
+      prev.map((cat: ChannelCategory) =>
+        cat.id === categoryId
+          ? { ...cat, isCollapsed: !cat.isCollapsed }
           : cat
       )
     );
@@ -448,13 +453,13 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
   const reactionEmojis = ['👍', '❤️', '😂', '😮', '🔥', '🚀'];
 
-  const [showReactionPicker, setShowReactionPicker] = useState<{ messageId: string; show: boolean }>({ 
-    messageId: '', 
-    show: false 
+  const [showReactionPicker, setShowReactionPicker] = useState<{ messageId: string; show: boolean }>({
+    messageId: '',
+    show: false
   });
-  const [showThread, setShowThread] = useState<{ messageId: string; show: boolean }>({ 
-    messageId: '', 
-    show: false 
+  const [showThread, setShowThread] = useState<{ messageId: string; show: boolean }>({
+    messageId: '',
+    show: false
   });
   const [threadMessages, setThreadMessages] = useState<ChannelMessage[]>([]);
   const [replyingTo, setReplyingTo] = useState<{ messageId: string; username: string } | null>(null);
@@ -587,15 +592,14 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
           if (part.match(mentionRegex)) {
             // Check if this mention is for the current user
             const isCurrentUser = part === `@${address?.slice(0, 6)}...${address?.slice(-4)}` ||
-                                part === '@you' ||
-                                (address && part.toLowerCase() === `@${address.toLowerCase()}`);
+              part === '@you' ||
+              (address && part.toLowerCase() === `@${address.toLowerCase()}`);
 
             return (
               <span
                 key={index}
-                className={`font-semibold ${
-                  isCurrentUser ? 'bg-blue-500/20 text-blue-400 px-1 rounded' : 'text-blue-400'
-                }`}
+                className={`font-semibold ${isCurrentUser ? 'bg-blue-500/20 text-blue-400 px-1 rounded' : 'text-blue-400'
+                  }`}
               >
                 {part}
               </span>
@@ -704,13 +708,13 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     }
 
     // Update DM to show typing
-    setDmConversations(prev => prev.map(dm => 
+    setDmConversations(prev => prev.map(dm =>
       dm.id === dmId ? { ...dm, isTyping: true } : dm
     ));
 
     // Set timeout to stop typing
     const timeout = setTimeout(() => {
-      setDmConversations(prev => prev.map(dm => 
+      setDmConversations(prev => prev.map(dm =>
         dm.id === dmId ? { ...dm, isTyping: false } : dm
       ));
       dmTypingTimeouts.current.delete(dmId);
@@ -727,16 +731,16 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       dmTypingTimeouts.current.delete(dmId);
     }
 
-    setDmConversations(prev => prev.map(dm => 
+    setDmConversations(prev => prev.map(dm =>
       dm.id === dmId ? { ...dm, isTyping: false } : dm
     ));
   };
 
   // Function to update online status for a DM participant
   const updateDmParticipantStatus = (participantAddress: string, isOnline: boolean, lastSeen?: Date) => {
-    setDmConversations(prev => prev.map(dm => 
-      dm.participant === participantAddress 
-        ? { ...dm, isOnline, lastSeen: lastSeen || new Date() } 
+    setDmConversations(prev => prev.map(dm =>
+      dm.participant === participantAddress
+        ? { ...dm, isOnline, lastSeen: lastSeen || new Date() }
         : dm
     ));
   };
@@ -747,15 +751,15 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       // Pinned DMs first
       if (a.isPinned && !b.isPinned) return -1;
       if (!a.isPinned && b.isPinned) return 1;
-      
+
       // Unread DMs next
       if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
       if (a.unreadCount === 0 && b.unreadCount > 0) return 1;
-      
+
       // Online users next
       if (a.isOnline && !b.isOnline) return -1;
       if (!a.isOnline && b.isOnline) return 1;
-      
+
       // Then by last activity
       const aTime = a.lastMessage?.timestamp.getTime() || 0;
       const bTime = b.lastMessage?.timestamp.getTime() || 0;
@@ -765,7 +769,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
   // Function to mark DM messages as read
   const markDmMessagesAsRead = (dmId: string) => {
-    setDmConversations(prev => prev.map(dm => 
+    setDmConversations(prev => prev.map(dm =>
       dm.id === dmId ? { ...dm, unreadCount: 0 } : dm
     ));
   };
@@ -780,21 +784,21 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       unreadCount: 0,
       isPinned: false
     };
-    
+
     setDmConversations(prev => [newDm, ...prev]);
     return newDm.id;
   };
 
   // Function to update DM unread count
   const updateDmUnreadCount = (dmId: string, count: number) => {
-    setDmConversations(prev => prev.map(dm => 
+    setDmConversations(prev => prev.map(dm =>
       dm.id === dmId ? { ...dm, unreadCount: count } : dm
     ));
   };
 
   // Function to pin/unpin a DM
   const toggleDmPin = (dmId: string) => {
-    setDmConversations(prev => prev.map(dm => 
+    setDmConversations(prev => prev.map(dm =>
       dm.id === dmId ? { ...dm, isPinned: !dm.isPinned } : dm
     ));
   };
@@ -803,184 +807,181 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     <div className={`flex h-full bg-white dark:bg-gray-900 rounded-lg overflow-hidden ${className}`}>
       {/* Channels Sidebar - Hidden on mobile by default or when hideSidebar is true */}
       {!hideSidebar && (
-      <div className={`w-60 border-r border-gray-200 dark:border-gray-700 flex flex-col bg-gray-50 dark:bg-gray-800 ${isMobile ? 'hidden md:block' : ''}`}>
-        {/* Header */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-              <MessageCircle size={20} className="mr-2" />
-              LinkDAO Chat
-            </h2>
-            <button
-              className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              onClick={onClose}
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          <div className="relative">
-            <Search size={16} className="absolute left-2 top-2.5 text-gray-500 dark:text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search channels..."
-              className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded px-8 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
-        {/* DMs Section */}
-        <div className="px-2 py-3">
-          <div
-            className="flex items-center justify-between px-2 py-1 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
-            onClick={() => toggleCategory('direct')}
-          >
-            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center">
-              {channelCategories.find(c => c.id === 'direct')?.isCollapsed ?
-                <ChevronRight size={14} className="mr-1" /> :
-                <ChevronDown size={14} className="mr-1" />}
-              Direct Messages
-            </h3>
-            <button className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-              <Plus size={14} />
-            </button>
-          </div>
-          
-          {!channelCategories.find(c => c.id === 'direct')?.isCollapsed && (
-            <>
-              {dmConversations
-                .sort((a, b) => {
-                  // Pinned DMs first
-                  if (a.isPinned && !b.isPinned) return -1;
-                  if (!a.isPinned && b.isPinned) return 1;
-                  
-                  // Online users next
-                  if (a.isOnline && !b.isOnline) return -1;
-                  if (!a.isOnline && b.isOnline) return 1;
-                  
-                  // Then by last activity
-                  const aTime = a.lastMessage?.timestamp.getTime() || 0;
-                  const bTime = b.lastMessage?.timestamp.getTime() || 0;
-                  return bTime - aTime;
-                })
-                .map(dm => (
-                  <div
-                    key={dm.id}
-                    className={`flex items-center px-2 py-1.5 rounded cursor-pointer mb-1 ml-4 ${
-                      isViewingDM && selectedDM === dm.id ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'
-                    }`}
-                    onClick={() => {
-                      setIsViewingDM(true);
-                      setSelectedDM(dm.id);
-                      setSelectedChannel(null);
-                    }}
-                  >
-                    <div className="relative">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-                        <User size={16} className="text-white" />
-                      </div>
-                      {/* Online status indicator */}
-                      <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-100 dark:border-gray-800 ${
-                        dm.isOnline ? 'bg-green-500' : 'bg-gray-500'
-                      }`}></div>
-                      {/* Typing indicator */}
-                      {dm.isTyping && (
-                        <div className="absolute -top-1 -right-1 flex space-x-1">
-                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></div>
-                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                        </div>
-                      )}
-                      {dm.unreadCount > 0 && !dm.isTyping && (
-                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-xs">
-                          {dm.unreadCount}
-                        </div>
-                      )}
-                    </div>
-                    <div className="ml-2 flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {dm.participantEnsName || `${dm.participant.slice(0, 6)}...${dm.participant.slice(-4)}`}
-                      </div>
-                      {dm.lastMessage && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                          {dm.lastMessage.content}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-            </>
-          )}
-        </div>
-
-        {/* Channels Section */}
-        <div className="px-2 py-3 flex-1 overflow-y-auto">
-          {channelCategories.filter(cat => cat.id !== 'direct').map(category => (
-            <div key={category.id} className="mb-3">
-              <div
-                className="flex items-center justify-between px-2 py-1 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
-                onClick={() => toggleCategory(category.id)}
+        <div className={`w-60 border-r border-gray-200 dark:border-gray-700 flex flex-col bg-gray-50 dark:bg-gray-800 ${isMobile ? 'hidden md:block' : ''}`}>
+          {/* Header */}
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                <MessageCircle size={20} className="mr-2" />
+                LinkDAO Chat
+              </h2>
+              <button
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                onClick={onClose}
               >
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center">
-                  {category.isCollapsed ?
-                    <ChevronRight size={14} className="mr-1" /> :
-                    <ChevronDown size={14} className="mr-1" />}
-                  {category.name}
-                </h3>
-                <button className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                  <Plus size={14} />
-                </button>
-              </div>
-              
-              {!category.isCollapsed && (
-                <div className="ml-4 mt-1">
-                  {channels
-                    .filter(channel => channel.category === category.id)
-                    .map(channel => (
-                      <div
-                        key={channel.id}
-                        className={`flex items-center px-2 py-1.5 rounded cursor-pointer mb-1 ${
-                          !isViewingDM && selectedChannel === channel.id ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="relative">
+              <Search size={16} className="absolute left-2 top-2.5 text-gray-500 dark:text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search channels..."
+                className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded px-8 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* DMs Section */}
+          <div className="px-2 py-3">
+            <div
+              className="flex items-center justify-between px-2 py-1 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+              onClick={() => toggleCategory('direct')}
+            >
+              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center">
+                {channelCategories.find(c => c.id === 'direct')?.isCollapsed ?
+                  <ChevronRight size={14} className="mr-1" /> :
+                  <ChevronDown size={14} className="mr-1" />}
+                Direct Messages
+              </h3>
+              <button className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                <Plus size={14} />
+              </button>
+            </div>
+
+            {!channelCategories.find(c => c.id === 'direct')?.isCollapsed && (
+              <>
+                {dmConversations
+                  .sort((a, b) => {
+                    // Pinned DMs first
+                    if (a.isPinned && !b.isPinned) return -1;
+                    if (!a.isPinned && b.isPinned) return 1;
+
+                    // Online users next
+                    if (a.isOnline && !b.isOnline) return -1;
+                    if (!a.isOnline && b.isOnline) return 1;
+
+                    // Then by last activity
+                    const aTime = a.lastMessage?.timestamp.getTime() || 0;
+                    const bTime = b.lastMessage?.timestamp.getTime() || 0;
+                    return bTime - aTime;
+                  })
+                  .map(dm => (
+                    <div
+                      key={dm.id}
+                      className={`flex items-center px-2 py-1.5 rounded cursor-pointer mb-1 ml-4 ${isViewingDM && selectedDM === dm.id ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'
                         }`}
-                        onClick={() => {
-                          setIsViewingDM(false);
-                          setSelectedDM(null);
-                          setSelectedChannel(channel.id);
-                        }}
-                      >
-                        <div className="flex items-center">
-                          {channel.isGated ? (
-                            <Tag size={16} className="text-yellow-400 mr-1" />
-                          ) : channel.isPrivate ? (
-                            <Lock size={16} className="text-gray-500 dark:text-gray-400 mr-1" />
-                          ) : (
-                            <Hash size={16} className="text-gray-500 dark:text-gray-400 mr-1" />
-                          )}
-                          <span className="text-sm text-gray-900 dark:text-white truncate">
-                            {channel.icon && <span className="mr-1">{channel.icon}</span>}
-                            #{channel.name}
-                          </span>
+                      onClick={() => {
+                        setIsViewingDM(true);
+                        setSelectedDM(dm.id);
+                        setSelectedChannel(null);
+                      }}
+                    >
+                      <div className="relative">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                          <User size={16} className="text-white" />
                         </div>
-                        {channel.unreadCount > 0 && (
-                          <div className="ml-auto w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs">
-                            {channel.unreadCount}
+                        {/* Online status indicator */}
+                        <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-100 dark:border-gray-800 ${dm.isOnline ? 'bg-green-500' : 'bg-gray-500'
+                          }`}></div>
+                        {/* Typing indicator */}
+                        {dm.isTyping && (
+                          <div className="absolute -top-1 -right-1 flex space-x-1">
+                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></div>
+                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                          </div>
+                        )}
+                        {dm.unreadCount > 0 && !dm.isTyping && (
+                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-xs">
+                            {dm.unreadCount}
                           </div>
                         )}
                       </div>
-                    ))
-                  }
+                      <div className="ml-2 flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {dm.participantEnsName || `${dm.participant.slice(0, 6)}...${dm.participant.slice(-4)}`}
+                        </div>
+                        {dm.lastMessage && (
+                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            {dm.lastMessage.content}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </>
+            )}
+          </div>
+
+          {/* Channels Section */}
+          <div className="px-2 py-3 flex-1 overflow-y-auto">
+            {channelCategories.filter(cat => cat.id !== 'direct').map(category => (
+              <div key={category.id} className="mb-3">
+                <div
+                  className="flex items-center justify-between px-2 py-1 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                  onClick={() => toggleCategory(category.id)}
+                >
+                  <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center">
+                    {category.isCollapsed ?
+                      <ChevronRight size={14} className="mr-1" /> :
+                      <ChevronDown size={14} className="mr-1" />}
+                    {category.name}
+                  </h3>
+                  <button className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                    <Plus size={14} />
+                  </button>
                 </div>
-              )}
-            </div>
-          ))}
+
+                {!category.isCollapsed && (
+                  <div className="ml-4 mt-1">
+                    {channels
+                      .filter(channel => channel.category === category.id)
+                      .map(channel => (
+                        <div
+                          key={channel.id}
+                          className={`flex items-center px-2 py-1.5 rounded cursor-pointer mb-1 ${!isViewingDM && selectedChannel === channel.id ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                            }`}
+                          onClick={() => {
+                            setIsViewingDM(false);
+                            setSelectedDM(null);
+                            setSelectedChannel(channel.id);
+                          }}
+                        >
+                          <div className="flex items-center">
+                            {channel.isGated ? (
+                              <Tag size={16} className="text-yellow-400 mr-1" />
+                            ) : channel.isPrivate ? (
+                              <Lock size={16} className="text-gray-500 dark:text-gray-400 mr-1" />
+                            ) : (
+                              <Hash size={16} className="text-gray-500 dark:text-gray-400 mr-1" />
+                            )}
+                            <span className="text-sm text-gray-900 dark:text-white truncate">
+                              {channel.icon && <span className="mr-1">{channel.icon}</span>}
+                              #{channel.name}
+                            </span>
+                          </div>
+                          {channel.unreadCount > 0 && (
+                            <div className="ml-auto w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs">
+                              {channel.unreadCount}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    }
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
       )}
 
       {/* Cross-Chain Bridge Panel */}
       {showCrossChainBridge && (
         <div className={`w-80 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 ${isMobile ? 'hidden lg:block' : ''}`}>
-          <CrossChainBridge 
+          <CrossChainBridge
             className="h-full"
             onBridgeMessage={(message) => {
               console.log('Bridge message:', message);
@@ -1025,11 +1026,10 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
               {/* Cross-Chain Bridge Toggle - Hidden on mobile */}
               <button
                 onClick={() => setShowCrossChainBridge(!showCrossChainBridge)}
-                className={`flex items-center px-3 py-1 rounded text-sm hidden sm:flex ${
-                  showCrossChainBridge
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                }`}
+                className={`flex items-center px-3 py-1 rounded text-sm hidden sm:flex ${showCrossChainBridge
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
               >
                 <ArrowLeftRight size={14} className="mr-1" />
                 Bridge
@@ -1049,19 +1049,34 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                 <ArrowLeft size={20} />
               </button>
               <div className="relative">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-                  <User size={20} className="text-white" />
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center overflow-hidden">
+                  {participantAvatar ? (
+                    <img
+                      src={participantAvatar}
+                      alt={participantName || "User"}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.parentElement?.classList.remove('overflow-hidden');
+                        e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'justify-center');
+                        const icon = document.createElement('div');
+                        icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+                        e.currentTarget.parentElement?.appendChild(icon.firstChild!);
+                      }}
+                    />
+                  ) : (
+                    <User size={20} className="text-white" />
+                  )}
                 </div>
                 {/* Online status indicator */}
-                <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-100 dark:border-gray-800 ${
-                  dmConversations.find(dm => dm.id === selectedDM)?.isOnline ? 'bg-green-500' : 'bg-gray-500'
-                }`}></div>
+                <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-100 dark:border-gray-800 ${dmConversations.find(dm => dm.id === selectedDM)?.isOnline ? 'bg-green-500' : 'bg-gray-500'
+                  }`}></div>
               </div>
               <div className="ml-3">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                   {dmConversations.find(dm => dm.id === selectedDM)?.participantEnsName ||
-                   participantName ||
-                   truncateAddress(dmConversations.find(dm => dm.id === selectedDM)?.participant || participantAddress || '')}
+                    participantName ||
+                    truncateAddress(dmConversations.find(dm => dm.id === selectedDM)?.participant || participantAddress || '')}
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 hidden sm:block">
                   {dmConversations.find(dm => dm.id === selectedDM)?.isOnline
@@ -1106,250 +1121,292 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
               </button>
             </div>
           )}
-          
-          <div className="space-y-4">
-            {messages.map(message => (
-              <Web3SwipeGestureHandler
-                key={message.id}
-                postId={message.id}
-                onUpvote={() => addReaction(message.id, '👍')}
-                onSave={() => console.log('Save message:', message.id)}
-                onTip={() => console.log('Tip message:', message.id)}
-                onStake={() => console.log('Stake on message:', message.id)}
-                walletConnected={isConnected}
-                userBalance={0}
-                className=""
-              >
-                <div
-                  className="hover:bg-gray-100 dark:hover:bg-gray-750 p-2 rounded"
-                  id={`message-${message.id}`}
-                >
-                <div className="flex">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center mr-3 flex-shrink-0">
-                    <User size={20} className="text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-baseline">
-                      <span className="font-semibold text-gray-900 dark:text-white mr-2">
-                        {message.fromAddress === address ? 'You' : message.fromAddress.slice(0, 6) + '...' + message.fromAddress.slice(-4)}
-                      </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                      {/* Encryption indicator for DM messages */}
-                      {isViewingDM && message.isEncrypted && (
-                        <Lock size={12} className="ml-1 text-green-500 dark:text-green-400" />
-                      )}
-                    </div>
-                    <p className="text-gray-700 dark:text-gray-200">{parseMentions(message.content)}</p>
-                    
-                    {/* Attachments */}
-                    {message.attachments && message.attachments.length > 0 && (
-                      <div className="mt-2 space-y-2">
-                        {message.attachments.map((attachment, idx) => (
-                          <div key={idx}>
-                            {attachment.type === 'nft' && attachment.metadata && (
-                              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600 max-w-sm">
-                                <div className="flex items-start space-x-3">
-                                  {attachment.metadata.imageUrl && (
-                                    <img
-                                      src={attachment.metadata.imageUrl}
-                                      alt={attachment.metadata.tokenName || attachment.name}
-                                      className="w-12 h-12 rounded object-cover flex-shrink-0"
-                                    />
-                                  )}
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center mb-1">
-                                      <Image size={14} className="mr-1 text-purple-500 dark:text-purple-400" />
-                                      <span className="text-sm font-medium text-gray-900 dark:text-white">NFT</span>
-                                    </div>
-                                    <div className="text-sm text-gray-700 dark:text-gray-300 font-medium truncate">
-                                      {attachment.metadata.tokenName || attachment.name}
-                                    </div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                      {attachment.metadata.contractAddress &&
-                                        `${attachment.metadata.contractAddress.slice(0, 6)}...${attachment.metadata.contractAddress.slice(-4)}`}
-                                      {attachment.metadata.tokenId && ` #${attachment.metadata.tokenId}`}
-                                    </div>
-                                    {attachment.metadata.price && (
-                                      <div className="text-xs text-green-500 dark:text-green-400 mt-1">
-                                        {attachment.metadata.price} ETH
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
 
-                            {attachment.type === 'transaction' && attachment.metadata && (
-                              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600 max-w-sm">
-                                <div className="flex items-center space-x-3">
-                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                                    attachment.metadata.status === 'success' ? 'bg-green-500/20 text-green-500 dark:text-green-400' :
-                                    attachment.metadata.status === 'failed' ? 'bg-red-500/20 text-red-500 dark:text-red-400' :
-                                    'bg-yellow-500/20 text-yellow-500 dark:text-yellow-400'
-                                  }`}>
-                                    <Wallet size={16} />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-medium text-gray-900 dark:text-white">Transaction</div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                      {attachment.metadata.transactionHash &&
-                                        `${attachment.metadata.transactionHash.slice(0, 10)}...${attachment.metadata.transactionHash.slice(-8)}`}
+          <div className="space-y-4">
+            {messages.map(message => {
+              // Resolve sender profile for avatar and name
+              let senderProfile: UserProfile | undefined;
+              let senderAvatarUrl: string | null = null;
+              let senderDisplayName: string = message.fromAddress.slice(0, 6) + '...' + message.fromAddress.slice(-4);
+
+              if (message.fromAddress === address) {
+                senderDisplayName = 'You';
+                // For "You", we rely on the parent or context to have the current user's profile if we wanted to show it,
+                // but usually "You" is sufficient or we could fetch it if needed. 
+                // For now, let's try to look it up if getParticipantProfile allows looking up self
+                if (getParticipantProfile) {
+                  senderProfile = getParticipantProfile(message.fromAddress);
+                }
+              } else if (getParticipantProfile) {
+                senderProfile = getParticipantProfile(message.fromAddress);
+              }
+
+              if (senderProfile) {
+                if (senderProfile.displayName) senderDisplayName = senderProfile.displayName;
+                else if (senderProfile.handle) senderDisplayName = senderProfile.handle;
+                else if (senderProfile.ens) senderDisplayName = senderProfile.ens;
+
+                if (senderProfile.avatarCid || senderProfile.profileCid) {
+                  senderAvatarUrl = `https://ipfs.io/ipfs/${senderProfile.avatarCid || senderProfile.profileCid}`;
+                }
+              }
+
+              return (
+                <Web3SwipeGestureHandler
+                  key={message.id}
+                  postId={message.id}
+                  onUpvote={() => addReaction(message.id, '👍')}
+                  onSave={() => console.log('Save message:', message.id)}
+                  onTip={() => console.log('Tip message:', message.id)}
+                  onStake={() => console.log('Stake on message:', message.id)}
+                  walletConnected={isConnected}
+                  userBalance={0}
+                  className=""
+                >
+                  <div
+                    className="hover:bg-gray-100 dark:hover:bg-gray-750 p-2 rounded"
+                    id={`message-${message.id}`}
+                  >
+                    <div className="flex">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center mr-3 flex-shrink-0 overflow-hidden">
+                        {senderAvatarUrl ? (
+                          <img
+                            src={senderAvatarUrl}
+                            alt={senderDisplayName}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.parentElement?.classList.remove('overflow-hidden');
+                              e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'justify-center');
+                              const icon = document.createElement('div');
+                              icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+                              e.currentTarget.parentElement?.appendChild(icon.firstChild!);
+                            }}
+                          />
+                        ) : (
+                          <User size={20} className="text-white" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-baseline">
+                          <span className="font-semibold text-gray-900 dark:text-white mr-2">
+                            {senderDisplayName}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          {/* Encryption indicator for DM messages */}
+                          {isViewingDM && message.isEncrypted && (
+                            <Lock size={12} className="ml-1 text-green-500 dark:text-green-400" />
+                          )}
+                        </div>
+                        <p className="text-gray-700 dark:text-gray-200">{parseMentions(message.content)}</p>
+
+                        {/* Attachments */}
+                        {message.attachments && message.attachments.length > 0 && (
+                          <div className="mt-2 space-y-2">
+                            {message.attachments.map((attachment, idx) => (
+                              <div key={idx}>
+                                {attachment.type === 'nft' && attachment.metadata && (
+                                  <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600 max-w-sm">
+                                    <div className="flex items-start space-x-3">
+                                      {attachment.metadata.imageUrl && (
+                                        <img
+                                          src={attachment.metadata.imageUrl}
+                                          alt={attachment.metadata.tokenName || attachment.name}
+                                          className="w-12 h-12 rounded object-cover flex-shrink-0"
+                                        />
+                                      )}
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center mb-1">
+                                          <Image size={14} className="mr-1 text-purple-500 dark:text-purple-400" />
+                                          <span className="text-sm font-medium text-gray-900 dark:text-white">NFT</span>
+                                        </div>
+                                        <div className="text-sm text-gray-700 dark:text-gray-300 font-medium truncate">
+                                          {attachment.metadata.tokenName || attachment.name}
+                                        </div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                          {attachment.metadata.contractAddress &&
+                                            `${attachment.metadata.contractAddress.slice(0, 6)}...${attachment.metadata.contractAddress.slice(-4)}`}
+                                          {attachment.metadata.tokenId && ` #${attachment.metadata.tokenId}`}
+                                        </div>
+                                        {attachment.metadata.price && (
+                                          <div className="text-xs text-green-500 dark:text-green-400 mt-1">
+                                            {attachment.metadata.price} ETH
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
-                                    <div className="flex items-center space-x-2 mt-1">
-                                      {attachment.metadata.status && (
-                                        <span className={`text-xs px-2 py-0.5 rounded ${
-                                          attachment.metadata.status === 'success' ? 'bg-green-500/20 text-green-500 dark:text-green-400' :
-                                          attachment.metadata.status === 'failed' ? 'bg-red-500/20 text-red-500 dark:text-red-400' :
+                                  </div>
+                                )}
+
+                                {attachment.type === 'transaction' && attachment.metadata && (
+                                  <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600 max-w-sm">
+                                    <div className="flex items-center space-x-3">
+                                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${attachment.metadata.status === 'success' ? 'bg-green-500/20 text-green-500 dark:text-green-400' :
+                                        attachment.metadata.status === 'failed' ? 'bg-red-500/20 text-red-500 dark:text-red-400' :
                                           'bg-yellow-500/20 text-yellow-500 dark:text-yellow-400'
                                         }`}>
-                                          {attachment.metadata.status}
-                                        </span>
-                                      )}
-                                      {attachment.metadata.gasUsed && (
-                                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                                          Gas: {attachment.metadata.gasUsed}
-                                        </span>
-                                      )}
+                                        <Wallet size={16} />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-medium text-gray-900 dark:text-white">Transaction</div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                          {attachment.metadata.transactionHash &&
+                                            `${attachment.metadata.transactionHash.slice(0, 10)}...${attachment.metadata.transactionHash.slice(-8)}`}
+                                        </div>
+                                        <div className="flex items-center space-x-2 mt-1">
+                                          {attachment.metadata.status && (
+                                            <span className={`text-xs px-2 py-0.5 rounded ${attachment.metadata.status === 'success' ? 'bg-green-500/20 text-green-500 dark:text-green-400' :
+                                              attachment.metadata.status === 'failed' ? 'bg-red-500/20 text-red-500 dark:text-red-400' :
+                                                'bg-yellow-500/20 text-yellow-500 dark:text-yellow-400'
+                                              }`}>
+                                              {attachment.metadata.status}
+                                            </span>
+                                          )}
+                                          {attachment.metadata.gasUsed && (
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                              Gas: {attachment.metadata.gasUsed}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
                                     </div>
                                   </div>
+                                )}
+
+                                {attachment.type === 'image' && (
+                                  <div className="max-w-sm">
+                                    <img
+                                      src={attachment.url}
+                                      alt={attachment.name}
+                                      className="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90"
+                                      onClick={() => window.open(attachment.url, '_blank')}
+                                    />
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{attachment.name}</div>
+                                  </div>
+                                )}
+
+                                {(attachment.type === 'file' || attachment.type === 'proposal') && (
+                                  <div className="bg-gray-100 dark:bg-gray-700 rounded p-2 flex items-center max-w-sm cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
+                                    onClick={() => window.open(attachment.url, '_blank')}>
+                                    {attachment.type === 'proposal' && <Vote size={16} className="mr-2 text-blue-500 dark:text-blue-400" />}
+                                    {attachment.type === 'file' && <LinkIcon size={16} className="mr-2 text-gray-500 dark:text-gray-400" />}
+                                    <span className="text-xs text-gray-700 dark:text-gray-300 flex-1 truncate">{attachment.name}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Reactions */}
+                        {message.reactions && message.reactions.length > 0 && (
+                          <div className="flex mt-2 space-x-1 relative">
+                            {message.reactions.map((reaction, idx) => (
+                              <button
+                                key={idx}
+                                className={`flex items-center rounded px-2 py-1 text-sm ${reaction.users.includes(address || '')
+                                  ? 'bg-blue-500/30 text-gray-900 dark:text-white'
+                                  : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+                                  }`}
+                                onClick={() => addReaction(message.id, reaction.emoji)}
+                                onMouseEnter={(e) => showReactionTooltip(message.id, reaction.emoji, e)}
+                                onMouseLeave={hideReactionTooltip}
+                              >
+                                <span className="mr-1">{reaction.emoji}</span>
+                                <span className="text-gray-600 dark:text-gray-300">{reaction.count}</span>
+                              </button>
+                            ))}
+
+                            {/* Reaction picker button */}
+                            <button
+                              className={`w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white ${touchTargetClasses}`}
+                              onClick={() => toggleReactionPicker(message.id)}
+                            >
+                              <span>+</span>
+                            </button>
+
+                            {/* Reaction picker popup */}
+                            {showReactionPicker.messageId === message.id && showReactionPicker.show && (
+                              <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 shadow-lg z-10">
+                                <div className="flex space-x-1">
+                                  {['👍', '❤️', '😂', '😮', '🔥', '🚀', '👏', '🎉'].map(emoji => (
+                                    <button
+                                      key={emoji}
+                                      className={`w-8 h-8 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center text-lg ${touchTargetClasses}`}
+                                      onClick={() => {
+                                        addReaction(message.id, emoji);
+                                        setShowReactionPicker({ messageId: '', show: false });
+                                      }}
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
                                 </div>
                               </div>
                             )}
 
-                            {attachment.type === 'image' && (
-                              <div className="max-w-sm">
-                                <img
-                                  src={attachment.url}
-                                  alt={attachment.name}
-                                  className="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90"
-                                  onClick={() => window.open(attachment.url, '_blank')}
-                                />
-                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{attachment.name}</div>
-                              </div>
-                            )}
+                            {/* Reaction tooltip */}
+                            {reactionTooltip && reactionTooltip.messageId === message.id && reactionTooltip.show && (
+                              <div
+                                className="fixed bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-2 shadow-lg z-20 pointer-events-none"
+                                style={{
+                                  left: reactionTooltip.position.x,
+                                  top: reactionTooltip.position.y,
+                                  transform: 'translate(-50%, -100%)'
+                                }}
+                              >
+                                <div className="text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                  {(() => {
+                                    const reaction = message.reactions?.find(r => r.emoji === reactionTooltip.emoji);
+                                    if (!reaction) return null;
 
-                            {(attachment.type === 'file' || attachment.type === 'proposal') && (
-                              <div className="bg-gray-100 dark:bg-gray-700 rounded p-2 flex items-center max-w-sm cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                                   onClick={() => window.open(attachment.url, '_blank')}>
-                                {attachment.type === 'proposal' && <Vote size={16} className="mr-2 text-blue-500 dark:text-blue-400" />}
-                                {attachment.type === 'file' && <LinkIcon size={16} className="mr-2 text-gray-500 dark:text-gray-400" />}
-                                <span className="text-xs text-gray-700 dark:text-gray-300 flex-1 truncate">{attachment.name}</span>
+                                    const userNames = reaction.users.map(addr => {
+                                      if (addr === address) return 'You';
+                                      const member = channelMembers.find(m => m.address === addr);
+                                      return member ? member.name : addr.slice(0, 6) + '...' + addr.slice(-4);
+                                    });
+
+                                    return (
+                                      <div className="flex items-center space-x-1">
+                                        <span>{reactionTooltip.emoji}</span>
+                                        <span>{userNames.join(', ')}</span>
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
                               </div>
                             )}
                           </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {/* Reactions */}
-                    {message.reactions && message.reactions.length > 0 && (
-                      <div className="flex mt-2 space-x-1 relative">
-                        {message.reactions.map((reaction, idx) => (
+                        )}
+
+                        {/* Message actions */}
+                        <div className="flex mt-1 space-x-3 text-xs text-gray-500 dark:text-gray-400">
                           <button
-                            key={idx}
-                            className={`flex items-center rounded px-2 py-1 text-sm ${
-                              reaction.users.includes(address || '')
-                                ? 'bg-blue-500/30 text-gray-900 dark:text-white'
-                                : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
-                            }`}
-                            onClick={() => addReaction(message.id, reaction.emoji)}
-                            onMouseEnter={(e) => showReactionTooltip(message.id, reaction.emoji, e)}
-                            onMouseLeave={hideReactionTooltip}
+                            className={`hover:text-gray-900 dark:hover:text-white ${touchTargetClasses}`}
+                            onClick={() => replyToMessage(message.id, message.fromAddress === address ? 'You' : message.fromAddress.slice(0, 6) + '...' + message.fromAddress.slice(-4))}
                           >
-                            <span className="mr-1">{reaction.emoji}</span>
-                            <span className="text-gray-600 dark:text-gray-300">{reaction.count}</span>
+                            Reply
                           </button>
-                        ))}
-
-                        {/* Reaction picker button */}
-                        <button
-                          className={`w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white ${touchTargetClasses}`}
-                          onClick={() => toggleReactionPicker(message.id)}
-                        >
-                          <span>+</span>
-                        </button>
-
-                        {/* Reaction picker popup */}
-                        {showReactionPicker.messageId === message.id && showReactionPicker.show && (
-                          <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 shadow-lg z-10">
-                            <div className="flex space-x-1">
-                              {['👍', '❤️', '😂', '😮', '🔥', '🚀', '👏', '🎉'].map(emoji => (
-                                <button
-                                  key={emoji}
-                                  className={`w-8 h-8 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center text-lg ${touchTargetClasses}`}
-                                  onClick={() => {
-                                    addReaction(message.id, emoji);
-                                    setShowReactionPicker({ messageId: '', show: false });
-                                  }}
-                                >
-                                  {emoji}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Reaction tooltip */}
-                        {reactionTooltip && reactionTooltip.messageId === message.id && reactionTooltip.show && (
-                          <div
-                            className="fixed bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-2 shadow-lg z-20 pointer-events-none"
-                            style={{
-                              left: reactionTooltip.position.x,
-                              top: reactionTooltip.position.y,
-                              transform: 'translate(-50%, -100%)'
-                            }}
-                          >
-                            <div className="text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                              {(() => {
-                                const reaction = message.reactions?.find(r => r.emoji === reactionTooltip.emoji);
-                                if (!reaction) return null;
-
-                                const userNames = reaction.users.map(addr => {
-                                  if (addr === address) return 'You';
-                                  const member = channelMembers.find(m => m.address === addr);
-                                  return member ? member.name : addr.slice(0, 6) + '...' + addr.slice(-4);
-                                });
-
-                                return (
-                                  <div className="flex items-center space-x-1">
-                                    <span>{reactionTooltip.emoji}</span>
-                                    <span>{userNames.join(', ')}</span>
-                                  </div>
-                                );
-                              })()}
-                            </div>
-                          </div>
-                        )}
+                          {message.threadReplies && message.threadReplies.length > 0 && (
+                            <button
+                              className={`hover:text-gray-900 dark:hover:text-white flex items-center ${touchTargetClasses}`}
+                              onClick={() => openThread(message.id)}
+                            >
+                              <span>Thread</span>
+                              <span className="ml-1 bg-gray-200 dark:bg-gray-700 rounded-full px-1.5 py-0.5">
+                                {message.threadReplies.length}
+                              </span>
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    )}
-
-                    {/* Message actions */}
-                    <div className="flex mt-1 space-x-3 text-xs text-gray-500 dark:text-gray-400">
-                      <button
-                        className={`hover:text-gray-900 dark:hover:text-white ${touchTargetClasses}`}
-                        onClick={() => replyToMessage(message.id, message.fromAddress === address ? 'You' : message.fromAddress.slice(0, 6) + '...' + message.fromAddress.slice(-4))}
-                      >
-                        Reply
-                      </button>
-                      {message.threadReplies && message.threadReplies.length > 0 && (
-                        <button
-                          className={`hover:text-gray-900 dark:hover:text-white flex items-center ${touchTargetClasses}`}
-                          onClick={() => openThread(message.id)}
-                        >
-                          <span>Thread</span>
-                          <span className="ml-1 bg-gray-200 dark:bg-gray-700 rounded-full px-1.5 py-0.5">
-                            {message.threadReplies.length}
-                          </span>
-                        </button>
-                      )}
                     </div>
                   </div>
-                </div>
-              </div>
-            </Web3SwipeGestureHandler>
-            ))}
+                </Web3SwipeGestureHandler>
+              );
+            })}
             <div ref={messagesEndRef} />
           </div>
         </div>
@@ -1809,7 +1866,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
             </div>
           </div>
         )}
-        
+
         <div className="p-4">
           <div className="space-y-3">
             {channelMembers.map(member => (
