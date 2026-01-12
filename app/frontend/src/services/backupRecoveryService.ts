@@ -482,10 +482,13 @@ export class BackupRecoveryService {
     address: string,
     password: string
   ): Promise<string | null> {
-    // In production, the mnemonic should be stored separately from the private key
-    // For now, we'll return null as it should be stored during wallet creation
-    // This is a placeholder for the actual implementation
-    return null;
+    try {
+      const walletData = await SecureKeyStorage.getWallet(address, password);
+      return walletData.mnemonic || null;
+    } catch (error) {
+      console.error('Failed to get mnemonic from storage:', error);
+      return null;
+    }
   }
 
   private async getPrivateKeyFromMnemonic(mnemonic: string): Promise<string> {

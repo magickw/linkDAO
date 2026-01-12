@@ -4,10 +4,12 @@
  */
 
 import { Hash, TransactionRequest, WalletClient } from 'viem';
+import { ethers } from 'ethers';
 import { SecureKeyStorage } from '@/security/secureKeyStorage';
 import { detectPhishing } from '@/security/phishingDetector';
 import { validateTransaction, validateGasParameters } from '@/security/transactionValidator';
 import { PublicClient } from 'viem';
+import { secureClear, wipeString } from '@/utils/secureMemory';
 
 export interface SigningRequest {
   to: `0x${string}`;
@@ -60,7 +62,7 @@ export class SecureSigningService {
         };
       }
 
-      // Get private key
+// Get private key
       const { privateKey } = await SecureKeyStorage.getWallet(activeWallet, password);
       if (!privateKey) {
         return {
@@ -69,8 +71,67 @@ export class SecureSigningService {
         };
       }
 
-      // Security checks
-      const phishingCheck = detectPhishing(request.to, request.value, request.data);
+      // Use secureClear to wipe private key after use
+      const result = await secureClear(async () => {
+        // Security checks
+        const phishingCheck = detectPhishing(request.to, request.value, request.data);
+        if (phishingCheck.isSuspicious) {
+          warnings.push(...phishingCheck.warnings);
+          if (phishingCheck.riskLevel === 'high') {
+            return {
+              success: false,
+              error: 'Transaction blocked: High security risk detected',
+              warnings: phishingCheck.warnings,
+            };
+          }
+        }
+
+        // Validate transaction
+        const txValidation = validateTransaction({
+          to: request.to,
+          value: request.value,
+          data: request.data,
+        });
+
+        if (!txValidation.valid) {
+          return {
+            success: false,
+            error: txValidation.errors.join(', '),
+            warnings: txValidation.warnings,
+          };
+        }
+
+        warnings.push(...txValidation.warnings);
+
+        // Validate gas parameters
+        const gasValidation = validateGasParameters({
+          gasLimit: request.gasLimit,
+          gasPrice: request.gasPrice,
+          maxFeePerGas: request.maxFeePerGas,
+          maxPriorityFeePerGas: request.maxPriorityFeePerGas,
+        });
+
+        if (!gasValidation.valid) {
+          return {
+            success: false,
+            error: gasValidation.errors.join(', '),
+            warnings: gasValidation.warnings,
+          };
+        }
+
+        warnings.push(...gasValidation.warnings);
+
+        // Sign transaction
+        const signature = await this.signWithPrivateKey(privateKey, request, publicClient);
+
+        return {
+          success: true,
+          signature,
+          warnings,
+        };
+      }, [privateKey]);
+
+      return result;
       if (phishingCheck.isSuspicious) {
         warnings.push(...phishingCheck.warnings);
         if (phishingCheck.riskLevel === 'high') {
@@ -257,39 +318,46 @@ export class SecureSigningService {
   }
 
   /**
-   * Sign with private key (simplified - use ethers.js or viem in production)
+   * Sign with private key using ethers.js
    */
   private async signWithPrivateKey(
     privateKey: string,
     transaction: TransactionRequest,
     publicClient: PublicClient
   ): Promise<Hash> {
-    // This is a placeholder - in production, use ethers.js or viem wallet client
-    // const wallet = new ethers.Wallet(privateKey);
-    // const signedTx = await wallet.signTransaction(transaction);
-    // return signedTx as Hash;
-
-    // For now, return a mock hash
-    return '0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('') as Hash;
+    try {
+      // Create wallet from private key
+      const wallet = new ethers.Wallet(privateKey);
+      
+      // Sign the transaction
+      const signedTx = await wallet.signTransaction(transaction);
+      return signedTx as Hash;
+    } catch (error: any) {
+      throw new Error(`Transaction signing failed: ${error.message}`);
+    }
   }
 
   /**
-   * Sign message with private key (simplified)
+   * Sign message with private key using ethers.js
    */
   private async signMessageWithPrivateKey(
     privateKey: string,
     message: string
   ): Promise<string> {
-    // This is a placeholder - in production, use ethers.js or viem
-    // const wallet = new ethers.Wallet(privateKey);
-    // return await wallet.signMessage(message);
-
-    // For now, return a mock signature
-    return '0x' + Array.from({ length: 130 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    try {
+      // Create wallet from private key
+      const wallet = new ethers.Wallet(privateKey);
+      
+      // Sign the message
+      const signature = await wallet.signMessage(message);
+      return signature;
+    } catch (error: any) {
+      throw new Error(`Message signing failed: ${error.message}`);
+    }
   }
 
   /**
-   * Sign typed data with private key (simplified)
+   * Sign typed data with private key using ethers.js
    */
   private async signTypedDataWithPrivateKey(
     privateKey: string,
@@ -297,7 +365,17 @@ export class SecureSigningService {
     types: any,
     value: any
   ): Promise<string> {
-    // This is a placeholder - in production, use ethers.js or viem
+    try {
+      // Create wallet from private key
+      const wallet = new ethers.Wallet(privateKey);
+      
+      // Sign the typed data
+      const signature = await wallet.signTypedData(domain, types, value);
+      return signature;
+    } catch (error: any) {
+      throw new Error(`Typed data signing failed: ${error.message}`);
+    }
+  }
     // const wallet = new ethers.Wallet(privateKey);
     // return await wallet._signTypedData(domain, types, value);
 

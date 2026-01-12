@@ -139,7 +139,7 @@ export const validateGasParameters = ({
   errors: string[];
 } => {
   const warnings: string[] = [];
-  const errors: string = [];
+  const errors: string[] = [];
 
   // Security gas limit
   const SECURITY_MAX_GAS_LIMIT = 500000n;

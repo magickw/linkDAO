@@ -8,6 +8,7 @@ import { Plus, Eye, EyeOff, Copy, CheckCircle, AlertCircle, ArrowRight, ArrowLef
 import { generateMnemonic, validateMnemonic, derivePrivateKeyFromMnemonic, deriveAddressFromPrivateKey } from '@/utils/bip39Utils';
 import { SecureKeyStorage } from '@/security/secureKeyStorage';
 import { useToast } from '@/context/ToastContext';
+import { PasswordStrengthIndicator } from './PasswordStrengthIndicator';
 
 type Step = 'intro' | 'create' | 'backup' | 'verify' | 'password' | 'complete';
 
@@ -119,12 +120,12 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
       const privateKey = derivePrivateKeyFromMnemonic(mnemonic, "m/44'/60'/0'/0/0", 0);
       const address = deriveAddressFromPrivateKey(privateKey);
 
-      // Store wallet securely
+      // Store wallet securely with mnemonic for backup/recovery
       await SecureKeyStorage.storeWallet(address, privateKey, password, {
         name: walletName || 'My Wallet',
         isHardwareWallet: false,
         chainIds: [1, 8453, 137, 42161], // Ethereum, Base, Polygon, Arbitrum
-      });
+      }, mnemonic);
 
       setWalletAddress(address);
       setStep('complete');
@@ -377,6 +378,13 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
                     )}
                   </button>
                 </div>
+                
+                {/* Password Strength Indicator */}
+                {password && (
+                  <div className="mt-2">
+                    <PasswordStrengthIndicator password={password} />
+                  </div>
+                )}
               </div>
 
               <div>
@@ -466,9 +474,11 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
       case 'backup':
         return verifiedWords.size === 12;
       case 'verify':
+        const { isPasswordStrong } = require('@/utils/passwordStrength');
         return (
           password.length >= 8 &&
           password === confirmPassword &&
+          isPasswordStrong(password) &&
           walletName.trim()
         );
       default:

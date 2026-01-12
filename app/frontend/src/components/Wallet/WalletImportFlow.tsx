@@ -8,6 +8,7 @@ import { Upload, Key, FileText, Eye, EyeOff, CheckCircle, AlertCircle, ArrowRigh
 import { validateMnemonic, derivePrivateKeyFromMnemonic, deriveAddressFromPrivateKey } from '@/utils/bip39Utils';
 import { SecureKeyStorage } from '@/security/secureKeyStorage';
 import { useToast } from '@/context/ToastContext';
+import { PasswordStrengthIndicator } from './PasswordStrengthIndicator';
 
 type ImportMethod = 'mnemonic' | 'privateKey' | 'hardware';
 type Step = 'method' | 'input' | 'password' | 'complete';
@@ -322,6 +323,13 @@ export const WalletImportFlow: React.FC<WalletImportFlowProps> = ({
                     )}
                   </button>
                 </div>
+                
+                {/* Password Strength Indicator */}
+                {password && (
+                  <div className="mt-2">
+                    <PasswordStrengthIndicator password={password} />
+                  </div>
+                )}
               </div>
 
               <div>
@@ -414,9 +422,11 @@ export const WalletImportFlow: React.FC<WalletImportFlowProps> = ({
         }
         return false;
       case 'password':
+        const { isPasswordStrong } = require('@/utils/passwordStrength');
         return (
           password.length >= 8 &&
           password === confirmPassword &&
+          isPasswordStrong(password) &&
           walletName.trim()
         );
       default:

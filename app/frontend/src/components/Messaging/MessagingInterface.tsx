@@ -182,6 +182,15 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  console.log('MessagingInterface Render Debug:', {
+    conversationId,
+    participantName,
+    participantAddress,
+    isViewingDM,
+    selectedDM,
+    foundDM: dmConversations.find(dm => dm.id === selectedDM),
+  });
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);

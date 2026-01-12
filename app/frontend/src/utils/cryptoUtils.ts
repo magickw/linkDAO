@@ -71,11 +71,12 @@ export async function encrypt(
 
     const encoder = new TextEncoder();
     const dataBuffer = encoder.encode(data);
+    const ivBuffer = new Uint8Array(iv.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
 
     const encryptedBuffer = await crypto.subtle.encrypt(
       {
         name: 'AES-GCM',
-        iv: encoder.encode(iv),
+        iv: ivBuffer,
       },
       key,
       dataBuffer
@@ -104,14 +105,14 @@ export async function decrypt(
   try {
     const key = await deriveKey(password, salt);
 
-    const encoder = new TextEncoder();
     const encryptedArray = encryptedData.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || [];
     const encryptedBuffer = new Uint8Array(encryptedArray);
+    const ivBuffer = new Uint8Array(iv.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
 
     const decryptedBuffer = await crypto.subtle.decrypt(
       {
         name: 'AES-GCM',
-        iv: encoder.encode(iv),
+        iv: ivBuffer,
       },
       key,
       encryptedBuffer

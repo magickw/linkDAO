@@ -8,6 +8,7 @@ import { encrypt, decrypt } from '@/utils/cryptoUtils';
 export interface EncryptedWalletData {
   address: string;
   encryptedPrivateKey: string;
+  encryptedMnemonic?: string; // Optional: for recovery purposes
   iv: string;
   salt: string;
   createdAt: number;
@@ -27,13 +28,14 @@ export class SecureKeyStorage {
   private static readonly ENCRYPTION_VERSION = 1;
 
   /**
-   * Encrypt and store a wallet's private key
+   * Encrypt and store a wallet's private key (and optionally mnemonic)
    */
   static async storeWallet(
     address: string,
     privateKey: string,
     password: string,
-    metadata?: Partial<WalletMetadata>
+    metadata?: Partial<WalletMetadata>,
+    mnemonic?: string
   ): Promise<void> {
     try {
       // Check if wallet already exists
@@ -55,6 +57,12 @@ export class SecureKeyStorage {
         lastAccessed: Date.now(),
       };
 
+      // Encrypt and store mnemonic if provided (for recovery)
+      if (mnemonic) {
+        const { encrypted: encryptedMnemonic } = await encrypt(mnemonic, password);
+        walletData.encryptedMnemonic = encryptedMnemonic;
+      }
+
       // Store in localStorage
       const storageKey = `${this.STORAGE_PREFIX}${address.toLowerCase()}`;
       localStorage.setItem(storageKey, JSON.stringify(walletData));
@@ -74,12 +82,12 @@ export class SecureKeyStorage {
   }
 
   /**
-   * Retrieve and decrypt a wallet's private key
+   * Retrieve and decrypt a wallet's private key (and optionally mnemonic)
    */
   static async getWallet(
     address: string,
     password?: string
-  ): Promise<{ privateKey?: string; metadata?: WalletMetadata }> {
+  ): Promise<{ privateKey?: string; mnemonic?: string; metadata?: WalletMetadata }> {
     try {
       const storageKey = `${this.STORAGE_PREFIX}${address.toLowerCase()}`;
       const encryptedData = localStorage.getItem(storageKey);
@@ -95,6 +103,7 @@ export class SecureKeyStorage {
       localStorage.setItem(storageKey, JSON.stringify(walletData));
 
       let privateKey: string | undefined;
+      let mnemonic: string | undefined;
 
       // Only decrypt if password is provided
       if (password) {
@@ -108,6 +117,21 @@ export class SecureKeyStorage {
         } catch (error) {
           throw new Error('Invalid password');
         }
+
+        // Decrypt mnemonic if stored
+        if (walletData.encryptedMnemonic) {
+          try {
+            mnemonic = await decrypt(
+              walletData.encryptedMnemonic,
+              password,
+              walletData.iv,
+              walletData.salt
+            );
+          } catch (error) {
+            // If mnemonic decryption fails, continue without it
+            console.warn('Failed to decrypt mnemonic:', error);
+          }
+        }
       }
 
       // Get metadata
@@ -115,7 +139,7 @@ export class SecureKeyStorage {
       const metadataData = localStorage.getItem(metadataKey);
       const metadata = metadataData ? JSON.parse(metadataData) : undefined;
 
-      return { privateKey, metadata };
+      return { privateKey, mnemonic, metadata };
     } catch (error) {
       console.error('Failed to get wallet:', error);
       throw error;
@@ -228,7 +252,7 @@ export class SecureKeyStorage {
   }
 
   /**
-   * Export wallet data (for backup)
+   * Export wallet data (for backup) - encrypted
    */
   static async exportWallet(address: string, password: string): Promise<string> {
     try {
@@ -246,7 +270,20 @@ export class SecureKeyStorage {
         exportedAt: Date.now(),
       };
 
-      return btoa(JSON.stringify(exportData));
+      // Encrypt the export data with the wallet password
+      const { encrypt } = await import('@/utils/cryptoUtils');
+      const { encrypted, iv, salt } = await encrypt(JSON.stringify(exportData), password);
+
+      // Return encrypted data with metadata needed for decryption
+      const exportPackage = {
+        version: this.ENCRYPTION_VERSION,
+        encrypted,
+        iv,
+        salt,
+        exportedAt: Date.now(),
+      };
+
+      return btoa(JSON.stringify(exportPackage));
     } catch (error) {
       console.error('Failed to export wallet:', error);
       throw new Error('Failed to export wallet');
@@ -254,18 +291,29 @@ export class SecureKeyStorage {
   }
 
   /**
-   * Import wallet data (from backup)
+   * Import wallet data (from backup) - decrypt first
    */
   static async importWallet(
     encryptedData: string,
     password: string
   ): Promise<string> {
     try {
-      const importData = JSON.parse(atob(encryptedData));
+      const importPackage = JSON.parse(atob(encryptedData));
 
-      if (importData.version !== this.ENCRYPTION_VERSION) {
+      if (importPackage.version !== this.ENCRYPTION_VERSION) {
         throw new Error('Incompatible wallet version');
       }
+
+      // Decrypt the export package
+      const { decrypt } = await import('@/utils/cryptoUtils');
+      const decryptedData = await decrypt(
+        importPackage.encrypted,
+        password,
+        importPackage.iv,
+        importPackage.salt
+      );
+
+      const importData = JSON.parse(decryptedData);
 
       // Store the imported wallet
       await this.storeWallet(
