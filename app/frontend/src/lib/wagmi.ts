@@ -97,15 +97,7 @@ export const config = createConfig({
         defaultNetwork: 'base',
       },
     }),
-    injected({
-      target() {
-        return {
-          id: 'injected',
-          name: 'Injected Wallet',
-          provider: typeof window !== 'undefined' ? window.ethereum : undefined
-        }
-      },
-    }),
+    injected(),
   ],
   transports: {
     [base.id]: http(getRpcUrl(base.id)),

@@ -43,10 +43,10 @@ export function derivePrivateKeyFromMnemonic(
   index: number = 0
 ): string {
   try {
-    const hdNode = HDNodeWallet.fromPhrase(mnemonic);
-    const path = derivationPath.replace(/\/0$/, `/${index}`);
-    const wallet = hdNode.derivePath(path);
-    return wallet.privateKey;
+    // In ethers.js v6, HDNodeWallet.fromPhrase() creates a wallet at the specified derivation path
+    // We don't need to derive again - just return the private key directly
+    const hdNode = HDNodeWallet.fromPhrase(mnemonic, derivationPath);
+    return hdNode.privateKey;
   } catch (error: any) {
     throw new Error(`Failed to derive private key: ${error.message}`);
   }
@@ -121,189 +121,126 @@ export function getEntropyFromMnemonic(mnemonic: string): Uint8Array {
 }
 
 /**
- * Generate multiple addresses from a single mnemonic
+ * Validate mnemonic word count
  * @param mnemonic Mnemonic phrase
- * @param count Number of addresses to generate
- * @param startIndex Starting index
- * @param derivationPath BIP-32/44 derivation path
- * @returns Array of addresses with their private keys
+ * @returns True if valid word count
  */
-export function generateAddressesFromMnemonic(
-  mnemonic: string,
-  count: number,
-  startIndex: number = 0,
-  derivationPath: string = "m/44'/60'/0'/0"
-): Array<{ address: string; privateKey: string; index: number }> {
-  const addresses: Array<{ address: string; privateKey: string; index: number }> = [];
+export function isValidWordCount(mnemonic: string): boolean {
+  const words = mnemonic.trim().split(/\s+/);
+  return words.length === 12 || words.length === 24;
+}
 
-  for (let i = startIndex; i < startIndex + count; i++) {
-    try {
-      const privateKey = derivePrivateKeyFromMnemonic(mnemonic, derivationPath, i);
-      const address = deriveAddressFromPrivateKey(privateKey);
-      addresses.push({ address, privateKey, index: i });
-    } catch (error) {
-      console.error(`Failed to generate address at index ${i}:`, error);
-    }
+/**
+ * Check if mnemonic uses valid BIP-39 words
+ * @param mnemonic Mnemonic phrase
+ * @returns True if all words are valid
+ */
+export function hasValidWords(mnemonic: string): boolean {
+  const words = mnemonic.trim().split(/\s+/);
+  const validWords = getWordList();
+  return words.every(word => validWords.includes(word.toLowerCase()));
+}
+
+/**
+ * Get mnemonic strength
+ * @param mnemonic Mnemonic phrase
+ * @returns Strength level
+ */
+export function getMnemonicStrength(mnemonic: string): 'weak' | 'good' | 'strong' {
+  const words = mnemonic.trim().split(/\s+/);
+  if (words.length === 24) {
+    return 'strong';
+  } else if (words.length === 12) {
+    return 'good';
   }
+  return 'weak';
+}
 
+/**
+ * Derive multiple addresses from a mnemonic
+ * @param mnemonic Mnemonic phrase
+ * @param derivationPath Base derivation path
+ * @param count Number of addresses to derive
+ * @returns Array of addresses
+ */
+export function deriveMultipleAddresses(
+  mnemonic: string,
+  derivationPath: string = "m/44'/60'/0'/0/0",
+  count: number = 1
+): string[] {
+  const addresses: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const address = deriveAddressFromMnemonic(mnemonic, derivationPath, i);
+    addresses.push(address);
+  }
   return addresses;
 }
 
 /**
- * Validate private key format
- * @param privateKey Private key to validate
- * @returns True if valid
+ * Get account index from derivation path
+ * @param derivationPath BIP-32/44 derivation path
+ * @returns Account index
  */
-export function validatePrivateKey(privateKey: string): boolean {
-  try {
-    // Check if it's a valid hex string
-    if (!/^0x[a-fA-F0-9]{64}$/.test(privateKey)) {
-      return false;
-    }
+export function getAccountIndex(derivationPath: string): number {
+  const match = derivationPath.match(/\/(\d+)\/?$/);
+  return match ? parseInt(match[1]) : 0;
+}
 
-    // Try to create a wallet from it
-    const wallet = new HDNodeWallet(privateKey);
-    return !!wallet.address;
-  } catch {
-    return false;
+/**
+ * Get change index from derivation path
+ * @param derivationPath BIP-32/44 derivation path
+ * @returns Change index
+ */
+export function getChangeIndex(derivationPath: string): number {
+  const parts = derivationPath.split('/');
+  if (parts.length >= 5) {
+    const changeIndex = parseInt(parts[4].replace("'", ""));
+    return isNaN(changeIndex) ? 0 : changeIndex;
+  }
+  return 0;
+}
+
+/**
+ * Validate derivation path format
+ * @param derivationPath BIP-32/44 derivation path
+ * @returns True if valid format
+ */
+export function isValidDerivationPath(derivationPath: string): boolean {
+  // BIP-44 path format: m/44'/60'/0'/0/0
+  const bip44Pattern = /^m\/\d+'\/\d+'\/\d+'\/\d+'\/\d+$/;
+  return bip44Pattern.test(derivationPath);
+}
+
+/**
+ * Get wallet type from derivation path
+ * @param derivationPath BIP-44 derivation path
+ * @returns Wallet type
+ */
+export function getWalletType(derivationPath: string): 'ethereum' | 'bitcoin' | 'other' {
+  const coinType = derivationPath.split('/')[2].replace("'", '');
+  switch (coinType) {
+    case '60':
+      return 'ethereum';
+    case '0':
+      return 'bitcoin';
+    default:
+      return 'other';
   }
 }
 
 /**
- * Get account info from mnemonic
- * @param mnemonic Mnemonic phrase
- * @param index Account index
- * @returns Account information
+ * Get account type from derivation path
+ * @param derivationPath BIP-44 derivation path
+ * @returns Account type
  */
-export function getAccountInfo(
-  mnemonic: string,
-  index: number = 0
-): {
-  address: string;
-  privateKey: string;
-  publicKey: string;
-  derivationPath: string;
-} {
-  const derivationPath = `m/44'/60'/0'/0/${index}`;
-  const privateKey = derivePrivateKeyFromMnemonic(mnemonic, derivationPath, index);
-  const address = deriveAddressFromPrivateKey(privateKey);
-  const wallet = new HDNodeWallet(privateKey);
-
-  return {
-    address,
-    privateKey,
-    publicKey: wallet.publicKey,
-    derivationPath,
-  };
-}
-
-/**
- * Encrypt mnemonic with password (for backup)
- * @param mnemonic Mnemonic phrase
- * @param password Password for encryption
- * @returns Encrypted data
- */
-export async function encryptMnemonic(
-  mnemonic: string,
-  password: string
-): Promise<{ encrypted: string; salt: string; iv: string }> {
-  const encoder = new TextEncoder();
-  const passwordBytes = encoder.encode(password);
-
-  // Generate salt and IV
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const iv = crypto.getRandomValues(new Uint8Array(16));
-
-  // Derive key
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    passwordBytes,
-    'PBKDF2',
-    false,
-    ['deriveKey']
-  );
-
-  const key = await crypto.subtle.deriveKey(
-    {
-      name: 'PBKDF2',
-      salt: salt,
-      iterations: 100000,
-      hash: 'SHA-256',
-    },
-    keyMaterial,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['encrypt']
-  );
-
-  // Encrypt
-  const mnemonicBytes = encoder.encode(mnemonic);
-  const encrypted = await crypto.subtle.encrypt(
-    {
-      name: 'AES-GCM',
-      iv: iv,
-    },
-    key,
-    mnemonicBytes
-  );
-
-  return {
-    encrypted: Buffer.from(encrypted).toString('hex'),
-    salt: Buffer.from(salt).toString('hex'),
-    iv: Buffer.from(iv).toString('hex'),
-  };
-}
-
-/**
- * Decrypt mnemonic with password
- * @param encrypted Encrypted mnemonic
- * @param salt Salt used for encryption
- * @param iv IV used for encryption
- * @param password Password for decryption
- * @returns Decrypted mnemonic
- */
-export async function decryptMnemonic(
-  encrypted: string,
-  salt: string,
-  iv: string,
-  password: string
-): Promise<string> {
-  const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
-  const passwordBytes = encoder.encode(password);
-
-  // Derive key
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    passwordBytes,
-    'PBKDF2',
-    false,
-    ['deriveKey']
-  );
-
-  const key = await crypto.subtle.deriveKey(
-    {
-      name: 'PBKDF2',
-      salt: Buffer.from(salt, 'hex'),
-      iterations: 100000,
-      hash: 'SHA-256',
-    },
-    keyMaterial,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['decrypt']
-  );
-
-  // Decrypt
-  const encryptedBytes = Buffer.from(encrypted, 'hex');
-  const decrypted = await crypto.subtle.decrypt(
-    {
-      name: 'AES-GCM',
-      iv: Buffer.from(iv, 'hex'),
-    },
-    key,
-    encryptedBytes
-  );
-
-  return decoder.decode(decrypted);
+export function getAccountType(derivationPath: string): 'default' | 'legacy' | 'other' {
+  const accountType = derivationPath.split('/')[3].replace("'", "");
+  switch (accountType) {
+    case '0':
+      return 'default';
+    case '1':
+      return 'legacy';
+    default:
+      return 'other';
+  }
 }
