@@ -104,6 +104,15 @@ export class CSRFService {
   }
 
   /**
+   * Get CSRF headers as an object (for use with fetch)
+   */
+  async getCSRFHeaders(): Promise<Record<string, string>> {
+    return {
+      [this.headerName]: this.getToken()
+    };
+  }
+
+  /**
    * Add CSRF token to fetch options
    */
   addToFetchOptions(options: RequestInit = {}): RequestInit {
@@ -203,7 +212,7 @@ export class CSRFService {
       const data = localStorage.getItem('csrf_token');
       if (data) {
         const token = JSON.parse(data) as CSRFToken;
-        
+
         // Check if token is still valid
         if (Date.now() <= token.expiresAt) {
           this.token = token;

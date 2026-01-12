@@ -87,20 +87,20 @@ export class GovernanceService {
     try {
       // Try to use window.ethereum if available
       if (typeof window !== 'undefined' && (window as any).ethereum) {
-        const provider = new ethers.BrowserProvider((window as any).ethereum);
+        const provider = new ethers.BrowserProvider((window as any).ethereum, "any");
         this.provider = provider;
         this.contract = new ethers.Contract(this.governanceAddress, GOVERNANCE_ABI, provider);
       } else {
         // Fallback to JSON-RPC provider
         const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://sepolia.drpc.org';
-            try {
-              this.provider = new ethers.JsonRpcProvider(rpcUrl, 11155111, {
-                staticNetwork: true
-              });
-            } catch (error) {
-              console.warn('Failed to initialize governance provider:', error);
-              this.provider = null;
-            }        this.contract = new ethers.Contract(this.governanceAddress, GOVERNANCE_ABI, this.provider);
+        try {
+          this.provider = new ethers.JsonRpcProvider(rpcUrl, 11155111, {
+            staticNetwork: true
+          });
+        } catch (error) {
+          console.warn('Failed to initialize governance provider:', error);
+          this.provider = null;
+        } this.contract = new ethers.Contract(this.governanceAddress, GOVERNANCE_ABI, this.provider);
       }
     } catch (error) {
       console.error('Failed to initialize governance contract:', error);
@@ -233,7 +233,7 @@ export class GovernanceService {
     try {
       // Get authentication headers including CSRF token
       const authHeaders = await this.getAuthHeaders();
-      
+
       const response = await fetch(`${this.baseUrl}/governance/proposals`, {
         method: 'POST',
         headers: authHeaders,
@@ -329,7 +329,7 @@ export class GovernanceService {
     try {
       // Get authentication headers including CSRF token
       const authHeaders = await this.getAuthHeaders();
-      
+
       const response = await fetch(`${this.baseUrl}/governance/delegate`, {
         method: 'POST',
         headers: authHeaders,
@@ -367,7 +367,7 @@ export class GovernanceService {
     try {
       // Get authentication headers including CSRF token
       const authHeaders = await this.getAuthHeaders();
-      
+
       const response = await fetch(`${this.baseUrl}/governance/revoke-delegation`, {
         method: 'POST',
         headers: authHeaders,
@@ -441,7 +441,7 @@ export class GovernanceService {
       // Try to vote via smart contract
       await this.initializeContract();
       if (this.contract && typeof window !== 'undefined' && (window as any).ethereum) {
-        const provider = new ethers.BrowserProvider((window as any).ethereum);
+        const provider = new ethers.BrowserProvider((window as any).ethereum, "any");
         const signer = await provider.getSigner();
         const contractWithSigner = this.contract.connect(signer) as any;
 
@@ -1032,7 +1032,7 @@ export class GovernanceService {
   private async getAuthHeaders(): Promise<Record<string, string>> {
     // Get base auth headers from enhancedAuthService
     const headers = await enhancedAuthService.getAuthHeaders();
-    
+
     // Add CSRF headers for authenticated requests
     try {
       const csrfHeaders = await csrfService.getCSRFHeaders();
@@ -1040,7 +1040,7 @@ export class GovernanceService {
     } catch (error) {
       console.warn('Failed to get CSRF headers:', error);
     }
-    
+
     return headers;
   }
 }
