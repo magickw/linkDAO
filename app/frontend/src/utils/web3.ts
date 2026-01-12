@@ -20,29 +20,58 @@ export function wrapProvider(provider: any): any {
   // Helper to deep clone objects to break references to frozen extension objects
   const deepClone = (obj: any) => {
     if (obj === null || typeof obj !== 'object') return obj;
-    return JSON.parse(JSON.stringify(obj));
+    try {
+      return JSON.parse(JSON.stringify(obj));
+    } catch (e) {
+      console.warn('Deep clone failed:', e);
+      return obj;
+    }
+  };
+
+  // Helper to create a safe, mutable error object
+  const createSafeError = (error: any) => {
+    if (!error) return error;
+    try {
+      const safeError: any = new Error(error.message || 'Unknown error');
+      if (error.code) safeError.code = error.code;
+      if (error.data) safeError.data = deepClone(error.data);
+      // Copy other properties potentially relevant for RPC errors
+      if (error.rpcCode) safeError.rpcCode = error.rpcCode;
+      return safeError;
+    } catch (e) {
+      return new Error('Unknown error (failed to process original error)');
+    }
   };
 
   // Create a clean object with just the necessary methods
-  return {
+  // We manually construct the object to avoid copying frozen properties
+  const wrapped = {
     // Forward specific known properties
     isMetaMask: provider.isMetaMask,
     isStatus: provider.isStatus,
     host: provider.host,
     path: provider.path,
 
-    // Some wallets/extensions might rely on this
+    // Explicitly add chainId if it exists on provider
+    chainId: provider.chainId,
+
+    // Copy other properties but prioritize our overrides
     ...provider,
 
     // Intercept request to ensure args are mutable and safe
     request: async (args: { method: string; params?: any[] }) => {
       // Create a completely new request object to ensure it's mutable
-      // Some extensions like LastPass freeze the args object
       const method = args.method;
       // Deep copy params to ensure no references to frozen objects remain
       const params = args.params ? deepClone(args.params) : [];
 
-      return provider.request({ method, params });
+      try {
+        const result = await provider.request({ method, params });
+        // Deep clone result to ensure it's not frozen
+        return deepClone(result);
+      } catch (error: any) {
+        throw createSafeError(error);
+      }
     },
 
     // Safe forwarding of send method (legacy)
@@ -57,8 +86,8 @@ export function wrapProvider(provider: any): any {
     // Safe forwarding of sendAsync method (legacy)
     sendAsync: (payload: any, callback: any) => {
       return provider.sendAsync?.(deepClone(payload), (error: any, result: any) => {
-        // Ensure result is also safe if needed, though usually we consume it
-        callback(error, result);
+        // Ensure result is also safe if needed
+        callback(createSafeError(error), deepClone(result));
       });
     },
 
@@ -66,6 +95,8 @@ export function wrapProvider(provider: any): any {
     on: (eventName: string, listener: any) => provider.on?.(eventName, listener),
     removeListener: (eventName: string, listener: any) => provider.removeListener?.(eventName, listener),
   };
+
+  return wrapped;
 }
 
 /**
