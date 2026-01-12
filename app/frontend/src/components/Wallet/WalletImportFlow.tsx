@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { Upload, Key, FileText, Eye, EyeOff, CheckCircle, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react';
-import { validateMnemonic, derivePrivateKeyFromMnemonic, deriveAddressFromPrivateKey } from '@/utils/bip39Utils';
+import { validateMnemonic, derivePrivateKeyFromMnemonic, deriveAddressFromPrivateKey, hasDuplicateWords } from '@/utils/bip39Utils';
 import { SecureKeyStorage } from '@/security/secureKeyStorage';
 import { useToast } from '@/context/ToastContext';
 import { PasswordStrengthIndicator } from './PasswordStrengthIndicator';
@@ -280,7 +280,9 @@ export const WalletImportFlow: React.FC<WalletImportFlowProps> = ({
 
             {importMethod === 'mnemonic' && mnemonic && !validateMnemonic(mnemonic) && (
               <p className="text-sm text-red-600 dark:text-red-400">
-                Invalid recovery phrase. Must be 12 or 24 words.
+                {hasDuplicateWords(mnemonic)
+                  ? 'Invalid recovery phrase: Contains duplicate words. Each word should be unique.'
+                  : 'Invalid recovery phrase. Must be 12 or 24 valid BIP-39 words.'}
               </p>
             )}
 

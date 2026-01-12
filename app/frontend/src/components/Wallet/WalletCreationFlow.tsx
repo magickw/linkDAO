@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, Eye, EyeOff, Copy, CheckCircle, AlertCircle, ArrowRight, ArrowLeft, Fingerprint } from 'lucide-react';
-import { generateMnemonic, validateMnemonic, derivePrivateKeyFromMnemonic, deriveAddressFromPrivateKey } from '@/utils/bip39Utils';
+import { generateMnemonic, validateMnemonic, derivePrivateKeyFromMnemonic, deriveAddressFromPrivateKey, hasDuplicateWords } from '@/utils/bip39Utils';
 import { SecureKeyStorage } from '@/security/secureKeyStorage';
 import { useToast } from '@/context/ToastContext';
 import { PasswordStrengthIndicator } from './PasswordStrengthIndicator';

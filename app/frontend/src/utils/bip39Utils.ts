@@ -12,8 +12,39 @@ import { HDNodeWallet, Mnemonic, entropyToMnemonic, mnemonicToEntropy, wordlist 
  */
 export function generateMnemonic(wordCount: 12 | 24 = 12): string {
   const entropyBytes = wordCount === 12 ? 16 : 32; // 128 bits for 12 words, 256 bits for 24 words
-  const entropy = Mnemonic.entropyToPhrase(crypto.getRandomValues(new Uint8Array(entropyBytes)));
-  return entropy;
+  
+  // Generate mnemonic and check for duplicates
+  let mnemonic: string;
+  let attempts = 0;
+  const maxAttempts = 100; // Prevent infinite loop
+  
+  do {
+    // Use HDNodeWallet.createRandom() to generate a wallet with mnemonic
+    // This is the proper way in ethers.js v6
+    const wallet = HDNodeWallet.createRandom();
+    mnemonic = wallet.mnemonic.phrase;
+    attempts++;
+    
+    // If we've tried too many times, log a warning and return the last result
+    // (this should be extremely rare given the entropy space)
+    if (attempts >= maxAttempts) {
+      console.warn(`Generated ${maxAttempts} mnemonics with duplicate words. Returning last result.`);
+      break;
+    }
+  } while (hasDuplicateWords(mnemonic));
+  
+  return mnemonic;
+}
+
+/**
+ * Check if a mnemonic has duplicate words
+ * @param mnemonic Mnemonic phrase
+ * @returns True if duplicate words found
+ */
+export function hasDuplicateWords(mnemonic: string): boolean {
+  const words = mnemonic.trim().split(/\s+/);
+  const uniqueWords = new Set(words);
+  return words.length !== uniqueWords.size;
 }
 
 /**
@@ -23,6 +54,12 @@ export function generateMnemonic(wordCount: 12 | 24 = 12): string {
  */
 export function validateMnemonic(mnemonic: string): boolean {
   try {
+    // Check for duplicate words first
+    if (hasDuplicateWords(mnemonic)) {
+      return false;
+    }
+    
+    // Validate BIP-39 format and checksum
     Mnemonic.fromPhrase(mnemonic);
     return true;
   } catch {
