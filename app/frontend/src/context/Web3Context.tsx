@@ -32,7 +32,7 @@ export function Web3Provider({ children }: Web3ProviderProps) {
   useEffect(() => {
     // Check if injected provider is available
     setHasWallet(hasInjectedProvider());
-    
+
     // Set up listeners for account and chain changes
     const cleanupAccountsListener = onAccountsChanged((accounts: string[]) => {
       if (accounts.length === 0) {
@@ -43,11 +43,11 @@ export function Web3Provider({ children }: Web3ProviderProps) {
         console.log('Account changed:', accounts[0]);
       }
     });
-    
+
     const cleanupChainListener = onChainChanged((chainId: string) => {
       console.log('Chain changed:', chainId);
     });
-    
+
     return () => {
       cleanupAccountsListener();
       cleanupChainListener();
@@ -58,15 +58,13 @@ export function Web3Provider({ children }: Web3ProviderProps) {
   useEffect(() => {
     // Only run in browser
     if (typeof window === 'undefined') return;
-    
+
     // Save connection state to localStorage for persistence across page reloads
     if (isConnected && address) {
       localStorage.setItem('linkdao_wallet_connected', 'true');
-      localStorage.setItem('linkdao_wallet_address', address);
       localStorage.setItem('linkdao_wallet_connector', connector?.id || 'unknown');
     } else {
       localStorage.removeItem('linkdao_wallet_connected');
-      localStorage.removeItem('linkdao_wallet_address');
       localStorage.removeItem('linkdao_wallet_connector');
     }
   }, [isConnected, address, connector]);
@@ -74,16 +72,16 @@ export function Web3Provider({ children }: Web3ProviderProps) {
   const handleConnect = (connectorId?: string) => {
     // Find MetaMask connector first, then fall back to injected, then first available
     let connectorToUse;
-    
+
     if (connectorId) {
       connectorToUse = connectors.find(c => c.id === connectorId);
     } else {
       // Try to find MetaMask specifically
-      connectorToUse = connectors.find(c => c.id === 'metaMask') || 
-                      connectors.find(c => c.id === 'injected') || 
-                      connectors[0];
+      connectorToUse = connectors.find(c => c.id === 'metaMask') ||
+        connectors.find(c => c.id === 'injected') ||
+        connectors[0];
     }
-    
+
     if (connectorToUse) {
       connect({ connector: connectorToUse });
     } else {
@@ -103,12 +101,11 @@ export function Web3Provider({ children }: Web3ProviderProps) {
   useEffect(() => {
     // Only run in browser and if not already connected
     if (typeof window === 'undefined' || isConnected) return;
-    
+
     const wasConnected = localStorage.getItem('linkdao_wallet_connected');
-    const savedAddress = localStorage.getItem('linkdao_wallet_address');
     const savedConnectorId = localStorage.getItem('linkdao_wallet_connector');
-    
-    if (wasConnected === 'true' && savedAddress && savedConnectorId) {
+
+    if (wasConnected === 'true' && savedConnectorId) {
       // Try to reconnect with the saved connector
       const savedConnector = connectors.find(c => c.id === savedConnectorId);
       if (savedConnector) {
@@ -119,7 +116,6 @@ export function Web3Provider({ children }: Web3ProviderProps) {
             console.warn('Failed to restore wallet connection:', error);
             // Clear saved connection data if restoration fails
             localStorage.removeItem('linkdao_wallet_connected');
-            localStorage.removeItem('linkdao_wallet_address');
             localStorage.removeItem('linkdao_wallet_connector');
           });
         }, 100);

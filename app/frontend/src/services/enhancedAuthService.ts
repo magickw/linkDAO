@@ -10,6 +10,7 @@ import { ENV_CONFIG } from '@/config/environment';
 import { AuthUser, UserRole } from '@/types/auth';
 import { enhancedRequestManager } from './enhancedRequestManager';
 import { apiCircuitBreaker } from './circuitBreaker';
+import { encrypt, decrypt } from '@/utils/cryptoUtils';
 
 export interface AuthResponse {
   success: boolean;
@@ -64,41 +65,61 @@ class EnhancedAuthService {
   private readonly STORAGE_KEYS = {
     ACCESS_TOKEN: 'linkdao_access_token',
     REFRESH_TOKEN: 'linkdao_refresh_token',
-    WALLET_ADDRESS: 'linkdao_wallet_address',
+    WALLET_ADDRESS: 'linkdao_wallet_address', // Now used for ENCRYPTED storage key
     SESSION_DATA: 'linkdao_session_data',
     SIGNATURE_TIMESTAMP: 'linkdao_signature_timestamp',
     USER_DATA: 'linkdao_user_data',
-    BACKEND_URL: 'linkdao_backend_url'
+    BACKEND_URL: 'linkdao_backend_url',
+    SESSION_KEY: 'linkdao_session_key' // Ephemeral key in sessionStorage
   };
+
+  private sessionKey: string | null = null;
+  public ready: Promise<void>;
 
   constructor() {
     this.baseUrl = ENV_CONFIG.BACKEND_URL || 'http://localhost:10000';
-    this.initializeFromStorage();
+    this.ready = this.initialize();
     this.setupPeriodicRefresh();
   }
 
   /**
-   * Initialize authentication state from localStorage
+   * Initialize authentication state
    */
-  private initializeFromStorage(): void {
+  private async initialize(): Promise<void> {
     if (typeof window === 'undefined') return;
 
     try {
+      // 1. Initialize or recover Session Key
+      this.sessionKey = sessionStorage.getItem(this.STORAGE_KEYS.SESSION_KEY);
+      if (!this.sessionKey) {
+        // Generate random session key
+        this.sessionKey = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+          .map(b => b.toString(16).padStart(2, '0')).join('');
+        sessionStorage.setItem(this.STORAGE_KEYS.SESSION_KEY, this.sessionKey);
+      }
+
+      // 2. Load Session Data (still in sessionStorage for now as per previous fix)
       const sessionDataStr = sessionStorage.getItem(this.STORAGE_KEYS.SESSION_DATA);
+
+      // 3. Handle Wallet Address Migration/Loading
+      // Check for plain text in sessionStorage (migrating away)
+      const sessionAddr = sessionStorage.getItem(this.STORAGE_KEYS.WALLET_ADDRESS);
+      if (sessionAddr && !sessionAddr.startsWith('{')) {
+        // It's a plain address. We should migrate it to encrypted localStorage.
+        // But we only migrate if we have a valid session context.
+      }
+
+      // Proceed with normal session load
       if (sessionDataStr) {
         const sessionData: SessionData = JSON.parse(sessionDataStr);
 
-        // Check if session is still valid
+        // Check validity...
         if (Date.now() < sessionData.expiresAt) {
-          // Check if the stored session is for the same backend (prevent cross-backend auth issues)
           const storedBackendUrl = sessionStorage.getItem(this.STORAGE_KEYS.BACKEND_URL);
           const currentBackendUrl = this.baseUrl;
 
           if (storedBackendUrl && storedBackendUrl !== currentBackendUrl) {
-            console.log('🔄 Backend URL changed, clearing stored session', {
-              oldUrl: storedBackendUrl,
-              newUrl: currentBackendUrl
-            });
+            console.log('🔄 Backend URL changed, clearing stored session');
             this.clearStoredSession();
             return;
           }
@@ -106,20 +127,21 @@ class EnhancedAuthService {
           this.sessionData = sessionData;
           this.token = sessionData.token;
 
-          // Fallback: ensure refresh token is loaded from separate storage if missing from sessionData
           if (!this.sessionData.refreshToken) {
             const storedRefreshToken = sessionStorage.getItem(this.STORAGE_KEYS.REFRESH_TOKEN);
             if (storedRefreshToken) {
               this.sessionData.refreshToken = storedRefreshToken;
-              console.log('🔄 Restored refresh token from separate storage');
             }
           }
 
           console.log('✅ Restored valid session from storage');
 
-          // Ensure wallet address is also stored separately for API client access
-          if (this.sessionData.user?.address) {
-            sessionStorage.setItem(this.STORAGE_KEYS.WALLET_ADDRESS, this.sessionData.user.address);
+          // Ensure wallet address is stored ENCRYPTED in localStorage
+          if (this.sessionData.user?.address && this.sessionKey) {
+            const encrypted = await encrypt(this.sessionData.user.address, this.sessionKey);
+            localStorage.setItem('encrypted_wallet_address', JSON.stringify(encrypted));
+            // Remove plaintext sessionStorage version if exists
+            sessionStorage.removeItem(this.STORAGE_KEYS.WALLET_ADDRESS);
           }
         } else {
           console.log('⏰ Stored session expired, clearing...');
@@ -131,6 +153,14 @@ class EnhancedAuthService {
       this.clearStoredSession();
     }
   }
+
+  // Helper backward compat for synchronous init calls if any (should define dummy or remove)
+  private initializeFromStorage(): void {
+    // Deprecated. Logic moved to initialize().
+  }
+
+
+
 
   /**
    * Setup periodic token refresh
@@ -666,13 +696,23 @@ class EnhancedAuthService {
       try {
         sessionStorage.setItem(this.STORAGE_KEYS.SESSION_DATA, JSON.stringify(this.sessionData));
         sessionStorage.setItem(this.STORAGE_KEYS.ACCESS_TOKEN, token);
-        sessionStorage.setItem(this.STORAGE_KEYS.WALLET_ADDRESS, user.address);
+
+        // Remove plain text address from sessionStorage (migration)
+        sessionStorage.removeItem(this.STORAGE_KEYS.WALLET_ADDRESS);
+
         sessionStorage.setItem(this.STORAGE_KEYS.SIGNATURE_TIMESTAMP, now.toString());
         sessionStorage.setItem(this.STORAGE_KEYS.USER_DATA, JSON.stringify(user));
-        sessionStorage.setItem(this.STORAGE_KEYS.BACKEND_URL, this.baseUrl); // Store current backend URL
+        sessionStorage.setItem(this.STORAGE_KEYS.BACKEND_URL, this.baseUrl);
 
         if (refreshToken) {
           sessionStorage.setItem(this.STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+        }
+
+        // Encrypt wallet address to localStorage
+        if (this.sessionKey) {
+          encrypt(user.address, this.sessionKey).then(encrypted => {
+            localStorage.setItem('encrypted_wallet_address', JSON.stringify(encrypted));
+          }).catch(err => console.error('Failed to encrypt wallet address', err));
         }
 
         this.storeTokenInDB(token);
