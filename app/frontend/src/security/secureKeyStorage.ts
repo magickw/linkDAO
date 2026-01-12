@@ -4,7 +4,7 @@
  */
 
 import { encrypt, decrypt } from '@/utils/cryptoUtils';
-import { wipeString } from '@/utils/secureMemory';
+import { wipeString, wipeUint8Array, stringToSecureBuffer, secureBufferToString } from '@/utils/secureMemory';
 import { rateLimiter } from '@/services/rateLimiter';
 
 export interface EncryptedWalletData {
@@ -24,6 +24,12 @@ export interface WalletMetadata {
   chainIds: number[];
 }
 
+interface DecryptedWallet {
+  privateKey: string;
+  mnemonic?: string;
+  metadata?: WalletMetadata;
+}
+
 export class SecureKeyStorage {
   private static readonly STORAGE_PREFIX = 'linkdao_wallet_';
   private static readonly ACTIVE_WALLET_KEY = 'linkdao_active_wallet';
@@ -41,7 +47,7 @@ export class SecureKeyStorage {
   ): Promise<void> {
     try {
       // Check if wallet already exists
-      const existing = await this.getWallet(address);
+      const existing = await this._getEncryptedWalletData(address);
       if (existing) {
         throw new Error('Wallet already exists');
       }
@@ -84,88 +90,130 @@ export class SecureKeyStorage {
   }
 
   /**
+   * Securely executes a callback with the decrypted wallet data, ensuring memory is wiped afterwards.
+   * This is the recommended way to access sensitive wallet data.
+   * @param address The wallet address
+   * @param password The user's password
+   * @param callback The function to execute with the decrypted wallet data
+   * @returns The result of the callback
+   */
+  static async withDecryptedWallet<T>(
+    address: string,
+    password: string,
+    callback: (wallet: DecryptedWallet) => Promise<T>
+  ): Promise<T> {
+    const walletData = await this._getEncryptedWalletData(address);
+    if (!walletData) {
+      throw new Error('Wallet not found');
+    }
+
+    let privateKey: string | undefined;
+    let mnemonic: string | undefined;
+    
+    try {
+      // Decrypt private key
+      privateKey = await decrypt(
+        walletData.encryptedPrivateKey,
+        password,
+        walletData.iv,
+        walletData.salt
+      );
+
+      // Decrypt mnemonic if it exists
+      if (walletData.encryptedMnemonic) {
+        try {
+          mnemonic = await decrypt(
+            walletData.encryptedMnemonic,
+            password,
+            walletData.iv,
+            walletData.salt
+          );
+        } catch (e) {
+          console.warn('Failed to decrypt mnemonic, continuing without it.');
+        }
+      }
+      
+      const metadata = this._getWalletMetadata(address);
+
+      // Execute the callback with the decrypted data
+      return await callback({ privateKey, mnemonic, metadata });
+
+    } catch (error) {
+        // Re-throw decryption errors as invalid password
+        throw new Error('Invalid password');
+    } finally {
+      // SECURELY WIPE SENSITIVE DATA FROM MEMORY
+      if (privateKey) {
+        const buffer = stringToSecureBuffer(privateKey);
+        wipeUint8Array(buffer);
+      }
+      if (mnemonic) {
+        const buffer = stringToSecureBuffer(mnemonic);
+        wipeUint8Array(buffer);
+      }
+    }
+  }
+
+  /**
    * Retrieve and decrypt a wallet's private key (and optionally mnemonic)
+   * @deprecated Use `withDecryptedWallet` for better in-memory security. This function returns sensitive data that the caller must handle correctly.
    */
   static async getWallet(
     address: string,
     password?: string
   ): Promise<{ privateKey?: string; mnemonic?: string; metadata?: WalletMetadata }> {
-    try {
-      const storageKey = `${this.STORAGE_PREFIX}${address.toLowerCase()}`;
-      const encryptedData = localStorage.getItem(storageKey);
-
-      if (!encryptedData) {
-        return {};
-      }
-
-      const walletData: EncryptedWalletData = JSON.parse(encryptedData);
-
-      // Update last accessed time
-      walletData.lastAccessed = Date.now();
-      localStorage.setItem(storageKey, JSON.stringify(walletData));
-
-      let privateKey: string | undefined;
-      let mnemonic: string | undefined;
-
-      // Only decrypt if password is provided
-      if (password) {
-        try {
-          privateKey = await decrypt(
-            walletData.encryptedPrivateKey,
-            password,
-            walletData.iv,
-            walletData.salt
-          );
-        } catch (error) {
-          throw new Error('Invalid password');
-        }
-
-        // Decrypt mnemonic if stored
-        if (walletData.encryptedMnemonic) {
-          try {
-            mnemonic = await decrypt(
-              walletData.encryptedMnemonic,
-              password,
-              walletData.iv,
-              walletData.salt
-            );
-          } catch (error) {
-            // If mnemonic decryption fails, continue without it
-            console.warn('Failed to decrypt mnemonic:', error);
-          }
-        }
-      }
-
-      // Get metadata
-      const metadataKey = `${this.STORAGE_PREFIX}${address.toLowerCase()}_metadata`;
-      const metadataData = localStorage.getItem(metadataKey);
-      const metadata = metadataData ? JSON.parse(metadataData) : undefined;
-
-      // Convert to secure buffers for proper memory clearing
-      const privateKeyBuffer = privateKey ? stringToSecureBuffer(privateKey) : null;
-      const mnemonicBuffer = mnemonic ? stringToSecureBuffer(mnemonic) : null;
-
-      // Create result with secure buffers
-      const result = {
-        privateKey: privateKeyBuffer ? secureBufferToString(privateKeyBuffer) : null,
-        mnemonic: mnemonicBuffer ? secureBufferToString(mnemonicBuffer) : null,
-        metadata
-      };
-
-      // Securely wipe the buffers
-      if (privateKeyBuffer) {
-        privateKeyBuffer.fill(0);
-      }
-      if (mnemonicBuffer) {
-        mnemonicBuffer.fill(0);
-      }
-
-      return result;
-    } catch (error) {
-      console.error('Failed to get wallet:', error);
-      throw error;
+    const walletData = await this._getEncryptedWalletData(address);
+    if (!walletData) {
+      return {};
     }
+
+    // Only decrypt if password is provided
+    if (password) {
+      return this.withDecryptedWallet(address, password, async (decryptedWallet) => {
+        // This is not ideal as it returns the sensitive data, but maintains compatibility.
+        // The memory for `decryptedWallet` is wiped by `withDecryptedWallet` after this callback.
+        return {
+          privateKey: decryptedWallet.privateKey,
+          mnemonic: decryptedWallet.mnemonic,
+          metadata: decryptedWallet.metadata,
+        };
+      });
+    }
+
+    return { metadata: this._getWalletMetadata(address) };
   }
+
+  /**
+   * Fetches the raw encrypted wallet data from localStorage.
+   * @private
+   */
+  private static async _getEncryptedWalletData(address: string): Promise<EncryptedWalletData | null> {
+    const storageKey = `${this.STORAGE_PREFIX}${address.toLowerCase()}`;
+    const encryptedData = localStorage.getItem(storageKey);
+
+    if (!encryptedData) {
+      return null;
+    }
+
+    const walletData: EncryptedWalletData = JSON.parse(encryptedData);
+
+    // Update last accessed time
+    walletData.lastAccessed = Date.now();
+    localStorage.setItem(storageKey, JSON.stringify(walletData));
+    
+    return walletData;
+  }
+
+  /**
+   * Fetches the wallet metadata from localStorage.
+   * @private
+   */
+  private static _getWalletMetadata(address: string): WalletMetadata | undefined {
+    const metadataKey = `${this.STORAGE_PREFIX}${address.toLowerCase()}_metadata`;
+    const metadataData = localStorage.getItem(metadataKey);
+    return metadataData ? JSON.parse(metadataData) : undefined;
+  }
+
 
   /**
    * Delete a wallet from storage
@@ -245,9 +293,8 @@ export class SecureKeyStorage {
         const minutes = Math.ceil((timeUntilUnblock || 0) / 60000);
         throw new Error(`Too many password attempts. Please try again in ${minutes} minutes.`);
       }
-
-      const { privateKey } = await this.getWallet(address, password);
-      const isValid = !!privateKey;
+      
+      const isValid = await this.withDecryptedWallet(address, password, async (wallet) => !!wallet.privateKey);
 
       // Record attempt (success or failure)
       rateLimiter.recordAttempt(address.toLowerCase(), 'password', isValid);
@@ -269,8 +316,10 @@ export class SecureKeyStorage {
     newPassword: string
   ): Promise<void> {
     try {
-      // Get current private key with old password
-      const { privateKey, metadata } = await this.getWallet(address, oldPassword);
+      const { privateKey, metadata, mnemonic } = await this.withDecryptedWallet(address, oldPassword, async (wallet) => {
+        // Clone data needed for re-encryption, as it will be wiped after this callback
+        return { privateKey: wallet.privateKey, metadata: wallet.metadata, mnemonic: wallet.mnemonic };
+      });
 
       if (!privateKey) {
         throw new Error('Invalid old password');
@@ -280,10 +329,8 @@ export class SecureKeyStorage {
       await this.deleteWallet(address);
 
       // Store with new password
-      await this.storeWallet(address, privateKey, newPassword, metadata);
+      await this.storeWallet(address, privateKey, newPassword, metadata, mnemonic);
 
-      // Wipe key from memory
-      wipeString(privateKey);
     } catch (error) {
       console.error('Failed to change password:', error);
       throw new Error('Failed to change password');
@@ -295,37 +342,34 @@ export class SecureKeyStorage {
    */
   static async exportWallet(address: string, password: string): Promise<string> {
     try {
-      const { privateKey, metadata } = await this.getWallet(address, password);
+      return await this.withDecryptedWallet(address, password, async (wallet) => {
+        if (!wallet.privateKey) {
+          throw new Error('Invalid password');
+        }
 
-      if (!privateKey) {
-        throw new Error('Invalid password');
-      }
+        const exportData = {
+          version: this.ENCRYPTION_VERSION,
+          address,
+          privateKey: wallet.privateKey, // This will be wiped after the callback
+          metadata: wallet.metadata,
+          exportedAt: Date.now(),
+        };
 
-      const exportData = {
-        version: this.ENCRYPTION_VERSION,
-        address,
-        privateKey,
-        metadata,
-        exportedAt: Date.now(),
-      };
+        // Encrypt the export data with the wallet password
+        const { encrypt } = await import('@/utils/cryptoUtils');
+        const { encrypted, iv, salt } = await encrypt(JSON.stringify(exportData), password);
 
-      // Encrypt the export data with the wallet password
-      const { encrypt } = await import('@/utils/cryptoUtils');
-      const { encrypted, iv, salt } = await encrypt(JSON.stringify(exportData), password);
-
-      // Return encrypted data with metadata needed for decryption
-      const exportPackage = {
-        version: this.ENCRYPTION_VERSION,
-        encrypted,
-        iv,
-        salt,
-        exportedAt: Date.now(),
-      };
-
-      // Wipe potentially sensitive data
-      wipeString(privateKey);
-
-      return btoa(JSON.stringify(exportPackage));
+        // Return encrypted data with metadata needed for decryption
+        const exportPackage = {
+          version: this.ENCRYPTION_VERSION,
+          encrypted,
+          iv,
+          salt,
+          exportedAt: Date.now(),
+        };
+        
+        return btoa(JSON.stringify(exportPackage));
+      });
     } catch (error) {
       console.error('Failed to export wallet:', error);
       throw new Error('Failed to export wallet');
@@ -348,24 +392,33 @@ export class SecureKeyStorage {
 
       // Decrypt the export package
       const { decrypt } = await import('@/utils/cryptoUtils');
-      const decryptedData = await decrypt(
-        importPackage.encrypted,
-        password,
-        importPackage.iv,
-        importPackage.salt
-      );
+      let decryptedDataJson: string | undefined;
+      let importData: any;
+      
+      try {
+        decryptedDataJson = await decrypt(
+          importPackage.encrypted,
+          password,
+          importPackage.iv,
+          importPackage.salt
+        );
+        importData = JSON.parse(decryptedDataJson);
+        
+        // Store the imported wallet
+        await this.storeWallet(
+          importData.address,
+          importData.privateKey,
+          password,
+          importData.metadata
+        );
 
-      const importData = JSON.parse(decryptedData);
+        return importData.address;
+      } finally {
+        // Wipe decrypted data
+        if (decryptedDataJson) wipeString(decryptedDataJson);
+        if (importData && importData.privateKey) wipeString(importData.privateKey);
+      }
 
-      // Store the imported wallet
-      await this.storeWallet(
-        importData.address,
-        importData.privateKey,
-        password,
-        importData.metadata
-      );
-
-      return importData.address;
     } catch (error) {
       console.error('Failed to import wallet:', error);
       throw new Error('Failed to import wallet');

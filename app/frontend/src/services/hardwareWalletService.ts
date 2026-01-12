@@ -356,26 +356,43 @@ export class HardwareWalletService {
     error?: string;
   }> {
     try {
-      // In production, use @ledgerhq/hw-transport-webusb
-      // This is a placeholder implementation
-      const address = await this.getAddressFromLedger(path);
+      // Import Ledger libraries dynamically to avoid SSR issues
+      const { default: TransportWebUSB } = await import('@ledgerhq/hw-transport-webusb');
+      const { default: AppEth } = await import('@ledgerhq/hw-app-eth');
 
+      // Create transport
+      const transport = await TransportWebUSB.create();
+      
+      // Create Ethereum app instance
+      const eth = new AppEth(transport);
+      
+      // Get address
+      const { address, publicKey } = await eth.getAddress(path, false, true);
+      
+      // Get device info
+      const deviceInfo = await eth.getAppConfiguration();
+      
       const wallet: HardwareWalletInfo = {
         type: 'ledger',
         name: 'Ledger Nano X/S',
         isConnected: true,
         path,
         address,
-        firmwareVersion: '2.0.0', // Would get from device
+        firmwareVersion: deviceInfo.version,
       };
 
       this.connectedWallet = wallet;
+
+      // Keep transport reference for future operations
+      (this as any).ledgerTransport = transport;
+      (this as any).ledgerApp = eth;
 
       return {
         success: true,
         wallet,
       };
     } catch (error: any) {
+      console.error('Ledger connection error:', error);
       return {
         success: false,
         error: error.message || 'Failed to connect to Ledger',
@@ -384,39 +401,93 @@ export class HardwareWalletService {
   }
 
   private async getAddressFromLedger(path: string): Promise<string> {
-    // Placeholder - In production, use @ledgerhq/hw-app-eth
-    // const transport = await TransportWebUSB.create();
-    // const eth = new AppEth(transport);
-    // const { address } = await eth.getAddress(path);
-    // return address;
-    
-    // For now, return a mock address
-    return '0x' + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    try {
+      const { default: TransportWebUSB } = await import('@ledgerhq/hw-transport-webusb');
+      const { default: AppEth } = await import('@ledgerhq/hw-app-eth');
+
+      const transport = await TransportWebUSB.create();
+      const eth = new AppEth(transport);
+      const { address } = await eth.getAddress(path);
+      
+      // Close transport after use
+      await transport.close();
+      
+      return address;
+    } catch (error) {
+      console.error('Failed to get address from Ledger:', error);
+      throw new Error('Failed to get address from Ledger device');
+    }
   }
 
   private async signTransactionWithLedger(
     request: TransactionRequest,
     publicClient: PublicClient
   ): Promise<Hash> {
-    // Placeholder - In production, use @ledgerhq/hw-app-eth
-    // const transport = await TransportWebUSB.create();
-    // const eth = new AppEth(transport);
-    // const tx = await eth.signTransaction(this.connectedWallet.path!, request);
-    // return tx as Hash;
-    
-    // For now, return a mock hash
-    return '0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('') as Hash;
+    try {
+      const eth = (this as any).ledgerApp;
+      if (!eth) {
+        throw new Error('Ledger not connected');
+      }
+
+      // Convert transaction to Ledger format
+      const txData = {
+        nonce: request.nonce ? `0x${request.nonce.toString(16)}` : '0x00',
+        gasPrice: request.gasPrice ? `0x${request.gasPrice.toString(16)}` : '0x00',
+        gasLimit: request.gasLimit ? `0x${request.gasLimit.toString(16)}` : '0x5208',
+        to: request.to || '0x0000000000000000000000000000000000000000',
+        value: request.value ? `0x${request.value.toString(16)}` : '0x00',
+        data: request.data || '0x',
+        chainId: request.chainId || 1,
+        v: request.chainId || 1,
+        r: '0x00',
+        s: '0x00',
+      };
+
+      // Sign transaction
+      const signature = await eth.signTransaction(this.connectedWallet.path!, txData);
+      
+      // Combine signature with transaction data to create signed transaction
+      const { v, r, s } = signature;
+      const signedTx = {
+        ...txData,
+        v: `0x${v.toString(16)}`,
+        r: r.startsWith('0x') ? r : `0x${r}`,
+        s: s.startsWith('0x') ? s : `0x${s}`,
+      };
+
+      // Serialize and send transaction
+      const hash = await publicClient.sendRawTransaction({
+        serialized: signedTx as any,
+      });
+
+      return hash;
+    } catch (error) {
+      console.error('Ledger transaction signing error:', error);
+      throw new Error('Failed to sign transaction with Ledger');
+    }
   }
 
   private async signMessageWithLedger(message: string): Promise<string> {
-    // Placeholder - In production, use @ledgerhq/hw-app-eth
-    // const transport = await TransportWebUSB.create();
-    // const eth = new AppEth(transport);
-    // const signature = await eth.signPersonalMessage(this.connectedWallet.path!, message);
-    // return signature;
-    
-    // For now, return a mock signature
-    return '0x' + Array.from({ length: 130 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    try {
+      const eth = (this as any).ledgerApp;
+      if (!eth) {
+        throw new Error('Ledger not connected');
+      }
+
+      // Convert message to hex
+      const messageHex = Buffer.from(message, 'utf8').toString('hex');
+      
+      // Sign personal message
+      const signature = await eth.signPersonalMessage(
+        this.connectedWallet.path!,
+        messageHex
+      );
+
+      return signature;
+    } catch (error) {
+      console.error('Ledger message signing error:', error);
+      throw new Error('Failed to sign message with Ledger');
+    }
   }
 
   private async signTypedDataWithLedger(
@@ -424,14 +495,25 @@ export class HardwareWalletService {
     types: any,
     value: any
   ): Promise<string> {
-    // Placeholder - In production, use @ledgerhq/hw-app-eth
-    // const transport = await TransportWebUSB.create();
-    // const eth = new AppEth(transport);
-    // const signature = await eth.signTypedData(this.connectedWallet.path!, domain, types, value);
-    // return signature;
-    
-    // For now, return a mock signature
-    return '0x' + Array.from({ length: 130 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    try {
+      const eth = (this as any).ledgerApp;
+      if (!eth) {
+        throw new Error('Ledger not connected');
+      }
+
+      // Sign typed data (EIP-712)
+      const signature = await eth.signEIP712HashedMessage(
+        this.connectedWallet.path!,
+        domain,
+        types,
+        value
+      );
+
+      return signature;
+    } catch (error) {
+      console.error('Ledger typed data signing error:', error);
+      throw new Error('Failed to sign typed data with Ledger');
+    }
   }
 
   // Private methods for Trezor
@@ -450,9 +532,35 @@ export class HardwareWalletService {
     error?: string;
   }> {
     try {
-      // In production, use @web3modal/walletconnect or @trezor/connect
-      // This is a placeholder implementation
-      const address = await this.getAddressFromTrezor(path);
+      // Import Trezor Connect dynamically
+      const TrezorConnect = await import('@trezor/connect-web');
+      
+      // Initialize Trezor Connect
+      TrezorConnect.init({
+        lazyLoad: true,
+        manifest: {
+          email: 'support@linkdao.io',
+          appUrl: window.location.origin,
+        },
+      });
+
+      // Get Ethereum address
+      const result = await TrezorConnect.ethereumGetAddress({
+        path,
+        showOnTrezor: true,
+      });
+
+      if (!result.success) {
+        throw new Error(result.payload.error || 'Failed to get address from Trezor');
+      }
+
+      const address = result.payload.address;
+
+      // Get device info
+      const featuresResult = await TrezorConnect.getFeatures();
+      const firmwareVersion = featuresResult.success 
+        ? `${featuresResult.payload.major_version}.${featuresResult.payload.minor_version}.${featuresResult.payload.patch_version}`
+        : 'Unknown';
 
       const wallet: HardwareWalletInfo = {
         type: 'trezor',
@@ -460,7 +568,7 @@ export class HardwareWalletService {
         isConnected: true,
         path,
         address,
-        firmwareVersion: '2.5.0', // Would get from device
+        firmwareVersion,
       };
 
       this.connectedWallet = wallet;
@@ -470,6 +578,7 @@ export class HardwareWalletService {
         wallet,
       };
     } catch (error: any) {
+      console.error('Trezor connection error:', error);
       return {
         success: false,
         error: error.message || 'Failed to connect to Trezor',
@@ -478,39 +587,98 @@ export class HardwareWalletService {
   }
 
   private async getAddressFromTrezor(path: string): Promise<string> {
-    // Placeholder - In production, use @trezor/connect
-    // const result = await TrezorConnect.ethereumGetAddress(path);
-    // return result.address;
-    
-    // For now, return a mock address
-    return '0x' + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    try {
+      const TrezorConnect = await import('@trezor/connect-web');
+      
+      const result = await TrezorConnect.ethereumGetAddress({
+        path,
+        showOnTrezor: false,
+      });
+
+      if (!result.success) {
+        throw new Error(result.payload.error || 'Failed to get address');
+      }
+
+      return result.payload.address;
+    } catch (error) {
+      console.error('Failed to get address from Trezor:', error);
+      throw new Error('Failed to get address from Trezor device');
+    }
   }
 
   private async signTransactionWithTrezor(
     request: TransactionRequest,
     publicClient: PublicClient
   ): Promise<Hash> {
-    // Placeholder - In production, use @trezor/connect
-    // const result = await TrezorConnect.ethereumSignTransaction(
-    //   this.connectedWallet.path!,
-    //   request
-    // );
-    // return result as Hash;
-    
-    // For now, return a mock hash
-    return '0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('') as Hash;
+    try {
+      const TrezorConnect = await import('@trezor/connect-web');
+
+      // Convert transaction to Trezor format
+      const txData = {
+        to: request.to || '0x0000000000000000000000000000000000000000',
+        value: request.value ? request.value.toString() : '0',
+        gasLimit: request.gasLimit ? request.gasLimit.toString() : '21000',
+        gasPrice: request.gasPrice ? request.gasPrice.toString() : undefined,
+        maxFeePerGas: request.maxFeePerGas ? request.maxFeePerGas.toString() : undefined,
+        maxPriorityFeePerGas: request.maxPriorityFeePerGas ? request.maxPriorityFeePerGas.toString() : undefined,
+        nonce: request.nonce ? request.nonce.toString() : undefined,
+        chainId: request.chainId || 1,
+        data: request.data || undefined,
+      };
+
+      // Sign transaction
+      const result = await TrezorConnect.ethereumSignTransaction({
+        path: this.connectedWallet.path!,
+        transaction: txData,
+      });
+
+      if (!result.success) {
+        throw new Error(result.payload.error || 'Failed to sign transaction');
+      }
+
+      // Combine signature with transaction data
+      const { r, s, v } = result.payload;
+      const signedTx = {
+        ...txData,
+        r,
+        s,
+        v: v.toString(),
+      };
+
+      // Serialize and send transaction
+      const hash = await publicClient.sendRawTransaction({
+        serialized: signedTx as any,
+      });
+
+      return hash;
+    } catch (error) {
+      console.error('Trezor transaction signing error:', error);
+      throw new Error('Failed to sign transaction with Trezor');
+    }
   }
 
   private async signMessageWithTrezor(message: string): Promise<string> {
-    // Placeholder - In production, use @trezor/connect
-    // const result = await TrezorConnect.ethereumSignMessage(
-    //   this.connectedWallet.path!,
-    //   message
-    // );
-    // return result.signature;
-    
-    // For now, return a mock signature
-    return '0x' + Array.from({ length: 130 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    try {
+      const TrezorConnect = await import('@trezor/connect-web');
+
+      const result = await TrezorConnect.ethereumSignMessage({
+        path: this.connectedWallet.path!,
+        message,
+      });
+
+      if (!result.success) {
+        throw new Error(result.payload.error || 'Failed to sign message');
+      }
+
+      const { r, s, v } = result.payload;
+      // Combine r, s, v into signature format
+      const signature = `${r}${s}${v.toString(16).padStart(2, '0')}`;
+
+      return signature;
+    } catch (error) {
+      console.error('Trezor message signing error:', error);
+      throw new Error('Failed to sign message with Trezor');
+    }
   }
 
   private async signTypedDataWithTrezor(
@@ -518,17 +686,39 @@ export class HardwareWalletService {
     types: any,
     value: any
   ): Promise<string> {
-    // Placeholder - In production, use @trezor/connect
-    // const result = await TrezorConnect.ethereumSignTypedData(
-    //   this.connectedWallet.path!,
-    //   domain,
-    //   types,
-    //   value
-    // );
-    // return result.signature;
-    
-    // For now, return a mock signature
-    return '0x' + Array.from({ length: 130 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    try {
+      const TrezorConnect = await import('@trezor/connect-web');
+
+      // Convert types to Trezor format
+      const trezorTypes = {};
+      for (const [key, type] of Object.entries(types)) {
+        if (key !== 'EIP712Domain') {
+          trezorTypes[key] = type;
+        }
+      }
+
+      const result = await TrezorConnect.ethereumSignTypedData({
+        path: this.connectedWallet.path!,
+        data: {
+          domain,
+          types: trezorTypes,
+          message: value,
+        },
+      });
+
+      if (!result.success) {
+        throw new Error(result.payload.error || 'Failed to sign typed data');
+      }
+
+      const { r, s, v } = result.payload;
+      // Combine r, s, v into signature format
+      const signature = `${r}${s}${v.toString(16).padStart(2, '0')}`;
+
+      return signature;
+    } catch (error) {
+      console.error('Trezor typed data signing error:', error);
+      throw new Error('Failed to sign typed data with Trezor');
+    }
   }
 }
 

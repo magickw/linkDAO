@@ -1,388 +1,522 @@
 /**
- * Security Monitoring Service
- * Monitors for security incidents and suspicious activity
+ * Security Monitoring and Alerting Service
+ * Provides real-time security monitoring, anomaly detection, and alerting
  */
 
-// Security event types
-export enum SecurityEventType {
-  // Authentication events
-  LOGIN_SUCCESS = 'LOGIN_SUCCESS',
-  LOGIN_FAILURE = 'LOGIN_FAILURE',
-  LOCKOUT_TRIGGERED = 'LOCKOUT_TRIGGERED',
-  PASSWORD_CHANGE = 'PASSWORD_CHANGE',
-
-  // Transaction events
-  TRANSACTION_SIGNED = 'TRANSACTION_SIGNED',
-  TRANSACTION_BLOCKED = 'TRANSACTION_BLOCKED',
-  LARGE_TRANSACTION = 'LARGE_TRANSACTION',
-  SUSPICIOUS_ADDRESS = 'SUSPICIOUS_ADDRESS',
-
-  // Phishing events
-  PHISHING_DETECTED = 'PHISHING_DETECTED',
-  MALICIOUS_ADDRESS = 'MALICIOUS_ADDRESS',
-
-  // System events
-  WALLET_CREATED = 'WALLET_CREATED',
-  WALLET_IMPORTED = 'WALLET_IMPORTED',
-  WALLET_EXPORTED = 'WALLET_EXPORTED',
-  WALLET_DELETED = 'WALLET_DELETED',
-
-  // Error events
-  ENCRYPTION_ERROR = 'ENCRYPTION_ERROR',
-  DECRYPTION_ERROR = 'DECRYPTION_ERROR',
-  VALIDATION_ERROR = 'VALIDATION_ERROR',
-
-  // Anomaly events
-  UNUSUAL_ACTIVITY = 'UNUSUAL_ACTIVITY',
-  RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED',
-  BETA_LIMIT_EXCEEDED = 'BETA_LIMIT_EXCEEDED',
-}
-
-export enum SecuritySeverity {
-  INFO = 'INFO',
-  WARNING = 'WARNING',
-  ERROR = 'ERROR',
-  CRITICAL = 'CRITICAL',
-}
-
-export interface SecurityEvent {
+export interface SecurityAlert {
   id: string;
-  type: SecurityEventType;
-  severity: SecuritySeverity;
-  timestamp: number;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  type: string;
   message: string;
-  metadata?: Record<string, any>;
-  userAgent?: string;
-  walletAddress?: string;
+  timestamp: number;
+  details?: any;
+  resolved: boolean;
 }
 
-// Configuration
-const CONFIG = {
-  maxEventsStored: 1000,
-  alertThresholds: {
-    loginFailures: 3, // Alert after 3 failures
-    transactionBlocked: 1, // Alert on any blocked transaction
-    largeTransactions: 5, // Alert after 5 large transactions in a day
-  },
-  reportingEndpoint: '/api/security/events', // Backend endpoint for reporting
-  enableRemoteReporting: false, // Enable to send events to backend
-};
+export interface SecurityMetrics {
+  totalAlerts: number;
+  criticalAlerts: number;
+  highAlerts: number;
+  mediumAlerts: number;
+  lowAlerts: number;
+  resolvedAlerts: number;
+  activeAlerts: number;
+}
 
-// Storage keys
-const STORAGE_KEY = 'linkdao_security_events';
-const STORAGE_KEY_ALERTS = 'linkdao_security_alerts';
+export interface AnomalyDetectionConfig {
+  unusualTransactionAmount: bigint;
+  unusualGasPrice: bigint;
+  multipleFailedAttempts: number;
+  suspiciousAddressPattern: RegExp[];
+  unusualContractInteraction: boolean;
+}
 
-class SecurityMonitor {
-  private static instance: SecurityMonitor;
-  private events: SecurityEvent[] = [];
-  private listeners: ((event: SecurityEvent) => void)[] = [];
+export class SecurityMonitorService {
+  private static instance: SecurityMonitorService;
+  private alerts: SecurityAlert[] = [];
+  private alertCallbacks: Map<string, (alert: SecurityAlert) => void> = new Map();
+  private readonly STORAGE_KEY = 'linkdao_security_alerts';
+  private readonly MAX_ALERTS = 1000;
+
+  private readonly anomalyConfig: AnomalyDetectionConfig = {
+    unusualTransactionAmount: parseEther('10000'), // 10,000 ETH
+    unusualGasPrice: parseGwei('100'), // 100 gwei
+    multipleFailedAttempts: 5,
+    suspiciousAddressPattern: [
+      /(.)\1{10,}/, // Repeated characters
+      /012345|543210|abcdef|fedcba/i, // Sequential characters
+    ],
+    unusualContractInteraction: true,
+  };
 
   private constructor() {
-    this.loadEvents();
+    this.loadAlerts();
+    this.startMonitoring();
   }
 
-  static getInstance(): SecurityMonitor {
-    if (!SecurityMonitor.instance) {
-      SecurityMonitor.instance = new SecurityMonitor();
+  static getInstance(): SecurityMonitorService {
+    if (!SecurityMonitorService.instance) {
+      SecurityMonitorService.instance = new SecurityMonitorService();
     }
-    return SecurityMonitor.instance;
+    return SecurityMonitorService.instance;
   }
 
   /**
-   * Load events from storage
+   * Register an alert callback
    */
-  private loadEvents(): void {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        this.events = JSON.parse(stored);
-      }
-    } catch {
-      this.events = [];
-    }
+  onAlert(callback: (alert: SecurityAlert) => void): string {
+    const id = `callback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    this.alertCallbacks.set(id, callback);
+    return id;
   }
 
   /**
-   * Save events to storage
+   * Unregister an alert callback
    */
-  private saveEvents(): void {
-    try {
-      // Keep only recent events
-      if (this.events.length > CONFIG.maxEventsStored) {
-        this.events = this.events.slice(-CONFIG.maxEventsStored);
-      }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.events));
-    } catch {
-      // Ignore storage errors
-    }
+  offAlert(id: string): void {
+    this.alertCallbacks.delete(id);
   }
 
   /**
-   * Generate unique event ID
+   * Create a security alert
    */
-  private generateId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  /**
-   * Log a security event
-   */
-  logEvent(
-    type: SecurityEventType,
-    severity: SecuritySeverity,
+  async createAlert(
+    severity: SecurityAlert['severity'],
+    type: string,
     message: string,
-    metadata?: Record<string, any>,
-    walletAddress?: string
-  ): SecurityEvent {
-    const event: SecurityEvent = {
-      id: this.generateId(),
-      type,
+    details?: any
+  ): Promise<SecurityAlert> {
+    const alert: SecurityAlert = {
+      id: `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       severity,
-      timestamp: Date.now(),
+      type,
       message,
-      metadata: {
-        ...metadata,
-        // Sanitize sensitive data
-        ...(metadata?.privateKey ? { privateKey: '[REDACTED]' } : {}),
-        ...(metadata?.mnemonic ? { mnemonic: '[REDACTED]' } : {}),
-        ...(metadata?.password ? { password: '[REDACTED]' } : {}),
-      },
-      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
-      walletAddress: walletAddress ? this.maskAddress(walletAddress) : undefined,
-    };
-
-    this.events.push(event);
-    this.saveEvents();
-
-    // Notify listeners
-    this.listeners.forEach((listener) => listener(event));
-
-    // Check for alerts
-    this.checkAlerts(event);
-
-    // Send to backend if enabled
-    if (CONFIG.enableRemoteReporting) {
-      this.reportToBackend(event);
-    }
-
-    // Log to console in development
-    if (process.env.NODE_ENV === 'development') {
-      this.logToConsole(event);
-    }
-
-    return event;
-  }
-
-  /**
-   * Mask wallet address for privacy
-   */
-  private maskAddress(address: string): string {
-    if (address.length < 10) return address;
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  }
-
-  /**
-   * Log to console with appropriate styling
-   */
-  private logToConsole(event: SecurityEvent): void {
-    const styles = {
-      [SecuritySeverity.INFO]: 'color: blue',
-      [SecuritySeverity.WARNING]: 'color: orange',
-      [SecuritySeverity.ERROR]: 'color: red',
-      [SecuritySeverity.CRITICAL]: 'color: red; font-weight: bold',
-    };
-
-    console.log(
-      `%c[SECURITY ${event.severity}] ${event.type}: ${event.message}`,
-      styles[event.severity],
-      event.metadata || ''
-    );
-  }
-
-  /**
-   * Check if alert thresholds are exceeded
-   */
-  private checkAlerts(event: SecurityEvent): void {
-    const now = Date.now();
-    const oneDayAgo = now - 24 * 60 * 60 * 1000;
-    const oneHourAgo = now - 60 * 60 * 1000;
-
-    // Check login failures in last hour
-    if (event.type === SecurityEventType.LOGIN_FAILURE) {
-      const recentFailures = this.events.filter(
-        (e) => e.type === SecurityEventType.LOGIN_FAILURE && e.timestamp > oneHourAgo
-      ).length;
-
-      if (recentFailures >= CONFIG.alertThresholds.loginFailures) {
-        this.triggerAlert('MULTIPLE_LOGIN_FAILURES', {
-          count: recentFailures,
-          timeframe: '1 hour',
-        });
-      }
-    }
-
-    // Check blocked transactions
-    if (event.type === SecurityEventType.TRANSACTION_BLOCKED) {
-      this.triggerAlert('TRANSACTION_BLOCKED', event.metadata);
-    }
-
-    // Check large transactions today
-    if (event.type === SecurityEventType.LARGE_TRANSACTION) {
-      const largeToday = this.events.filter(
-        (e) => e.type === SecurityEventType.LARGE_TRANSACTION && e.timestamp > oneDayAgo
-      ).length;
-
-      if (largeToday >= CONFIG.alertThresholds.largeTransactions) {
-        this.triggerAlert('MULTIPLE_LARGE_TRANSACTIONS', {
-          count: largeToday,
-          timeframe: '24 hours',
-        });
-      }
-    }
-
-    // Critical events always trigger alerts
-    if (event.severity === SecuritySeverity.CRITICAL) {
-      this.triggerAlert('CRITICAL_EVENT', {
-        type: event.type,
-        message: event.message,
-      });
-    }
-  }
-
-  /**
-   * Trigger a security alert
-   */
-  private triggerAlert(alertType: string, data: any): void {
-    const alert = {
-      type: alertType,
       timestamp: Date.now(),
-      data,
+      details,
+      resolved: false,
     };
 
-    // Store alert
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_ALERTS);
-      const alerts = stored ? JSON.parse(stored) : [];
+    this.alerts.unshift(alert);
+
+    // Keep only the most recent alerts
+    if (this.alerts.length > this.MAX_ALERTS) {
+      this.alerts = this.alerts.slice(0, this.MAX_ALERTS);
+    }
+
+    this.saveAlerts();
+    this.notifyCallbacks(alert);
+
+    // Send to backend for persistent storage and notification
+    await this.sendAlertToBackend(alert);
+
+    return alert;
+  }
+
+  /**
+   * Monitor transaction for security issues
+   */
+  async monitorTransaction(
+    to: string,
+    value: bigint,
+    data: string,
+    gasPrice?: bigint
+  ): Promise<{ safe: boolean; warnings: string[]; alerts: SecurityAlert[] }> {
+    const warnings: string[] = [];
+    const alerts: SecurityAlert[] = [];
+
+    // Check for unusual transaction amount
+    if (value > this.anomalyConfig.unusualTransactionAmount) {
+      const warning = `Unusually large transaction amount: ${formatEther(value)} ETH`;
+      warnings.push(warning);
+      const alert = await this.createAlert(
+        'high',
+        'unusual_transaction',
+        warning,
+        { to, value: value.toString(), data }
+      );
       alerts.push(alert);
-      localStorage.setItem(STORAGE_KEY_ALERTS, JSON.stringify(alerts.slice(-100)));
-    } catch {
-      // Ignore
     }
 
-    // In production, this would send to an alerting service
-    console.warn('[SECURITY ALERT]', alertType, data);
-  }
-
-  /**
-   * Report event to backend (if enabled)
-   */
-  private async reportToBackend(event: SecurityEvent): Promise<void> {
-    try {
-      await fetch(CONFIG.reportingEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(event),
-      });
-    } catch {
-      // Silently fail - don't disrupt user experience
+    // Check for unusual gas price
+    if (gasPrice && gasPrice > this.anomalyConfig.unusualGasPrice) {
+      const warning = `Unusually high gas price: ${formatGwei(gasPrice)} gwei`;
+      warnings.push(warning);
+      const alert = await this.createAlert(
+        'medium',
+        'high_gas_price',
+        warning,
+        { to, gasPrice: gasPrice.toString() }
+      );
+      alerts.push(alert);
     }
-  }
 
-  /**
-   * Subscribe to security events
-   */
-  subscribe(listener: (event: SecurityEvent) => void): () => void {
-    this.listeners.push(listener);
-    return () => {
-      this.listeners = this.listeners.filter((l) => l !== listener);
-    };
-  }
+    // Check for suspicious address patterns
+    for (const pattern of this.anomalyConfig.suspiciousAddressPattern) {
+      if (pattern.test(to)) {
+        const warning = `Suspicious address pattern detected: ${to}`;
+        warnings.push(warning);
+        const alert = await this.createAlert(
+          'high',
+          'suspicious_address',
+          warning,
+          { to, pattern: pattern.toString() }
+        );
+        alerts.push(alert);
+      }
+    }
 
-  /**
-   * Get recent events
-   */
-  getRecentEvents(count = 50): SecurityEvent[] {
-    return this.events.slice(-count);
-  }
-
-  /**
-   * Get events by type
-   */
-  getEventsByType(type: SecurityEventType): SecurityEvent[] {
-    return this.events.filter((e) => e.type === type);
-  }
-
-  /**
-   * Get events by severity
-   */
-  getEventsBySeverity(severity: SecuritySeverity): SecurityEvent[] {
-    return this.events.filter((e) => e.severity === severity);
-  }
-
-  /**
-   * Get security statistics
-   */
-  getStats(): {
-    totalEvents: number;
-    last24Hours: number;
-    bySeverity: Record<SecuritySeverity, number>;
-    byType: Record<string, number>;
-  } {
-    const now = Date.now();
-    const oneDayAgo = now - 24 * 60 * 60 * 1000;
-
-    const bySeverity: Record<SecuritySeverity, number> = {
-      [SecuritySeverity.INFO]: 0,
-      [SecuritySeverity.WARNING]: 0,
-      [SecuritySeverity.ERROR]: 0,
-      [SecuritySeverity.CRITICAL]: 0,
-    };
-
-    const byType: Record<string, number> = {};
-
-    this.events.forEach((event) => {
-      bySeverity[event.severity]++;
-      byType[event.type] = (byType[event.type] || 0) + 1;
-    });
+    // Check for contract interaction
+    if (data && data.length > 10) {
+      const warning = `Contract interaction detected with address: ${to}`;
+      warnings.push(warning);
+      if (this.anomalyConfig.unusualContractInteraction) {
+        const alert = await this.createAlert(
+          'medium',
+          'contract_interaction',
+          warning,
+          { to, data: data.substring(0, 100) + '...' }
+        );
+        alerts.push(alert);
+      }
+    }
 
     return {
-      totalEvents: this.events.length,
-      last24Hours: this.events.filter((e) => e.timestamp > oneDayAgo).length,
-      bySeverity,
-      byType,
+      safe: alerts.filter(a => a.severity === 'critical' || a.severity === 'high').length === 0,
+      warnings,
+      alerts,
     };
   }
 
   /**
-   * Clear all events (for testing)
+   * Monitor failed authentication attempts
    */
-  clearEvents(): void {
-    this.events = [];
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(STORAGE_KEY_ALERTS);
+  async monitorFailedAuthAttempt(
+    walletAddress: string,
+    reason: string
+  ): Promise<{ blocked: boolean; alert?: SecurityAlert }> {
+    const key = `failed_auth_${walletAddress}`;
+    const attempts = this.getFailedAttempts(key);
+
+    if (attempts >= this.anomalyConfig.multipleFailedAttempts) {
+      const alert = await this.createAlert(
+        'critical',
+        'multiple_failed_auth',
+        `Multiple failed authentication attempts for wallet ${walletAddress}`,
+        { walletAddress, attempts, reason }
+      );
+
+      // Block the wallet temporarily
+      this.blockWallet(walletAddress, 30 * 60 * 1000); // 30 minutes
+
+      return { blocked: true, alert };
+    }
+
+    this.incrementFailedAttempts(key);
+    return { blocked: false };
   }
+
+  /**
+   * Monitor unusual wallet activity
+   */
+  async monitorWalletActivity(
+    walletAddress: string,
+    activity: {
+      transactionCount: number;
+      totalValue: bigint;
+      uniqueAddresses: Set<string>;
+      timeWindow: number; // in milliseconds
+    }
+  ): Promise<{ suspicious: boolean; alert?: SecurityAlert }> {
+    // Check for rapid transactions
+    const transactionsPerHour = (activity.transactionCount / activity.timeWindow) * 3600000;
+    if (transactionsPerHour > 100) {
+      const alert = await this.createAlert(
+        'high',
+        'rapid_transactions',
+        `Unusually high transaction rate: ${transactionsPerHour.toFixed(0)} transactions/hour`,
+        { walletAddress, transactionCount: activity.transactionCount, timeWindow: activity.timeWindow }
+      );
+      return { suspicious: true, alert };
+    }
+
+    // Check for high total value in short time
+    if (activity.totalValue > parseEther('100000')) {
+      const alert = await this.createAlert(
+        'critical',
+        'high_value_transfers',
+        `Unusually high transfer volume: ${formatEther(activity.totalValue)} ETH in ${activity.timeWindow / 60000} minutes`,
+        { walletAddress, totalValue: activity.totalValue.toString(), timeWindow: activity.timeWindow }
+      );
+      return { suspicious: true, alert };
+    }
+
+    // Check for many unique addresses (potential dusting attack)
+    if (activity.uniqueAddresses.size > 50) {
+      const alert = await this.createAlert(
+        'medium',
+        'dusting_attack',
+        `Potential dusting attack: ${activity.uniqueAddresses.size} unique addresses in ${activity.timeWindow / 60000} minutes`,
+        { walletAddress, uniqueAddressCount: activity.uniqueAddresses.size }
+      );
+      return { suspicious: true, alert };
+    }
+
+    return { suspicious: false };
+  }
+
+  /**
+   * Get all alerts
+   */
+  getAlerts(filters?: {
+    severity?: SecurityAlert['severity'];
+    type?: string;
+    resolved?: boolean;
+    limit?: number;
+  }): SecurityAlert[] {
+    let filtered = [...this.alerts];
+
+    if (filters?.severity) {
+      filtered = filtered.filter(a => a.severity === filters.severity);
+    }
+
+    if (filters?.type) {
+      filtered = filtered.filter(a => a.type === filters.type);
+    }
+
+    if (filters?.resolved !== undefined) {
+      filtered = filtered.filter(a => a.resolved === filters.resolved);
+    }
+
+    if (filters?.limit) {
+      filtered = filtered.slice(0, filters.limit);
+    }
+
+    return filtered;
+  }
+
+  /**
+   * Get security metrics
+   */
+  getMetrics(): SecurityMetrics {
+    const totalAlerts = this.alerts.length;
+    const resolvedAlerts = this.alerts.filter(a => a.resolved).length;
+    const activeAlerts = totalAlerts - resolvedAlerts;
+
+    return {
+      totalAlerts,
+      criticalAlerts: this.alerts.filter(a => a.severity === 'critical' && !a.resolved).length,
+      highAlerts: this.alerts.filter(a => a.severity === 'high' && !a.resolved).length,
+      mediumAlerts: this.alerts.filter(a => a.severity === 'medium' && !a.resolved).length,
+      lowAlerts: this.alerts.filter(a => a.severity === 'low' && !a.resolved).length,
+      resolvedAlerts,
+      activeAlerts,
+    };
+  }
+
+  /**
+   * Resolve an alert
+   */
+  resolveAlert(alertId: string): boolean {
+    const alert = this.alerts.find(a => a.id === alertId);
+    if (alert) {
+      alert.resolved = true;
+      this.saveAlerts();
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Clear old alerts
+   */
+  clearOldAlerts(olderThanDays: number = 30): number {
+    const cutoff = Date.now() - (olderThanDays * 24 * 60 * 60 * 1000);
+    const beforeCount = this.alerts.length;
+    this.alerts = this.alerts.filter(a => a.timestamp > cutoff || !a.resolved);
+    const cleared = beforeCount - this.alerts.length;
+    this.saveAlerts();
+    return cleared;
+  }
+
+  /**
+   * Get failed attempts count
+   */
+  private getFailedAttempts(key: string): number {
+    const data = localStorage.getItem(key);
+    if (!data) return 0;
+    const { count, timestamp } = JSON.parse(data);
+    // Reset if older than 15 minutes
+    if (Date.now() - timestamp > 15 * 60 * 1000) {
+      localStorage.removeItem(key);
+      return 0;
+    }
+    return count;
+  }
+
+  /**
+   * Increment failed attempts
+   */
+  private incrementFailedAttempts(key: string): void {
+    const current = this.getFailedAttempts(key);
+    localStorage.setItem(key, JSON.stringify({
+      count: current + 1,
+      timestamp: Date.now()
+    }));
+  }
+
+  /**
+   * Block a wallet temporarily
+   */
+  private blockWallet(walletAddress: string, durationMs: number): void {
+    const key = `blocked_wallet_${walletAddress}`;
+    localStorage.setItem(key, JSON.stringify({
+      blockedUntil: Date.now() + durationMs,
+      reason: 'Multiple failed authentication attempts'
+    }));
+  }
+
+  /**
+   * Check if wallet is blocked
+   */
+  isWalletBlocked(walletAddress: string): { blocked: boolean; reason?: string; blockedUntil?: number } {
+    const key = `blocked_wallet_${walletAddress}`;
+    const data = localStorage.getItem(key);
+    if (!data) return { blocked: false };
+
+    const { blockedUntil, reason } = JSON.parse(data);
+    if (Date.now() > blockedUntil) {
+      localStorage.removeItem(key);
+      return { blocked: false };
+    }
+
+    return { blocked: true, reason, blockedUntil };
+  }
+
+  /**
+   * Notify all registered callbacks
+   */
+  private notifyCallbacks(alert: SecurityAlert): void {
+    this.alertCallbacks.forEach(callback => {
+      try {
+        callback(alert);
+      } catch (error) {
+        console.error('Error in alert callback:', error);
+      }
+    });
+  }
+
+  /**
+   * Send alert to backend for persistent storage and notification
+   */
+  private async sendAlertToBackend(alert: SecurityAlert): Promise<void> {
+    try {
+      // In production, send to backend API
+      // await fetch('/api/security/alerts', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(alert)
+      // });
+    } catch (error) {
+      console.error('Failed to send alert to backend:', error);
+    }
+  }
+
+  /**
+   * Save alerts to localStorage
+   */
+  private saveAlerts(): void {
+    try {
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.alerts));
+    } catch (error) {
+      console.error('Failed to save alerts:', error);
+    }
+  }
+
+  /**
+   * Load alerts from localStorage
+   */
+  private loadAlerts(): void {
+    try {
+      const data = localStorage.getItem(this.STORAGE_KEY);
+      if (data) {
+        this.alerts = JSON.parse(data);
+      }
+    } catch (error) {
+      console.error('Failed to load alerts:', error);
+      this.alerts = [];
+    }
+  }
+
+  /**
+   * Start monitoring interval
+   */
+  private startMonitoring(): void {
+    // Clear old alerts every hour
+    setInterval(() => {
+      this.clearOldAlerts(7); // Keep alerts for 7 days
+    }, 60 * 60 * 1000);
+
+    // Clean up failed auth attempts every 15 minutes
+    setInterval(() => {
+      Object.keys(localStorage)
+        .filter(key => key.startsWith('failed_auth_'))
+        .forEach(key => {
+          const data = localStorage.getItem(key);
+          if (data) {
+            const { timestamp } = JSON.parse(data);
+            if (Date.now() - timestamp > 15 * 60 * 1000) {
+              localStorage.removeItem(key);
+            }
+          }
+        });
+    }, 15 * 60 * 1000);
+
+    // Clean up blocked wallets every 5 minutes
+    setInterval(() => {
+      Object.keys(localStorage)
+        .filter(key => key.startsWith('blocked_wallet_'))
+        .forEach(key => {
+          const data = localStorage.getItem(key);
+          if (data) {
+            const { blockedUntil } = JSON.parse(data);
+            if (Date.now() > blockedUntil) {
+              localStorage.removeItem(key);
+            }
+          }
+        });
+    }, 5 * 60 * 1000);
+  }
+
+  /**
+   * Clear all alerts and monitoring data
+   */
+  clearAll(): void {
+    this.alerts = [];
+    localStorage.removeItem(this.STORAGE_KEY);
+    
+    // Clear monitoring data
+    Object.keys(localStorage)
+      .filter(key => key.startsWith('failed_auth_') || key.startsWith('blocked_wallet_'))
+      .forEach(key => localStorage.removeItem(key));
+  }
+}
+
+// Helper functions
+function parseEther(eth: string): bigint {
+  return BigInt(Math.floor(parseFloat(eth) * 1e18));
+}
+
+function parseGwei(gwei: string): bigint {
+  return BigInt(Math.floor(parseFloat(gwei) * 1e9));
+}
+
+function formatEther(wei: bigint): string {
+  return (Number(wei) / 1e18).toFixed(6);
+}
+
+function formatGwei(wei: bigint): string {
+  return (Number(wei) / 1e9).toFixed(2);
 }
 
 // Export singleton instance
-export const securityMonitor = SecurityMonitor.getInstance();
-
-// Convenience functions
-export const logSecurityEvent = (
-  type: SecurityEventType,
-  severity: SecuritySeverity,
-  message: string,
-  metadata?: Record<string, any>,
-  walletAddress?: string
-) => securityMonitor.logEvent(type, severity, message, metadata, walletAddress);
-
-export const logInfo = (type: SecurityEventType, message: string, metadata?: Record<string, any>) =>
-  securityMonitor.logEvent(type, SecuritySeverity.INFO, message, metadata);
-
-export const logWarning = (type: SecurityEventType, message: string, metadata?: Record<string, any>) =>
-  securityMonitor.logEvent(type, SecuritySeverity.WARNING, message, metadata);
-
-export const logError = (type: SecurityEventType, message: string, metadata?: Record<string, any>) =>
-  securityMonitor.logEvent(type, SecuritySeverity.ERROR, message, metadata);
-
-export const logCritical = (type: SecurityEventType, message: string, metadata?: Record<string, any>) =>
-  securityMonitor.logEvent(type, SecuritySeverity.CRITICAL, message, metadata);
+export const securityMonitorService = SecurityMonitorService.getInstance();

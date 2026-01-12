@@ -23,9 +23,11 @@ export function secureBufferToString(buffer: Uint8Array): string {
 
 /**
  * Securely wipe a string from memory by overwriting it with random data
- * Note: JavaScript strings are immutable, so this creates a new string
- * The original string may still exist in memory until garbage collected
- * DEPRECATED: Use stringToSecureBuffer() and SecureBuffer instead
+ * WARNING: THIS IS NOT A RELIABLE SECURITY MEASURE.
+ * JavaScript strings are immutable. This function creates a *new* random string,
+ * but the original sensitive string remains in memory until the garbage collector
+ * decides to remove it. Its use is strongly discouraged.
+ * @deprecated Use `stringToSecureBuffer` and `wipeUint8Array` instead for a more reliable wipe.
  */
 export function wipeString(str: string): void {
   if (!str || typeof str !== 'string') return;

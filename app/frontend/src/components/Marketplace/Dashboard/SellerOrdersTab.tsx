@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify';
 import React, { useState, useRef } from 'react';
 import { useSellerWorkflow } from '../../../hooks/useSellerWorkflow';
 import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
@@ -40,7 +41,7 @@ const PackingSlipPrintView: React.FC<{
                     </style>
                 </head>
                 <body>
-                    ${printContent.innerHTML}
+                    ${DOMPurify.sanitize(printContent.innerHTML)}
                 </body>
                 </html>
             `);

@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify';
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Layout from '@/components/Layout';
@@ -556,11 +557,11 @@ export default function Wallet() {
                                       // Fallback to gradient circle with initials if image fails to load
                                       const target = e.target as HTMLImageElement;
                                       target.style.display = 'none';
-                                      target.parentElement!.innerHTML = `
+                                      target.parentElement!.innerHTML = DOMPurify.sanitize(`
                                         <div class="flex-shrink-0 h-10 w-10 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center">
                                           <span class="text-gray-700 dark:text-gray-300 font-medium">${asset.name.charAt(0)}</span>
                                         </div>
-                                      `;
+                                      `);
                                     }}
                                   />
                                 ) : (

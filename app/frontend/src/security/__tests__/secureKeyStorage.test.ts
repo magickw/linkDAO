@@ -18,6 +18,8 @@ const mockLocalStorage = (() => {
     clear: () => {
       store = {};
     },
+    length: Object.keys(store).length,
+    key: (index: number) => Object.keys(store)[index],
   };
 })();
 
@@ -30,114 +32,89 @@ describe('SecureKeyStorage', () => {
     mockLocalStorage.clear();
   });
 
+  const address = '0x' + 'a'.repeat(40);
+  const privateKey = '0x' + 'b'.repeat(64);
+  const mnemonic = 'test junk test junk test junk test junk test junk test junk';
+  const password = 'test-password-123';
+  const metadata = {
+    name: 'Test Wallet',
+    isHardwareWallet: false,
+    chainIds: [1, 8453],
+  };
+
   describe('storeWallet', () => {
     it('should store a wallet with encryption', async () => {
-      const address = '0x' + 'a'.repeat(40);
-      const privateKey = '0x' + 'b'.repeat(64);
-      const password = 'test-password-123';
-      const metadata = {
-        name: 'Test Wallet',
-        isHardwareWallet: false,
-        chainIds: [1, 8453],
-      };
-
-      await SecureKeyStorage.storeWallet(address, privateKey, password, metadata);
+      await SecureKeyStorage.storeWallet(address, privateKey, password, metadata, mnemonic);
 
       const stored = mockLocalStorage.getItem(`linkdao_wallet_${address.toLowerCase()}`);
       expect(stored).toBeDefined();
       
       const parsed = JSON.parse(stored as string);
-      expect(parsed.encryptedKey).toBeDefined();
-      expect(parsed.encryptedKey).not.toBe(privateKey); // Should be encrypted
-      expect(parsed.metadata).toEqual(metadata);
-    });
+      expect(parsed.encryptedPrivateKey).toBeDefined();
+      expect(parsed.encryptedPrivateKey).not.toBe(privateKey);
+      expect(parsed.encryptedMnemonic).toBeDefined();
+      expect(parsed.encryptedMnemonic).not.toBe(mnemonic);
+      expect(parsed.salt).toBeDefined();
+      expect(parsed.iv).toBeDefined();
 
-    it('should store wallet metadata', async () => {
-      const address = '0x' + 'a'.repeat(40);
-      const privateKey = '0x' + 'b'.repeat(64);
-      const password = 'test-password-123';
-      const metadata = {
-        name: 'Test Wallet',
-        isHardwareWallet: false,
-        chainIds: [1, 8453],
-      };
-
-      await SecureKeyStorage.storeWallet(address, privateKey, password, metadata);
-
-      const stored = mockLocalStorage.getItem(`linkdao_wallet_${address.toLowerCase()}`);
-      const parsed = JSON.parse(stored as string);
-      
-      expect(parsed.metadata.name).toBe('Test Wallet');
-      expect(parsed.metadata.isHardwareWallet).toBe(false);
-      expect(parsed.metadata.chainIds).toEqual([1, 8453]);
+      const storedMeta = mockLocalStorage.getItem(`linkdao_wallet_${address.toLowerCase()}_metadata`);
+      const parsedMeta = JSON.parse(storedMeta as string);
+      expect(parsedMeta).toEqual(metadata);
     });
   });
 
-  describe('getWallet', () => {
-    it('should retrieve a wallet with correct password', async () => {
-      const address = '0x' + 'a'.repeat(40);
-      const privateKey = '0x' + 'b'.repeat(64);
-      const password = 'test-password-123';
-      const metadata = {
-        name: 'Test Wallet',
-        isHardwareWallet: false,
-        chainIds: [1, 8453],
-      };
+  describe('withDecryptedWallet', () => {
+    it('should retrieve and wipe a wallet with correct password', async () => {
+      await SecureKeyStorage.storeWallet(address, privateKey, password, metadata, mnemonic);
+      
+      await SecureKeyStorage.withDecryptedWallet(address, password, async (wallet) => {
+        expect(wallet).toBeDefined();
+        expect(wallet.privateKey).toBe(privateKey);
+        expect(wallet.mnemonic).toBe(mnemonic);
+        expect(wallet.metadata).toEqual(metadata);
+      });
+    });
 
+    it('should fail with wrong password', async () => {
+      const wrongPassword = 'wrong-password';
       await SecureKeyStorage.storeWallet(address, privateKey, password, metadata);
+      
+      await expect(
+        SecureKeyStorage.withDecryptedWallet(address, wrongPassword, async () => {})
+      ).rejects.toThrow('Invalid password');
+    });
+
+    it('should throw for non-existent wallet', async () => {
+      await expect(
+        SecureKeyStorage.withDecryptedWallet('0x' + 'c'.repeat(40), password, async () => {})
+      ).rejects.toThrow('Wallet not found');
+    });
+  });
+
+  describe('getWallet (deprecated)', () => {
+    it('should still retrieve a wallet using the deprecated method', async () => {
+      await SecureKeyStorage.storeWallet(address, privateKey, password, metadata, mnemonic);
       const retrieved = await SecureKeyStorage.getWallet(address, password);
 
       expect(retrieved).toBeDefined();
       expect(retrieved.privateKey).toBe(privateKey);
+      expect(retrieved.mnemonic).toBe(mnemonic);
       expect(retrieved.metadata).toEqual(metadata);
-    });
-
-    it('should fail with wrong password', async () => {
-      const address = '0x' + 'a'.repeat(40);
-      const privateKey = '0x' + 'b'.repeat(64);
-      const correctPassword = 'correct-password';
-      const wrongPassword = 'wrong-password';
-      const metadata = {
-        name: 'Test Wallet',
-        isHardwareWallet: false,
-        chainIds: [1, 8453],
-      };
-
-      await SecureKeyStorage.storeWallet(address, privateKey, correctPassword, metadata);
-      
-      await expect(
-        SecureKeyStorage.getWallet(address, wrongPassword)
-      ).rejects.toThrow();
-    });
-
-    it('should return null for non-existent wallet', async () => {
-      const address = '0x' + 'a'.repeat(40);
-      const password = 'test-password';
-      
-      const result = await SecureKeyStorage.getWallet(address, password);
-      expect(result).toBeNull();
     });
   });
 
-  describe('listWallets', () () => {
-    it('should list all stored wallets', async () => {
+  describe('listWallets', () => {
+    it('should list all stored wallet addresses', async () => {
       const address1 = '0x' + 'a'.repeat(40);
       const address2 = '0x' + 'b'.repeat(40);
-      const privateKey = '0x' + 'c'.repeat(64);
-      const password = 'test-password-123';
-      const metadata = {
-        name: 'Test Wallet',
-        isHardwareWallet: false,
-        chainIds: [1, 8453],
-      };
-
-      await SecureKeyStorage.storeWallet(address1, privateKey, password, metadata);
-      await SecureKeyStorage.storeWallet(address2, privateKey, password, metadata);
+      
+      await SecureKeyStorage.storeWallet(address1, privateKey, password);
+      await SecureKeyStorage.storeWallet(address2, privateKey, password);
 
       const wallets = SecureKeyStorage.listWallets();
       expect(wallets).toHaveLength(2);
-      expect(wallets.map((w) => w.address)).toContain(address1);
-      expect(wallets.map((w) => w.address)).toContain(address2);
+      expect(wallets).toContain(address1.toLowerCase());
+      expect(wallets).toContain(address2.toLowerCase());
     });
 
     it('should return empty array when no wallets stored', () => {
@@ -147,93 +124,62 @@ describe('SecureKeyStorage', () => {
   });
 
   describe('deleteWallet', () => {
-    it('should delete a wallet', async () => {
-      const address = '0x' + 'a'.repeat(40);
-      const privateKey = '0x' + 'b'.repeat(64);
-      const password = 'test-password-123';
-      const metadata = {
-        name: 'Test Wallet',
-        isHardwareWallet: false,
-        chainIds: [1, 8453],
-      };
-
+    it('should delete a wallet and its metadata', async () => {
       await SecureKeyStorage.storeWallet(address, privateKey, password, metadata);
-      expect(SecureKeyStorage.listWallets()).toHaveLength(1);
+      expect(mockLocalStorage.getItem(`linkdao_wallet_${address.toLowerCase()}`)).not.toBeNull();
+      expect(mockLocalStorage.getItem(`linkdao_wallet_${address.toLowerCase()}_metadata`)).not.toBeNull();
 
-      SecureKeyStorage.deleteWallet(address);
-      expect(SecureKeyStorage.listWallets()).toHaveLength(0);
-    });
-
-    it('should not throw when deleting non-existent wallet', () => {
-      const address = '0x' + 'a'.repeat(40);
-      expect(() => {
-        SecureKeyStorage.deleteWallet(address);
-      }).not.toThrow();
+      await SecureKeyStorage.deleteWallet(address);
+      expect(mockLocalStorage.getItem(`linkdao_wallet_${address.toLowerCase()}`)).toBeNull();
+      expect(mockLocalStorage.getItem(`linkdao_wallet_${address.toLowerCase()}_metadata`)).toBeNull();
     });
   });
 
-  describe('getActiveWallet', () => {
-    it('should return null when no active wallet', () => {
-      const activeWallet = SecureKeyStorage.getActiveWallet();
-      expect(activeWallet).toBeNull();
-    });
-
-    it('should return active wallet after setting', async () => {
-      const address = '0x' + 'a'.repeat(40);
-      const privateKey = '0x' + 'b'.repeat(64);
-      const password = 'test-password-123';
-      const metadata = {
-        name: 'Test Wallet',
-        isHardwareWallet: false,
-        chainIds: [1, 8453],
-      };
-
-      await SecureKeyStorage.storeWallet(address, privateKey, password, metadata);
+  describe('Active Wallet Management', () => {
+    it('should set and get the active wallet', () => {
       SecureKeyStorage.setActiveWallet(address);
-
-      const activeWallet = SecureKeyStorage.getActiveWallet();
-      expect(activeWallet).toBe(address);
+      expect(SecureKeyStorage.getActiveWallet()).toBe(address.toLowerCase());
     });
-  });
-
-  describe('setActiveWallet', () => {
-    it('should set active wallet', async () => {
-      const address = '0x' + 'a'.repeat(40);
-      const privateKey = '0x' + 'b'.repeat(64);
-      const password = 'test-password-123';
-      const metadata = {
-        name: 'Test Wallet',
-        isHardwareWallet: false,
-        chainIds: [1, 8453],
-      };
-
-      await SecureKeyStorage.storeWallet(address, privateKey, password, metadata);
+    
+    it('should clear the active wallet', () => {
       SecureKeyStorage.setActiveWallet(address);
-
-      expect(SecureKeyStorage.getActiveWallet()).toBe(address);
-    });
-
-    it('should update active wallet', () => {
-      const address1 = '0x' + 'a'.repeat(40);
-      const address2 = '0x' + 'b'.repeat(40);
-
-      SecureKeyStorage.setActiveWallet(address1);
-      expect(SecureKeyStorage.getActiveWallet()).toBe(address1);
-
-      SecureKeyStorage.setActiveWallet(address2);
-      expect(SecureKeyStorage.getActiveWallet()).toBe(address2);
-    });
-  });
-
-  describe('clearActiveWallet', () => {
-    it('should clear active wallet', () => {
-      const address = '0x' + 'a'.repeat(40);
-
-      SecureKeyStorage.setActiveWallet(address);
-      expect(SecureKeyStorage.getActiveWallet()).toBe(address);
-
       SecureKeyStorage.clearActiveWallet();
       expect(SecureKeyStorage.getActiveWallet()).toBeNull();
+    });
+  });
+
+  describe('verifyPassword', () => {
+    it('should return true for correct password', async () => {
+      await SecureKeyStorage.storeWallet(address, privateKey, password);
+      const isValid = await SecureKeyStorage.verifyPassword(address, password);
+      expect(isValid).toBe(true);
+    });
+
+    it('should throw for incorrect password', async () => {
+      await SecureKeyStorage.storeWallet(address, privateKey, password);
+      await expect(
+        SecureKeyStorage.verifyPassword(address, 'wrong-password')
+      ).rejects.toThrow('Invalid password');
+    });
+  });
+
+  describe('changePassword', () => {
+    it('should successfully change the password', async () => {
+      const newPassword = 'new-password-456';
+      await SecureKeyStorage.storeWallet(address, privateKey, password, metadata, mnemonic);
+
+      await SecureKeyStorage.changePassword(address, password, newPassword);
+
+      // Verify with new password
+      await SecureKeyStorage.withDecryptedWallet(address, newPassword, async (wallet) => {
+        expect(wallet.privateKey).toBe(privateKey);
+        expect(wallet.mnemonic).toBe(mnemonic);
+      });
+      
+      // Old password should fail
+      await expect(
+        SecureKeyStorage.withDecryptedWallet(address, password, async () => {})
+      ).rejects.toThrow('Invalid password');
     });
   });
 });

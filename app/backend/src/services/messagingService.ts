@@ -473,7 +473,7 @@ export class MessagingService {
           encryptionMetadata: data.encryptionMetadata,
           replyToId: data.replyToId,
           attachments: sanitizedMessage.attachments ? JSON.stringify(sanitizedMessage.attachments) : null,
-          sentAt: new Date()
+          timestamp: new Date()
         })
         .returning();
 

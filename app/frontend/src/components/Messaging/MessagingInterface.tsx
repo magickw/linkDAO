@@ -3,6 +3,7 @@
  * Enhanced messaging with channels, threads, and reactions
  */
 
+import DOMPurify from 'dompurify';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   MessageCircle, Search, Send, User, Plus, Hash, Lock,
@@ -40,6 +41,7 @@ interface DirectMessageConversation {
   id: string;
   participant: string;
   participantEnsName?: string;
+  participantAvatar?: string | null;
   isOnline: boolean;
   isTyping?: boolean;
   lastSeen?: Date;
@@ -131,6 +133,24 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   const { isMobile, triggerHapticFeedback, touchTargetClasses } = useMobileOptimization();
   const { resolveName, resolvedNames, isLoading } = useENSIntegration();
 
+  // Helper function to get the best display name for a participant
+  const getParticipantDisplayName = (participantAddress: string): string => {
+    // Try to get the participant's profile
+    const profile = getParticipantProfile?.(participantAddress);
+
+    // Priority: handle > display name > ENS name > shortened address
+    if (profile?.handle) return profile.handle;
+    if (profile?.displayName) return profile.displayName;
+    if (profile?.ens) return profile.ens;
+
+    // Check if we have a resolved ENS name
+    const dm = dmConversations.find(d => d.participant === participantAddress);
+    if (dm?.participantEnsName) return dm.participantEnsName;
+
+    // Fall back to shortened address
+    return truncateAddress(participantAddress);
+  };
+
   // Helper function to truncate addresses
   const truncateAddress = (addr: string) => {
     if (!addr || addr.length <= 10) return addr || '';
@@ -198,27 +218,41 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   // Sync hook conversations into DM list
   useEffect(() => {
     if (!hookConversations) return;
-    const mapped: DirectMessageConversation[] = hookConversations.map(c => ({
-      id: c.id,
-      participant: Array.isArray(c.participants)
+    const mapped: DirectMessageConversation[] = hookConversations.map(c => {
+      const participantAddress = Array.isArray(c.participants)
         ? (c.participants.find((p: any) => p !== address) || c.participants[0])
-        : (c.participants as any),
-      participantEnsName: undefined,
-      isOnline: false,
-      isTyping: false,
-      lastSeen: undefined,
-      unreadCount: c.unreadCounts?.[address || ''] || 0,
-      lastMessage: c.lastMessage ? ({
-        id: c.lastMessage.id,
-        fromAddress: c.lastMessage.fromAddress,
-        content: c.lastMessage.content,
-        timestamp: new Date(c.lastMessage.timestamp)
-      } as ChannelMessage) : undefined,
-      isPinned: (c as any).isPinned || false
-    }));
+        : (c.participants as any);
+
+      // Get participant profile to fetch avatar
+      let participantAvatar: string | null = null;
+      if (getParticipantProfile) {
+        const profile = getParticipantProfile(participantAddress);
+        if (profile?.avatarCid || profile?.profileCid) {
+          participantAvatar = `https://ipfs.io/ipfs/${profile.avatarCid || profile.profileCid}`;
+        }
+      }
+
+      return {
+        id: c.id,
+        participant: participantAddress,
+        participantEnsName: undefined,
+        participantAvatar,
+        isOnline: false,
+        isTyping: false,
+        lastSeen: undefined,
+        unreadCount: c.unreadCounts?.[address || ''] || 0,
+        lastMessage: c.lastMessage ? ({
+          id: c.lastMessage.id,
+          fromAddress: c.lastMessage.fromAddress,
+          content: c.lastMessage.content,
+          timestamp: new Date(c.lastMessage.timestamp)
+        } as ChannelMessage) : undefined,
+        isPinned: (c as any).isPinned || false
+      };
+    });
 
     setDmConversations(mapped);
-  }, [hookConversations, address]);
+  }, [hookConversations, address, getParticipantProfile]);
 
   // When viewing a DM, load messages via hook
   useEffect(() => {
@@ -914,7 +948,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                       </div>
                       <div className="ml-2 flex-1 min-w-0">
                         <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {dm.participantEnsName || `${dm.participant.slice(0, 6)}...${dm.participant.slice(-4)}`}
+                          {getParticipantDisplayName(dm.participant)}
                         </div>
                         {dm.lastMessage && (
                           <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
@@ -1066,15 +1100,14 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   {participantAvatar ? (
                     <img
                       src={participantAvatar}
-                      alt={participantName || "User"}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        e.currentTarget.parentElement?.classList.remove('overflow-hidden');
-                        e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'justify-center');
-                        const icon = document.createElement('div');
-                        icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-                        e.currentTarget.parentElement?.appendChild(icon.firstChild!);
+                                          alt={participantName || "User"}
+                                          className="w-full h-full object-cover"
+                                          onError={(e) => {
+                                            e.currentTarget.style.display = 'none';
+                                            e.currentTarget.parentElement?.classList.remove('overflow-hidden');
+                                            e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'justify-center');
+                                            const icon = document.createElement('div');
+                                            icon.innerHTML = DOMPurify.sanitize('<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>');                        e.currentTarget.parentElement?.appendChild(icon.firstChild!);
                       }}
                     />
                   ) : (
@@ -1086,10 +1119,8 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   }`}></div>
               </div>
               <div className="ml-3">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {dmConversations.find(dm => dm.id === selectedDM)?.participantEnsName ||
-                    participantName ||
-                    truncateAddress(dmConversations.find(dm => dm.id === selectedDM)?.participant || participantAddress || '')}
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate max-w-[150px] sm:max-w-xs">
+                  {getParticipantDisplayName(dmConversations.find(dm => dm.id === selectedDM)?.participant || participantAddress || '')}
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 hidden sm:block">
                   {dmConversations.find(dm => dm.id === selectedDM)?.isOnline
@@ -1192,7 +1223,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                               e.currentTarget.parentElement?.classList.remove('overflow-hidden');
                               e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'justify-center');
                               const icon = document.createElement('div');
-                              icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+                              icon.innerHTML = DOMPurify.sanitize('<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>');
                               e.currentTarget.parentElement?.appendChild(icon.firstChild!);
                             }}
                           />

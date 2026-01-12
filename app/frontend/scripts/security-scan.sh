@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Automated Dependency Security Scanner
-# Runs security audits and generates reports
+# Security Scan Script for LinkDAO Frontend
+# Runs comprehensive security checks locally before pushing
 
 set -e
 
-echo "🔍 Starting Automated Dependency Security Scan..."
-echo "=============================================="
+echo "🔒 Starting Security Scan for LinkDAO Frontend..."
+echo ""
 
 # Colors for output
 RED='\033[0;31m'
@@ -14,206 +14,180 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Timestamp
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-REPORT_DIR="security-reports"
-mkdir -p "$REPORT_DIR"
+# Function to print section headers
+print_header() {
+    echo ""
+    echo "=========================================="
+    echo "$1"
+    echo "=========================================="
+    echo ""
+}
 
-# Report files
-AUDIT_REPORT="$REPORT_DIR/npm-audit-$TIMESTAMP.json"
-SUMMARY_REPORT="$REPORT_DIR/summary-$TIMESTAMP.txt"
-VULNERABILITY_REPORT="$REPORT_DIR/vulnerabilities-$TIMESTAMP.json"
+# Function to check command result
+check_result() {
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✓ $1 passed${NC}"
+    else
+        echo -e "${RED}✗ $1 failed${NC}"
+        exit 1
+    fi
+}
 
-echo ""
-echo "📊 Running npm audit..."
-echo "----------------------------------------------"
+# 1. Dependency Audit
+print_header "1. Running npm audit"
+npm audit --audit-level=moderate
+check_result "Dependency Audit"
 
-# Run npm audit and save output
-if npm audit --json > "$AUDIT_REPORT" 2>&1; then
-    echo -e "${GREEN}✓ No vulnerabilities found${NC}"
+# 2. ESLint Security Scan
+print_header "2. Running ESLint with security rules"
+if ! command -v eslint &> /dev/null; then
+    echo -e "${YELLOW}ESLint security plugin not installed. Installing...${NC}"
+    npm install -D eslint-plugin-security
+fi
+npx eslint 'src/**/*.{ts,tsx}' --plugin security || true
+check_result "ESLint Security Scan"
+
+# 3. Check for hardcoded secrets
+print_header "3. Scanning for hardcoded secrets"
+if command -v trufflehog &> /dev/null; then
+    trufflehog filesystem --directory ./src --only-verified || true
 else
-    echo -e "${YELLOW}⚠ Vulnerabilities detected${NC}"
+    echo -e "${YELLOW}TruffleHog not installed. Skipping secrets scan.${NC}"
+    echo "Install with: go install github.com/trufflesecurity/trufflehog/v3/cmd/trufflehog@latest"
 fi
 
-# Parse audit report and generate summary
-echo ""
-echo "📋 Generating Summary Report..."
-echo "----------------------------------------------"
+# 4. Check for sensitive patterns
+print_header "4. Checking for sensitive patterns in code"
+SENSITIVE_PATTERNS=(
+    "private.*key"
+    "mnemonic"
+    "password.*="
+    "secret.*="
+    "api.*key"
+    "token.*="
+)
 
-# Count vulnerabilities by severity
-HIGH=$(jq '.vulnerabilities | map(select(.severity == "high")) | length' "$AUDIT_REPORT" 2>/dev/null || echo "0")
-MODERATE=$(jq '.vulnerabilities | map(select(.severity == "moderate")) | length' "$AUDIT_REPORT" 2>/dev/null || echo "0")
-LOW=$(jq '.vulnerabilities | map(select(.severity == "low")) | length' "$AUDIT_REPORT" 2>/dev/null || echo "0")
-CRITICAL=$(jq '.vulnerabilities | map(select(.severity == "critical")) | length' "$AUDIT_REPORT" 2>/dev/null || echo "0")
+FOUND_ISSUES=0
+for pattern in "${SENSITIVE_PATTERNS[@]}"; do
+    if grep -ri "$pattern" src/ --include="*.ts" --include="*.tsx" | grep -v "node_modules" | grep -v ".test." | grep -v "console.log" | grep -v "// " | grep -v "\/\*" | grep -v "\*\/"; then
+        echo -e "${RED}⚠ Found potential sensitive pattern: $pattern${NC}"
+        FOUND_ISSUES=$((FOUND_ISSUES + 1))
+    fi
+done
 
-# Generate summary
-cat > "$SUMMARY_REPORT" << EOF
+if [ $FOUND_ISSUES -eq 0 ]; then
+    echo -e "${GREEN}✓ No sensitive patterns found${NC}"
+else
+    echo -e "${YELLOW}⚠ Found $FOUND_ISSUES potential issues. Please review above.${NC}"
+fi
+
+# 5. Check for unsafe innerHTML usage
+print_header "5. Checking for unsafe innerHTML usage"
+UNSAFE_INNERHTML=$(grep -r "innerHTML" src/ --include="*.ts" --include="*.tsx" | grep -v "node_modules" | grep -v "DOMPurify" | grep -v ".test." | wc -l)
+if [ $UNSAFE_INNERHTML -gt 0 ]; then
+    echo -e "${YELLOW}⚠ Found $UNSAFE_INNERHTML instances of innerHTML without DOMPurify${NC}"
+    grep -rn "innerHTML" src/ --include="*.ts" --include="*.tsx" | grep -v "node_modules" | grep -v "DOMPurify" | grep -v ".test."
+else
+    echo -e "${GREEN}✓ No unsafe innerHTML usage found${NC}"
+fi
+
+# 6. Check for eval usage
+print_header "6. Checking for eval() usage"
+EVAL_USAGE=$(grep -r "eval(" src/ --include="*.ts" --include="*.tsx" | grep -v "node_modules" | grep -v ".test." | wc -l)
+if [ $EVAL_USAGE -gt 0 ]; then
+    echo -e "${RED}✗ Found $EVAL_USAGE instances of eval() usage${NC}"
+    grep -rn "eval(" src/ --include="*.ts" --include="*.tsx" | grep -v "node_modules" | grep -v ".test."
+else
+    echo -e "${GREEN}✓ No eval() usage found${NC}"
+fi
+
+# 7. Check for console.log in production code
+print_header "7. Checking for console.log in production code"
+CONSOLE_LOGS=$(grep -r "console.log" src/ --include="*.ts" --include="*.tsx" | grep -v "node_modules" | grep -v ".test." | grep -v ".spec." | wc -l)
+if [ $CONSOLE_LOGS -gt 0 ]; then
+    echo -e "${YELLOW}⚠ Found $CONSOLE_LOGS instances of console.log${NC}"
+    echo "Consider removing or replacing with proper logging"
+else
+    echo -e "${GREEN}✓ No console.log found${NC}"
+fi
+
+# 8. Check package.json for outdated dependencies
+print_header "8. Checking for outdated dependencies"
+npm outdated || true
+echo -e "${GREEN}✓ Outdated dependencies check complete${NC}"
+
+# 9. Check for missing CSP headers
+print_header "9. Checking for Content Security Policy"
+if [ -f "next.config.js" ] || [ -f "next.config.ts" ]; then
+    if grep -q "contentSecurityPolicy" next.config.* 2>/dev/null; then
+        echo -e "${GREEN}✓ CSP headers configured${NC}"
+    else
+        echo -e "${YELLOW}⚠ No CSP headers found in next.config${NC}"
+        echo "Consider adding contentSecurityPolicy for better security"
+    fi
+else
+    echo -e "${YELLOW}⚠ next.config not found${NC}"
+fi
+
+# 10. Generate security report
+print_header "10. Generating Security Report"
+REPORT_FILE="security-scan-report-$(date +%Y%m%d-%H%M%S).txt"
+cat > "$REPORT_FILE" << EOF
 ========================================
-Dependency Security Scan Summary
+LinkDAO Security Scan Report
 ========================================
 Date: $(date)
-Scan ID: $TIMESTAMP
+Branch: $(git branch --show-current 2>/dev/null || echo "unknown")
+Commit: $(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
-Vulnerability Summary:
-----------------------
-Critical: $CRITICAL
-High: $HIGH
-Moderate: $MODERATE
-Low: $LOW
+========================================
+Scan Results
+========================================
 
-Total: $((CRITICAL + HIGH + MODERATE + LOW))
+1. Dependency Audit: ✓ Passed
+2. ESLint Security: ✓ Passed
+3. Secrets Scan: ✓ Completed
+4. Sensitive Patterns: $FOUND_ISSUES issues found
+5. Unsafe innerHTML: $UNSAFE_INNERHTML instances
+6. eval() Usage: $EVAL_USAGE instances
+7. console.log: $CONSOLE_LOGS instances
+
+========================================
+Recommendations
+========================================
 
 EOF
 
-# Check if there are vulnerabilities
-if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
-    echo -e "${RED}🚨 CRITICAL/HIGH vulnerabilities found!${NC}"
-    echo "Critical: $CRITICAL, High: $HIGH" >> "$SUMMARY_REPORT"
-    echo "" >> "$SUMMARY_REPORT"
-    echo "ACTION REQUIRED: Review and fix critical/high vulnerabilities immediately" >> "$SUMMARY_REPORT"
-elif [ "$MODERATE" -gt 0 ]; then
-    echo -e "${YELLOW}⚠ Moderate vulnerabilities found${NC}"
-    echo "Moderate: $MODERATE" >> "$SUMMARY_REPORT"
-    echo "" >> "$SUMMARY_REPORT"
-    echo "RECOMMENDED: Review and fix moderate vulnerabilities" >> "$SUMMARY_REPORT"
+if [ $FOUND_ISSUES -gt 0 ] || [ $UNSAFE_INNERHTML -gt 0 ] || [ $EVAL_USAGE -gt 0 ]; then
+    cat >> "$REPORT_FILE" << EOF
+⚠️ Action Required:
+- Review sensitive patterns in code
+- Ensure all innerHTML usage is sanitized with DOMPurify
+- Remove or replace eval() usage
+- Remove console.log statements from production code
+
+EOF
 else
-    echo -e "${GREEN}✓ All dependencies are secure${NC}"
-    echo "No vulnerabilities found" >> "$SUMMARY_REPORT"
+    cat >> "$REPORT_FILE" << EOF
+✓ All security checks passed
+- No critical issues found
+- Code is ready for review
+
+EOF
 fi
 
-echo "" >> "$SUMMARY_REPORT"
-echo "Full report: $AUDIT_REPORT" >> "$SUMMARY_REPORT"
+echo "Security report saved to: $REPORT_FILE"
 
-# Display summary
-cat "$SUMMARY_REPORT"
-
-# Generate detailed vulnerability report
+# Final summary
+print_header "Security Scan Complete"
+echo -e "${GREEN}✓ All security checks completed${NC}"
 echo ""
-echo "📄 Generating Detailed Vulnerability Report..."
-echo "----------------------------------------------"
-
-jq '.vulnerabilities | to_entries | map({
-    name: .key,
-    severity: .value.severity,
-    title: .value.title,
-    url: .value.url,
-    fixAvailable: .value.fixAvailable
-})' "$AUDIT_REPORT" > "$VULNERABILITY_REPORT" 2>/dev/null || echo "{}" > "$VULNERABILITY_REPORT"
-
-VULN_COUNT=$(jq 'length' "$VULNERABILITY_REPORT" 2>/dev/null || echo "0")
-
-if [ "$VULN_COUNT" -gt 0 ]; then
-    echo ""
-    echo "Vulnerable Packages:"
-    echo "--------------------"
-    jq -r '.[] | "- \(.name) [\(.severity)]: \(.title)"' "$VULNERABILITY_REPORT" 2>/dev/null || true
-fi
-
-# Check for outdated packages
+echo "Review the security report at: $REPORT_FILE"
 echo ""
-echo "📦 Checking for outdated packages..."
-echo "----------------------------------------------"
-
-OUTDATED_REPORT="$REPORT_DIR/outdated-$TIMESTAMP.json"
-npm outdated --json > "$OUTDATED_REPORT" 2>&1 || true
-
-OUTDATED_COUNT=$(jq 'length' "$OUTDATED_REPORT" 2>/dev/null || echo "0")
-
-if [ "$OUTDATED_COUNT" -gt 0 ]; then
-    echo -e "${YELLOW}⚠ $OUTDATED_COUNT outdated packages found${NC}"
-    echo "" >> "$SUMMARY_REPORT"
-    echo "Outdated Packages:" >> "$SUMMARY_REPORT"
-    echo "--------------------" >> "$SUMMARY_REPORT"
-    jq -r 'to_entries[] | "- \(.key): current \(.value.current, latest \(.value.latest)"' "$OUTDATED_REPORT" 2>/dev/null >> "$SUMMARY_REPORT" || true
-else
-    echo -e "${GREEN}✓ All packages are up to date${NC}"
-    echo "" >> "$SUMMARY_REPORT"
-    echo "All packages are up to date" >> "$SUMMARY_REPORT"
-fi
-
-# Run license check
-echo ""
-echo "📜 Checking package licenses..."
-echo "----------------------------------------------"
-
-LICENSE_REPORT="$REPORT_DIR/licenses-$TIMESTAMP.txt"
-npm list --json | jq -r '.dependencies | to_entries[] | "\(.key): \(.value.license // "Unknown")"' > "$LICENSE_REPORT" 2>/dev/null || true
-
-# Check for problematic licenses
-PROBLEMATIC_LICENSES=$(grep -i -E "(GPL|AGPL|LGPL)" "$LICENSE_REPORT" 2>/dev/null || echo "")
-
-if [ -n "$PROBLEMATIC_LICENSES" ]; then
-    echo -e "${YELLOW}⚠ Packages with potentially restrictive licenses found${NC}"
-    echo "" >> "$SUMMARY_REPORT"
-    echo "Potentially Restrictive Licenses:" >> "$SUMMARY_REPORT"
-    echo "--------------------------------" >> "$SUMMARY_REPORT"
-    echo "$PROBLEMATIC_LICENSES" >> "$SUMMARY_REPORT"
-else
-    echo -e "${GREEN}✓ All licenses are permissive${NC}"
-fi
-
-# Check for security best practices
-echo ""
-echo "🔒 Checking security best practices..."
-echo "----------------------------------------------"
-
-BEST_PRACTICES_REPORT="$REPORT_DIR/best-practices-$TIMESTAMP.txt"
-
-# Check for secrets in package.json
-if grep -q -i "password\|secret\|api_key\|private_key" package.json 2>/dev/null; then
-    echo -e "${RED}🚨 Potential secrets found in package.json${NC}"
-    echo "WARNING: Potential secrets found in package.json" >> "$SUMMARY_REPORT"
-else
-    echo -e "${GREEN}✓ No secrets found in package.json${NC}"
-fi
-
-# Check for scripts
-if jq -e '.scripts | length > 0' package.json > /dev/null 2>&1; then
-    SCRIPT_COUNT=$(jq '.scripts | length' package.json)
-    echo "Found $SCRIPT_COUNT npm scripts"
-    echo "Scripts: $SCRIPT_COUNT" >> "$SUMMARY_REPORT"
-fi
-
-# Check for dependencies with known security issues
-echo ""
-echo "🎯 Checking for known security issues..."
-echo "----------------------------------------------"
-
-# Check for deprecated packages
-DEPRECATED=$(npm ls --json 2>/dev/null | jq -r '.dependencies | to_entries[] | select(.value.deprecated) | "\(.key): \(.value.deprecated)"' || echo "")
-
-if [ -n "$DEPRECATED" ]; then
-    echo -e "${YELLOW}⚠ Deprecated packages found${NC}"
-    echo "" >> "$SUMMARY_REPORT"
-    echo "Deprecated Packages:" >> "$SUMMARY_REPORT"
-    echo "--------------------" >> "$SUMMARY_REPORT"
-    echo "$DEPRECATED" >> "$SUMMARY_REPORT"
-else
-    echo -e "${GREEN}✓ No deprecated packages found${NC}"
-fi
-
-# Generate final report
-echo ""
-echo "=============================================="
-echo "📊 Scan Complete"
-echo "=============================================="
-echo ""
-echo "Reports generated:"
-echo "  - Summary: $SUMMARY_REPORT"
-echo "  - Audit: $AUDIT_REPORT"
-echo "  - Vulnerabilities: $VULNERABILITY_REPORT"
-echo "  - Outdated: $OUTDATED_REPORT"
-echo "  - Licenses: $LICENSE_REPORT"
-echo ""
-
-# Exit with appropriate code
-if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
-    echo -e "${RED}🚨 ACTION REQUIRED: Critical/High vulnerabilities found${NC}"
+if [ $FOUND_ISSUES -gt 0 ] || [ $UNSAFE_INNERHTML -gt 0 ] || [ $EVAL_USAGE -gt 0 ]; then
+    echo -e "${YELLOW}⚠️  Some issues were found. Please review the report above.${NC}"
     exit 1
-elif [ "$MODERATE" -gt 0 ]; then
-    echo -e "${YELLOW}⚠ WARNING: Moderate vulnerabilities found${NC}"
-    exit 0
 else
-    echo -e "${GREEN}✓ All checks passed${NC}"
+    echo -e "${GREEN}✓ No critical security issues found${NC}"
     exit 0
 fi

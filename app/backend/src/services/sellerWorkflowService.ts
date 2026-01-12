@@ -50,18 +50,47 @@ export class SellerWorkflowService {
      */
     async getOrderDashboard(sellerId: string): Promise<any> {
         try {
+            safeLogger.info('[SellerWorkflowService] getOrderDashboard called', { sellerId });
             // Fetch all orders for seller (this could be optimized with specific status queries)
             // For now, we reuse existing method and filter/group in memory
             // In production, this should be a direct DB aggregation query
 
             const user = await this.databaseService.getUserById(sellerId);
-            if (!user) throw new Error('Seller not found');
+            if (!user) {
+                safeLogger.error('[SellerWorkflowService] Seller not found', { sellerId });
+                throw new Error('Seller not found');
+            }
+
+            safeLogger.info('[SellerWorkflowService] User found', {
+                userId: user.id,
+                walletAddress: user.walletAddress
+            });
 
             const orders = await this.orderService.getOrdersByUser(user.walletAddress);
+
+            safeLogger.info('[SellerWorkflowService] Raw orders retrieved', {
+                count: orders.length,
+                userAddress: user.walletAddress
+            });
+
             // We need to filter for seller role - compare wallet addresses
-            const sellerOrders = orders.filter(o =>
-                o.sellerWalletAddress?.toLowerCase() === user.walletAddress.toLowerCase()
-            );
+            const sellerOrders = orders.filter(o => {
+                const isMatch = o.sellerWalletAddress?.toLowerCase() === user.walletAddress.toLowerCase();
+                if (!isMatch) {
+                    // Optional: log mismatch for debugging if needed
+                    // safeLogger.debug('Filtering out order', { 
+                    //    orderId: o.id, 
+                    //    orderSeller: o.sellerWalletAddress, 
+                    //    userAddress: user.walletAddress 
+                    // });
+                }
+                return isMatch;
+            });
+
+            safeLogger.info('[SellerWorkflowService] Filtered seller orders', {
+                total: orders.length,
+                sellerOrders: sellerOrders.length
+            });
 
             // Transform orders to match SellerOrder frontend interface
             const transformOrder = (order: any) => {

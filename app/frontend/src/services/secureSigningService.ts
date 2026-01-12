@@ -63,17 +63,14 @@ export class SecureSigningService {
         };
       }
 
-      // Get private key
-      const { privateKey } = await SecureKeyStorage.getWallet(activeWallet, password);
-      if (!privateKey) {
-        return {
-          success: false,
-          error: 'Invalid password',
-        };
-      }
+      return await SecureKeyStorage.withDecryptedWallet(activeWallet, password, async ({ privateKey }) => {
+        if (!privateKey) {
+          return {
+            success: false,
+            error: 'Invalid password',
+          };
+        }
 
-      // Use secureClear to wipe private key after use
-      const result = await secureClear(async () => {
         // Security checks - phishing detection
         const phishingCheck = detectPhishing(request.to, request.value, request.data);
         if (phishingCheck.isSuspicious) {
@@ -178,9 +175,7 @@ export class SecureSigningService {
           hash,
           warnings,
         };
-      }, [privateKey]);
-
-      return result;
+      });
     } catch (error: any) {
       return {
         success: false,
@@ -207,17 +202,14 @@ export class SecureSigningService {
         };
       }
 
-      // Get private key
-      const { privateKey } = await SecureKeyStorage.getWallet(activeWallet, password);
-      if (!privateKey) {
-        return {
-          success: false,
-          error: 'Invalid password',
-        };
-      }
-
-      // Use secureClear to wipe private key after use
-      const result = await secureClear(async () => {
+      return await SecureKeyStorage.withDecryptedWallet(activeWallet, password, async ({ privateKey }) => {
+        if (!privateKey) {
+          return {
+            success: false,
+            error: 'Invalid password',
+          };
+        }
+        
         // Sign message using ethers.js
         const signature = await this.signMessageWithPrivateKey(privateKey, message);
 
@@ -225,9 +217,7 @@ export class SecureSigningService {
           success: true,
           signature,
         };
-      }, [privateKey]);
-
-      return result;
+      });
     } catch (error: any) {
       return {
         success: false,
@@ -255,17 +245,14 @@ export class SecureSigningService {
         };
       }
 
-      // Get private key
-      const { privateKey } = await SecureKeyStorage.getWallet(activeWallet, password);
-      if (!privateKey) {
-        return {
-          success: false,
-          error: 'Invalid password',
-        };
-      }
+      return await SecureKeyStorage.withDecryptedWallet(activeWallet, password, async ({ privateKey }) => {
+        if (!privateKey) {
+          return {
+            success: false,
+            error: 'Invalid password',
+          };
+        }
 
-      // Use secureClear to wipe private key after use
-      const result = await secureClear(async () => {
         // Sign typed data using ethers.js
         const signature = await this.signTypedDataWithPrivateKey(
           privateKey,
@@ -278,9 +265,7 @@ export class SecureSigningService {
           success: true,
           signature,
         };
-      }, [privateKey]);
-
-      return result;
+      });
     } catch (error: any) {
       return {
         success: false,

@@ -136,10 +136,19 @@ export class OrderService {
    */
   async getOrdersByUser(userAddress: string, role?: 'buyer' | 'seller'): Promise<MarketplaceOrder[]> {
     try {
+      safeLogger.info('[OrderService] getOrdersByUser called', { userAddress, role });
       const user = await userProfileService.getProfileByAddress(userAddress);
-      if (!user) return [];
+      if (!user) {
+        safeLogger.warn('[OrderService] User not found for address', { userAddress });
+        return [];
+      }
+
+      safeLogger.info('[OrderService] User profile found', { userId: user.id });
 
       const dbOrders = await databaseService.getOrdersByUser(user.id, role);
+
+      safeLogger.info('[OrderService] DB orders found', { count: dbOrders.length, userId: user.id });
+
       const orders: MarketplaceOrder[] = [];
 
       for (const dbOrder of dbOrders) {

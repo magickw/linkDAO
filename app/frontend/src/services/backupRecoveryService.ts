@@ -68,23 +68,12 @@ export class BackupRecoveryService {
     error?: string;
   }> {
     try {
-      // Get wallet data
-      const walletData = await SecureKeyStorage.getWallet(address, password);
-      if (!walletData) {
-        return {
-          success: false,
-          error: 'Wallet not found or invalid password',
-        };
-      }
-
-      // Get mnemonic (in production, this would be stored separately)
-      // For now, we'll use the private key to derive the mnemonic
-      // In a real implementation, the mnemonic should be stored securely
+      // Get mnemonic using the secure wrapper
       const mnemonic = await this.getMnemonicFromStorage(address, password);
       if (!mnemonic) {
         return {
           success: false,
-          error: 'Mnemonic not found in storage',
+          error: 'Mnemonic not found in storage or invalid password',
         };
       }
 
@@ -483,8 +472,9 @@ export class BackupRecoveryService {
     password: string
   ): Promise<string | null> {
     try {
-      const walletData = await SecureKeyStorage.getWallet(address, password);
-      return walletData.mnemonic || null;
+      return await SecureKeyStorage.withDecryptedWallet(address, password, async (wallet) => {
+        return wallet.mnemonic || null;
+      });
     } catch (error) {
       console.error('Failed to get mnemonic from storage:', error);
       return null;

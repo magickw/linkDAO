@@ -2,7 +2,7 @@
  * CommunityPerformanceOptimizer Component
  * Optimizes community page performance with intelligent loading and caching
  */
-
+import DOMPurify from 'dompurify';
 import React, { useEffect, useRef, useCallback } from 'react';
 import { communityCacheService } from '../../services/communityCacheService';
 import { imageOptimizationService } from '../../services/imageOptimizationService';
@@ -290,8 +290,8 @@ export const CommunityPerformanceOptimizer: React.FC<CommunityPerformanceOptimiz
   const renderPosts = (element: HTMLElement, posts: any[]) => {
     element.innerHTML = posts.map(post => `
       <div class="post-item" data-post-id="${post.id}">
-        <h4>${post.title || 'Post'}</h4>
-        <p>${post.content.slice(0, 100)}...</p>
+        <h4>${DOMPurify.sanitize(post.title || 'Post')}</h4>
+        <p>${DOMPurify.sanitize(post.content.slice(0, 100))}...</p>
       </div>
     `).join('');
     
@@ -301,7 +301,7 @@ export const CommunityPerformanceOptimizer: React.FC<CommunityPerformanceOptimiz
   const renderMembers = (element: HTMLElement, members: any[]) => {
     element.innerHTML = members.map(member => `
       <div class="member-item" data-member-id="${member.id}">
-        <span>${member.ensName || member.address.slice(0, 8)}...</span>
+        <span>${DOMPurify.sanitize(member.ensName || member.address.slice(0, 8))}...</span>
       </div>
     `).join('');
     
@@ -312,11 +312,11 @@ export const CommunityPerformanceOptimizer: React.FC<CommunityPerformanceOptimiz
     element.innerHTML = `
       <div class="stats-grid">
         <div class="stat">
-          <span class="stat-value">${stats.memberCount || 0}</span>
+          <span class="stat-value">${DOMPurify.sanitize(String(stats.memberCount || 0))}</span>
           <span class="stat-label">Members</span>
         </div>
         <div class="stat">
-          <span class="stat-value">${stats.postCount || 0}</span>
+          <span class="stat-value">${DOMPurify.sanitize(String(stats.postCount || 0))}</span>
           <span class="stat-label">Posts</span>
         </div>
       </div>

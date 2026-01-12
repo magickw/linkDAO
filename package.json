@@ -25,6 +25,7 @@
     "chart.js": "^4.5.0",
     "cloudinary": "^2.8.0",
     "cors": "^2.8.5",
+    "dompurify": "^3.3.1",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
     "ethers": "^6.15.0",
@@ -41,5 +42,8 @@
     "stripe": "^20.0.0",
     "uuid": "^10.0.0",
     "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/dompurify": "^3.0.5"
   }
 }

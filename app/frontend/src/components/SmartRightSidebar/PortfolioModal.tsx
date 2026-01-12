@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify';
 import React, { useState, useEffect } from 'react';
 import { EnhancedWalletData, TokenBalance, PortfolioAnalytics } from '../../types/wallet';
 import { getTokenLogoWithFallback } from '../../utils/tokenLogoUtils';
@@ -370,11 +371,11 @@ export default function PortfolioModal({
                                   // Fallback to gradient circle with initials if image fails to load
                                   const target = e.target as HTMLImageElement;
                                   target.style.display = 'none';
-                                  target.parentElement!.innerHTML = `
+                                  target.parentElement!.innerHTML = DOMPurify.sanitize(`
                                     <div class="w-12 h-12 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white font-bold">
                                       ${token.symbol.substring(0, 2)}
                                     </div>
-                                  `;
+                                  `);
                                 }}
                               />
                             ) : (
