@@ -67,10 +67,12 @@ export class SellerWorkflowService {
             });
 
             // Pass 'seller' role to only fetch orders where user is the seller
-            const sellerOrders = await this.orderService.getOrdersByUser(user.walletAddress, 'seller');
+            // Use getOrdersByUserId to fetch directly by UUID, avoiding wallet address casing issues
+            const sellerOrders = await this.orderService.getOrdersByUserId(user.id, 'seller');
 
             safeLogger.info('[SellerWorkflowService] Seller orders retrieved', {
                 count: sellerOrders.length,
+                userId: user.id,
                 userAddress: user.walletAddress
             });
 
@@ -134,12 +136,19 @@ export class SellerWorkflowService {
             const transformedOrders = sellerOrders.map(transformOrder);
 
             const groupedOrders = {
-                new: transformedOrders.filter(o => o.status === OrderStatus.PAID.toLowerCase()),
+                // Include 'paid', 'pending', 'payment_pending', and 'created' in the "New" tab
+                // This ensures newly created orders that require seller attention are visible
+                new: transformedOrders.filter(o =>
+                    o.status === OrderStatus.PAID.toLowerCase() ||
+                    o.status === 'pending' ||
+                    o.status === OrderStatus.PAYMENT_PENDING.toLowerCase() ||
+                    o.status === OrderStatus.CREATED.toLowerCase()
+                ),
                 processing: transformedOrders.filter(o => o.status === OrderStatus.PROCESSING.toLowerCase() && !o.trackingNumber),
                 readyToShip: transformedOrders.filter(o => o.status === OrderStatus.PROCESSING.toLowerCase() && o.trackingNumber),
                 shipped: transformedOrders.filter(o => o.status === OrderStatus.SHIPPED.toLowerCase()),
                 completed: transformedOrders.filter(o => o.status === OrderStatus.DELIVERED.toLowerCase() || o.status === OrderStatus.COMPLETED.toLowerCase()),
-                cancelled: transformedOrders.filter(o => o.status === OrderStatus.CANCELLED.toLowerCase() || o.status === OrderStatus.REFUNDED.toLowerCase()),
+                cancelled: transformedOrders.filter(o => o.status === OrderStatus.CANCELLED.toLowerCase() || o.status === OrderStatus.REFUNDED.toLowerCase() || o.status === OrderStatus.CANCELLATION_REQUESTED.toLowerCase()),
             };
 
             // Calculate total revenue from completed orders

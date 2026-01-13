@@ -13,167 +13,105 @@ let cachedProvider: ethers.Provider | null = null;
 /**
  * Wrap an EIP-1193 provider to avoid "Cannot assign to read only property" errors.
  * This happens when extensions like LastPass freeze request objects.
- *
- * IMPORTANT: We do NOT spread (...provider) because that copies frozen properties
- * which causes "Cannot assign to read only property 'requestId'" errors.
+ * 
+ * Uses Proxy for complete isolation from frozen extension objects.
  */
 export function wrapProvider(provider: any): any {
   if (!provider) return provider;
 
-  // Helper to deep clone objects to break references to frozen extension objects
-  const deepClone = (obj: any): any => {
-    if (obj === null || typeof obj !== 'object') return obj;
-    if (Array.isArray(obj)) {
-      return obj.map(item => deepClone(item));
-    }
-    try {
-      // For plain objects, manually clone to avoid issues with non-serializable values
-      const cloned: any = {};
-      for (const key of Object.keys(obj)) {
-        try {
-          const value = obj[key];
-          if (typeof value === 'function') {
-            // Skip functions - they can't be cloned
-            continue;
+  // Create a Proxy that intercepts ALL property access and method calls
+  // This ensures complete isolation from the original provider's frozen objects
+  return new Proxy(provider, {
+    get(target, prop, receiver) {
+      const value = target[prop];
+
+      // For methods, wrap them to ensure arguments and results are safe
+      if (typeof value === 'function') {
+        return function (...args: any[]) {
+          // Special handling for the request method
+          if (prop === 'request') {
+            return (async () => {
+              try {
+                // Create completely new request object with no references to original
+                const safeRequest = {
+                  method: String(args[0]?.method || ''),
+                  params: args[0]?.params ? JSON.parse(JSON.stringify(args[0].params)) : []
+                };
+
+                // Call original request
+                const result = await value.call(target, safeRequest);
+
+                // Return deep cloned result to ensure no frozen objects
+                return JSON.parse(JSON.stringify(result));
+              } catch (error: any) {
+                // Create new error object to avoid frozen error objects
+                const safeError: any = new Error(error?.message || 'Request failed');
+                if (error?.code !== undefined) safeError.code = error.code;
+                if (error?.data !== undefined) {
+                  try {
+                    safeError.data = JSON.parse(JSON.stringify(error.data));
+                  } catch {
+                    safeError.data = error.data;
+                  }
+                }
+                throw safeError;
+              }
+            })();
           }
-          cloned[key] = deepClone(value);
+
+          // For send/sendAsync (legacy methods)
+          if (prop === 'send' || prop === 'sendAsync') {
+            try {
+              // Deep clone arguments
+              const safeArgs = args.map(arg => {
+                if (typeof arg === 'function') return arg; // Keep callbacks as-is
+                try {
+                  return JSON.parse(JSON.stringify(arg));
+                } catch {
+                  return arg;
+                }
+              });
+              return value.apply(target, safeArgs);
+            } catch (error: any) {
+              const safeError = new Error(error?.message || 'Send failed');
+              throw safeError;
+            }
+          }
+
+          // For event listeners (on, removeListener, etc.)
+          if (prop === 'on' || prop === 'removeListener' || prop === 'removeAllListeners') {
+            return value.bind(target);
+          }
+
+          // For other methods, just bind and call
+          return value.bind(target);
+        };
+      }
+
+      // For non-function properties, return the value directly
+      // but ensure it's not a frozen object
+      if (value && typeof value === 'object') {
+        try {
+          return JSON.parse(JSON.stringify(value));
         } catch {
-          // Skip properties that throw on access (frozen getters, etc.)
+          return value;
         }
       }
-      return cloned;
-    } catch (e) {
-      // Fallback to JSON clone for simple objects
-      try {
-        return JSON.parse(JSON.stringify(obj));
-      } catch {
-        return obj;
-      }
-    }
-  };
 
-  // Helper to create a safe, mutable error object
-  const createSafeError = (error: any): Error => {
-    if (!error) return new Error('Unknown error');
-    try {
-      const message = typeof error === 'string' ? error : (error.message || error.reason || 'Unknown error');
-      const safeError: any = new Error(message);
-
-      // Safely copy error properties
-      if (error.code !== undefined) {
-        try { safeError.code = error.code; } catch {}
-      }
-      if (error.data !== undefined) {
-        try { safeError.data = deepClone(error.data); } catch {}
-      }
-      if (error.reason !== undefined) {
-        try { safeError.reason = error.reason; } catch {}
-      }
-
-      return safeError;
-    } catch (e) {
-      return new Error('Unknown error (failed to process original error)');
-    }
-  };
-
-  // Create a clean object with ONLY the necessary methods - do NOT spread provider
-  // This prevents copying frozen properties from browser extensions
-  const wrapped: any = {
-    // Forward specific known properties (read them once, don't reference frozen objects)
-    isMetaMask: (() => { try { return provider.isMetaMask; } catch { return false; } })(),
-    isStatus: (() => { try { return provider.isStatus; } catch { return false; } })(),
-    isCoinbaseWallet: (() => { try { return provider.isCoinbaseWallet; } catch { return false; } })(),
-    host: (() => { try { return provider.host; } catch { return undefined; } })(),
-    path: (() => { try { return provider.path; } catch { return undefined; } })(),
-    chainId: (() => { try { return provider.chainId; } catch { return undefined; } })(),
-    selectedAddress: (() => { try { return provider.selectedAddress; } catch { return undefined; } })(),
-
-    // Intercept request to ensure args are mutable and safe
-    request: async (args: { method: string; params?: any[] }) => {
-      // Create a completely new request object to ensure it's mutable
-      const safeArgs = {
-        method: String(args.method),
-        params: args.params ? deepClone(args.params) : []
-      };
-
-      try {
-        const result = await provider.request(safeArgs);
-        // Deep clone result to ensure it's not frozen
-        return deepClone(result);
-      } catch (error: any) {
-        // Wrap the error in a new Error object to avoid frozen error objects
-        throw createSafeError(error);
-      }
+      return value;
     },
 
-    // Safe forwarding of send method (legacy)
-    send: provider.send ? (method: string | any, params?: any) => {
+    // Ensure property setting works
+    set(target, prop, value) {
       try {
-        if (typeof method === 'string') {
-          return provider.send(method, params ? deepClone(params) : params);
-        }
-        // Handle (payload, callback) signature
-        return provider.send(deepClone(method), params);
-      } catch (error) {
-        throw createSafeError(error);
-      }
-    } : undefined,
-
-    // Safe forwarding of sendAsync method (legacy)
-    sendAsync: provider.sendAsync ? (payload: any, callback: any) => {
-      try {
-        return provider.sendAsync(deepClone(payload), (error: any, result: any) => {
-          callback(error ? createSafeError(error) : null, deepClone(result));
-        });
-      } catch (error) {
-        callback(createSafeError(error), null);
-      }
-    } : undefined,
-
-    // Forward event listeners with error handling
-    on: provider.on ? (eventName: string, listener: any) => {
-      try {
-        return provider.on(eventName, listener);
+        target[prop] = value;
+        return true;
       } catch {
-        return wrapped;
+        // If setting fails (frozen object), just return true to avoid errors
+        return true;
       }
-    } : undefined,
-
-    removeListener: provider.removeListener ? (eventName: string, listener: any) => {
-      try {
-        return provider.removeListener(eventName, listener);
-      } catch {
-        return wrapped;
-      }
-    } : undefined,
-
-    removeAllListeners: provider.removeAllListeners ? (eventName?: string) => {
-      try {
-        return provider.removeAllListeners(eventName);
-      } catch {
-        return wrapped;
-      }
-    } : undefined,
-
-    // Add enable method for older dapps
-    enable: provider.enable ? async () => {
-      try {
-        const result = await provider.enable();
-        return deepClone(result);
-      } catch (error) {
-        throw createSafeError(error);
-      }
-    } : undefined,
-  };
-
-  // Remove undefined properties
-  Object.keys(wrapped).forEach(key => {
-    if (wrapped[key] === undefined) {
-      delete wrapped[key];
     }
   });
-
-  return wrapped;
 }
 
 /**

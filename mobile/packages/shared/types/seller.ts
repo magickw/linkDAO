@@ -1,0 +1,533 @@
+export interface SellerTier {
+    id: 'anonymous' | 'basic' | 'verified' | 'pro' | 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
+    name: string;
+    description: string;
+    requirements: string[];
+    benefits: string[];
+    limitations: string[];
+}
+
+export interface SellerProfile {
+    id: string;
+    walletAddress: string;
+    tier: SellerTier['id'];
+
+    // Basic Profile
+    storeName?: string;
+    profilePicture?: string;
+    logo?: string;
+    coverImage?: string;
+    bio?: string;
+    description?: string;
+    sellerStory?: string;
+    location?: string;
+
+    // Business Information
+    legalBusinessName?: string;
+    businessType?: string;
+    registeredAddressStreet?: string;
+    registeredAddressCity?: string;
+    registeredAddressState?: string;
+    registeredAddressPostalCode?: string;
+    registeredAddressCountry?: string;
+    storeDescription?: string;
+
+    // ENS Support (optional)
+    ensHandle?: string;
+    ensVerified: boolean;
+    ensLastVerified?: string;
+
+    // Image Storage with IPFS and CDN support
+    profileImageIpfs?: string;
+    profileImageCdn?: string;
+    coverImageIpfs?: string;
+    coverImageCdn?: string;
+
+    // Enhanced Social Media Links
+    websiteUrl?: string;
+    socialLinks?: {
+        twitter?: string;
+        discord?: string;
+        telegram?: string;
+        linkedin?: string;
+        facebook?: string;
+        website?: string;
+    };
+
+    // Profile Completeness
+    profileCompleteness: {
+        score: number; // 0-100
+        missingFields: Array<{
+            field: string;
+            label: string;
+            weight: number;
+            required: boolean;
+        }>;
+        recommendations: Array<{
+            action: string;
+            description: string;
+            impact: number;
+        }>;
+        lastCalculated: string;
+    };
+
+    // Application Status
+    applicationStatus: 'pending' | 'approved' | 'rejected' | 'suspended';
+    applicationDate: string;
+    approvedDate?: string;
+    rejectionReason?: string;
+    suspensionReason?: string;
+    reviewedBy?: string;
+
+    // Verification Data
+    email?: string;
+    emailVerified: boolean;
+    phone?: string;
+    phoneVerified: boolean;
+    kycStatus: 'none' | 'pending' | 'approved' | 'rejected';
+    kycDocuments?: string[];
+
+    // DAO Reputation
+    daoReputation?: {
+        governanceParticipation: number;
+        proposalsSubmitted: number;
+        votingHistory: number;
+        communityStanding: 'good' | 'excellent' | 'outstanding';
+    };
+
+    // Payout Preferences
+    payoutPreferences: {
+        defaultCrypto: string; // USDC, ETH, etc.
+        cryptoAddresses: Record<string, string>;
+        fiatEnabled: boolean;
+        offRampProvider?: 'circle' | 'coinbase' | 'stripe';
+        bankAccount?: {
+            accountNumber: string;
+            routingNumber: string;
+            accountType: 'checking' | 'savings';
+        };
+    };
+
+    // Seller Stats
+    stats: {
+        totalSales: number;
+        activeListings: number;
+        completedOrders: number;
+        averageRating: number;
+        totalReviews: number;
+        reputationScore: number;
+        joinDate: string;
+        lastActive: string;
+    };
+
+    // Verification Badges
+    badges: string[];
+
+    // Onboarding Progress
+    onboardingProgress: {
+        profileSetup: boolean;
+        verification: boolean;
+        payoutSetup: boolean;
+        firstListing: boolean;
+        completed: boolean;
+        currentStep: number;
+        totalSteps: number;
+    };
+
+    // Settings
+    settings: {
+        notifications: {
+            orders: boolean;
+            disputes: boolean;
+            daoActivity: boolean;
+            tips: boolean;
+            marketing: boolean;
+        };
+        privacy: {
+            showEmail: boolean;
+            showPhone: boolean;
+            showStats: boolean;
+        };
+        escrow: {
+            defaultEnabled: boolean;
+            minimumAmount: number;
+        };
+    };
+
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface OnboardingStep {
+    id: string;
+    title: string;
+    description: string;
+    component: string;
+    required: boolean;
+    completed: boolean;
+    data?: any;
+}
+
+export interface SellerDashboardStats {
+    sales: {
+        today: number;
+        thisWeek: number;
+        thisMonth: number;
+        total: number;
+    };
+    orders: {
+        pending: number;
+        processing: number;
+        shipped: number;
+        delivered: number;
+        disputed: number;
+    };
+    listings: {
+        active: number;
+        draft: number;
+        sold: number;
+        expired: number;
+    };
+    balance: {
+        crypto: Record<string, number>;
+        fiatEquivalent: number;
+        pendingEscrow: number;
+        availableWithdraw: number;
+    };
+    reputation: {
+        score: number;
+        trend: 'up' | 'down' | 'stable';
+        recentReviews: number;
+        averageRating: number;
+    };
+}
+
+export interface SellerNotification {
+    id: string;
+    type: 'order' | 'dispute' | 'dao' | 'tip' | 'system';
+    title: string;
+    message: string;
+    data?: any;
+    read: boolean;
+    priority: 'low' | 'medium' | 'high' | 'urgent';
+    createdAt: string;
+}
+
+export interface SellerOrder {
+    id: string;
+    items: Array<{
+        listingId: string;
+        title: string;
+        quantity: number;
+        price: number;
+        image?: string;
+        isPhysical?: boolean;
+        isService?: boolean;
+        serviceType?: 'remote' | 'in_person' | 'consultation' | 'subscription';
+        // NFT fields
+        isNFT?: boolean;
+        nftContractAddress?: string;
+        nftTokenId?: string;
+        nftStandard?: 'ERC721' | 'ERC1155';
+    }>;
+    buyerAddress: string;
+    buyerName?: string;
+    totalAmount: number;
+    currency: string;
+    status: 'pending' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'disputed' | 'cancelled';
+    escrowStatus: 'none' | 'locked' | 'released' | 'disputed';
+    paymentMethod: 'crypto' | 'fiat';
+    shippingAddress?: {
+        name: string;
+        address: string;
+        city: string;
+        state: string;
+        zipCode: string;
+        country: string;
+    };
+    trackingNumber?: string;
+    estimatedDelivery?: string;
+    notes?: string;
+    createdAt: string;
+    updatedAt: string;
+    // Physical vs Digital vs Service flags
+    isPhysical?: boolean;
+    requiresShipping?: boolean;
+    // Service delivery fields
+    isService?: boolean;
+    serviceStatus?: ServiceStatus;
+    serviceSchedule?: ServiceSchedule;
+    serviceDeliverables?: ServiceDeliverable[];
+    serviceCompletedAt?: string;
+    buyerConfirmedAt?: string;
+    serviceNotes?: string;
+    serviceType?: 'remote' | 'in_person' | 'consultation' | 'subscription';
+    // NFT Escrow fields
+    isNFTOrder?: boolean;
+    nftEscrowId?: string;
+    nftContractAddress?: string;
+    nftTokenId?: string;
+    nftStandard?: 'ERC721' | 'ERC1155';
+    nftAmount?: number;
+    nftDeposited?: boolean;
+    nftEscrowStatus?: 'created' | 'funds_locked' | 'nft_deposited' | 'ready_for_release' | 'completed' | 'disputed' | 'cancelled';
+}
+
+export interface SellerListing {
+    id: string;
+    title: string;
+    description: string;
+    category: string;
+    subcategory?: string;
+    price: number;
+    currency: string;
+    inventory: number;
+    condition: 'new' | 'used' | 'refurbished';
+    images: string[];
+    specifications?: Record<string, string>;
+    tags: string[];
+    status: 'draft' | 'active' | 'paused' | 'sold' | 'expired';
+    saleType: 'fixed' | 'auction' | 'negotiable';
+    escrowEnabled: boolean;
+    shippingOptions: {
+        free: boolean;
+        cost?: number;
+        estimatedDays: string;
+        international: boolean;
+        internationalCost?: number;
+    };
+    views: number;
+    favorites: number;
+    questions: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface SellerAnalytics {
+    overview: {
+        totalRevenue: number;
+        totalOrders: number;
+        conversionRate: number;
+        averageOrderValue: number;
+    };
+    sales: {
+        daily: Array<{ date: string; amount: number; orders: number }>;
+        byCategory: Array<{ category: string; amount: number; percentage: number }>;
+        byProduct: Array<{ productId: string; title: string; sales: number; revenue: number }>;
+    };
+    buyers: {
+        demographics: {
+            countries: Array<{ country: string; count: number }>;
+            walletTypes: Array<{ type: string; count: number }>;
+        };
+        behavior: {
+            repeatCustomers: number;
+            averageOrdersPerCustomer: number;
+            customerLifetimeValue: number;
+        };
+    };
+    reputation: {
+        ratingHistory: Array<{ date: string; rating: number }>;
+        reviewSentiment: {
+            positive: number;
+            neutral: number;
+            negative: number;
+        };
+        badges: Array<{ badge: string; earnedAt: string }>;
+    };
+}
+
+// ENS Support Types
+export interface ENSValidationResult {
+    isValid: boolean;
+    isAvailable: boolean;
+    isOwned: boolean;
+    resolvedAddress?: string;
+    reverseResolution?: string;
+    errors: string[];
+    suggestions: string[];
+}
+
+export interface ENSVerification {
+    id: string;
+    walletAddress: string;
+    ensHandle: string;
+    verificationMethod: 'signature' | 'transaction' | 'reverse_resolution';
+    verificationData: any;
+    verifiedAt: string;
+    verificationTxHash?: string;
+    expiresAt?: string;
+    isActive: boolean;
+}
+
+// Profile Validation Types
+export interface ProfileValidationRule {
+    field: string;
+    required: boolean;
+    validator?: (value: any) => ValidationResult;
+    weight: number; // For completeness scoring
+}
+
+export interface ValidationResult {
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+}
+
+export interface ProfileValidationOptions {
+    ensRequired: boolean;
+    imageRequired: boolean;
+    socialLinksRequired: boolean;
+    strictValidation: boolean;
+}
+
+export interface ProfileCompletenessCalculation {
+    totalFields: number;
+    completedFields: number;
+    score: number;
+    missingFields: Array<{
+        field: string;
+        label: string;
+        weight: number;
+        required: boolean;
+    }>;
+    recommendations: Array<{
+        action: string;
+        description: string;
+        impact: number;
+    }>;
+    lastCalculated: string;
+}
+
+// Enhanced Profile Update Types
+export interface SellerProfileUpdateRequest {
+    displayName?: string;
+    storeName?: string;
+    bio?: string;
+    description?: string;
+    sellerStory?: string;
+    location?: string;
+    ensHandle?: string;
+    websiteUrl?: string;
+    socialLinks?: {
+        twitter?: string;
+        discord?: string;
+        telegram?: string;
+        linkedin?: string;
+    };
+    profileImage?: File;
+    coverImage?: File;
+}
+
+export interface SellerProfileUpdateResponse {
+    success: boolean;
+    profile: SellerProfile;
+    validationResults: ValidationResult;
+    completenessUpdate: ProfileCompletenessCalculation;
+    ensValidation?: ENSValidationResult;
+    imageUploadResults?: {
+        profileImage?: ImageUploadResult;
+        coverImage?: ImageUploadResult;
+    };
+}
+
+export interface ImageUploadResult {
+    ipfsHash: string;
+    cdnUrl: string;
+    thumbnails: {
+        small: string;
+        medium: string;
+        large: string;
+    };
+    metadata: {
+        width: number;
+        height: number;
+        format: string;
+        size: number;
+    };
+}
+
+// Seller Workflow Types
+export interface SellerWorkflowDashboard {
+    stats: {
+        pendingCount: number;
+        processingCount: number;
+        readyToShipCount: number;
+        shippedCount: number;
+        completedCount: number;
+        revenue: string;
+    };
+    orders: {
+        new: SellerOrder[];
+        processing: SellerOrder[];
+        readyToShip: SellerOrder[];
+        shipped: SellerOrder[];
+        completed: SellerOrder[];
+        cancelled: SellerOrder[];
+    };
+}
+
+export interface ShippingLabelResult {
+    labelUrl: string;
+    trackingNumber: string;
+}
+
+export interface PackingSlip {
+    orderId: string;
+    date: string;
+    buyerAddress?: {
+        name: string;
+        address: string;
+        city: string;
+        state: string;
+        zipCode: string;
+        country: string;
+    };
+    items: Array<{ description: string; quantity: number }>;
+    sellerId: string;
+}
+
+// Service Delivery Types
+export type ServiceStatus = 'pending' | 'scheduled' | 'in_progress' | 'completed' | 'buyer_confirmed' | 'cancelled';
+
+export interface ServiceSchedule {
+    scheduledDate: string;
+    scheduledTime: string;
+    timezone: string;
+    duration?: number;
+    notes?: string;
+}
+
+export interface ServiceDeliverable {
+    id: string;
+    type: 'file' | 'link' | 'document';
+    url: string;
+    name: string;
+    description?: string;
+    uploadedAt: string;
+    size?: number;
+}
+
+export interface ServiceDetails {
+    orderId: string;
+    serviceStatus: ServiceStatus;
+    schedule?: ServiceSchedule;
+    deliverables: ServiceDeliverable[];
+    completedAt?: string;
+    buyerConfirmedAt?: string;
+    notes?: string;
+}
+
+export interface ScheduleServiceInput {
+    date: string;
+    time: string;
+    timezone: string;
+    notes?: string;
+}
+
+export interface AddDeliverableInput {
+    type: 'file' | 'link' | 'document';
+    url: string;
+    name: string;
+    description?: string;
+}

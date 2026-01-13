@@ -130,6 +130,48 @@ export class OrderService {
   }
 
   /**
+   * Get orders by user ID (direct DB access)
+   * @param userId - The UUID of the user
+   * @param role - Optional role filter: 'buyer' for orders placed by user, 'seller' for orders received by user
+   */
+  async getOrdersByUserId(userId: string, role?: 'buyer' | 'seller'): Promise<MarketplaceOrder[]> {
+    try {
+      safeLogger.info('[OrderService] getOrdersByUserId called', { userId, role });
+
+      const dbOrders = await databaseService.getOrdersByUser(userId, role);
+
+      safeLogger.info('[OrderService] DB orders found', { count: dbOrders.length, userId });
+
+      const orders: MarketplaceOrder[] = [];
+
+      for (const dbOrder of dbOrders) {
+        // Use Promise.allSettled to prevent one failure from blocking all orders? 
+        // Or simplified error handling.
+        try {
+          const [buyer, seller, product] = await Promise.all([
+            userProfileService.getProfileById(dbOrder.buyerId || ''),
+            userProfileService.getProfileById(dbOrder.sellerId || ''),
+            dbOrder.listingId ? databaseService.getProductById(dbOrder.listingId) : null
+          ]);
+
+          if (buyer && seller) {
+            orders.push(this.formatOrder(dbOrder, buyer, seller, dbOrder.escrowId?.toString(), product));
+          } else {
+            safeLogger.warn('[OrderService] Missing buyer or seller for order', { orderId: dbOrder.id });
+          }
+        } catch (err) {
+          safeLogger.error('[OrderService] Error formatting order', { orderId: dbOrder.id, error: err });
+        }
+      }
+
+      return orders;
+    } catch (error) {
+      safeLogger.error('Error getting user orders by ID:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get orders by user address (buyer or seller)
    * @param userAddress - The wallet address of the user
    * @param role - Optional role filter: 'buyer' for orders placed by user, 'seller' for orders received by user
@@ -145,25 +187,7 @@ export class OrderService {
 
       safeLogger.info('[OrderService] User profile found', { userId: user.id });
 
-      const dbOrders = await databaseService.getOrdersByUser(user.id, role);
-
-      safeLogger.info('[OrderService] DB orders found', { count: dbOrders.length, userId: user.id });
-
-      const orders: MarketplaceOrder[] = [];
-
-      for (const dbOrder of dbOrders) {
-        const [buyer, seller, product] = await Promise.all([
-          userProfileService.getProfileById(dbOrder.buyerId || ''),
-          userProfileService.getProfileById(dbOrder.sellerId || ''),
-          dbOrder.listingId ? databaseService.getProductById(dbOrder.listingId) : null
-        ]);
-
-        if (buyer && seller) {
-          orders.push(this.formatOrder(dbOrder, buyer, seller, dbOrder.escrowId?.toString(), product));
-        }
-      }
-
-      return orders;
+      return await this.getOrdersByUserId(user.id, role);
     } catch (error) {
       safeLogger.error('Error getting user orders:', error);
       throw error;
