@@ -1457,10 +1457,10 @@ class UnifiedMessagingService {
   private transformMessage(data: any): Message {
     return {
       ...data,
-      fromAddress: data.fromAddress || data.senderAddress,
-      timestamp: new Date(data.timestamp || data.createdAt || data.sentAt),
-      editedAt: data.editedAt ? new Date(data.editedAt) : undefined,
-      deletedAt: data.deletedAt ? new Date(data.deletedAt) : undefined
+      fromAddress: data.fromAddress || data.senderAddress || data.sender_address,
+      timestamp: new Date(data.timestamp || data.createdAt || data.sentAt || data.sent_at || data.created_at),
+      editedAt: data.editedAt || data.edited_at ? new Date(data.editedAt || data.edited_at) : undefined,
+      deletedAt: data.deletedAt || data.deleted_at ? new Date(data.deletedAt || data.deleted_at) : undefined
     };
   }
 

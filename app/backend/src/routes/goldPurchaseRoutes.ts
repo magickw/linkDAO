@@ -31,7 +31,7 @@ const GOLD_PACKAGES: GoldPackage[] = [
 router.post('/payment-intent', authenticateToken, csrfProtection, async (req, res) => {
   try {
     const { packageId, paymentMethod } = req.body;
-    const userAddress = req.user?.address;
+    const userAddress = req.user?.walletAddress;
 
     if (!userAddress) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -173,7 +173,7 @@ router.post('/complete', async (req, res) => {
 // Get user's gold balance
 router.get('/balance', authenticateToken, async (req, res) => {
   try {
-    const userAddress = req.user?.address;
+    const userAddress = req.user?.walletAddress;
 
     if (!userAddress) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -200,7 +200,7 @@ router.get('/packages', (req, res) => {
 // Get user's gold transaction history
 router.get('/transactions', authenticateToken, async (req, res) => {
   try {
-    const userAddress = req.user?.address;
+    const userAddress = req.user?.walletAddress;
     const { page = 1, limit = 20 } = req.query;
 
     if (!userAddress) {

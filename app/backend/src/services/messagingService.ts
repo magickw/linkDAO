@@ -138,8 +138,8 @@ export class MessagingService {
               (SELECT json_build_object(
                 'id', m.id,
                 'content', m.content,
-                'sender_address', m.sender_address,
-                'sent_at', m.timestamp
+                'senderAddress', m.sender_address,
+                'timestamp', m.timestamp
               )
               FROM chat_messages m
               WHERE m.conversation_id = ${conversations.id}
@@ -191,7 +191,7 @@ export class MessagingService {
       let resolvedParticipantAddress = participantAddress;
       if (participantAddress && typeof participantAddress === 'string' && participantAddress.endsWith('.eth')) {
         // Import ENS service here to avoid circular dependencies
-        const { ensService } = await import('./ensService');
+        const { ensService } = await import('./ensService.js');
         const validationResult = await ensService.validateENSHandle(participantAddress);
 
         if (!validationResult.isValid || !validationResult.address) {
@@ -338,10 +338,16 @@ export class MessagingService {
 
       // Validate UUID format for before/after parameters
       if (before && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(before)) {
-        throw new Error('Invalid before parameter format');
+        return {
+          success: false,
+          message: 'Invalid before parameter format'
+        };
       }
       if (after && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(after)) {
-        throw new Error('Invalid after parameter format');
+        return {
+          success: false,
+          message: 'Invalid after parameter format'
+        };
       }
 
       // MEMORY OPTIMIZATION: Check cache first
@@ -411,12 +417,16 @@ export class MessagingService {
       await cacheService.set(cacheKey, result, DEFAULT_CACHE_TTL / 2);
 
       return result;
-    } catch (error) {
+    } catch (error: any) {
       safeLogger.error('Error getting conversation messages:', error);
-      if (error instanceof Error && error.message.includes('database')) {
+      if (error?.message?.includes('database')) {
         throw new Error('Messaging service temporarily unavailable. Database connection error.');
       }
-      throw new Error('Failed to get conversation messages');
+
+      return {
+        success: false,
+        message: `Failed to get conversation messages: ${error?.message || 'Unknown error'}`
+      };
     } finally {
       // MEMORY OPTIMIZATION: Decrease active connection count
       const currentCount = this.activeConnections.get(userAddress) || 0;

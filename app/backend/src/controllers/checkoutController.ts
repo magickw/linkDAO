@@ -84,7 +84,7 @@ export class CheckoutController {
             }
 
             // Get user address from auth or request body
-            const buyerAddress = req.user?.address || userAddress;
+            const buyerAddress = req.user?.walletAddress || userAddress;
 
             // Calculate totals
             const subtotal = items.reduce((sum: number, item: CartItem) => sum + (parseFloat(item.priceAtTime) * item.quantity), 0);
@@ -229,14 +229,14 @@ export class CheckoutController {
             const platformFee = subtotal * 0.15; // 15% platform fee
             const total = subtotal + shipping + tax + platformFee;
 
-            safeLogger.info(`Processing checkout for user ${req.user.address}, total: ${total}, method: ${paymentMethod}`);
+            safeLogger.info(`Processing checkout for user ${req.user.walletAddress}, total: ${total}, method: ${paymentMethod}`);
 
             // Validate high-value transaction for seller
             const sellerId = cart.items[0].product?.sellerId || '';
             if (sellerId) {
                 const transactionValidation = await highValueTransactionService.validateTransaction(
                     sellerId,
-                    req.user.id || req.user.address,
+                    req.user.id || req.user.walletAddress,
                     total,
                     'USD'
                 );
@@ -262,7 +262,7 @@ export class CheckoutController {
             // Create order
             const order = await orderServiceInstance.createOrder({
                 listingId: cart.items[0].productId, // Simplified - assumes single item
-                buyerAddress: req.user.address,
+                buyerAddress: req.user.walletAddress,
                 sellerAddress: cart.items[0].product?.sellerId || '', // Simplified - assumes single seller
                 amount: total.toString(),
                 paymentToken: 'USDC', // Default payment token
@@ -291,7 +291,7 @@ export class CheckoutController {
                 paymentResult = await stripePaymentServiceInstance.processPayment({
                     amount: Math.round(total * 100), // Convert to cents
                     paymentMethod: 'fiat',
-                    userAddress: req.user.address
+                    userAddress: req.user.walletAddress
                 });
             } else {
                 // Crypto payment - return instructions for frontend to complete
