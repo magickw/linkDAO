@@ -336,7 +336,7 @@ class WalletService {
    */
   async signMessage(message: string, address: string): Promise<string> {
     try {
-      if (!this.isConnected || !this.activeConnection || this.activeConnection.address !== address) {
+      if (!this._isConnected || !this.activeConnection || this.activeConnection.address !== address) {
         throw new Error('Wallet not connected or address mismatch');
       }
 
@@ -377,7 +377,7 @@ class WalletService {
    * Switch network/chain
    */
   async switchChain(chainId: number): Promise<void> {
-    if (!this.isConnected || !this.activeConnection) {
+    if (!this._isConnected || !this.activeConnection) {
       throw new Error('Wallet not connected');
     }
 
@@ -393,7 +393,7 @@ class WalletService {
   async disconnect() {
     try {
       const provider = this.currentProvider;
-      this.isConnected = false;
+      this._isConnected = false;
       this.activeConnection = null;
       this.currentProvider = null;
       await this.clearConnection();
@@ -436,7 +436,7 @@ class WalletService {
    * Check if wallet is connected
    */
   isConnected(): boolean {
-    return this.isConnected && this.activeConnection !== null;
+    return this._isConnected && this.activeConnection !== null;
   }
 
   /**
@@ -475,7 +475,7 @@ class WalletService {
       if (connectionJson) {
         const connection: WalletConnection = JSON.parse(connectionJson);
         if (connection.address) {
-          this.isConnected = true;
+          this._isConnected = true;
           this.activeConnection = connection;
           this.currentProvider = connection.provider;
           console.log('✅ Connection restored:', connection.provider, connection.address);

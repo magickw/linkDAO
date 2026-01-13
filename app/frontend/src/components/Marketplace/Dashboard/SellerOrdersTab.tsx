@@ -554,11 +554,11 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
                         No orders in this status.
                     </GlassPanel>
                 ) : (
-                    orders.map((order: SellerOrder) => (
-                        <GlassPanel key={order.id} className="p-6">
+                    orders.map((order: SellerOrder, idx) => (
+                        <GlassPanel key={order.id || idx} className="p-6">
                             <div className="flex justify-between items-start mb-4">
                                 <div>
-                                    <h3 className="text-lg font-bold text-white">Order #{order.id.slice(0, 8)}</h3>
+                                    <h3 className="text-lg font-bold text-white">Order #{order.id?.slice(0, 8) || 'Unknown'}</h3>
                                     <p className="text-sm text-gray-400">Placed on {new Date(order.createdAt).toLocaleDateString()}</p>
                                 </div>
                                 <div className="text-right">

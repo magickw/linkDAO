@@ -36,7 +36,7 @@ export class UnifiedSellerService {
   private profileCache = new Map<string, { data: UnifiedSellerProfile | null; timestamp: number }>();
   private listingsCache = new Map<string, { data: UnifiedSellerListing[]; timestamp: number }>();
   private dashboardCache = new Map<string, { data: UnifiedSellerDashboard | null; timestamp: number }>();
-  
+
   private readonly CACHE_DURATION = 60000; // 60 seconds cache
   private readonly transformationOptions: DataTransformationOptions = {
     includeDeprecatedFields: false,
@@ -86,7 +86,7 @@ export class UnifiedSellerService {
       const response = await unifiedSellerAPIClient.request<SellerProfile>(
         unifiedSellerAPIClient['endpoints'].getProfile(walletAddress),
         undefined,
-        true // requireAuth = true for authenticated access
+        false // requireAuth = false for public access
       );
 
       if (!response) {
@@ -96,22 +96,22 @@ export class UnifiedSellerService {
 
       // Transform to unified format
       const transformResult = transformSellerProfileToUnified(response, this.transformationOptions);
-      
+
       // Log transformation warnings if any
       if (transformResult.warnings.length > 0) {
         console.warn('Profile transformation warnings:', transformResult.warnings);
       }
 
       // Cache the result
-      this.profileCache.set(walletAddress, { 
-        data: transformResult.data, 
-        timestamp: Date.now() 
+      this.profileCache.set(walletAddress, {
+        data: transformResult.data,
+        timestamp: Date.now()
       });
 
       return transformResult.data;
     } catch (error) {
       console.error('Failed to get seller profile:', error);
-      
+
       // Check if this is a SellerAPIError with specific error details
       if (error instanceof SellerAPIError) {
         // Handle 404 Not Found - profile doesn't exist yet
@@ -120,13 +120,13 @@ export class UnifiedSellerService {
           this.profileCache.set(walletAddress, { data: null, timestamp: Date.now() });
           return null;
         }
-        
+
         // Handle 401 Unauthorized - authentication issue
         if (error.statusCode === 401 || error.type === SellerErrorType.PERMISSION_ERROR) {
           console.warn('Authentication required for seller profile');
           throw error; // Re-throw auth errors so they can be handled appropriately
         }
-        
+
         // Handle 500 Server Error - backend issue
         if (error.statusCode === 500) {
           console.error('Server error when fetching seller profile (500), this indicates a backend issue');
@@ -140,7 +140,7 @@ export class UnifiedSellerService {
           );
         }
       }
-      
+
       // Check if this is a "not found" error in the message
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (errorMessage.includes('not found') || errorMessage.includes('404')) {
@@ -149,7 +149,7 @@ export class UnifiedSellerService {
         this.profileCache.set(walletAddress, { data: null, timestamp: Date.now() });
         return null;
       }
-      
+
       // Check for server error messages
       if (errorMessage.includes('500') || errorMessage.includes('Internal Server Error')) {
         console.error('Detected server error in profile fetch');
@@ -160,7 +160,7 @@ export class UnifiedSellerService {
           { originalError: errorMessage }
         );
       }
-      
+
       // For other errors, still throw
       throw new SellerAPIError(
         SellerErrorType.API_ERROR,
@@ -174,10 +174,10 @@ export class UnifiedSellerService {
     try {
       // Convert unified profile data to legacy format for API
       const legacyProfileData = this.convertUnifiedProfileToLegacy(profileData);
-      
+
       // Get the wallet address from the profile data or from the context
       const walletAddress = legacyProfileData.walletAddress;
-      
+
       const response = await unifiedSellerAPIClient.createProfile(walletAddress, legacyProfileData);
 
       // Transform response to unified format
@@ -198,12 +198,12 @@ export class UnifiedSellerService {
     } catch (error) {
       console.error('Failed to create seller profile:', error);
       // Provide a more user-friendly error message
-      const errorMessage = error instanceof SellerAPIError 
-        ? error.message 
-        : error instanceof Error 
-          ? error.message 
+      const errorMessage = error instanceof SellerAPIError
+        ? error.message
+        : error instanceof Error
+          ? error.message
           : 'Failed to create seller profile. Please try again.';
-      
+
       throw new SellerAPIError(
         SellerErrorType.API_ERROR,
         errorMessage,
@@ -213,7 +213,7 @@ export class UnifiedSellerService {
   }
 
   async updateProfile(
-    walletAddress: string, 
+    walletAddress: string,
     updates: Partial<UnifiedSellerProfile>
   ): Promise<UnifiedSellerProfile> {
     try {
@@ -233,9 +233,9 @@ export class UnifiedSellerService {
       const transformResult = transformSellerProfileToUnified(response, this.transformationOptions);
 
       // Update cache
-      this.profileCache.set(walletAddress, { 
-        data: transformResult.data, 
-        timestamp: Date.now() 
+      this.profileCache.set(walletAddress, {
+        data: transformResult.data,
+        timestamp: Date.now()
       });
 
       // Invalidate related caches
@@ -289,11 +289,11 @@ export class UnifiedSellerService {
       for (const listing of listingsArray) {
         try {
           const transformResult = transformBackendListingToUnified(listing, this.transformationOptions);
-          
+
           // Fill in seller information
           transformResult.data.sellerId = walletAddress;
           transformResult.data.sellerWalletAddress = walletAddress;
-          
+
           unifiedListings.push(transformResult.data);
           transformationWarnings.push(...transformResult.warnings);
         } catch (error) {
@@ -308,9 +308,9 @@ export class UnifiedSellerService {
       }
 
       // Cache the result
-      this.listingsCache.set(walletAddress, { 
-        data: unifiedListings, 
-        timestamp: Date.now() 
+      this.listingsCache.set(walletAddress, {
+        data: unifiedListings,
+        timestamp: Date.now()
       });
 
       return unifiedListings;
@@ -325,7 +325,7 @@ export class UnifiedSellerService {
   }
 
   async createListing(
-    walletAddress: string, 
+    walletAddress: string,
     listingData: Partial<UnifiedSellerListing>
   ): Promise<UnifiedSellerListing> {
     try {
@@ -343,7 +343,7 @@ export class UnifiedSellerService {
 
       // Transform response to unified format
       const transformResult = transformSellerListingToUnified(response, this.transformationOptions);
-      
+
       // Fill in seller information
       transformResult.data.sellerId = walletAddress;
       transformResult.data.sellerWalletAddress = walletAddress;
@@ -383,7 +383,7 @@ export class UnifiedSellerService {
 
       // Transform response to unified format
       const transformResult = transformSellerListingToUnified(response, this.transformationOptions);
-      
+
       // Fill in seller information
       transformResult.data.sellerId = walletAddress;
       transformResult.data.sellerWalletAddress = walletAddress;
@@ -441,15 +441,15 @@ export class UnifiedSellerService {
         }
 
         // Cache the result
-        this.dashboardCache.set(walletAddress, { 
-          data: transformResult.data, 
-          timestamp: Date.now() 
+        this.dashboardCache.set(walletAddress, {
+          data: transformResult.data,
+          timestamp: Date.now()
         });
 
         return transformResult.data;
       } catch (transformError) {
         console.error('Dashboard transformation failed, using default:', transformError);
-        
+
         // Return a default dashboard to allow the seller to access the dashboard
         const defaultDashboard: UnifiedSellerDashboard = {
           profile,
@@ -594,9 +594,9 @@ export class UnifiedSellerService {
         };
 
         // Cache the default dashboard
-        this.dashboardCache.set(walletAddress, { 
-          data: defaultDashboard, 
-          timestamp: Date.now() 
+        this.dashboardCache.set(walletAddress, {
+          data: defaultDashboard,
+          timestamp: Date.now()
         });
 
         return defaultDashboard;
@@ -791,7 +791,7 @@ export class UnifiedSellerService {
   async getOnboardingSteps(walletAddress: string): Promise<OnboardingStep[]> {
     try {
       const profile = await this.getProfile(walletAddress);
-      
+
       if (!profile) {
         return this.getDefaultOnboardingSteps();
       }
