@@ -390,7 +390,14 @@ export async function getSigner() {
               }
             }
             
-            throw new Error('Wallet connection failed due to browser extension interference. Please try disabling browser extensions or use a different browser.');
+            // If viem also fails, try direct JSON-RPC
+            console.log('Trying direct JSON-RPC as final fallback...');
+            const directSigner = await getDirectJsonRpcSigner();
+            if (directSigner) {
+              return directSigner;
+            }
+            
+            throw new Error('Wallet connection failed. Please try refreshing the page or using a different browser.');
           }
         }
       }
@@ -420,7 +427,14 @@ export async function getSigner() {
             }
           }
           
-          throw new Error('Wallet connection failed due to browser extension interference. Please try disabling browser extensions or use a different browser.');
+          // If viem also fails, try direct JSON-RPC
+          console.log('Trying direct JSON-RPC as final fallback...');
+          const directSigner = await getDirectJsonRpcSigner();
+          if (directSigner) {
+            return directSigner;
+          }
+          
+          throw new Error('Wallet connection failed. Please try refreshing the page or using a different browser.');
         }
       }
     }
@@ -459,6 +473,206 @@ export async function getAccount() {
     return client?.account || null;
   } catch (error) {
     console.error('Error getting account:', error);
+    return null;
+  }
+}
+
+/**
+ * Get a direct JSON-RPC signer that bypasses ethers.js and viem
+ * This is the ultimate fallback for when all libraries fail due to frozen objects
+ */
+export async function getDirectJsonRpcSigner(): Promise<ethers.Signer | null> {
+  try {
+    if (!hasInjectedProvider()) {
+      return null;
+    }
+
+    const injectedProvider = getInjectedProvider();
+    if (!injectedProvider) {
+      return null;
+    }
+
+    // Get accounts directly
+    const accounts = await injectedProvider.request({ method: 'eth_accounts' }) as string[];
+    if (!accounts || accounts.length === 0) {
+      // Request accounts if not connected
+      const requestedAccounts = await injectedProvider.request({ method: 'eth_requestAccounts' }) as string[];
+      if (!requestedAccounts || requestedAccounts.length === 0) {
+        return null;
+      }
+    }
+
+    const address = accounts[0];
+
+    // Get chain ID
+    const chainId = await injectedProvider.request({ method: 'eth_chainId' }) as string;
+
+    // Create a minimal signer object that implements the ethers.js Signer interface
+    const directSigner: any = {
+      address: address,
+      provider: {
+        getNetwork: async () => ({
+          chainId: parseInt(chainId, 16),
+          name: 'unknown'
+        }),
+        getBalance: async (addr: string) => {
+          const result = await injectedProvider.request({
+            method: 'eth_getBalance',
+            params: [addr, 'latest']
+          });
+          return ethers.toBigInt(result);
+        },
+        getCode: async (addr: string) => {
+          const result = await injectedProvider.request({
+            method: 'eth_getCode',
+            params: [addr, 'latest']
+          });
+          return result;
+        },
+        getStorage: async (addr: string, slot: bigint) => {
+          const result = await injectedProvider.request({
+            method: 'eth_getStorageAt',
+            params: [addr, slot, 'latest']
+          });
+          return result;
+        },
+        call: async (tx: any) => {
+          const result = await injectedProvider.request({
+            method: 'eth_call',
+            params: [tx, 'latest']
+          });
+          return result;
+        },
+        estimateGas: async (tx: any) => {
+          const result = await injectedProvider.request({
+            method: 'eth_estimateGas',
+            params: [tx]
+          });
+          return ethers.toBigInt(result);
+        },
+        broadcastTransaction: async (tx: string) => {
+          const result = await injectedProvider.request({
+            method: 'eth_sendRawTransaction',
+            params: [tx]
+          });
+          return result;
+        },
+        getTransaction: async (hash: string) => {
+          const result = await injectedProvider.request({
+            method: 'eth_getTransactionByHash',
+            params: [hash]
+          });
+          return result;
+        },
+        getTransactionReceipt: async (hash: string) => {
+          const result = await injectedProvider.request({
+            method: 'eth_getTransactionReceipt',
+            params: [hash]
+          });
+          return result;
+        },
+        getBlock: async (blockTag: string | number) => {
+          const result = await injectedProvider.request({
+            method: 'eth_getBlockByNumber',
+            params: [blockTag, false]
+          });
+          return result;
+        },
+        getFeeData: async () => {
+          const [gasPrice, maxFeePerGas, maxPriorityFeePerGas] = await injectedProvider.request({
+            method: 'eth_feeHistory',
+            params: [4, 'latest', []]
+          });
+          
+          return {
+            gasPrice: gasPrice ? ethers.toBigInt(gasPrice[0]) : undefined,
+            maxFeePerGas: maxFeePerGas ? ethers.toBigInt(maxFeePerGas[0]) : undefined,
+            maxPriorityFeePerGas: maxPriorityFeePerGas ? ethers.toBigInt(maxPriorityFeePerGas[0]) : undefined
+          };
+        }
+      },
+      getAddress: () => address,
+      connect: async (provider: any) => directSigner,
+      signMessage: async (message: string | Uint8Array) => {
+        const msg = typeof message === 'string' ? message : ethers.toUtf8String(message);
+        const result = await injectedProvider.request({
+          method: 'personal_sign',
+          params: [msg, address]
+        });
+        return result;
+      },
+      signTransaction: async (tx: any) => {
+        const result = await injectedProvider.request({
+          method: 'eth_signTransaction',
+          params: [tx]
+        });
+        return result;
+      },
+      sendTransaction: async (tx: any) => {
+        // Try to send transaction
+        const hash = await injectedProvider.request({
+          method: 'eth_sendTransaction',
+          params: [tx]
+        });
+        
+        // Wait for confirmation
+        let receipt = null;
+        let attempts = 0;
+        const maxAttempts = 60; // Wait up to 60 seconds
+        
+        while (!receipt && attempts < maxAttempts) {
+          receipt = await injectedProvider.request({
+            method: 'eth_getTransactionReceipt',
+            params: [hash]
+          });
+          
+          if (!receipt) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            attempts++;
+          }
+        }
+        
+        if (!receipt) {
+          throw new Error('Transaction confirmation timeout');
+        }
+        
+        return {
+          hash: receipt.hash,
+          blockNumber: parseInt(receipt.blockNumber, 16),
+          blockHash: receipt.blockHash,
+          from: receipt.from,
+          to: receipt.to,
+          gasUsed: ethers.toBigInt(receipt.gasUsed),
+          logs: receipt.logs,
+          wait: async () => {
+            // Already waited, return receipt
+            return {
+              hash: receipt.hash,
+              blockNumber: parseInt(receipt.blockNumber, 16),
+              blockHash: receipt.blockHash,
+              from: receipt.from,
+              to: receipt.to,
+              gasUsed: ethers.toBigInt(receipt.gasUsed),
+              logs: receipt.logs,
+              status: parseInt(receipt.status, 16) === 1 ? 1 : 0,
+              confirmations: 1
+            };
+          }
+        };
+      },
+      signTypedData: async (domain: any, types: any, value: any) => {
+        const result = await injectedProvider.request({
+          method: 'eth_signTypedData_v4',
+          params: [address, JSON.stringify({ domain, types, value })]
+        });
+        return result;
+      }
+    };
+
+    console.log('Successfully created direct JSON-RPC signer with address:', address);
+    return directSigner;
+  } catch (error) {
+    console.error('Error creating direct JSON-RPC signer:', error);
     return null;
   }
 }
