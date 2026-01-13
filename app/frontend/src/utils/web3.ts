@@ -327,6 +327,14 @@ export async function getProvider() {
  */
 export async function getSigner() {
   try {
+    // Check if LastPass is likely causing issues
+    if (typeof window !== 'undefined' && (window as any).chrome) {
+      const lastPassDetected = document.querySelectorAll('[data-lp-version]').length > 0;
+      if (lastPassDetected) {
+        console.warn('LastPass extension detected. This may cause wallet connection issues. Please disable LastPass for this site or use a different browser.');
+      }
+    }
+
     // Try direct injected provider (window.ethereum) first
     if (hasInjectedProvider()) {
       const injectedProvider = getInjectedProvider();
@@ -334,6 +342,10 @@ export async function getSigner() {
         try {
           // Wrap provider to avoid read-only property errors
           const wrappedProvider = wrapProvider(injectedProvider);
+
+          // Try to get accounts first to test if the provider works
+          const accounts = await wrappedProvider.request({ method: 'eth_accounts' });
+          console.log('Got accounts:', accounts);
 
           // Create a BrowserProvider with the wrapped provider
           // Use "any" network to avoid strict detection
@@ -356,8 +368,13 @@ export async function getSigner() {
             console.warn('Could not get address from signer:', addressError);
             return null;
           }
-        } catch (e) {
+        } catch (e: any) {
           console.warn('Failed to create signer from injected provider:', e);
+          
+          // Check if it's a LastPass-related error
+          if (e?.message?.includes('read only property') || e?.message?.includes('requestId')) {
+            throw new Error('Wallet connection failed due to browser extension interference (likely LastPass). Please disable LastPass for this site or use a different browser to enable wallet features.');
+          }
         }
       }
     }
@@ -371,8 +388,13 @@ export async function getSigner() {
         const address = await signer.getAddress();
         console.log('Last resort signer created with address:', address);
         return signer;
-      } catch (e) {
+      } catch (e: any) {
         console.warn('Last resort signer creation failed:', e);
+        
+        // Check if it's a LastPass-related error
+        if (e?.message?.includes('read only property') || e?.message?.includes('requestId')) {
+          throw new Error('Wallet connection failed due to browser extension interference (likely LastPass). Please disable LastPass for this site or use a different browser to enable wallet features.');
+        }
       }
     }
 
@@ -380,6 +402,12 @@ export async function getSigner() {
     return null;
   } catch (error) {
     console.error('Error getting signer:', error);
+    
+    // Re-throw LastPass-related errors with clearer message
+    if (error instanceof Error && (error.message.includes('read only property') || error.message.includes('LastPass'))) {
+      throw error;
+    }
+    
     return null;
   }
 }
