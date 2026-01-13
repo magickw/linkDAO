@@ -129,7 +129,13 @@ export class SellerWorkflowService {
                     serviceCompletedAt: order.serviceCompletedAt,
                     buyerConfirmedAt: order.buyerConfirmedAt,
                     serviceNotes: order.serviceNotes,
-                    serviceType: order.product?.serviceType || order.items?.[0]?.serviceType
+                    serviceType: order.product?.serviceType || order.items?.[0]?.serviceType,
+                    // Financial details
+                    taxAmount: parseFloat(order.taxAmount || '0'),
+                    shippingCost: parseFloat(order.shippingCost || '0'),
+                    platformFee: parseFloat(order.platformFee || '0'),
+                    taxBreakdown: order.taxBreakdown || [],
+                    netRevenue: (parseFloat(order.amount) || parseFloat(order.total) || 0) - (parseFloat(order.platformFee || '0'))
                 };
             };
 

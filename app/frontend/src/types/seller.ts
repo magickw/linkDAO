@@ -271,6 +271,12 @@ export interface SellerOrder {
     nftAmount?: number;
     nftDeposited?: boolean;
     nftEscrowStatus?: 'created' | 'funds_locked' | 'nft_deposited' | 'ready_for_release' | 'completed' | 'disputed' | 'cancelled';
+    // Financial Details
+    taxAmount?: number;
+    shippingCost?: number;
+    platformFee?: number;
+    taxBreakdown?: any[];
+    netRevenue?: number;
 }
 
 export interface SellerListing {

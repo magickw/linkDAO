@@ -618,6 +618,52 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
                                 </div>
                             </div>
 
+                            {/* Financial Breakdown */}
+                            <div className="mb-4 p-3 bg-gray-800/50 rounded-lg border border-gray-700/50">
+                                <h4 className="text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
+                                    <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Financial Breakdown
+                                </h4>
+                                <div className="space-y-1 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-400">Subtotal</span>
+                                        <span className="text-white">
+                                            ${(
+                                                order.totalAmount -
+                                                (order.taxAmount || 0) -
+                                                (order.shippingCost || 0)
+                                            ).toFixed(2)}
+                                        </span>
+                                    </div>
+                                    {(order.shippingCost || 0) > 0 && (
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Shipping</span>
+                                            <span className="text-white">${order.shippingCost?.toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {(order.taxAmount || 0) > 0 && (
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Tax</span>
+                                            <span className="text-white">${order.taxAmount?.toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {(order.platformFee || 0) > 0 && (
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Platform Fee (deducted)</span>
+                                            <span className="text-red-300">-${order.platformFee?.toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between pt-2 mt-2 border-t border-gray-700 font-bold">
+                                        <span className="text-gray-300">Net Earnings</span>
+                                        <span className="text-green-400">
+                                            ${(order.netRevenue || (order.totalAmount - (order.platformFee || 0))).toFixed(2)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Show delivery type badge */}
                             <div className="mb-4 flex flex-wrap gap-2">
                                 {isNFTOrder(order) ? (

@@ -5,6 +5,7 @@ import { HybridPaymentOrchestrator } from './hybridPaymentOrchestrator';
 import { ProductListingService } from './listingService';
 import { sellerService } from './sellerService';
 import { ShippingService } from './shippingService';
+import { taxCalculationService } from './taxCalculationService';
 
 export interface OrderCreationRequest {
   listingId: string;
@@ -100,6 +101,7 @@ export class OrderCreationService {
     this.shippingService = new ShippingService();
   }
 
+
   /**
    * Create a comprehensive order with full validation and processing
    */
@@ -131,7 +133,14 @@ export class OrderCreationService {
         request.buyerAddress,
         listing.sellerId, // sellerId
         orderTotals.total.toString(),
-        'USDC' // paymentToken
+        'USDC', // paymentToken
+        undefined, // escrowId
+        undefined, // variantId
+        undefined, // orderId
+        orderTotals.tax.toString(),
+        orderTotals.shippingCost.toString(),
+        orderTotals.platformFee.toString(),
+        orderTotals.taxBreakdown
       );
 
       // 6. Send notifications
@@ -220,16 +229,43 @@ export class OrderCreationService {
    * Calculate order totals including shipping and taxes
    */
   private async calculateOrderTotals(listing: any, quantity: number, shippingAddress: any) {
-    const subtotal = parseFloat(listing.price || '0') * quantity;
-    const shippingCost = 5.99; // Fixed shipping cost for now
-    const tax = subtotal * 0.08; // 8% tax
-    const total = subtotal + shippingCost + tax;
+    const price = parseFloat(listing.price || '0');
+    const subtotal = price * quantity;
+    const shippingCost = 5.99; // Fixed shipping cost for now, logic can be enhanced later
+
+    // Calculate Platform Fee (e.g. 2.5%)
+    const platformFeeRate = 0.025;
+    const platformFee = subtotal * platformFeeRate;
+
+    // Use TaxCalculationService
+    const taxResult = await taxCalculationService.calculateTax(
+      [{
+        id: listing.id,
+        name: listing.title,
+        price: price,
+        quantity: quantity,
+        isDigital: listing.itemType === 'digital',
+        isTaxExempt: false
+      }],
+      {
+        country: shippingAddress.country,
+        state: shippingAddress.state,
+        city: shippingAddress.city,
+        postalCode: shippingAddress.postalCode,
+        line1: shippingAddress.addressLine1
+      },
+      shippingCost
+    );
+
+    const total = subtotal + shippingCost + taxResult.taxAmount + platformFee;
 
     return {
       subtotal,
       shippingCost,
-      tax,
-      total
+      tax: taxResult.taxAmount,
+      platformFee,
+      total,
+      taxBreakdown: taxResult.taxBreakdown
     };
   }
 

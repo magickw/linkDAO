@@ -8,7 +8,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, RefreshCon
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { OptimizedFlatList, Skeleton } from '../../src/components';
+import { OptimizedFlatList } from '../../src/components/OptimizedFlatList';
+import { Skeleton } from '../../src/components/Skeleton';
 import { communitiesService } from '../../src/services';
 import { useCommunitiesStore } from '../../src/store';
 

@@ -285,7 +285,8 @@ export async function getProvider() {
     }
 
     // Fallback to configured chain RPC
-    const chainId = envChainId ? parseInt(envChainId, 10) : 1;
+    // Default to Sepolia (11155111) if not specified, as most dev/staging happens there
+    const chainId = envChainId ? parseInt(envChainId, 10) : 11155111;
     let rpcUrl = getChainRpcUrl(chainId);
 
     if (!rpcUrl) {
@@ -313,8 +314,8 @@ export async function getProvider() {
   // Last-resort: use a simple JsonRpcProvider with staticNetwork
   console.log('Using fallback provider');
   try {
-    const network = ethers.Network.from(1);
-    const provider = new ethers.JsonRpcProvider('https://eth.llamarpc.com', network, {
+    const network = ethers.Network.from(11155111);
+    const provider = new ethers.JsonRpcProvider('https://ethereum-sepolia-rpc.publicnode.com', network, {
       staticNetwork: network,
       polling: false
     });

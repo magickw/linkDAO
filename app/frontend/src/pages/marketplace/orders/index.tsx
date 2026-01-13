@@ -70,6 +70,9 @@ interface Order {
     };
     serviceCompletedAt?: Date;
     actualDelivery?: Date;
+    taxAmount?: number;
+    shippingCost?: number;
+    platformFee?: number;
 }
 
 interface OrderItem {
@@ -226,7 +229,10 @@ export default function OrdersPage() {
                 seller: order.seller,
                 buyer: order.buyer,
                 serviceCompletedAt: order.serviceCompletedAt ? new Date(order.serviceCompletedAt) : undefined,
-                actualDelivery: order.actualDelivery ? new Date(order.actualDelivery) : undefined
+                actualDelivery: order.actualDelivery ? new Date(order.actualDelivery) : undefined,
+                taxAmount: typeof order.taxAmount === 'number' ? order.taxAmount : parseFloat(order.taxAmount) || 0,
+                shippingCost: typeof order.shippingCost === 'number' ? order.shippingCost : parseFloat(order.shippingCost) || 0,
+                platformFee: typeof order.platformFee === 'number' ? order.platformFee : parseFloat(order.platformFee) || 0
             }));
             setOrders(sanitizedOrders);
         } catch (error) {
@@ -610,11 +616,9 @@ function OrderDetailsModal({ order, onClose, onCancelOrder, canCancel, isCancell
     // Calculate subtotal from items
     const subtotal = (order.items || []).reduce((sum, item) => sum + (item.total || item.price * (item.quantity || 1)), 0);
 
-    // Shipping is $0 for digital-only orders
-    const shipping = isDigitalOnly ? 0 : (order.total - subtotal) * 0.5; // Approximate shipping
-
-    // Calculate tax (remaining amount after shipping)
-    const tax = order.total - subtotal - shipping;
+    // Use stored values if available, otherwise fallback (though stored values SHOULD be 0 if not set)
+    const shipping = order.shippingCost !== undefined ? order.shippingCost : (isDigitalOnly ? 0 : (order.total - subtotal) * 0.5);
+    const tax = order.taxAmount !== undefined ? order.taxAmount : (order.total - subtotal - shipping);
 
     // Handle invoice download
     const handleDownloadInvoice = () => {
@@ -922,12 +926,18 @@ function OrderDetailsModal({ order, onClose, onCancelOrder, canCancel, isCancell
                             </div>
                             <div className="flex justify-between text-white/80">
                                 <span>Shipping{isDigitalOnly ? ' (Digital Delivery)' : ''}</span>
-                                <span>{isDigitalOnly ? 'Free' : `$${shipping.toFixed(2)}`}</span>
+                                <span>{isDigitalOnly && !shipping ? 'Free' : `$${shipping.toFixed(2)}`}</span>
                             </div>
                             <div className="flex justify-between text-white/80">
                                 <span>Tax</span>
                                 <span>${Math.max(0, tax).toFixed(2)}</span>
                             </div>
+                            {order.platformFee && order.platformFee > 0 && (
+                                <div className="flex justify-between text-white/80">
+                                    <span>Platform Fee</span>
+                                    <span>${order.platformFee.toFixed(2)}</span>
+                                </div>
+                            )}
                             <div className="pt-2 border-t border-white/10 flex justify-between text-xl font-bold text-white">
                                 <span>Total</span>
                                 <span>${(order.total || 0).toFixed(2)}</span>

@@ -1291,6 +1291,11 @@ export const orders = pgTable("orders", {
   metadata: jsonb("metadata"), // Additional metadata as JSONB
   stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
   stripeTransferGroup: varchar("stripe_transfer_group", { length: 255 }),
+  // Financial Details
+  taxAmount: numeric("tax_amount", { precision: 20, scale: 8 }).default('0'),
+  shippingCost: numeric("shipping_cost", { precision: 20, scale: 8 }).default('0'),
+  platformFee: numeric("platform_fee", { precision: 20, scale: 8 }).default('0'),
+  taxBreakdown: jsonb("tax_breakdown").default('[]'),
   // New lifecycle fields
   cancellationRequestedAt: timestamp("cancellation_requested_at"),
   cancellationReason: text("cancellation_reason"),
@@ -4748,6 +4753,12 @@ export const purchases = pgTable("purchases", {
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+
+  // Financial Details
+  taxAmount: numeric("tax_amount", { precision: 20, scale: 8 }).default('0'),
+  shippingCost: numeric("shipping_cost", { precision: 20, scale: 8 }).default('0'),
+  platformFee: numeric("platform_fee", { precision: 20, scale: 8 }).default('0'),
+  taxBreakdown: jsonb("tax_breakdown").default('[]'),
 }, (t) => ({
   buyerIdx: index("idx_purchases_buyer_id").on(t.buyerId),
   sellerIdx: index("idx_purchases_seller_id").on(t.sellerId),

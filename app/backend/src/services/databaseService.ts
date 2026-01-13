@@ -965,7 +965,8 @@ export class DatabaseService {
   }
 
   async createOrder(listingId: string, buyerId: string, sellerId: string, amount: string,
-    paymentToken: string, escrowId?: string, variantId?: string, orderId?: string) {
+    paymentToken: string, escrowId?: string, variantId?: string, orderId?: string,
+    taxAmount: string = '0', shippingCost: string = '0', platformFee: string = '0', taxBreakdown: any[] = []) {
     try {
       return await this.db.transaction(async (tx: any) => {
         // 1a. Handle variant inventory if variant is specified
@@ -1041,29 +1042,10 @@ export class DatabaseService {
             throw new Error('Insufficient inventory');
           }
 
-          // Create inventory hold record for legacy listings
-          // TODO: Re-enable when inventory table is added to schema
-          /* await tx.insert(schema.inventory).values({
-            productId: listingId,
-            inventory: 1,
-            heldBy: buyerId,
-            orderId: null, // Will be updated after order creation
-            holdType: 'order_pending',
-            expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minute timeout
-            status: 'active',
-            metadata: JSON.stringify({
-              sellerId,
-              amount,
-              paymentToken,
-              source: 'legacy_listing'
-            })
-          }); */
-
           // Decrement legacy listing
           await tx.update(schema.listings)
             .set({
               inventory: sql`${schema.listings.inventory} - 1`
-              // inventory: sql`${schema.listings.inventory} + 1`  // TODO: Add field to schema
             })
             .where(eq(schema.listings.id, listingId));
         } else {
@@ -1106,7 +1088,11 @@ export class DatabaseService {
           paymentToken,
           escrowId: escrowId || null,
           status: 'pending',
-          createdAt: new Date()
+          createdAt: new Date(),
+          taxAmount,
+          shippingCost,
+          platformFee,
+          taxBreakdown: JSON.stringify(taxBreakdown)
         };
 
         // Use provided orderId if available and is valid UUID, otherwise let DB generate it
