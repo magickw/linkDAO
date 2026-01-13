@@ -4,11 +4,11 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { usePostsStore } from '../../src/store';
+import { usePostsStore, useAuthStore } from '../../src/store';
 import { postsService } from '../../src/services';
 
 export default function FeedScreen() {
@@ -20,6 +20,7 @@ export default function FeedScreen() {
   const setLoading = usePostsStore((state) => state.setLoading);
   const setError = usePostsStore((state) => state.setError);
   const updatePost = usePostsStore((state) => state.updatePost);
+  const clearStorage = useAuthStore((state) => state.clearStorage);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -85,6 +86,24 @@ export default function FeedScreen() {
         likes: post.likes,
       });
     }
+  };
+
+  const handleClearStorage = () => {
+    Alert.alert(
+      'Clear Storage',
+      'This will clear all stored authentication data and redirect you to login. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: () => {
+            clearStorage();
+            router.replace('/auth');
+          },
+        },
+      ]
+    );
   };
 
   const formatTime = (timestamp: string) => {
@@ -212,6 +231,12 @@ export default function FeedScreen() {
             <Text style={styles.emptySubtext}>Be the first to share something!</Text>
           </View>
         )}
+
+        {/* Debug - Clear Storage */}
+        <TouchableOpacity style={styles.debugButton} onPress={handleClearStorage}>
+          <Ionicons name="refresh-outline" size={16} color="#9ca3af" />
+          <Text style={styles.debugButtonText}>Reset to Login (Debug)</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -372,5 +397,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9ca3af',
     fontStyle: 'italic',
+  },
+  debugButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    marginBottom: 32,
+    padding: 12,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    marginHorizontal: 16,
+  },
+  debugButtonText: {
+    fontSize: 12,
+    color: '#9ca3af',
+    marginLeft: 8,
   },
 });

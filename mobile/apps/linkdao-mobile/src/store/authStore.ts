@@ -4,7 +4,8 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthUser } from '@linkdao/shared';
 
 interface AuthState {
@@ -20,6 +21,7 @@ interface AuthState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   logout: () => void;
+  clearStorage: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -36,9 +38,15 @@ export const useAuthStore = create<AuthState>()(
       setLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
       logout: () => set({ user: null, token: null, isAuthenticated: false, error: null }),
+      clearStorage: () => {
+        set({ user: null, token: null, isAuthenticated: false, error: null, isLoading: false });
+        // Clear the persisted storage
+        useAuthStore.persist.clearStorage();
+      },
     }),
     {
       name: 'linkdao-auth-storage',
+      storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({ user: state.user, token: state.token, isAuthenticated: state.isAuthenticated }),
     }
   )

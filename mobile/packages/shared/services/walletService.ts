@@ -8,7 +8,191 @@ import { mainnet, sepolia, base, baseSepolia, polygon, arbitrum } from 'viem/cha
 import { cryptoPriceService } from './cryptoPriceService';
 import { Config } from '../constants/config';
 
-// ... (Token interface and other constants)
+export interface TokenBalance {
+  symbol: string;
+  name: string;
+  address: string;
+  balance: string;
+  balanceFormatted: string;
+  decimals: number;
+  valueUSD: number;
+  change24h: number;
+  priceUSD: number;
+  isNative: boolean;
+}
+
+export interface Transaction {
+  id: string;
+  hash: string;
+  type: 'send' | 'receive' | 'swap' | 'contract_interaction';
+  amount: string;
+  token: {
+    symbol: string;
+    address?: string;
+  };
+  valueUSD: string;
+  from: string;
+  to: string;
+  status: 'pending' | 'confirmed' | 'failed';
+  timestamp: string;
+  blockNumber?: number;
+  gasUsed?: string;
+  gasFee?: string;
+}
+
+export interface PortfolioSummary {
+  totalValueUSD: number;
+  change24h: number;
+  change24hPercent: number;
+  totalTokens: number;
+  lastUpdated: string;
+}
+
+export interface WalletData {
+  address: string;
+  portfolio: PortfolioSummary;
+  tokens: TokenBalance[];
+  transactions: Transaction[];
+  isLoading: boolean;
+  error: string | null;
+}
+
+// Rate limiting queue for RPC calls
+class RPCCallQueue {
+  private queue: Array<() => Promise<any>> = [];
+  private pendingPromises = 0;
+  private readonly maxConcurrent = 3; // Limit concurrent RPC calls
+  private readonly minDelay = 200; // Minimum delay between calls (ms)
+
+  async add<T>(call: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      this.queue.push(async () => {
+        try {
+          const result = await call();
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      });
+      this.process();
+    });
+  }
+
+  private async process(): Promise<void> {
+    if (this.pendingPromises >= this.maxConcurrent || this.queue.length === 0) {
+      return;
+    }
+
+    const call = this.queue.shift();
+    if (!call) return;
+
+    this.pendingPromises++;
+    
+    // Add delay to prevent rate limiting
+    await new Promise(resolve => setTimeout(resolve, this.minDelay));
+
+    try {
+      await call();
+    } catch (error) {
+      console.error('RPC call failed:', error);
+    } finally {
+      this.pendingPromises--;
+      this.process(); // Process next call
+    }
+  }
+}
+
+const rpcCallQueue = new RPCCallQueue();
+
+// Common ERC20 tokens to check (addresses for different chains)
+const getTokensForChain = (chainId: number) => {
+  switch (chainId) {
+    case 8453: // Base Mainnet
+      return [
+        {
+          symbol: 'USDC',
+          name: 'USD Coin',
+          address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as Address,
+          decimals: 6
+        },
+        {
+          symbol: 'WETH',
+          name: 'Wrapped Ether',
+          address: '0x4200000000000000000000000000000000000006' as Address,
+          decimals: 18
+        },
+        {
+          symbol: 'LINK',
+          name: 'Chainlink',
+          address: '0x88Fb150BDc53A65fe94Dea0c9BA0a6dAf8C6e196' as Address,
+          decimals: 18
+        }
+      ];
+    case 137: // Polygon
+      return [
+        {
+          symbol: 'USDC',
+          name: 'USD Coin (Polygon)',
+          address: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174' as Address,
+          decimals: 6
+        },
+        {
+          symbol: 'USDT',
+          name: 'Tether USD (Polygon)',
+          address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F' as Address,
+          decimals: 6
+        }
+      ];
+    case 1: // Ethereum Mainnet
+    default:
+      return [
+        {
+          symbol: 'USDC',
+          name: 'USD Coin',
+          address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' as Address,
+          decimals: 6
+        },
+        {
+          symbol: 'USDT',
+          name: 'Tether USD',
+          address: '0xdAC17F958D2ee523a2206206994597C13D831ec7' as Address,
+          decimals: 6
+        }
+      ];
+  }
+};
+
+// ERC20 ABI for balance checking
+const ERC20_ABI = [
+  {
+    constant: true,
+    inputs: [{ name: '_owner', type: 'address' }],
+    name: 'balanceOf',
+    outputs: [{ name: 'balance', type: 'uint256' }],
+    type: 'function'
+  },
+  {
+    constant: true,
+    inputs: [],
+    name: 'decimals',
+    outputs: [{ name: '', type: 'uint8' }],
+    type: 'function'
+  },
+  {
+    constant: true,
+    inputs: [],
+    name: 'symbol',
+    outputs: [{ name: '', type: 'string' }],
+    type: 'function'
+  },
+  {
+    constant: true,
+    inputs: [],
+    name: 'name',
+    outputs: [{ name: '', type: 'string' }],
+    type: 'function'
+  }
+] as const;
 
 export class WalletService {
   private publicClient: PublicClient;
@@ -59,7 +243,44 @@ export class WalletService {
     }) as any;
   }
 
-  // ... (getWalletData methods)
+  /**
+   * Get comprehensive wallet data including portfolio and transactions
+   */
+  async getWalletData(address: Address): Promise<WalletData> {
+    try {
+      const [tokens, transactions] = await Promise.all([
+        this.getTokenBalances(address),
+        this.getTransactionHistory(address)
+      ]);
+
+      const portfolio = this.calculatePortfolioSummary(tokens);
+
+      return {
+        address,
+        portfolio,
+        tokens,
+        transactions,
+        isLoading: false,
+        error: null
+      };
+    } catch (error) {
+      console.error('Error fetching wallet data:', error);
+      return {
+        address,
+        portfolio: {
+          totalValueUSD: 0,
+          change24h: 0,
+          change24hPercent: 0,
+          totalTokens: 0,
+          lastUpdated: new Date().toISOString()
+        },
+        tokens: [],
+        transactions: [],
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch wallet data'
+      };
+    }
+  }
 
   /**
    * Discover all ERC-20 tokens held by an address using block explorer API
@@ -113,10 +334,6 @@ export class WalletService {
     // Fallback to per-chain API
     try {
       if (!config.apiKey) {
-        // Only log warning in development mode to reduce console noise in production
-        if (process.env.NODE_ENV === 'development') {
-          console.debug(`Token discovery: No API key for chain ${chainId}, using known tokens only`);
-        }
         return [];
       }
 
@@ -229,10 +446,8 @@ export class WalletService {
           } as TokenBalance;
         } catch (tokenError) {
           console.warn(`Failed to fetch balance for ${token.symbol}:`, tokenError);
-          // Don't throw error, just return null to filter out later
           return null;
         }
-        return null;
       });
 
       // Wait for all token balance requests with concurrency control
@@ -260,15 +475,13 @@ export class WalletService {
    */
   async getTransactionHistory(address: Address, limit: number = 20): Promise<Transaction[]> {
     try {
-      // Map chain IDs to their explorer APIs
-      // Note: Basescan has been deprecated - use Etherscan V2 API for Base chains
       const explorerConfigs: Record<number, { baseUrl: string; apiKey?: string; nativeSymbol: string }> = {
-        1: { baseUrl: 'https://api.etherscan.io/api', apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY, nativeSymbol: 'ETH' },
-        8453: { baseUrl: 'https://api.etherscan.io/v2/api', apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY, nativeSymbol: 'ETH' }, // Base uses Etherscan V2
-        84532: { baseUrl: 'https://api.etherscan.io/v2/api', apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY, nativeSymbol: 'ETH' }, // Base Sepolia uses Etherscan V2
-        137: { baseUrl: 'https://api.polygonscan.com/api', apiKey: process.env.NEXT_PUBLIC_POLYGONSCAN_API_KEY, nativeSymbol: 'MATIC' },
-        42161: { baseUrl: 'https://api.arbiscan.io/api', apiKey: process.env.NEXT_PUBLIC_ARBISCAN_API_KEY, nativeSymbol: 'ETH' },
-        11155111: { baseUrl: 'https://api-sepolia.etherscan.io/api', apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY, nativeSymbol: 'ETH' },
+        1: { baseUrl: 'https://api.etherscan.io/api', apiKey: Config.etherscanApiKey, nativeSymbol: 'ETH' },
+        8453: { baseUrl: 'https://api.etherscan.io/v2/api', apiKey: Config.etherscanApiKey, nativeSymbol: 'ETH' },
+        84532: { baseUrl: 'https://api.etherscan.io/v2/api', apiKey: Config.etherscanApiKey, nativeSymbol: 'ETH' },
+        137: { baseUrl: 'https://api.polygonscan.com/api', apiKey: Config.polygonscanApiKey, nativeSymbol: 'MATIC' },
+        42161: { baseUrl: 'https://api.arbiscan.io/api', apiKey: Config.arbiscanApiKey, nativeSymbol: 'ETH' },
+        11155111: { baseUrl: 'https://api-sepolia.etherscan.io/api', apiKey: Config.etherscanApiKey, nativeSymbol: 'ETH' },
       };
 
       const config = explorerConfigs[this.chainId];
@@ -279,11 +492,10 @@ export class WalletService {
 
       const transactions: Transaction[] = [];
 
-      // Try unified v2 endpoint first if API key is available (for chains that support it)
-      const unifiedKey = process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY;
-      if (unifiedKey && [8453, 84532, 42161, 137].includes(this.chainId)) { // Base, Base Sepolia, Arbitrum, Polygon
+      // Try unified v2 endpoint first if API key is available
+      const unifiedKey = Config.etherscanApiKey;
+      if (unifiedKey && [8453, 84532, 42161, 137].includes(this.chainId)) {
         try {
-          // Fetch native token transactions
           const nativeUrl = new URL('https://api.etherscan.io/v2/api');
           nativeUrl.searchParams.set('chainid', String(this.chainId));
           nativeUrl.searchParams.set('module', 'account');
@@ -295,7 +507,6 @@ export class WalletService {
           const nativeResponse = await fetch(nativeUrl.toString());
           const nativeData = await nativeResponse.json();
           
-          // Fetch ERC-20 token transactions
           const erc20Url = new URL('https://api.etherscan.io/v2/api');
           erc20Url.searchParams.set('chainid', String(this.chainId));
           erc20Url.searchParams.set('module', 'account');
@@ -307,7 +518,6 @@ export class WalletService {
           const erc20Response = await fetch(erc20Url.toString());
           const erc20Data = await erc20Response.json();
           
-          // Process native transactions
           if (nativeData && nativeData.status === '1' && Array.isArray(nativeData.result)) {
             for (const tx of nativeData.result.slice(0, limit)) {
               const valueWei = BigInt(tx.value || '0');
@@ -320,7 +530,7 @@ export class WalletService {
                 type: isSend ? 'send' : 'receive',
                 amount: amount.toFixed(6),
                 token: { symbol: config.nativeSymbol },
-                valueUSD: '0', // Will be updated with real price data
+                valueUSD: '0',
                 from: tx.from,
                 to: tx.to || (isSend ? tx.to : address),
                 status: Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending',
@@ -332,7 +542,6 @@ export class WalletService {
             }
           }
           
-          // Process ERC-20 transactions
           if (erc20Data && erc20Data.status === '1' && Array.isArray(erc20Data.result)) {
             for (const tx of erc20Data.result.slice(0, limit)) {
               const decimals = Number(tx.tokenDecimal || 18);
@@ -347,7 +556,7 @@ export class WalletService {
                 type: isSend ? 'send' : 'receive',
                 amount: amount.toFixed(6),
                 token: { symbol },
-                valueUSD: '0', // Will be updated with real price data
+                valueUSD: '0',
                 from: tx.from,
                 to: tx.to || (isSend ? tx.to : address),
                 status: Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending',
@@ -361,88 +570,8 @@ export class WalletService {
         } catch (err) {
           console.warn('Unified API transaction fetch failed:', err);
         }
-      } else if (config.apiKey) {
-        // Fallback to per-chain API if unified key is not available
-        try {
-          // Fetch native token transactions
-          const nativeUrl = new URL(config.baseUrl);
-          nativeUrl.searchParams.set('module', 'account');
-          nativeUrl.searchParams.set('action', 'txlist');
-          nativeUrl.searchParams.set('address', address);
-          nativeUrl.searchParams.set('sort', 'desc');
-          nativeUrl.searchParams.set('apikey', config.apiKey);
-          
-          const nativeResponse = await fetch(nativeUrl.toString());
-          const nativeData = await nativeResponse.json();
-          
-          // Fetch ERC-20 token transactions
-          const erc20Url = new URL(config.baseUrl);
-          erc20Url.searchParams.set('module', 'account');
-          erc20Url.searchParams.set('action', 'tokentx');
-          erc20Url.searchParams.set('address', address);
-          erc20Url.searchParams.set('sort', 'desc');
-          erc20Url.searchParams.set('apikey', config.apiKey);
-          
-          const erc20Response = await fetch(erc20Url.toString());
-          const erc20Data = await erc20Response.json();
-          
-          // Process native transactions
-          if (nativeData && nativeData.status === '1' && Array.isArray(nativeData.result)) {
-            for (const tx of nativeData.result.slice(0, limit)) {
-              const valueWei = BigInt(tx.value || '0');
-              const amount = Number(valueWei) / 1e18;
-              const isSend = (tx.from || '').toLowerCase() === address.toLowerCase();
-              
-              transactions.push({
-                id: `${this.chainId}_${tx.hash}`,
-                hash: tx.hash,
-                type: isSend ? 'send' : 'receive',
-                amount: amount.toFixed(6),
-                token: { symbol: config.nativeSymbol },
-                valueUSD: '0', // Will be updated with real price data
-                from: tx.from,
-                to: tx.to || (isSend ? tx.to : address),
-                status: Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending',
-                timestamp: new Date((Number(tx.timeStamp) || 0) * 1000).toISOString(),
-                blockNumber: Number(tx.blockNumber),
-                gasUsed: tx.gasUsed,
-                gasFee: tx.gasPrice ? (Number(tx.gasPrice) * Number(tx.gasUsed) / 1e18).toFixed(8) : '0'
-              });
-            }
-          }
-          
-          // Process ERC-20 transactions
-          if (erc20Data && erc20Data.status === '1' && Array.isArray(erc20Data.result)) {
-            for (const tx of erc20Data.result.slice(0, limit)) {
-              const decimals = Number(tx.tokenDecimal || 18);
-              const raw = tx.value || '0';
-              const amount = Number(raw) / Math.pow(10, decimals);
-              const isSend = (tx.from || '').toLowerCase() === address.toLowerCase();
-              const symbol = (tx.tokenSymbol || '').toUpperCase();
-              
-              transactions.push({
-                id: `${this.chainId}_${tx.hash}_${tx.contractAddress}`,
-                hash: tx.hash,
-                type: isSend ? 'send' : 'receive',
-                amount: amount.toFixed(6),
-                token: { symbol },
-                valueUSD: '0', // Will be updated with real price data
-                from: tx.from,
-                to: tx.to || (isSend ? tx.to : address),
-                status: Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending',
-                timestamp: new Date((Number(tx.timeStamp) || 0) * 1000).toISOString(),
-                blockNumber: Number(tx.blockNumber),
-                gasUsed: tx.gasUsed,
-                gasFee: tx.gasPrice ? (Number(tx.gasPrice) * Number(tx.gasUsed) / 1e18).toFixed(8) : '0'
-              });
-            }
-          }
-        } catch (err) {
-          console.warn('Explorer API transaction fetch failed:', err);
-        }
       }
 
-      // Sort transactions by timestamp (newest first) and limit to requested amount
       return transactions
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
         .slice(0, limit);
@@ -452,9 +581,6 @@ export class WalletService {
     }
   }
 
-  /**
-   * Calculate portfolio summary from token balances
-   */
   private calculatePortfolioSummary(tokens: TokenBalance[]): PortfolioSummary {
     const totalValueUSD = tokens.reduce((sum, token) => sum + token.valueUSD, 0);
     const weightedChange = tokens.reduce((sum, token) => {
@@ -471,29 +597,19 @@ export class WalletService {
     };
   }
 
-  /**
-   * Get token price using the centralized crypto price service
-   */
   private async getTokenPrice(tokenSymbol: string): Promise<number> {
     try {
-      // Use the centralized crypto price service which has better caching and rate limiting
       const priceData = await cryptoPriceService.getPrice(tokenSymbol);
       return priceData?.current_price || 0;
     } catch (error) {
       console.warn(`Failed to fetch price for ${tokenSymbol}:`, error);
-      
-      // Fallback to cached price if available
       const cached = this.priceCache.get(tokenSymbol);
       return cached?.price || 0;
     }
   }
 
-  /**
-   * Get 24h price change for a token using the centralized crypto price service
-   */
   private async getTokenChange24h(tokenSymbol: string): Promise<number> {
     try {
-      // Use the centralized crypto price service
       const priceData = await cryptoPriceService.getPrice(tokenSymbol);
       return priceData?.price_change_percentage_24h || 0;
     } catch (error) {
@@ -502,9 +618,6 @@ export class WalletService {
     }
   }
 
-  /**
-   * Format token balance based on decimals
-   */
   private formatTokenBalance(balance: bigint, decimals: number): string {
     const divisor = BigInt(10 ** decimals);
     const wholePart = balance / divisor;
@@ -515,18 +628,11 @@ export class WalletService {
     }
     
     const fractionalStr = fractionalPart.toString().padStart(decimals, '0');
-    // Keep all decimal places for maximum precision
     return `${wholePart.toString()}.${fractionalStr}`;
   }
 
-  /**
-   * Resolve ENS name to address
-   */
   async resolveEnsName(name: string): Promise<string | null> {
     if (this.chainId !== 1 && this.chainId !== 11155111) {
-      // ENS is primarily on Mainnet and Sepolia
-      // However, for other chains, we could use a Mainnet provider if we had one handy.
-      // For now, restrict to supported chains to avoid errors.
       return null;
     }
 
@@ -541,9 +647,6 @@ export class WalletService {
     }
   }
 
-  /**
-   * Lookup ENS name from address
-   */
   async lookupEnsAddress(address: Address): Promise<string | null> {
     if (this.chainId !== 1 && this.chainId !== 11155111) {
       return null;
@@ -560,14 +663,10 @@ export class WalletService {
     }
   }
 
-  /**
-   * Get portfolio performance data (mock implementation for now)
-   */
   async getPortfolioPerformance(address: Address, timeframe: '1d' | '1w' | '1m' | '1y' = '1d'): Promise<{
     labels: string[];
     values: number[];
   }> {
-    // Mock implementation - in a real app, this would fetch historical data
     const now = new Date();
     const labels: string[] = [];
     const values: number[] = [];
@@ -585,7 +684,6 @@ export class WalletService {
         labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
       }
       
-      // Generate mock portfolio value with some randomness
       const baseValue = 5000 + Math.sin(i * 0.1) * 500;
       const randomness = (Math.random() - 0.5) * 200;
       values.push(Math.max(0, baseValue + randomness));

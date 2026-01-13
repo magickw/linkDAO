@@ -3,12 +3,35 @@
  * User profile and settings
  */
 
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useAuthStore } from '../../src/store';
+import { authService } from '@linkdao/shared';
 
 export default function ProfileScreen() {
+  const { user, logout } = useAuthStore();
+
+  const handleLogout = async () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await authService.logout();
+            logout();
+            router.replace('/auth');
+          },
+        },
+      ]
+    );
+  };
+
   const menuItems = [
     { id: 1, icon: 'person-outline', label: 'Edit Profile', route: '/profile/edit' },
     { id: 2, icon: 'wallet-outline', label: 'Wallet', route: '/wallet' },
@@ -17,6 +40,10 @@ export default function ProfileScreen() {
     { id: 5, icon: 'help-circle-outline', label: 'Help & Support', route: '/profile/help' },
     { id: 6, icon: 'settings-outline', label: 'Settings', route: '/profile/settings' },
   ];
+
+  const displayName = user?.displayName || user?.handle || 'User';
+  const handleName = user?.handle ? `@${user.handle}` : '@user';
+  const walletAddress = user?.address || '0x0000...0000';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -32,11 +59,13 @@ export default function ProfileScreen() {
         <View style={styles.profileHeader}>
           <View style={styles.profileAvatar} />
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>Alex Johnson</Text>
-            <Text style={styles.profileHandle}>@alexjohnson</Text>
+            <Text style={styles.profileName}>{displayName}</Text>
+            <Text style={styles.profileHandle}>{handleName}</Text>
             <View style={styles.walletInfo}>
               <Ionicons name="wallet-outline" size={16} color="#6b7280" />
-              <Text style={styles.walletAddress}>0x1234...5678</Text>
+              <Text style={styles.walletAddress}>
+                {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+              </Text>
             </View>
           </View>
           <TouchableOpacity style={styles.editButton}>
@@ -87,7 +116,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color="#ef4444" />
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>

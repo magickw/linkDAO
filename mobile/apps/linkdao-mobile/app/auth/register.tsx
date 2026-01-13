@@ -1,17 +1,20 @@
 /**
- * Login Screen
- * User authentication with wallet signature
+ * Register Screen
+ * User registration with wallet signature
  */
 
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useAuthStore } from '../../src/store';
-import { authService } from '@linkdao/shared';
+import { authService, AuthUser } from '@linkdao/shared';
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
+  const [handle, setHandle] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
   const [walletAddress, setWalletAddress] = useState('');
   const [signature, setSignature] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,11 +22,15 @@ export default function LoginScreen() {
   const setUser = useAuthStore((state) => state.setUser);
   const setToken = useAuthStore((state) => state.setToken);
   const setLoadingStore = useAuthStore((state) => state.setLoading);
-  const clearStorage = useAuthStore((state) => state.clearStorage);
 
-  const handleLogin = async () => {
+  const handleRegister = async () => {
     if (!walletAddress || !signature) {
       Alert.alert('Error', 'Please connect your wallet and sign the message');
+      return;
+    }
+
+    if (!handle) {
+      Alert.alert('Error', 'Please enter a username');
       return;
     }
 
@@ -31,10 +38,12 @@ export default function LoginScreen() {
     setLoadingStore(true);
 
     try {
-      const response = await authService.login({
+      const response = await authService.register({
         address: walletAddress,
         signature,
-        message: 'Sign in to LinkDAO',
+        handle,
+        displayName: displayName || handle,
+        email,
       });
 
       if (response.success && response.data) {
@@ -42,10 +51,10 @@ export default function LoginScreen() {
         setUser(response.data.user);
         router.replace('/(tabs)');
       } else {
-        Alert.alert('Login Failed', response.error || 'Invalid credentials');
+        Alert.alert('Registration Failed', response.error || 'Unable to create account');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to login. Please try again.');
+      Alert.alert('Error', 'Failed to register. Please try again.');
     } finally {
       setLoading(false);
       setLoadingStore(false);
@@ -60,28 +69,8 @@ export default function LoginScreen() {
     // This would integrate with a wallet provider like WalletConnect or native wallet
     // For now, simulate signature generation
     const mockSignature = `0x${Math.random().toString(16).substr(2, 64)}`;
-    const mockAddress = `0x${Math.random().toString(16).substr(2, 40)}`;
     setSignature(mockSignature);
-    setWalletAddress(mockAddress);
     Alert.alert('Success', 'Signature generated successfully');
-  };
-
-  const handleClearStorage = () => {
-    Alert.alert(
-      'Clear Storage',
-      'This will clear all stored authentication data. Are you sure?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: () => {
-            clearStorage();
-            Alert.alert('Success', 'Storage cleared. Please refresh the app.');
-          },
-        },
-      ]
-    );
   };
 
   return (
@@ -94,64 +83,107 @@ export default function LoginScreen() {
           {/* Logo */}
           <View style={styles.logoContainer}>
             <View style={styles.logo}>
-              <Ionicons name="wallet" size={48} color="#3b82f6" />
+              <Ionicons name="person-add" size={48} color="#3b82f6" />
             </View>
-            <Text style={styles.appName}>LinkDAO</Text>
-            <Text style={styles.tagline}>Decentralized Social Platform</Text>
+            <Text style={styles.appName}>Create Account</Text>
+            <Text style={styles.tagline}>Join the LinkDAO community</Text>
           </View>
 
-          {/* Login Form */}
+          {/* Register Form */}
           <View style={styles.formContainer}>
-            <Text style={styles.formTitle}>Welcome Back</Text>
-            <Text style={styles.formSubtitle}>Sign in with your wallet to continue</Text>
+            <Text style={styles.formTitle}>Sign Up</Text>
+            <Text style={styles.formSubtitle}>Create your account to get started</Text>
 
             {/* Wallet Address */}
             <View style={styles.inputContainer}>
               <Ionicons name="wallet-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
-              <Text style={styles.input}>
-                {walletAddress || 'Not connected'}
-              </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Wallet Address"
+                placeholderTextColor="#9ca3af"
+                value={walletAddress}
+                onChangeText={setWalletAddress}
+                autoCapitalize="none"
+              />
               <TouchableOpacity onPress={handleWalletConnect}>
                 <Ionicons name="link" size={20} color="#3b82f6" />
               </TouchableOpacity>
             </View>
 
+            {/* Username/Handle */}
+            <View style={styles.inputContainer}>
+              <Ionicons name="at" size={20} color="#9ca3af" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Username"
+                placeholderTextColor="#9ca3af"
+                value={handle}
+                onChangeText={setHandle}
+                autoCapitalize="none"
+              />
+            </View>
+
+            {/* Display Name */}
+            <View style={styles.inputContainer}>
+              <Ionicons name="person-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Display Name (optional)"
+                placeholderTextColor="#9ca3af"
+                value={displayName}
+                onChangeText={setDisplayName}
+              />
+            </View>
+
+            {/* Email */}
+            <View style={styles.inputContainer}>
+              <Ionicons name="mail-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Email (optional)"
+                placeholderTextColor="#9ca3af"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
             {/* Signature */}
             <View style={styles.inputContainer}>
               <Ionicons name="key-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
-              <Text style={styles.input}>
-                {signature ? `${signature.slice(0, 10)}...${signature.slice(-6)}` : 'No signature'}
-              </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Signature"
+                placeholderTextColor="#9ca3af"
+                value={signature}
+                onChangeText={setSignature}
+                autoCapitalize="none"
+              />
               <TouchableOpacity onPress={generateSignature}>
                 <Ionicons name="create-outline" size={20} color="#3b82f6" />
               </TouchableOpacity>
             </View>
 
-            {/* Login Button */}
+            {/* Register Button */}
             <TouchableOpacity
-              style={[styles.loginButton, loading && styles.loginButtonDisabled]}
-              onPress={handleLogin}
+              style={[styles.registerButton, loading && styles.registerButtonDisabled]}
+              onPress={handleRegister}
               disabled={loading}
             >
-              <Text style={styles.loginButtonText}>
-                {loading ? 'Signing In...' : 'Sign In with Wallet'}
+              <Text style={styles.registerButtonText}>
+                {loading ? 'Creating Account...' : 'Create Account'}
               </Text>
             </TouchableOpacity>
 
-            {/* Register Link */}
-            <View style={styles.registerContainer}>
-              <Text style={styles.registerText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => router.push('/auth/register')}>
-                <Text style={styles.registerLink}>Sign Up</Text>
+            {/* Login Link */}
+            <View style={styles.loginContainer}>
+              <Text style={styles.loginText}>Already have an account? </Text>
+              <TouchableOpacity onPress={() => router.push('/auth')}>
+                <Text style={styles.loginLink}>Sign In</Text>
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* Debug - Clear Storage */}
-          <TouchableOpacity style={styles.debugButton} onPress={handleClearStorage}>
-            <Ionicons name="trash-outline" size={16} color="#9ca3af" />
-            <Text style={styles.debugButtonText}>Clear Storage (Debug)</Text>
-          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -227,7 +259,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1f2937',
   },
-  loginButton: {
+  registerButton: {
     backgroundColor: '#3b82f6',
     paddingVertical: 16,
     borderRadius: 12,
@@ -235,37 +267,25 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 24,
   },
-  loginButtonDisabled: {
+  registerButtonDisabled: {
     opacity: 0.6,
   },
-  loginButtonText: {
+  registerButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
   },
-  registerContainer: {
+  loginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
   },
-  registerText: {
+  loginText: {
     fontSize: 14,
     color: '#6b7280',
   },
-  registerLink: {
+  loginLink: {
     fontSize: 14,
     color: '#3b82f6',
     fontWeight: '600',
-  },
-  debugButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 16,
-    padding: 12,
-  },
-  debugButtonText: {
-    fontSize: 12,
-    color: '#9ca3af',
-    marginLeft: 8,
   },
 });

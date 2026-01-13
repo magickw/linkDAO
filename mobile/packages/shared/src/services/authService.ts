@@ -4,7 +4,7 @@
  */
 
 import { apiClient } from './apiClient';
-import { ENV_CONFIG } from '../constants/environment';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface AuthUser {
   id: string;
@@ -43,6 +43,8 @@ export interface RegisterData {
 class AuthService {
   private currentUser: AuthUser | null = null;
   private token: string | null = null;
+  private readonly TOKEN_KEY = 'linkdao_token';
+  private readonly USER_KEY = 'linkdao_user';
 
   /**
    * Login with wallet signature
@@ -177,18 +179,11 @@ class AuthService {
    * Persist session (platform-specific)
    */
   private async persistSession(token: string, user: AuthUser): Promise<void> {
-    // This will be implemented differently for web vs mobile
-    // Web: localStorage
-    // Mobile: AsyncStorage
-    // For now, just check if we're in a browser environment
-    const isBrowser = typeof window !== 'undefined' && window.localStorage !== undefined;
-    if (isBrowser) {
-      try {
-        window.localStorage.setItem('linkdao_token', token);
-        window.localStorage.setItem('linkdao_user', JSON.stringify(user));
-      } catch (error) {
-        console.error('Failed to persist session:', error);
-      }
+    try {
+      await AsyncStorage.setItem(this.TOKEN_KEY, token);
+      await AsyncStorage.setItem(this.USER_KEY, JSON.stringify(user));
+    } catch (error) {
+      console.error('Failed to persist session:', error);
     }
   }
 
@@ -196,14 +191,11 @@ class AuthService {
    * Clear session (platform-specific)
    */
   private async clearSession(): Promise<void> {
-    const isBrowser = typeof window !== 'undefined' && window.localStorage !== undefined;
-    if (isBrowser) {
-      try {
-        window.localStorage.removeItem('linkdao_token');
-        window.localStorage.removeItem('linkdao_user');
-      } catch (error) {
-        console.error('Failed to clear session:', error);
-      }
+    try {
+      await AsyncStorage.removeItem(this.TOKEN_KEY);
+      await AsyncStorage.removeItem(this.USER_KEY);
+    } catch (error) {
+      console.error('Failed to clear session:', error);
     }
   }
 
@@ -211,30 +203,27 @@ class AuthService {
    * Restore session from storage (platform-specific)
    */
   async restoreSession(): Promise<AuthResponse> {
-    const isBrowser = typeof window !== 'undefined' && window.localStorage !== undefined;
-    if (isBrowser) {
-      try {
-        const token = window.localStorage.getItem('linkdao_token');
-        const userStr = window.localStorage.getItem('linkdao_user');
+    try {
+      const token = await AsyncStorage.getItem(this.TOKEN_KEY);
+      const userStr = await AsyncStorage.getItem(this.USER_KEY);
 
-        if (token && userStr) {
-          const user = JSON.parse(userStr) as AuthUser;
-          this.token = token;
-          this.currentUser = user;
-          apiClient.setToken(token);
+      if (token && userStr) {
+        const user = JSON.parse(userStr) as AuthUser;
+        this.token = token;
+        this.currentUser = user;
+        apiClient.setToken(token);
 
-          // Verify session is still valid
-          const verifyResponse = await apiClient.get<{ valid: boolean }>('/api/auth/verify');
-          if (verifyResponse.success && verifyResponse.data?.valid) {
-            return { success: true, token, user };
-          } else {
-            // Session invalid, clear it
-            await this.logout();
-          }
+        // Verify session is still valid
+        const verifyResponse = await apiClient.get<{ valid: boolean }>('/api/auth/verify');
+        if (verifyResponse.success && verifyResponse.data?.valid) {
+          return { success: true, token, user };
+        } else {
+          // Session invalid, clear it
+          await this.logout();
         }
-      } catch (error) {
-        console.error('Failed to restore session:', error);
       }
+    } catch (error) {
+      console.error('Failed to restore session:', error);
     }
 
     return { success: false, error: 'No valid session' };

@@ -490,14 +490,64 @@ export class MessagingService {
       const participants = JSON.parse(conversation.participants as string);
       const otherParticipants = participants.filter((p: string) => p !== fromAddress);
 
-      // TODO: Implement messaging notifications
-      // for (const participant of otherParticipants) {
-      //   await notificationService.notifyNewMessage(
-      //     participant,
-      //     fromAddress,
-      //     newMessage[0]
-      //   );
-      // }
+      // Send notifications to other participants
+      for (const participant of otherParticipants) {
+        try {
+          // Check for mentions in the message
+          const mentionRegex = /@([a-zA-Z0-9_]+)/g;
+          const mentions = messageContent.match(mentionRegex);
+          const isMentioned = mentions && mentions.some(m => {
+            const mentionedAddress = m.substring(1).toLowerCase();
+            return mentionedAddress === participant.toLowerCase();
+          });
+
+          // Create notification data
+          const notificationData = {
+            userAddress: participant,
+            type: isMentioned ? 'mention' : 'message',
+            title: isMentioned ? 'You were mentioned in a message' : 'New message',
+            message: messageContent.length > 100 
+              ? messageContent.substring(0, 100) + '...' 
+              : messageContent,
+            data: {
+              conversationId,
+              messageId: newMessage[0].id,
+              senderAddress: fromAddress,
+              isMentioned
+            },
+            priority: 'medium' as const
+          };
+
+          // Store notification in database
+          await db.insert(userNotifications).values({
+            ...notificationData,
+            isRead: false,
+            createdAt: new Date()
+          });
+
+          // Send real-time notification via WebSocket
+          const wsService = getWebSocketService();
+          if (wsService) {
+            wsService.sendToUser(participant, 'notification:new', {
+              id: `msg_${newMessage[0].id}`,
+              type: isMentioned ? 'mention' : 'message',
+              category: isMentioned ? 'comment_mention' : 'direct_message',
+              title: notificationData.title,
+              message: notificationData.message,
+              data: notificationData.data,
+              fromAddress: fromAddress,
+              priority: 'medium',
+              isRead: false,
+              createdAt: new Date()
+            });
+          }
+
+          safeLogger.info(`Message notification sent to ${participant} for conversation ${conversationId}`);
+        } catch (notifyError) {
+          safeLogger.error(`Failed to send message notification to ${participant}:`, notifyError);
+          // Don't fail the message send if notification fails
+        }
+      }
 
       return {
         success: true,

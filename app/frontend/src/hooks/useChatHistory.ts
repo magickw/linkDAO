@@ -85,6 +85,124 @@ export const useChatHistory = (): UseChatHistoryReturn => {
     };
   }, []);
 
+  // Subscribe to messaging events for real-time updates
+  useEffect(() => {
+    const unsubscribers: (() => void)[] = [];
+
+    // Handle message sent events (includes temp -> real ID replacement)
+    unsubscribers.push(
+      unifiedMessagingService.on('message_sent', ({ message, conversationId, tempId }) => {
+        if (conversationId === currentConversationId) {
+          setMessages(prev => {
+            // If there's a tempId, replace the optimistic message with the real one
+            if (tempId) {
+              return prev.map(msg =>
+                msg.id === tempId ? message : msg
+              );
+            }
+            // Otherwise, add the new message (avoid duplicates)
+            const exists = prev.some(m => m.id === message.id);
+            if (!exists) {
+              return [message, ...prev];
+            }
+            return prev;
+          });
+        }
+      })
+    );
+
+    // Handle message received events (from WebSocket)
+    unsubscribers.push(
+      unifiedMessagingService.on('message_received', ({ message, conversationId }) => {
+        if (conversationId === currentConversationId) {
+          setMessages(prev => {
+            // Avoid duplicates - check if message already exists
+            const exists = prev.some(m => m.id === message.id);
+            if (!exists) {
+              // Check if this is a message from another user (not the current user)
+              const isFromOtherUser = message.fromAddress?.toLowerCase() !== user?.address?.toLowerCase();
+
+              // If it's from another user, trigger a notification
+              if (isFromOtherUser) {
+                // Check for mentions
+                const mentionRegex = /@([a-zA-Z0-9_]+)/g;
+                const mentions = message.content.match(mentionRegex);
+                const isMentioned = mentions && mentions.some(m => {
+                  const mentionedAddress = m.substring(1).toLowerCase();
+                  return mentionedAddress === user?.address?.toLowerCase();
+                });
+
+                // Create and trigger notification
+                const notificationData = {
+                  id: `msg_${message.id}`,
+                  type: isMentioned ? 'mention' : 'message',
+                  category: isMentioned ? 'comment_mention' : 'direct_message',
+                  title: isMentioned ? 'You were mentioned in a message' : 'New message',
+                  message: message.content.length > 100 
+                    ? message.content.substring(0, 100) + '...' 
+                    : message.content,
+                  data: {
+                    conversationId,
+                    messageId: message.id,
+                    senderAddress: message.fromAddress,
+                    isMentioned
+                  },
+                  fromAddress: message.fromAddress,
+                  priority: 'medium' as const,
+                  isRead: false,
+                  createdAt: new Date(message.timestamp)
+                };
+
+                // Emit a custom event for the NotificationSystem to handle
+                window.dispatchEvent(new CustomEvent('message_notification', {
+                  detail: notificationData
+                }));
+              }
+
+              return [message, ...prev];
+            }
+            // If it exists and has a temp ID, replace it with the real message
+            const tempMessageIndex = prev.findIndex(m =>
+              m.id.startsWith('temp_') &&
+              m.content === message.content &&
+              m.fromAddress === message.fromAddress
+            );
+            if (tempMessageIndex !== -1) {
+              const updated = [...prev];
+              updated[tempMessageIndex] = message;
+              return updated;
+            }
+            return prev;
+          });
+        }
+      })
+    );
+
+    // Handle message deleted events
+    unsubscribers.push(
+      unifiedMessagingService.on('message_deleted', ({ messageId, conversationId }) => {
+        if (conversationId === currentConversationId) {
+          setMessages(prev => prev.filter(msg => msg.id !== messageId));
+        }
+      })
+    );
+
+    // Handle message edited events
+    unsubscribers.push(
+      unifiedMessagingService.on('message_edited', ({ message, conversationId }) => {
+        if (conversationId === currentConversationId) {
+          setMessages(prev =>
+            prev.map(msg => (msg.id === message.id ? message : msg))
+          );
+        }
+      })
+    );
+
+    return () => {
+      unsubscribers.forEach(unsub => unsub());
+    };
+  }, [currentConversationId]);
+
   const loadConversations = useCallback(async (append = false) => {
     if (append) {
       await fetchNextPage();
@@ -139,10 +257,9 @@ export const useChatHistory = (): UseChatHistoryReturn => {
 
   const sendMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => Promise<void> = useCallback(async (message) => {
     try {
-      // Use the new unified service
+      // Use the new unified service - it handles optimistic updates internally
+      // and emits 'message_sent' events which we handle via the useEffect above
       const newMessage = await unifiedMessagingService.sendMessage(message);
-
-      setMessages(prev => [newMessage, ...prev]);
 
       queryClient.setQueryData(['conversations', user?.address], (oldData: any) => {
         if (!oldData) return oldData;

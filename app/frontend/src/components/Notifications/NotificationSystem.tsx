@@ -89,10 +89,21 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({ classNam
       on('notification:read', handleNotificationRead);
       on('notification:bulk_read', handleBulkNotificationRead);
 
+      // Listen for message notifications from messaging system
+      on('message_notification', handleMessageNotification);
+
+      // Listen for custom message_notification events from useChatHistory
+      const handleCustomMessageNotification = (event: CustomEvent) => {
+        handleMessageNotification(event.detail);
+      };
+      window.addEventListener('message_notification', handleCustomMessageNotification as EventListener);
+
       return () => {
         off('notification:new', handleNewNotification);
         off('notification:read', handleNotificationRead);
         off('notification:bulk_read', handleBulkNotificationRead);
+        off('message_notification', handleMessageNotification);
+        window.removeEventListener('message_notification', handleCustomMessageNotification as EventListener);
       };
     }
   }, [isConnected, address, on, off]);
@@ -159,6 +170,42 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({ classNam
   };
 
   const handleNewNotification = useCallback((notification: AppNotification) => {
+    // Add to notifications list
+    setNotifications(prev => [notification, ...prev]);
+    setUnreadCount(prev => prev + 1);
+
+    // Check if notification should be shown based on preferences
+    if (preferences && shouldShowNotification(notification, preferences)) {
+      // Show toast notification
+      showToastNotification(notification);
+
+      // Show desktop notification if enabled and permitted
+      if (preferences.enableDesktop && Notification.permission === 'granted') {
+        showDesktopNotification(notification);
+      }
+
+      // Play sound if enabled
+      if (preferences.enableSound && shouldPlaySound(notification, preferences)) {
+        playNotificationSound(notification.priority);
+      }
+    }
+  }, [preferences]);
+
+  const handleMessageNotification = useCallback((data: any) => {
+    // Convert message notification to AppNotification format
+    const notification: AppNotification = {
+      id: data.id || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      type: data.type || 'message',
+      category: data.category || 'direct_message',
+      title: data.title || 'New message',
+      message: data.message || '',
+      data: data.data || {},
+      fromAddress: data.senderAddress || data.fromAddress,
+      priority: data.priority || 'medium',
+      isRead: false,
+      createdAt: new Date(data.timestamp || Date.now())
+    };
+
     // Add to notifications list
     setNotifications(prev => [notification, ...prev]);
     setUnreadCount(prev => prev + 1);

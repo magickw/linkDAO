@@ -1,6 +1,6 @@
 import 'react-native-reanimated';
 import 'react-native-get-random-values';
-import '@expo/standard-web-crypto';
+import 'expo-standard-web-crypto';
 import 'react-native-gesture-handler';
 import React, { useEffect } from 'react';
 import AppNavigator from './src/navigation/AppNavigator';

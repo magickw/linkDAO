@@ -1,3 +1,9 @@
+/**
+ * Local Wallet Transaction Service
+ * Handles secure transaction signing and sending for the local non-custodial wallet.
+ * Implements strict security checks including phishing detection, gas validation, and simulation.
+ */
+
 import { createWalletClient, http, Hex, Hash, TransactionRequest, Address, createPublicClient } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { mainnet, sepolia, base, baseSepolia, polygon, arbitrum } from 'viem/chains';
@@ -6,6 +12,7 @@ import { validateTransaction, validateGasParameters } from '../utils/enhancedTra
 import { detectPhishing } from '../utils/phishingDetector';
 import { simulateTransaction } from './transactionSimulator';
 import { walletService } from './walletService';
+import { Config } from '../constants/config';
 
 export interface SendTransactionParams {
   to: string;
@@ -148,7 +155,7 @@ export class LocalWalletTransactionService {
             maxPriorityFeePerGas,
             chain,
             type: 'eip1559',
-            kzg: undefined // Explicitly undefined to satisfy strict types if needed, though type='eip1559' usually suffices
+            kzg: undefined 
           } as any);
 
           return { success: true, hash, warnings };
@@ -160,14 +167,6 @@ export class LocalWalletTransactionService {
       return { success: false, error: error.message || 'Transaction failed', warnings };
     }
   }
-
-import { Config } from '../constants/config';
-
-// ... (other imports and interfaces)
-
-export class LocalWalletTransactionService {
-  
-  // ... (sendTransaction method)
 
   private getChain(chainId: number) {
     switch (chainId) {
@@ -192,7 +191,6 @@ export class LocalWalletTransactionService {
       default: return Config.mainnetRpcUrl;
     }
   }
-}
 }
 
 export const localWalletTransactionService = new LocalWalletTransactionService();
