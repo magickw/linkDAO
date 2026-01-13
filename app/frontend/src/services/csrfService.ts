@@ -235,12 +235,6 @@ export class CSRFService {
       this.refreshToken();
     }
   }
-      }
-    } catch (error) {
-      console.error('Failed to load CSRF token:', error);
-      this.refreshToken();
-    }
-  }
 
   /**
    * Clear token
