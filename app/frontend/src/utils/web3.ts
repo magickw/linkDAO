@@ -262,34 +262,31 @@ export async function getProvider() {
         // Continue to fallback
       }
     }
-    console.warn('Invalid NEXT_PUBLIC_RPC_URL or NEXT_PUBLIC_RPC_CHAIN_ID, falling back to configured chain RPC', e);
-  }
+
+    // Fallback to configured chain RPC
+    const chainId = envChainId ? parseInt(envChainId, 10) : 1;
+    let rpcUrl = getChainRpcUrl(chainId);
+
+    if (!rpcUrl) {
+      console.warn(`No RPC URL found for chain ID ${chainId}, using fallback public RPC.`);
+      rpcUrl = 'https://ethereum-sepolia-rpc.publicnode.com';
     }
 
-try {
-  const chainId = envChainId ? parseInt(envChainId, 10) : 1;
-  let rpcUrl = getChainRpcUrl(chainId);
+    if (rpcUrl) {
+      // Use staticNetwork: true to prevent network detection issues
+      const provider = new ethers.JsonRpcProvider(rpcUrl, chainId, {
+        staticNetwork: true,
+        polling: false // Disable polling to reduce noise
+      });
 
-  if (!rpcUrl) {
-    console.warn(`No RPC URL found for chain ID ${chainId}, using fallback public RPC.`);
-    rpcUrl = 'https://ethereum-sepolia-rpc.publicnode.com';
+      // Don't wait for network detection - just return the provider
+      cachedProvider = provider;
+      providerCreationAttempts = 0;
+      return provider;
+    }
+  } catch (e) {
+    console.warn('Error getting provider:', e);
   }
-
-  if (rpcUrl) {
-    // Use staticNetwork: true to prevent network detection issues
-    const provider = new ethers.JsonRpcProvider(rpcUrl, chainId, {
-      staticNetwork: true,
-      polling: false // Disable polling to reduce noise
-    });
-
-    // Don't wait for network detection - just return the provider
-    cachedProvider = provider;
-    providerCreationAttempts = 0;
-    return provider;
-  }
-} catch (e) {
-  console.warn('Error getting chain RPC URL:', e);
-}
 
 // Last-resort: use a simple JsonRpcProvider with staticNetwork
 console.log('Using fallback provider');
