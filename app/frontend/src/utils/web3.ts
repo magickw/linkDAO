@@ -310,49 +310,10 @@ export async function getProvider() {
  */
 export async function getSigner() {
   try {
-    // Try wagmi wallet client first with better error handling
-    try {
-      // Check if config is properly initialized before using it
-      if (!config || !config.connectors || config.connectors.length === 0) {
-        console.warn('Wagmi config not properly initialized, skipping getWalletClient');
-      } else {
-        // getWalletClient can throw if connectors are in a bad state
-        const client = await getWalletClient(config).catch(e => {
-          console.warn('Wagmi getWalletClient failed:', e);
-          return null;
-        });
+    // Skip wagmi getWalletClient entirely to avoid connector.getChainId errors
+    // Go directly to injected provider
 
-        if (client && client.account) {
-          // Check if the client has the necessary methods before accessing them
-          const injectedProvider = (client as any).transport?.provider;
-          if (injectedProvider) {
-            try {
-              // Wrap provider to avoid read-only property errors
-              const wrappedProvider = wrapProvider(injectedProvider);
-              // Use "any" network to avoid strict detection
-              const provider = new ethers.BrowserProvider(wrappedProvider as any, "any");
-
-              const signer = await provider.getSigner();
-              // Verify that the signer has the necessary methods
-              try {
-                const address = await signer.getAddress();
-                console.log('Successfully got signer from wagmi client with address:', address);
-                return signer;
-              } catch (addressError) {
-                console.warn('Could not get address from signer:', addressError);
-                // Continue to fallback
-              }
-            } catch (e) {
-              console.warn('Failed to create signer from wagmi client:', e);
-            }
-          }
-        }
-      }
-    } catch (walletClientError) {
-      console.warn('Error getting wallet client, falling back to injected provider:', walletClientError);
-    }
-
-    // Fallback to direct injected provider (window.ethereum) with better error handling
+    // Try direct injected provider (window.ethereum) first
     if (hasInjectedProvider()) {
       const injectedProvider = getInjectedProvider();
       if (injectedProvider) {
@@ -385,13 +346,13 @@ export async function getSigner() {
       }
     }
 
-    // Last resort: try to create signer from window.ethereum directly
+    // Fallback: try to create signer from window.ethereum directly
     if (typeof window !== 'undefined' && (window as any).ethereum) {
       try {
         // Wrap provider to avoid read-only property errors
         const wrappedProvider = wrapProvider((window as any).ethereum);
         // Use "any" network here as well
-        const provider = new ethers.BrowserProvider(wrappedProvider, "any");
+        const provider = new ethers.BrowserProvider(wrappedProvider as any, "any");
         const signer = await provider.getSigner();
         const address = await signer.getAddress();
         console.log('Last resort signer created with address:', address);
@@ -401,6 +362,7 @@ export async function getSigner() {
       }
     }
 
+    console.error('No signer available');
     return null;
   } catch (error) {
     console.error('Error getting signer:', error);
