@@ -6,6 +6,7 @@
 
 import { Contract, ethers } from 'ethers';
 import { contractRegistryService } from '../contractRegistryService';
+import { getProvider } from '../../utils/web3';
 
 // NFT Marketplace ABI (key functions)
 const NFT_MARKETPLACE_ABI = [
@@ -65,9 +66,8 @@ export class NFTMarketplaceService {
     if (!this.contract) {
       const address = await contractRegistryService.getContractAddress('NFTMarketplace');
       // Create a read-only provider for view functions
-      const provider = new ethers.JsonRpcProvider('https://sepolia.drpc.org', 11155111, {
-        staticNetwork: true
-      });
+      const provider = await getProvider();
+      if (!provider) throw new Error('Failed to get provider');
       this.contract = new Contract(address, NFT_MARKETPLACE_ABI, provider);
     }
 
@@ -358,9 +358,8 @@ export class NFTMarketplaceService {
    */
   async checkNFTOwnership(nftContract: string, tokenId: string, user: string): Promise<boolean> {
     try {
-      const provider = new ethers.JsonRpcProvider('https://sepolia.drpc.org', undefined, {
-        staticNetwork: true
-      });
+      const provider = await getProvider();
+      if (!provider) return false;
       const nftContractInstance = new Contract(
         nftContract,
         ['function ownerOf(uint256 tokenId) external view returns (address)'],
@@ -379,9 +378,8 @@ export class NFTMarketplaceService {
    */
   async getNFTMetadata(nftContract: string, tokenId: string): Promise<any> {
     try {
-      const provider = new ethers.JsonRpcProvider('https://sepolia.drpc.org', undefined, {
-        staticNetwork: true
-      });
+      const provider = await getProvider();
+      if (!provider) return null;
       const nftContractInstance = new Contract(
         nftContract,
         ['function tokenURI(uint256 tokenId) external view returns (string)'],

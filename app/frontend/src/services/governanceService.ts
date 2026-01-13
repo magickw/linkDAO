@@ -11,6 +11,7 @@ import { ethers } from 'ethers';
 import { ENV_CONFIG } from '@/config/environment';
 import { enhancedAuthService } from './enhancedAuthService';
 import { csrfService } from './csrfService';
+import { getProvider } from '../utils/web3';
 
 // Safe JSON helper to avoid crashing on non-JSON API responses
 async function safeJson(response: Response): Promise<any | null> {
@@ -91,16 +92,17 @@ export class GovernanceService {
         this.provider = provider;
         this.contract = new ethers.Contract(this.governanceAddress, GOVERNANCE_ABI, provider);
       } else {
-        // Fallback to JSON-RPC provider
-        const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://sepolia.drpc.org';
+        // Fallback to JSON-RPC provider using centralized getProvider
         try {
-          this.provider = new ethers.JsonRpcProvider(rpcUrl, 11155111, {
-            staticNetwork: true
-          });
+          const provider = await getProvider();
+          this.provider = provider;
         } catch (error) {
           console.warn('Failed to initialize governance provider:', error);
           this.provider = null;
-        } this.contract = new ethers.Contract(this.governanceAddress, GOVERNANCE_ABI, this.provider);
+        } 
+        if (this.provider) {
+          this.contract = new ethers.Contract(this.governanceAddress, GOVERNANCE_ABI, this.provider);
+        }
       }
     } catch (error) {
       console.error('Failed to initialize governance contract:', error);

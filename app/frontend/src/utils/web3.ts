@@ -267,10 +267,14 @@ export async function getProvider() {
       try {
         const chainId = envChainId ? parseInt(envChainId, 10) : 1;
         console.log('Creating JsonRpcProvider with RPC:', envRpc, 'Chain ID:', chainId);
-        const provider = new ethers.JsonRpcProvider(envRpc, chainId, {
-          staticNetwork: true, // Prevent network detection issues
-          polling: false // Disable polling to reduce noise
+        
+        // Correct way to initialize JsonRpcProvider in ethers v6 with static network
+        const network = ethers.Network.from(chainId);
+        const provider = new ethers.JsonRpcProvider(envRpc, network, {
+          staticNetwork: network, 
+          polling: false 
         });
+        
         cachedProvider = provider;
         providerCreationAttempts = 0;
         return provider;
@@ -290,10 +294,11 @@ export async function getProvider() {
     }
 
     if (rpcUrl) {
-      // Use staticNetwork: true to prevent network detection issues
-      const provider = new ethers.JsonRpcProvider(rpcUrl, chainId, {
-        staticNetwork: true,
-        polling: false // Disable polling to reduce noise
+      // Correct way to initialize JsonRpcProvider in ethers v6 with static network
+      const network = ethers.Network.from(chainId);
+      const provider = new ethers.JsonRpcProvider(rpcUrl, network, {
+        staticNetwork: network,
+        polling: false
       });
 
       // Don't wait for network detection - just return the provider
@@ -308,8 +313,9 @@ export async function getProvider() {
   // Last-resort: use a simple JsonRpcProvider with staticNetwork
   console.log('Using fallback provider');
   try {
-    const provider = new ethers.JsonRpcProvider('https://eth.llamarpc.com', 1, {
-      staticNetwork: true,  // Prevent network detection issues
+    const network = ethers.Network.from(1);
+    const provider = new ethers.JsonRpcProvider('https://eth.llamarpc.com', network, {
+      staticNetwork: network,
       polling: false
     });
     cachedProvider = provider;

@@ -179,9 +179,21 @@ export class CommunityWeb3Service {
 
       const receipt = await tx.wait();
 
-      // Extract proposal ID from events
-      const proposalCreatedEvent = receipt.events?.find((e: { event: string; args?: { id?: any }; }) => e.event === 'ProposalCreated');
-      const proposalId = proposalCreatedEvent?.args?.id?.toString() || receipt.hash;
+      // Extract proposal ID from logs (ethers v6)
+      let proposalId = receipt.hash;
+      if (receipt.logs) {
+        for (const log of receipt.logs) {
+          try {
+            const parsedLog = governanceWithSigner.interface.parseLog(log);
+            if (parsedLog && parsedLog.name === 'ProposalCreated') {
+              proposalId = parsedLog.args.id?.toString() || proposalId;
+              break;
+            }
+          } catch (e) {
+            // Ignore logs that can't be parsed by this interface
+          }
+        }
+      }
 
       return proposalId;
     } catch (error) {

@@ -222,7 +222,7 @@ export default function ProfileEditScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>GitHub</Text>
             <View style={styles.inputWithIcon}>
-              <Ionicons name="logo-github" size={20} color="#9 style={styles.inputIcon} />
+              <Ionicons name="logo-github" size={20} color="#9ca3af" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="github.com/username"

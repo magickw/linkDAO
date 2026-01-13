@@ -6,6 +6,7 @@
 
 import { Contract, ethers } from 'ethers';
 import { contractRegistryService } from '../contractRegistryService';
+import { getProvider } from '../../utils/web3';
 
 // Reputation System ABI (key functions)
 const REPUTATION_ABI = [
@@ -57,10 +58,8 @@ export class ReputationService {
     if (!this.contract) {
       const address = await contractRegistryService.getContractAddress('ReputationSystem');
       // Create a read-only provider for view functions
-      // Create a read-only provider for view functions
-      const provider = new ethers.JsonRpcProvider('https://sepolia.drpc.org', 11155111, {
-        staticNetwork: true
-      });
+      const provider = await getProvider();
+      if (!provider) throw new Error('Failed to get provider');
       this.contract = new Contract(address, REPUTATION_ABI, provider);
     }
 
