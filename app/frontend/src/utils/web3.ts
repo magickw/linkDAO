@@ -38,10 +38,10 @@ export function wrapProvider(provider: any): any {
   wrappedProvider._emitted = {};
 
   // Safely copy static properties
-  try { wrappedProvider.isMetaMask = !!provider.isMetaMask; } catch {}
-  try { wrappedProvider.chainId = provider.chainId; } catch {}
-  try { wrappedProvider.networkVersion = provider.networkVersion; } catch {}
-  try { wrappedProvider.selectedAddress = provider.selectedAddress; } catch {}
+  try { wrappedProvider.isMetaMask = !!provider.isMetaMask; } catch { }
+  try { wrappedProvider.chainId = provider.chainId; } catch { }
+  try { wrappedProvider.networkVersion = provider.networkVersion; } catch { }
+  try { wrappedProvider.selectedAddress = provider.selectedAddress; } catch { }
 
   // CRITICAL: Capture the request function via bind() so we never pass
   // the original provider object to ethers.js. The bound function
@@ -186,28 +186,37 @@ export async function getProvider() {
 
   try {
     console.log('Getting provider...');
-    const client = getPublicClient(config);
-    console.log('Public client:', client);
 
-    // Check if client is available before accessing transport
-    if (client) {
-      // If wagmi transport exposes an injected provider, use it.
-      const injectedProvider = (client as any).transport?.provider;
-      console.log('Injected provider:', injectedProvider);
+    // Check if config is properly initialized before using it
+    if (!config || !config.connectors || config.connectors.length === 0) {
+      console.warn('Wagmi config not properly initialized, skipping getPublicClient');
+    } else {
+      const client = getPublicClient(config).catch(e => {
+        console.warn('Wagmi getPublicClient failed:', e);
+        return null;
+      });
+      console.log('Public client:', client);
 
-      if (injectedProvider) {
-        try {
-          // CRITICAL: Wrap the provider to avoid "Cannot assign to read only property" errors
-          const wrappedProvider = wrapProvider(injectedProvider);
-          // Create BrowserProvider with "any" network to prevent detection issues
-          // This is crucial for fixing "JsonRpcProvider failed to detect network" errors
-          const provider = new ethers.BrowserProvider(wrappedProvider as any, "any");
-          console.log('Created BrowserProvider with "any" network');
-          cachedProvider = provider;
-          providerCreationAttempts = 0; // Reset on success
-          return provider;
-        } catch (e) {
-          console.warn('Failed to create provider from wagmi client:', e);
+      // Check if client is available before accessing transport
+      if (client) {
+        // If wagmi transport exposes an injected provider, use it.
+        const injectedProvider = (client as any).transport?.provider;
+        console.log('Injected provider:', injectedProvider);
+
+        if (injectedProvider) {
+          try {
+            // CRITICAL: Wrap the provider to avoid "Cannot assign to read only property" errors
+            const wrappedProvider = wrapProvider(injectedProvider);
+            // Create BrowserProvider with "any" network to prevent detection issues
+            // This is crucial for fixing "JsonRpcProvider failed to detect network" errors
+            const provider = new ethers.BrowserProvider(wrappedProvider as any, "any");
+            console.log('Created BrowserProvider with "any" network');
+            cachedProvider = provider;
+            providerCreationAttempts = 0; // Reset on success
+            return provider;
+          } catch (e) {
+            console.warn('Failed to create provider from wagmi client:', e);
+          }
         }
       }
     }
@@ -242,59 +251,66 @@ export async function getProvider() {
         const chainId = envChainId ? parseInt(envChainId, 10) : 1;
         console.log('Creating JsonRpcProvider with RPC:', envRpc, 'Chain ID:', chainId);
         const provider = new ethers.JsonRpcProvider(envRpc, chainId, {
-          staticNetwork: true  // Prevent network detection issues
+          staticNetwork: true, // Prevent network detection issues
+          polling: false // Disable polling to reduce noise
         });
         cachedProvider = provider;
         providerCreationAttempts = 0;
         return provider;
       } catch (e) {
-        console.warn('Invalid NEXT_PUBLIC_RPC_URL or NEXT_PUBLIC_RPC_CHAIN_ID, falling back to configured chain RPC', e);
+        console.warn('Failed to create env RPC provider (ignoring network detection error):', e);
+        // Continue to fallback
       }
     }
-
-    try {
-      const chainId = envChainId ? parseInt(envChainId, 10) : 1;
-      let rpcUrl = getChainRpcUrl(chainId);
-
-      if (!rpcUrl) {
-        console.warn(`No RPC URL found for chain ID ${chainId}, using fallback public RPC.`);
-        rpcUrl = 'https://ethereum-sepolia-rpc.publicnode.com';
-      }
-
-      if (rpcUrl) {
-        // Use staticNetwork: true to prevent network detection issues
-        const provider = new ethers.JsonRpcProvider(rpcUrl, chainId, {
-          staticNetwork: true
-        });
-
-        // Don't wait for network detection - just return the provider
-        cachedProvider = provider;
-        providerCreationAttempts = 0;
-        return provider;
-      }
-    } catch (e) {
-      console.warn('Error getting chain RPC URL:', e);
-    }
-
-    // Last-resort: use a simple JsonRpcProvider with staticNetwork
-    console.log('Using fallback provider');
-    try {
-      const provider = new ethers.JsonRpcProvider('https://eth.llamarpc.com', 1, {
-        staticNetwork: true  // Prevent network detection issues
-      });
-      cachedProvider = provider;
-      providerCreationAttempts = 0;
-      return provider;
-    } catch (fallbackError) {
-      console.warn('Fallback provider creation failed:', fallbackError);
-      lastProviderError = fallbackError instanceof Error ? fallbackError : new Error('Unknown error');
-      return null;
-    }
-  } catch (error) {
-    console.error('Error getting provider:', error);
-    lastProviderError = error instanceof Error ? error : new Error('Unknown error');
-    return null;
+    console.warn('Invalid NEXT_PUBLIC_RPC_URL or NEXT_PUBLIC_RPC_CHAIN_ID, falling back to configured chain RPC', e);
   }
+    }
+
+try {
+  const chainId = envChainId ? parseInt(envChainId, 10) : 1;
+  let rpcUrl = getChainRpcUrl(chainId);
+
+  if (!rpcUrl) {
+    console.warn(`No RPC URL found for chain ID ${chainId}, using fallback public RPC.`);
+    rpcUrl = 'https://ethereum-sepolia-rpc.publicnode.com';
+  }
+
+  if (rpcUrl) {
+    // Use staticNetwork: true to prevent network detection issues
+    const provider = new ethers.JsonRpcProvider(rpcUrl, chainId, {
+      staticNetwork: true,
+      polling: false // Disable polling to reduce noise
+    });
+
+    // Don't wait for network detection - just return the provider
+    cachedProvider = provider;
+    providerCreationAttempts = 0;
+    return provider;
+  }
+} catch (e) {
+  console.warn('Error getting chain RPC URL:', e);
+}
+
+// Last-resort: use a simple JsonRpcProvider with staticNetwork
+console.log('Using fallback provider');
+try {
+  const provider = new ethers.JsonRpcProvider('https://eth.llamarpc.com', 1, {
+    staticNetwork: true,  // Prevent network detection issues
+    polling: false
+  });
+  cachedProvider = provider;
+  providerCreationAttempts = 0;
+  return provider;
+} catch (fallbackError) {
+  console.warn('Fallback provider creation failed:', fallbackError);
+  lastProviderError = fallbackError instanceof Error ? fallbackError : new Error('Unknown error');
+  return null;
+}
+  } catch (error) {
+  console.error('Error getting provider:', error);
+  lastProviderError = error instanceof Error ? error : new Error('Unknown error');
+  return null;
+}
 }
 
 /**
@@ -405,7 +421,17 @@ export async function getSigner() {
  */
 export async function getAccount() {
   try {
-    const client = await getWalletClient(config);
+    // Check if config is properly initialized before using it
+    if (!config || !config.connectors || config.connectors.length === 0) {
+      console.warn('Wagmi config not properly initialized, skipping getWalletClient');
+      return null;
+    }
+
+    const client = await getWalletClient(config).catch(e => {
+      console.warn('Wagmi getWalletClient failed in getAccount:', e);
+      return null;
+    });
+
     // Check if client is available before accessing account
     return client?.account || null;
   } catch (error) {

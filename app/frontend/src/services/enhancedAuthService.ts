@@ -4,13 +4,28 @@
  * session persistence, CORS handling, and authentication recovery mechanisms
  */
 
-import { signMessage, getAccount } from '@wagmi/core';
+import { signMessage, getAccount as wagmiGetAccount } from '@wagmi/core';
 import { config } from '@/lib/rainbowkit';
 import { ENV_CONFIG } from '@/config/environment';
 import { AuthUser, UserRole } from '@/types/auth';
 import { enhancedRequestManager } from './enhancedRequestManager';
 import { apiCircuitBreaker } from './circuitBreaker';
 import { encrypt, decrypt } from '@/utils/cryptoUtils';
+
+/**
+ * Safe wrapper for wagmi getAccount to prevent connector errors
+ */
+function safeGetAccount() {
+  try {
+    if (!config || !config.connectors || config.connectors.length === 0) {
+      return { isConnected: false, connector: null, address: undefined };
+    }
+    return wagmiGetAccount(config);
+  } catch (error) {
+    console.warn('Error getting account from wagmi:', error);
+    return { isConnected: false, connector: null, address: undefined };
+  }
+}
 
 export interface AuthResponse {
   success: boolean;
@@ -436,7 +451,7 @@ class EnhancedAuthService {
     while (Date.now() - startTime < timeout) {
       if (connector && config) {
         // Verify the connector is actually connected
-        const account = getAccount(config);
+        const account = safeGetAccount();
         if (account.isConnected && account.connector) {
           console.log('✅ Wallet connector is ready');
           return;
@@ -513,11 +528,11 @@ class EnhancedAuthService {
         // Wait for connector to be ready before attempting to sign
         const maxWaitTime = 5000; // 5 seconds max wait per attempt
         const startWait = Date.now();
-        let account = getAccount(config);
+        let account = safeGetAccount();
 
         while ((!account.isConnected || !account.connector) && (Date.now() - startWait < maxWaitTime)) {
           await this.sleep(200);
-          account = getAccount(config);
+          account = safeGetAccount();
         }
 
         // Final check after waiting

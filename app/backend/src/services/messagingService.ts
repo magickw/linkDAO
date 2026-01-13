@@ -430,6 +430,12 @@ export class MessagingService {
   async sendMessage(data: SendMessageData) {
     const { conversationId, fromAddress, content, encryptedContent, encryptionMetadata } = data;
 
+    safeLogger.info(`[MessagingService] sendMessage called for conversation ${conversationId} from ${fromAddress}`);
+
+
+    safeLogger.info(`[MessagingService] sendMessage called for conversation ${conversationId} from ${fromAddress}`);
+
+
     try {
       // Check if user is participant
       const conversation = await this.getConversationDetails({ conversationId, userAddress: fromAddress });
@@ -457,7 +463,8 @@ export class MessagingService {
       const messageContent = sanitizedMessage.content;
 
       // Validate message size (10KB limit)
-      const contentSize = new Blob([messageContent]).size;
+      // Use Buffer.byteLength instead of Blob to ensure compatibility with all Node.js environments
+      const contentSize = Buffer.byteLength(messageContent, 'utf8');
       if (contentSize > 10240) {
         return {
           success: false,
@@ -564,11 +571,13 @@ export class MessagingService {
           encryptionMetadata: encryptionMetadata || null
         }
       };
-    } catch (error) {
+    } catch (error: any) {
       safeLogger.error('Error sending message:', {
         error,
-        params: { conversationId, fromAddress, contentType: data.contentType },
-        stack: error instanceof Error ? error.stack : undefined
+        name: error?.name,
+        message: error?.message,
+        stack: error?.stack,
+        params: { conversationId, fromAddress, contentType: data.contentType }
       });
 
       if (error instanceof Error && error.message.includes('database')) {
@@ -578,7 +587,8 @@ export class MessagingService {
       if (error instanceof Error && error.message.includes('limit')) {
         throw error;
       }
-      throw new Error(`Failed to send message: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Return the exact error details for debugging
+      throw new Error(`Failed to send message: [${error?.name || 'Unknown'}] ${error?.message || 'Unknown error'}`);
     }
   }
 

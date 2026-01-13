@@ -219,6 +219,16 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   useEffect(() => {
     if (!hookConversations) return;
     const mapped: DirectMessageConversation[] = hookConversations.map(c => {
+      // DEBUG: Log participant extraction logic
+      if (Math.random() < 0.05) { // Sample logs to avoid spam
+        console.log('Participant Debug:', {
+          id: c.id,
+          participants: c.participants,
+          myAddress: address,
+          found: c.participants.find((p: any) => p?.toLowerCase() !== address?.toLowerCase())
+        });
+      }
+
       const participantAddress = Array.isArray(c.participants)
         ? (c.participants.find((p: any) => p?.toLowerCase() !== address?.toLowerCase()) || c.participants[0])
         : (c.participants as any);

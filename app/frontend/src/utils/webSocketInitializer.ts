@@ -1,10 +1,25 @@
 import { webSocketManager, initializeWebSocketManager } from '@/services/webSocketManager';
-import { getAccount } from '@wagmi/core';
+import { getAccount as wagmiGetAccount } from '@wagmi/core';
 import { config } from '@/lib/rainbowkit';
 
 // Global flag to prevent multiple initializations
 let isInitializing = false;
 let isInitialized = false;
+
+/**
+ * Safe wrapper for wagmi getAccount to prevent connector errors
+ */
+function safeGetAccount() {
+  try {
+    if (!config || !config.connectors || config.connectors.length === 0) {
+      return { isConnected: false, connector: null, address: undefined };
+    }
+    return wagmiGetAccount(config);
+  } catch (error) {
+    console.warn('Error getting account from wagmi:', error);
+    return { isConnected: false, connector: null, address: undefined };
+  }
+}
 
 /**
  * Initialize WebSocket connections with proper error handling
@@ -32,12 +47,12 @@ export const initializeWebSockets = async (): Promise<boolean> => {
     console.log('Starting WebSocket initialization...');
 
     // Get wallet address from wagmi
-    const account = getAccount(config);
+    const account = safeGetAccount();
     const walletAddress = account.address || '';
 
     // Initialize WebSocketManager
     await initializeWebSocketManager(walletAddress);
-    
+
     isInitialized = true;
     console.log('WebSocketManager initialized successfully');
     return true;

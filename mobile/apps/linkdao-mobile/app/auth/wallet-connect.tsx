@@ -8,23 +8,29 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { walletService } from '../../src/services/walletConnectService';
+import { walletService, WalletProvider } from '../../src/services/walletConnectService';
 
 // Wallet providers
-const WALLET_PROVIDERS = [
-  {
-    id: 'walletconnect',
-    name: 'WalletConnect',
-    icon: 'qr-code-outline',
-    color: '#3b99fc',
-    description: 'Scan QR code with mobile wallet',
-  },
+const WALLET_PROVIDERS: Array<{
+  id: WalletProvider;
+  name: string;
+  icon: any;
+  color: string;
+  description: string;
+}> = [
   {
     id: 'metamask',
     name: 'MetaMask',
     icon: 'wallet-outline',
     color: '#f6851b',
     description: 'Connect with MetaMask wallet',
+  },
+  {
+    id: 'walletconnect',
+    name: 'WalletConnect',
+    icon: 'qr-code-outline',
+    color: '#3b99fc',
+    description: 'Scan QR code with mobile wallet',
   },
   {
     id: 'coinbase',
@@ -39,6 +45,20 @@ const WALLET_PROVIDERS = [
     icon: 'shield-checkmark-outline',
     color: '#3375bb',
     description: 'Connect with Trust Wallet',
+  },
+  {
+    id: 'rainbow',
+    name: 'Rainbow',
+    icon: 'rainy-outline',
+    color: '#7b3fe4',
+    description: 'Connect with Rainbow wallet',
+  },
+  {
+    id: 'base',
+    name: 'Base',
+    icon: 'cube-outline',
+    color: '#0052ff',
+    description: 'Connect with Base wallet',
   },
 ];
 
@@ -87,8 +107,8 @@ export default function WalletConnectScreen() {
     setConnecting(true);
 
     try {
-      // Connect to wallet
-      const address = await walletService.connect();
+      // Connect to specific wallet provider
+      const address = await walletService.connect(providerId as WalletProvider);
       setWalletAddress(address);
       setSelectedProvider(providerId);
 
@@ -110,7 +130,8 @@ export default function WalletConnectScreen() {
       );
     } catch (error) {
       console.error('Connection error:', error);
-      Alert.alert('Connection Failed', 'Unable to connect to wallet. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unable to connect to wallet. Please try again.';
+      Alert.alert('Connection Failed', errorMessage);
     } finally {
       setConnecting(false);
     }
