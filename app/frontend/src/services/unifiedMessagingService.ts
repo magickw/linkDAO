@@ -122,7 +122,23 @@ class UnifiedMessagingService {
   private lastFullSync: Date | null = null;
 
   private constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+    // Determine the correct base URL
+    let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
+
+    // If running on linkdao.io, use api.linkdao.io
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      if (hostname === 'www.linkdao.io' || hostname === 'linkdao.io' || hostname === 'app.linkdao.io') {
+        backendUrl = 'https://api.linkdao.io';
+      }
+    }
+
+    this.baseUrl = backendUrl;
+
+    // Log the base URL for debugging
+    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+      console.log('[UnifiedMessaging] Initialized with baseUrl:', this.baseUrl);
+    }
 
     // Set up online/offline listeners
     if (typeof window !== 'undefined') {

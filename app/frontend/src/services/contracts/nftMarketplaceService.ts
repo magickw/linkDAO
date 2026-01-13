@@ -65,9 +65,9 @@ export class NFTMarketplaceService {
     if (!this.contract) {
       const address = await contractRegistryService.getContractAddress('NFTMarketplace');
       // Create a read-only provider for view functions
-      const provider = new ethers.JsonRpcProvider('https://sepolia.drpc.org', undefined, {
-              staticNetwork: true
-            });
+      const provider = new ethers.JsonRpcProvider('https://sepolia.drpc.org', 11155111, {
+        staticNetwork: true
+      });
       this.contract = new Contract(address, NFT_MARKETPLACE_ABI, provider);
     }
 
@@ -104,7 +104,7 @@ export class NFTMarketplaceService {
       });
 
       const receipt = await tx.wait();
-      
+
       // Extract listing ID from event
       const event = receipt.logs.find(log => {
         try {
@@ -155,8 +155,8 @@ export class NFTMarketplaceService {
 
     try {
       const listing = await this.getListing(listingId);
-      const value = listing.highestBidder === ethers.ZeroAddress 
-        ? listing.price 
+      const value = listing.highestBidder === ethers.ZeroAddress
+        ? listing.price
         : listing.highestBid;
 
       const tx = await contract.executeSale(listingId, { value });
@@ -207,7 +207,7 @@ export class NFTMarketplaceService {
 
     try {
       const listing = await contract.getListing(listingId);
-      
+
       return {
         id: listing.id.toString(),
         seller: listing.seller,
@@ -238,7 +238,7 @@ export class NFTMarketplaceService {
       const listings = await Promise.all(
         listingIds.map((id: any) => this.getListing(id.toString()))
       );
-      
+
       return listings;
     } catch (error) {
       console.error('Failed to get listings by seller:', error);
@@ -257,7 +257,7 @@ export class NFTMarketplaceService {
       const listings = await Promise.all(
         listingIds.map((id: any) => this.getListing(id.toString()))
       );
-      
+
       return listings;
     } catch (error) {
       console.error('Failed to get listings by NFT:', error);
@@ -359,14 +359,14 @@ export class NFTMarketplaceService {
   async checkNFTOwnership(nftContract: string, tokenId: string, user: string): Promise<boolean> {
     try {
       const provider = new ethers.JsonRpcProvider('https://sepolia.drpc.org', undefined, {
-              staticNetwork: true
-            });
+        staticNetwork: true
+      });
       const nftContractInstance = new Contract(
         nftContract,
         ['function ownerOf(uint256 tokenId) external view returns (address)'],
         provider
       );
-      
+
       const owner = await nftContractInstance.ownerOf(tokenId);
       return owner.toLowerCase() === user.toLowerCase();
     } catch {
@@ -380,16 +380,16 @@ export class NFTMarketplaceService {
   async getNFTMetadata(nftContract: string, tokenId: string): Promise<any> {
     try {
       const provider = new ethers.JsonRpcProvider('https://sepolia.drpc.org', undefined, {
-              staticNetwork: true
-            });
+        staticNetwork: true
+      });
       const nftContractInstance = new Contract(
         nftContract,
         ['function tokenURI(uint256 tokenId) external view returns (string)'],
         provider
       );
-      
+
       const tokenURI = await nftContractInstance.tokenURI(tokenId);
-      
+
       // Fetch metadata from URI
       const response = await fetch(tokenURI);
       return await response.json();

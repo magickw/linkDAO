@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
+    "@noble/hashes": "1.3.2",
     "axios": "^1.13.2",
     "chart.js": "^4.5.0",
     "cloudinary": "^2.8.0",

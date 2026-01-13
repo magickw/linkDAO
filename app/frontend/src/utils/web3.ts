@@ -241,38 +241,41 @@ export async function getProvider() {
  */
 export async function getSigner() {
   try {
-    // Reset provider cache to ensure fresh connection
-    resetProviderCache();
-
-    // Try wagmi wallet client first
+    // Try wagmi wallet client first with better error handling
     try {
-      // getWalletClient can throw if connectors are in a bad state
-      const client = await getWalletClient(config).catch(e => {
-        console.warn('Wagmi getWalletClient failed:', e);
-        return null;
-      });
+      // Check if config is properly initialized before using it
+      if (!config || !config.connectors || config.connectors.length === 0) {
+        console.warn('Wagmi config not properly initialized, skipping getWalletClient');
+      } else {
+        // getWalletClient can throw if connectors are in a bad state
+        const client = await getWalletClient(config).catch(e => {
+          console.warn('Wagmi getWalletClient failed:', e);
+          return null;
+        });
 
-      if (client) {
-        // Check if the client has the necessary methods before accessing them
-        const injectedProvider = (client as any).transport?.provider;
-        if (injectedProvider) {
-          try {
-            // Wrap provider to avoid read-only property errors
-            const wrappedProvider = wrapProvider(injectedProvider);
-            // Use "any" network to avoid strict detection
-            const provider = new ethers.BrowserProvider(wrappedProvider as any, "any");
-
-            const signer = await provider.getSigner();
-            // Verify that the signer has the necessary methods
+        if (client && client.account) {
+          // Check if the client has the necessary methods before accessing them
+          const injectedProvider = (client as any).transport?.provider;
+          if (injectedProvider) {
             try {
-              await signer.getAddress();
-              return signer;
-            } catch (addressError) {
-              console.warn('Could not get address from signer:', addressError);
-              // Continue to fallback
+              // Wrap provider to avoid read-only property errors
+              const wrappedProvider = wrapProvider(injectedProvider);
+              // Use "any" network to avoid strict detection
+              const provider = new ethers.BrowserProvider(wrappedProvider as any, "any");
+
+              const signer = await provider.getSigner();
+              // Verify that the signer has the necessary methods
+              try {
+                const address = await signer.getAddress();
+                console.log('Successfully got signer from wagmi client with address:', address);
+                return signer;
+              } catch (addressError) {
+                console.warn('Could not get address from signer:', addressError);
+                // Continue to fallback
+              }
+            } catch (e) {
+              console.warn('Failed to create signer from wagmi client:', e);
             }
-          } catch (e) {
-            console.warn('Failed to create signer from wagmi client:', e);
           }
         }
       }

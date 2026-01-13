@@ -132,7 +132,12 @@ export class SecureKeyStorage {
       const metadata = await this._getWalletMetadata(address);
 
       // Execute the callback with the decrypted data
-      return await callback({ privateKey, mnemonic, metadata });
+      // Execute the callback with the decrypted data
+      const wallet: DecryptedWallet = { privateKey };
+      if (mnemonic !== undefined) wallet.mnemonic = mnemonic;
+      if (metadata !== undefined) wallet.metadata = metadata;
+
+      return await callback(wallet);
 
     } catch (error) {
       // Re-throw decryption errors as invalid password
@@ -166,15 +171,16 @@ export class SecureKeyStorage {
     // Only decrypt if password is provided
     if (password) {
       return this.withDecryptedWallet(address, password, async (decryptedWallet) => {
-        return {
-          privateKey: decryptedWallet.privateKey,
-          mnemonic: decryptedWallet.mnemonic,
-          metadata: decryptedWallet.metadata,
-        };
+        const result: { privateKey?: string; mnemonic?: string; metadata?: WalletMetadata } = {};
+        if (decryptedWallet.privateKey !== undefined) result.privateKey = decryptedWallet.privateKey;
+        if (decryptedWallet.mnemonic !== undefined) result.mnemonic = decryptedWallet.mnemonic;
+        if (decryptedWallet.metadata !== undefined) result.metadata = decryptedWallet.metadata;
+        return result;
       });
     }
 
-    return { metadata: await this._getWalletMetadata(address) };
+    const meta = await this._getWalletMetadata(address);
+    return meta !== undefined ? { metadata: meta } : {};
   }
 
   /**
@@ -254,7 +260,7 @@ export class SecureKeyStorage {
    */
   static async setActiveWallet(address: string): Promise<void> {
     await getStorage().setItem(this.ACTIVE_WALLET_KEY, address.toLowerCase());
-    
+
     // Also update index if not already there
     const indexKey = `${this.STORAGE_PREFIX}index`;
     const indexData = await getStorage().getItem(indexKey);
@@ -289,7 +295,7 @@ export class SecureKeyStorage {
       return false;
     }
   }
-}
+
 
   /**
    * Change wallet password

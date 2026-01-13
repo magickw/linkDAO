@@ -57,8 +57,8 @@ export class ReputationService {
     if (!this.contract) {
       const address = await contractRegistryService.getContractAddress('ReputationSystem');
       // Create a read-only provider for view functions
-      const { publicClient } = await import('wagmi');
-      const provider = new ethers.JsonRpcProvider('https://sepolia.drpc.org', undefined, {
+      // Create a read-only provider for view functions
+      const provider = new ethers.JsonRpcProvider('https://sepolia.drpc.org', 11155111, {
         staticNetwork: true
       });
       this.contract = new Contract(address, REPUTATION_ABI, provider);
@@ -161,7 +161,7 @@ export class ReputationService {
 
     try {
       const history = await contract.getUserReputationHistory(userAddress);
-      
+
       return history.map((entry: any) => ({
         action: entry.action,
         amount: ethers.formatEther(entry.amount),
@@ -269,7 +269,7 @@ export class ReputationService {
     const currentLevel = reputation.level;
     const nextLevelThreshold = this.getLevelThreshold(currentLevel + 1);
     const currentScore = Math.floor(parseFloat(reputation.score));
-    
+
     return Math.max(0, nextLevelThreshold - currentScore);
   }
 

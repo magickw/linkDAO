@@ -416,7 +416,18 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
         }
       });
 
-      return res.status(201).json(created);
+      // Transform database response to match frontend expectations
+      const responseMessage = {
+        id: String(created.id),
+        conversationId: String(created.conversationId ?? conversationId),
+        fromAddress: String(created.senderAddress ?? fromAddress),
+        content: String(created.content ?? ''),
+        timestamp: (created.sentAt instanceof Date ? created.sentAt.toISOString() : String(created.sentAt)),
+        contentType: 'text',
+        deliveryStatus: 'sent'
+      };
+
+      return res.status(201).json(responseMessage);
     } catch (err) {
       safeLogger.error('[compatibilityChat] DB error creating message', { error: err, conversationId, fromAddress });
       return res.status(500).json({ error: 'Database error creating message', details: err instanceof Error ? err.message : 'Unknown error' });

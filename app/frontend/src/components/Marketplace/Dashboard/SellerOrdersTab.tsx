@@ -272,11 +272,10 @@ const AddDeliverableModal: React.FC<{
                             {deliverables.map((d) => (
                                 <li key={d.id} className="flex items-center justify-between bg-gray-800 p-3 rounded">
                                     <div className="flex items-center gap-2">
-                                        <span className={`px-2 py-0.5 rounded text-xs ${
-                                            d.type === 'file' ? 'bg-blue-500/20 text-blue-300' :
+                                        <span className={`px-2 py-0.5 rounded text-xs ${d.type === 'file' ? 'bg-blue-500/20 text-blue-300' :
                                             d.type === 'link' ? 'bg-green-500/20 text-green-300' :
-                                            'bg-orange-500/20 text-orange-300'
-                                        }`}>
+                                                'bg-orange-500/20 text-orange-300'
+                                            }`}>
                                             {d.type}
                                         </span>
                                         <a
@@ -383,7 +382,7 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
         completeDigitalDelivery
     } = useSellerWorkflow(isActive);
 
-    const [activeStatus, setActiveStatus] = useState<'new' | 'processing' | 'ready' | 'shipped'>('new');
+    const [activeStatus, setActiveStatus] = useState<'new' | 'processing' | 'ready' | 'shipped' | 'completed' | 'cancelled'>('new');
     const [shippingModalOpen, setShippingModalOpen] = useState<{ isOpen: boolean; orderId: string | null }>({ isOpen: false, orderId: null });
     const [shippingForm, setShippingForm] = useState({ trackingNumber: '', carrier: 'FedEx' });
     const [packingSlipModal, setPackingSlipModal] = useState<{ isOpen: boolean; slip: any }>({ isOpen: false, slip: null });
@@ -420,6 +419,8 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
             case 'processing': return dashboardData.orders.processing;
             case 'ready': return dashboardData.orders.readyToShip;
             case 'shipped': return dashboardData.orders.shipped;
+            case 'completed': return dashboardData.orders.completed;
+            case 'cancelled': return dashboardData.orders.cancelled;
             default: return [];
         }
     })();
@@ -519,12 +520,14 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
     return (
         <div className="space-y-6">
             <div className="flex flex-wrap gap-2">
-                {(['new', 'processing', 'ready', 'shipped'] as const).map(status => {
+                {(['new', 'processing', 'ready', 'shipped', 'completed', 'cancelled'] as const).map(status => {
                     const count = dashboardData ? (
                         status === 'new' ? dashboardData.orders.new.length :
                             status === 'processing' ? dashboardData.orders.processing.length :
                                 status === 'ready' ? dashboardData.orders.readyToShip.length :
-                                    dashboardData.orders.shipped.length
+                                    status === 'shipped' ? dashboardData.orders.shipped.length :
+                                        status === 'completed' ? dashboardData.orders.completed.length :
+                                            dashboardData.orders.cancelled.length
                     ) : 0;
 
                     return (
