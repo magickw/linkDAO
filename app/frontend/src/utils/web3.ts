@@ -48,41 +48,51 @@ export function wrapProvider(provider: any): any {
   // internally references 'provider' but ethers.js never sees it.
   const boundRequest = provider.request.bind(provider);
 
+  // Helper for safe deep cloning that handles BigInts
+  const safeClone = (obj: any): any => {
+    if (obj === null || typeof obj !== 'object') {
+      return obj;
+    }
+    
+    if (typeof obj === 'bigint') {
+      return obj.toString();
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map(safeClone);
+    }
+
+    const clone: any = {};
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        clone[key] = safeClone(obj[key]);
+      }
+    }
+    return clone;
+  };
+
   wrappedProvider.request = async (args: any) => {
     try {
       // Create a completely safe, mutable clone of the arguments
-      // We do NOT use a Proxy here because some extensions freeze objects or check for specific properties
-      // that might trigger read-only errors when ethers tries to add 'id' or 'jsonrpc'
       const safeRequest: any = {
         method: String(args?.method || ''),
-        params: args?.params ? JSON.parse(JSON.stringify(args.params)) : [],
+        params: args?.params ? safeClone(args.params) : [],
         jsonrpc: '2.0',
         id: Date.now()
       };
 
-      // Call the bound request function - this internally uses
-      // the original provider as 'this', but we never expose it
+      // Call the bound request function
       const result = await boundRequest(safeRequest);
 
       // Deep clone result to ensure no frozen objects leak through
-      if (result === undefined || result === null) return result;
-      try {
-        return JSON.parse(JSON.stringify(result));
-      } catch {
-        // If result can't be serialized (e.g., has circular refs), return as-is
-        return result;
-      }
+      return safeClone(result);
     } catch (error: any) {
       // Create a new error object to avoid frozen error objects
       const message = error?.message || error?.toString() || 'Request failed';
       const safeError: any = new Error(message);
       if (error?.code !== undefined) safeError.code = error.code;
       if (error?.data !== undefined) {
-        try {
-          safeError.data = JSON.parse(JSON.stringify(error.data));
-        } catch {
-          safeError.data = String(error.data);
-        }
+        safeError.data = safeClone(error.data);
       }
       throw safeError;
     }
@@ -490,11 +500,14 @@ export async function getDirectJsonRpcSigner(): Promise<ethers.Signer | null> {
       return null;
     }
 
+    // Wrap the provider to ensure we handle frozen objects correctly
+    const wrappedProvider = wrapProvider(injectedProvider);
+
     // Get accounts directly
-    const accounts = await injectedProvider.request({ method: 'eth_accounts' }) as string[];
+    const accounts = await wrappedProvider.request({ method: 'eth_accounts' }) as string[];
     if (!accounts || accounts.length === 0) {
       // Request accounts if not connected
-      const requestedAccounts = await injectedProvider.request({ method: 'eth_requestAccounts' }) as string[];
+      const requestedAccounts = await wrappedProvider.request({ method: 'eth_requestAccounts' }) as string[];
       if (!requestedAccounts || requestedAccounts.length === 0) {
         return null;
       }
@@ -503,7 +516,7 @@ export async function getDirectJsonRpcSigner(): Promise<ethers.Signer | null> {
     const address = accounts[0];
 
     // Get chain ID
-    const chainId = await injectedProvider.request({ method: 'eth_chainId' }) as string;
+    const chainId = await wrappedProvider.request({ method: 'eth_chainId' }) as string;
 
     // Create a minimal signer object that implements the ethers.js Signer interface
     const directSigner: any = {
@@ -514,70 +527,70 @@ export async function getDirectJsonRpcSigner(): Promise<ethers.Signer | null> {
           name: 'unknown'
         }),
         getBalance: async (addr: string) => {
-          const result = await injectedProvider.request({
+          const result = await wrappedProvider.request({
             method: 'eth_getBalance',
             params: [addr, 'latest']
           });
           return ethers.toBigInt(result);
         },
         getCode: async (addr: string) => {
-          const result = await injectedProvider.request({
+          const result = await wrappedProvider.request({
             method: 'eth_getCode',
             params: [addr, 'latest']
           });
           return result;
         },
         getStorage: async (addr: string, slot: bigint) => {
-          const result = await injectedProvider.request({
+          const result = await wrappedProvider.request({
             method: 'eth_getStorageAt',
             params: [addr, slot, 'latest']
           });
           return result;
         },
         call: async (tx: any) => {
-          const result = await injectedProvider.request({
+          const result = await wrappedProvider.request({
             method: 'eth_call',
             params: [tx, 'latest']
           });
           return result;
         },
         estimateGas: async (tx: any) => {
-          const result = await injectedProvider.request({
+          const result = await wrappedProvider.request({
             method: 'eth_estimateGas',
             params: [tx]
           });
           return ethers.toBigInt(result);
         },
         broadcastTransaction: async (tx: string) => {
-          const result = await injectedProvider.request({
+          const result = await wrappedProvider.request({
             method: 'eth_sendRawTransaction',
             params: [tx]
           });
           return result;
         },
         getTransaction: async (hash: string) => {
-          const result = await injectedProvider.request({
+          const result = await wrappedProvider.request({
             method: 'eth_getTransactionByHash',
             params: [hash]
           });
           return result;
         },
         getTransactionReceipt: async (hash: string) => {
-          const result = await injectedProvider.request({
+          const result = await wrappedProvider.request({
             method: 'eth_getTransactionReceipt',
             params: [hash]
           });
           return result;
         },
         getBlock: async (blockTag: string | number) => {
-          const result = await injectedProvider.request({
+          const result = await wrappedProvider.request({
             method: 'eth_getBlockByNumber',
             params: [blockTag, false]
           });
           return result;
         },
         getFeeData: async () => {
-          const [gasPrice, maxFeePerGas, maxPriorityFeePerGas] = await injectedProvider.request({
+          const [gasPrice, maxFeePerGas, maxPriorityFeePerGas] = await wrappedProvider.request({
             method: 'eth_feeHistory',
             params: [4, 'latest', []]
           });
@@ -593,14 +606,14 @@ export async function getDirectJsonRpcSigner(): Promise<ethers.Signer | null> {
       connect: async (provider: any) => directSigner,
       signMessage: async (message: string | Uint8Array) => {
         const msg = typeof message === 'string' ? message : ethers.toUtf8String(message);
-        const result = await injectedProvider.request({
+        const result = await wrappedProvider.request({
           method: 'personal_sign',
           params: [msg, address]
         });
         return result;
       },
       signTransaction: async (tx: any) => {
-        const result = await injectedProvider.request({
+        const result = await wrappedProvider.request({
           method: 'eth_signTransaction',
           params: [tx]
         });
@@ -608,7 +621,7 @@ export async function getDirectJsonRpcSigner(): Promise<ethers.Signer | null> {
       },
       sendTransaction: async (tx: any) => {
         // Try to send transaction
-        const hash = await injectedProvider.request({
+        const hash = await wrappedProvider.request({
           method: 'eth_sendTransaction',
           params: [tx]
         });
@@ -619,7 +632,7 @@ export async function getDirectJsonRpcSigner(): Promise<ethers.Signer | null> {
         const maxAttempts = 60; // Wait up to 60 seconds
         
         while (!receipt && attempts < maxAttempts) {
-          receipt = await injectedProvider.request({
+          receipt = await wrappedProvider.request({
             method: 'eth_getTransactionReceipt',
             params: [hash]
           });
@@ -659,7 +672,7 @@ export async function getDirectJsonRpcSigner(): Promise<ethers.Signer | null> {
         };
       },
       signTypedData: async (domain: any, types: any, value: any) => {
-        const result = await injectedProvider.request({
+        const result = await wrappedProvider.request({
           method: 'eth_signTypedData_v4',
           params: [address, JSON.stringify({ domain, types, value })]
         });

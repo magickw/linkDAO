@@ -160,15 +160,8 @@ class AuthService {
    * Uses the configured wallet adapter to sign the message
    */
   private async signMessage(address: string, message: string): Promise<string> {
-    try {
-      // Use wallet adapter to sign the message
-      return await signMessageWithWallet(message, address);
-    } catch (error) {
-      console.error('Failed to sign message:', error);
-      // Fallback to mock signature for development/testing
-      const mockSignature = `0x${Buffer.from(message).toString('hex').padEnd(130, '0').substring(0, 130)}`;
-      return mockSignature;
-    }
+    // Use wallet adapter to sign the message
+    return await signMessageWithWallet(message, address);
   }
 
   /**

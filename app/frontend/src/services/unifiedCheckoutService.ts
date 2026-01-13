@@ -2,6 +2,7 @@ import { CryptoPaymentService } from './cryptoPaymentService';
 import { StripePaymentService } from './stripePaymentService';
 import { ExchangeRateService } from './exchangeRateService';
 import { x402PaymentService, type X402PaymentRequest } from './x402PaymentService';
+import { enhancedAuthService } from './enhancedAuthService';
 import {
   PrioritizedPaymentMethod,
   PaymentMethodType,
@@ -77,6 +78,10 @@ export interface UnifiedCheckoutResult {
     recommendationReason: string;
     costEstimate: any;
     alternativeMethods: any[];
+    inventoryInfo?: {
+      wasAvailable: boolean;
+      remainingQuantity: number;
+    };
   };
 }
 
@@ -106,7 +111,7 @@ export class UnifiedCheckoutService {
    */
   private getAuthToken(): string {
     let token = '';
-    
+
     // Try to get from linkdao_session_data first (WalletLoginBridge pattern)
     try {
       const sessionDataStr = localStorage.getItem('linkdao_session_data');
@@ -115,7 +120,8 @@ export class UnifiedCheckoutService {
         token = sessionData.token || sessionData.accessToken || '';
       }
     } catch (error) {
-      console.warn('Failed to parse session data, trying fallback token retrieval');
+      console.warn('Failed to parse session data, clearing corrupted storage');
+      localStorage.removeItem('linkdao_session_data');
     }
 
     // Fallback to other possible token locations (cartService pattern)
@@ -346,7 +352,7 @@ export class UnifiedCheckoutService {
         amount: BigInt(Math.floor(request.amount * 10 ** decimals)),
         token: selectedPaymentMethod.method.token,
         recipient: request.sellerAddress,
-        chainId: selectedPaymentMethod.method.chainId,
+        chainId: selectedPaymentMethod.method.chainId || selectedPaymentMethod.method.token.chainId,
       };
 
       // Process the escrow payment
@@ -875,20 +881,20 @@ export class UnifiedCheckoutService {
     };
 
     // Convert BigInt values to strings before serialization
-          const serializedBody = convertBigIntToStrings(requestBody);
-    
-          // Get auth token
-          const token = this.getAuthToken();
-    
-          // Call existing crypto payment processing
-          const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/checkout`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token && { 'Authorization': `Bearer ${token}` })
-            },
-            body: JSON.stringify(serializedBody)
-          });    if (!response.ok) {
+    const serializedBody = convertBigIntToStrings(requestBody);
+
+    // Get auth token
+    const token = this.getAuthToken();
+
+    // Call existing crypto payment processing
+    const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/checkout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
+      body: JSON.stringify(serializedBody)
+    }); if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || 'Crypto payment failed');
     }
@@ -919,35 +925,35 @@ export class UnifiedCheckoutService {
     };
 
     // Convert BigInt values to strings before serialization
-          const serializedBody = convertBigIntToStrings(requestBody);
-    
-          // Get auth token
-          const token = this.getAuthToken();
-    
-          console.log('🔍 [processFiatPayment] Sending request to backend:', {
-            url: `${this.apiBaseUrl}/api/hybrid-payment/checkout`,
-            hasToken: !!token,
-            tokenLength: token?.length,
-            requestBodyKeys: Object.keys(serializedBody),
-            requestBody: serializedBody
-          });
-    
-          // Call existing fiat payment processing
-          const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/checkout`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token && { 'Authorization': `Bearer ${token}` })
-            },
-            body: JSON.stringify(serializedBody)
-          });
-    
+    const serializedBody = convertBigIntToStrings(requestBody);
+
+    // Get auth token
+    const token = this.getAuthToken();
+
+    console.log('🔍 [processFiatPayment] Sending request to backend:', {
+      url: `${this.apiBaseUrl}/api/hybrid-payment/checkout`,
+      hasToken: !!token,
+      tokenLength: token?.length,
+      requestBodyKeys: Object.keys(serializedBody),
+      requestBody: serializedBody
+    });
+
+    // Call existing fiat payment processing
+    const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/checkout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
+      body: JSON.stringify(serializedBody)
+    });
+
     console.log('📡 [processFiatPayment] Backend response:', {
       status: response.status,
       statusText: response.statusText,
       ok: response.ok
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error('❌ [processFiatPayment] Backend error response:', errorText);
@@ -1100,8 +1106,24 @@ export class UnifiedCheckoutService {
   }
 
   private async getConnectedAddress(): Promise<string> {
-    // In a real implementation, get from wallet connection
-    return '0x1234567890123456789012345678901234567890';
+    try {
+      // Try enhancedAuthService first (most reliable source of truth)
+      const address = enhancedAuthService.getWalletAddress();
+      if (address) return address;
+
+      // Fallback to checking window.ethereum
+      if (typeof window !== 'undefined' && (window as any).ethereum) {
+        const accounts = await (window as any).ethereum.request({ method: 'eth_accounts' });
+        if (accounts && accounts.length > 0) {
+          return accounts[0];
+        }
+      }
+
+      throw new Error('No wallet connected');
+    } catch (error) {
+      console.error('Error getting connected address:', error);
+      throw error;
+    }
   }
 
   /**

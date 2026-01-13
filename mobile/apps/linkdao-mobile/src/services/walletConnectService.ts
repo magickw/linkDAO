@@ -133,11 +133,7 @@ class WalletService {
   private async connectMetaMask(): Promise<string> {
     try {
       if (!this.metamaskSDK) {
-        console.warn('⚠️ MetaMask SDK not initialized, using fallback mock connection');
-        // Fallback: Generate a mock address for development
-        const mockAddress = this.generateMockAddress();
-        console.log('📱 MetaMask connection simulated:', mockAddress);
-        return mockAddress;
+        throw new Error('MetaMask SDK not initialized. Please ensure the wallet service is properly initialized.');
       }
 
       console.log('🦊 Connecting to MetaMask...');
@@ -216,101 +212,37 @@ class WalletService {
   // }
 
   /**
-   * Connect to Coinbase Wallet
-   */
-  private async connectCoinbase(): Promise<string> {
-    try {
-      const scheme = 'cbwallet://';
-      const appLink = Platform.select({
-        ios: 'https://apps.apple.com/app/coinbase-wallet/id1278383455',
-        android: 'https://play.google.com/store/apps/details?id=com.coinbase.wallet',
-      });
 
-      const canOpen = await Linking.canOpenURL(scheme);
+     * Connect to Coinbase Wallet
 
-      if (!canOpen) {
-        if (appLink) {
-          await Linking.openURL(appLink);
-        }
-        throw new Error('Coinbase Wallet is not installed');
-      }
+     */
 
-      const mockAddress = this.generateMockAddress();
-      console.log('📱 Coinbase Wallet connection simulated:', mockAddress);
-      return mockAddress;
-    } catch (error) {
-      console.error('❌ Coinbase Wallet connection failed:', error);
-      throw error;
+    private async connectCoinbase(): Promise<string> {
+
+      throw new Error('Coinbase Wallet integration not yet implemented. Please use MetaMask for now.');
+
     }
-  }
 
   /**
    * Connect to Trust Wallet
    */
   private async connectTrust(): Promise<string> {
-    try {
-      const scheme = 'trust://';
-      const appLink = Platform.select({
-        ios: 'https://apps.apple.com/app/trust-wallet/id1288339409',
-        android: 'https://play.google.com/store/apps/details?id=com.wallet.crypto.trustapp',
-      });
-
-      const canOpen = await Linking.canOpenURL(scheme);
-
-      if (!canOpen) {
-        if (appLink) {
-          await Linking.openURL(appLink);
-        }
-        throw new Error('Trust Wallet is not installed');
-      }
-
-      const mockAddress = this.generateMockAddress();
-      console.log('📱 Trust Wallet connection simulated:', mockAddress);
-      return mockAddress;
-    } catch (error) {
-      console.error('❌ Trust Wallet connection failed:', error);
-      throw error;
-    }
+    throw new Error('Trust Wallet integration not yet implemented. Please use MetaMask for now.');
   }
 
   /**
    * Connect to Rainbow Wallet
    */
   private async connectRainbow(): Promise<string> {
-    try {
-      const scheme = 'rainbow://';
-      const appLink = Platform.select({
-        ios: 'https://apps.apple.com/app/rainbow-ethereum-wallet/id1457119021',
-        android: 'https://play.google.com/store/apps/details?id=me.rainbow',
-      });
-
-      const canOpen = await Linking.canOpenURL(scheme);
-
-      if (!canOpen) {
-        if (appLink) {
-          await Linking.openURL(appLink);
-        }
-        throw new Error('Rainbow Wallet is not installed');
-      }
-
-      const mockAddress = this.generateMockAddress();
-      console.log('📱 Rainbow Wallet connection simulated:', mockAddress);
-      return mockAddress;
-    } catch (error) {
-      console.error('❌ Rainbow Wallet connection failed:', error);
-      throw error;
-    }
+    throw new Error('Rainbow Wallet integration not yet implemented. Please use MetaMask for now.');
   }
 
   /**
    * Connect to Base Wallet
    */
   private async connectBase(): Promise<string> {
-    try {
-      const scheme = 'base://';
-      const appLink = Platform.select({
-        ios: 'https://apps.apple.com/app/base-crypto-wallet/id6443685999',
-        android: 'https://play.google.com/store/apps/details?id=com.base',
+    throw new Error('Base Wallet integration not yet implemented. Please use MetaMask for now.');
+  }
       });
 
       const canOpen = await Linking.canOpenURL(scheme);
@@ -350,7 +282,7 @@ class WalletService {
           message: message,
         });
         console.log('✅ Message signed with MetaMask');
-      } 
+      }
       // Use Reown AppKit for WalletConnect
       else if (this.activeConnection.provider === 'walletconnect' && this.appKit) {
         const result = await this.appKit.signMessage({
@@ -358,12 +290,11 @@ class WalletService {
         });
         signature = result;
         console.log('✅ Message signed with WalletConnect');
-      } 
+      }
       else {
-        // Simulate signing for other wallets (in production, integrate their SDKs)
-        await new Promise(resolve => setTimeout(resolve, 500));
-        signature = this.generateMockSignature(message, address);
-        console.log('✅ Message signed (simulated)');
+        // For other wallets, we need to implement their SDKs
+        // For now, throw an error to indicate real signing is required
+        throw new Error(`Real wallet signing not yet implemented for ${this.activeConnection.provider}. Please use MetaMask.`);
       }
 
       return signature;
@@ -437,22 +368,6 @@ class WalletService {
    */
   isConnected(): boolean {
     return this._isConnected && this.activeConnection !== null;
-  }
-
-  /**
-   * Generate a mock Ethereum address
-   */
-  private generateMockAddress(): string {
-    return '0x' + Math.random().toString(16).substr(2, 40);
-  }
-
-  /**
-   * Generate a mock signature
-   */
-  private generateMockSignature(message: string, address: string): string {
-    const combined = message + address;
-    const hash = Buffer.from(combined).toString('hex');
-    return '0x' + hash.padEnd(130, '0').substring(0, 130);
   }
 
   /**

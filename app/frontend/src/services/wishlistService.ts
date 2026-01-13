@@ -82,18 +82,18 @@ class WishlistService {
       let token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || localStorage.getItem('user_session') || sessionStorage.getItem('auth_token') || sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
 
       // Also check for linkdao_session_data (wallet authentication)
-      if (!token) {
-        try {
-          const sessionDataStr = localStorage.getItem('linkdao_session_data');
-          if (sessionDataStr) {
-            const sessionData = JSON.parse(sessionDataStr);
-            token = sessionData.token || sessionData.accessToken || '';
-          }
-        } catch (error) {
-          console.warn('Failed to parse linkdao_session_data');
-        }
-      }
-
+              if (!token) {
+                try {
+                  const sessionDataStr = localStorage.getItem('linkdao_session_data');
+                  if (sessionDataStr) {
+                    const sessionData = JSON.parse(sessionDataStr);
+                    token = sessionData.token || sessionData.accessToken || '';
+                  }
+                } catch (error) {
+                  console.warn('Failed to parse linkdao_session_data in listener, clearing storage');
+                  localStorage.removeItem('linkdao_session_data');
+                }
+              }
       this.isAuthenticated = !!token;
       this.authToken = token;
     }

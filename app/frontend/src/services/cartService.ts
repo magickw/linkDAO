@@ -143,7 +143,8 @@ class CartService {
             token = sessionData.token || sessionData.accessToken || '';
           }
         } catch (error) {
-          console.warn('Failed to parse linkdao_session_data, trying fallback token retrieval');
+          console.warn('Failed to parse linkdao_session_data, clearing corrupted storage');
+          localStorage.removeItem('linkdao_session_data');
         }
       }
 
@@ -1143,7 +1144,8 @@ class CartService {
               token = sessionData.token || sessionData.accessToken || '';
             }
           } catch (error) {
-            console.warn('Failed to parse linkdao_session_data');
+            console.warn('Failed to parse linkdao_session_data in listener, clearing storage');
+            localStorage.removeItem('linkdao_session_data');
           }
         }
 
