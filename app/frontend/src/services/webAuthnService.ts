@@ -609,10 +609,12 @@ export class WebAuthnService {
    */
   private loadCredentials(): void {
     try {
-      const data = localStorage.getItem(this.STORAGE_KEY);
-      if (data) {
-        const entries = JSON.parse(data);
-        this.credentials = new Map(entries);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const data = localStorage.getItem(this.STORAGE_KEY);
+        if (data) {
+          const entries = JSON.parse(data);
+          this.credentials = new Map(entries);
+        }
       }
     } catch (error) {
       console.error('Failed to load WebAuthn credentials:', error);

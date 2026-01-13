@@ -1,2 +1,5 @@
+// Import polyfills first - must be before any other imports
+import './polyfills';
 import 'react-native-gesture-handler';
+
 export { default } from './app/_layout';

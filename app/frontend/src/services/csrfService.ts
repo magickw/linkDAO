@@ -196,7 +196,7 @@ export class CSRFService {
    */
   private saveToken(): void {
     try {
-      if (this.token) {
+      if (this.token && typeof window !== 'undefined' && window.localStorage) {
         localStorage.setItem('csrf_token', JSON.stringify(this.token));
       }
     } catch (error) {
@@ -209,20 +209,32 @@ export class CSRFService {
    */
   private loadToken(): void {
     try {
-      const data = localStorage.getItem('csrf_token');
-      if (data) {
-        const token = JSON.parse(data) as CSRFToken;
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const data = localStorage.getItem('csrf_token');
+        if (data) {
+          const token = JSON.parse(data) as CSRFToken;
 
-        // Check if token is still valid
-        if (Date.now() <= token.expiresAt) {
-          this.token = token;
+          // Check if token is still valid
+          if (Date.now() <= token.expiresAt) {
+            this.token = token;
+          } else {
+            // Token expired, generate new one
+            this.refreshToken();
+          }
         } else {
-          // Token expired, generate new one
+          // No token found, generate new one
           this.refreshToken();
         }
       } else {
-        // No token found, generate new one
+        // SSR or localStorage not available, generate new token
         this.refreshToken();
+      }
+    } catch (error) {
+      console.error('Failed to load CSRF token:', error);
+      // Generate new token on error
+      this.refreshToken();
+    }
+  }
       }
     } catch (error) {
       console.error('Failed to load CSRF token:', error);

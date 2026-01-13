@@ -311,10 +311,12 @@ export class RateLimiter {
    */
   private loadStates(): void {
     try {
-      const data = localStorage.getItem('rate_limit_states');
-      if (data) {
-        const entries = JSON.parse(data);
-        this.states = new Map(entries);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const data = localStorage.getItem('rate_limit_states');
+        if (data) {
+          const entries = JSON.parse(data);
+          this.states = new Map(entries);
+        }
       }
     } catch (error) {
       console.error('Failed to load rate limit states:', error);
