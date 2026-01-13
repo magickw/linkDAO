@@ -103,14 +103,20 @@ export const CartItemCard: React.FC<CartItemCardProps> = ({
                     <QuantitySelector
                         quantity={item.quantity}
                         maxQuantity={99}
-                        onChange={onQuantityChange}
+                        onChange={(qty) => {
+                            if (onQuantityChange) onQuantityChange(qty);
+                        }}
                         stockLevel={item.inventory}
                         showStock={false}
                     />
 
                     <button
+                        type="button"
                         className={styles.actionButton}
-                        onClick={onRemove}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            onRemove();
+                        }}
                         aria-label="Delete item"
                     >
                         Delete
@@ -118,8 +124,12 @@ export const CartItemCard: React.FC<CartItemCardProps> = ({
 
                     {onSaveForLater && (
                         <button
+                            type="button"
                             className={styles.actionButton}
-                            onClick={onSaveForLater}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                onSaveForLater();
+                            }}
                             aria-label="Save for later"
                         >
                             Save for later
@@ -127,7 +137,16 @@ export const CartItemCard: React.FC<CartItemCardProps> = ({
                     )}
 
                     <button
+                        type="button"
                         className={styles.actionButton}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            // Simple share logic - copy product link
+                            const url = `${window.location.origin}/marketplace/product/${item.productId}`;
+                            navigator.clipboard.writeText(url)
+                                .then(() => alert('Product link copied to clipboard!'))
+                                .catch(err => console.error('Failed to copy', err));
+                        }}
                         aria-label="Share item"
                     >
                         Share

@@ -8,7 +8,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Activi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { OptimizedFlatList } from '../../src/components';
+import { OptimizedFlatList } from '../src/components/OptimizedFlatList';
 
 export default function SearchScreen() {
   const router = useRouter();

@@ -50,28 +50,15 @@ export function wrapProvider(provider: any): any {
 
   wrappedProvider.request = async (args: any) => {
     try {
-      // Create a Proxy for the request object to intercept any property access
-      const safeRequest = new Proxy(Object.create(null), {
-        get(target, prop) {
-          // If ethers.js tries to set a property, intercept it
-          if (prop === 'requestId' || prop === 'id' || prop === 'jsonrpc') {
-            return 0; // Default value
-          }
-          // For other properties, return undefined
-          return undefined;
-        },
-        set(target, prop, value) {
-          // Allow ethers.js to set properties on our proxy
-          target[prop] = value;
-          return true;
-        }
-      });
-
-      // Set the required properties
-      safeRequest.method = String(args?.method || '');
-      safeRequest.params = args?.params ? JSON.parse(JSON.stringify(args.params)) : [];
-      safeRequest.jsonrpc = '2.0';
-      safeRequest.id = Date.now();
+      // Create a completely safe, mutable clone of the arguments
+      // We do NOT use a Proxy here because some extensions freeze objects or check for specific properties
+      // that might trigger read-only errors when ethers tries to add 'id' or 'jsonrpc'
+      const safeRequest: any = {
+        method: String(args?.method || ''),
+        params: args?.params ? JSON.parse(JSON.stringify(args.params)) : [],
+        jsonrpc: '2.0',
+        id: Date.now()
+      };
 
       // Call the bound request function - this internally uses
       // the original provider as 'this', but we never expose it
@@ -265,12 +252,13 @@ export async function getProvider() {
 
     if (envRpc) {
       try {
-        const chainId = envChainId ? parseInt(envChainId, 10) : 1;
+        const chainId = envChainId ? parseInt(envChainId, 10) : 11155111;
         console.log('Creating JsonRpcProvider with RPC:', envRpc, 'Chain ID:', chainId);
         
         // Correct way to initialize JsonRpcProvider in ethers v6 with static network
+        // Passing undefined as 2nd arg and network in options prevents detection
         const network = ethers.Network.from(chainId);
-        const provider = new ethers.JsonRpcProvider(envRpc, network, {
+        const provider = new ethers.JsonRpcProvider(envRpc, undefined, {
           staticNetwork: network, 
           polling: false 
         });
@@ -297,7 +285,7 @@ export async function getProvider() {
     if (rpcUrl) {
       // Correct way to initialize JsonRpcProvider in ethers v6 with static network
       const network = ethers.Network.from(chainId);
-      const provider = new ethers.JsonRpcProvider(rpcUrl, network, {
+      const provider = new ethers.JsonRpcProvider(rpcUrl, undefined, {
         staticNetwork: network,
         polling: false
       });
@@ -315,7 +303,7 @@ export async function getProvider() {
   console.log('Using fallback provider');
   try {
     const network = ethers.Network.from(11155111);
-    const provider = new ethers.JsonRpcProvider('https://ethereum-sepolia-rpc.publicnode.com', network, {
+    const provider = new ethers.JsonRpcProvider('https://ethereum-sepolia-rpc.publicnode.com', undefined, {
       staticNetwork: network,
       polling: false
     });
@@ -697,8 +685,11 @@ export async function getViemSigner() {
     const { http } = await import('viem');
     
     try {
+      // Wrap the provider to ensure it's safe even for viem
+      const wrappedProvider = wrapProvider(injectedProvider);
+      
       const walletClient = createWalletClient({
-        transport: custom(injectedProvider),
+        transport: custom(wrappedProvider),
       });
 
       // Test if it works by getting accounts

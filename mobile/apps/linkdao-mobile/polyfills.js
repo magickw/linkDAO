@@ -1,5 +1,8 @@
 // Polyfills for browser APIs required by web3 libraries (viem, wagmi, etc.)
 
+// Import URL polyfill for React Native
+import 'react-native-url-polyfill/auto';
+
 // Initialize window object if it doesn't exist
 if (typeof window === 'undefined') {
   global.window = {};

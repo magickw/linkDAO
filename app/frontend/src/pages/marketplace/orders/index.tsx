@@ -635,7 +635,7 @@ function OrderDetailsModal({ order, onClose, onCancelOrder, canCancel, isCancell
 
         // --- Header ---
         doc.setFontSize(20);
-        doc.text('TAX INVOICE', 14, 22);
+        doc.text('PURCHASE ORDER', 14, 22);
 
         doc.setFontSize(10);
         doc.setTextColor(100);
@@ -771,8 +771,9 @@ function OrderDetailsModal({ order, onClose, onCancelOrder, canCancel, isCancell
 
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <GlassPanel variant="modal" className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="p-6">
+            <GlassPanel variant="modal" className="max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+                {/* Header - Fixed */}
+                <div className="p-6 border-b border-white/10 flex-shrink-0">
                     {/* Header */}
                     <div className="flex justify-between items-start mb-6">
                         <div>
@@ -796,7 +797,10 @@ function OrderDetailsModal({ order, onClose, onCancelOrder, canCancel, isCancell
                             <XCircle size={24} className="text-white/60" />
                         </button>
                     </div>
+                </div>
 
+                {/* Scrollable Content */}
+                <div className="p-6 overflow-y-auto flex-1">
                     {/* Seller Information */}
                     {order.seller && (
                         <div className="mb-6 p-4 bg-white/5 rounded-lg border border-white/10">
@@ -945,6 +949,10 @@ function OrderDetailsModal({ order, onClose, onCancelOrder, canCancel, isCancell
                         </div>
                     </div>
 
+                </div>
+
+                {/* Footer Actions - Fixed */}
+                <div className="p-6 border-t border-white/10 flex-shrink-0 bg-gray-900/50">
                     {/* Actions */}
                     <div className="flex gap-3">
                         <Button
@@ -974,7 +982,7 @@ function OrderDetailsModal({ order, onClose, onCancelOrder, canCancel, isCancell
                             iconPosition="left"
                             onClick={handleDownloadInvoice}
                         >
-                            Download Invoice
+                            Download Purchase Order
                         </Button>
                     </div>
                 </div>

@@ -171,28 +171,6 @@ class WalletService {
     }
   }
 
-      // Check if MetaMask is installed
-      const canOpen = await Linking.canOpenURL(scheme);
-
-      if (!canOpen) {
-        // Open app store if not installed
-        if (appLink) {
-          await Linking.openURL(appLink);
-        }
-        throw new Error('MetaMask is not installed');
-      }
-
-      // For demo, generate a mock address
-      // In production, integrate with @metamask/sdk-react-native
-      const mockAddress = this.generateMockAddress();
-      console.log('📱 MetaMask connection simulated:', mockAddress);
-      return mockAddress;
-    } catch (error) {
-      console.error('❌ MetaMask connection failed:', error);
-      throw error;
-    }
-  }
-
   /**
    * Connect via WalletConnect (Reown AppKit)
    */
