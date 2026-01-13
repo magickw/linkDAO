@@ -1300,8 +1300,46 @@ class UnifiedMessagingService {
     const message = this.transformMessage(data.message || data);
     const conversationId = data.conversationId || message.conversationId;
 
-    // Add to cache
-    this.addMessageToCache(conversationId, message);
+    // CHECK FOR DUPLICATES / PENDING MESSAGES
+    // Look for any pending message that matches this one (same content and sender)
+    // This prevents the "double message" issue where optimistic + real message both exist
+    let matchedTempId: string | null = null;
+
+    // Check pending messages map
+    for (const [tempId, pending] of this.pendingMessages.entries()) {
+      if (
+        pending.conversationId === conversationId &&
+        pending.content === message.content &&
+        // Allow for small timing differences or exact match not needed for optimistic correlation
+        (message.fromAddress?.toLowerCase() === this.currentUserAddress?.toLowerCase())
+      ) {
+        matchedTempId = tempId;
+        break;
+      }
+    }
+
+    // Also check the cache for any messages that look like optimistic updates (temp_ prefix)
+    if (!matchedTempId) {
+      const cachedMessages = this.messagesCache.get(conversationId) || [];
+      const optimisticMatch = cachedMessages.find(m =>
+        m.id.startsWith('temp_') &&
+        m.content === message.content &&
+        m.conversationId === conversationId
+      );
+      if (optimisticMatch) {
+        matchedTempId = optimisticMatch.id;
+      }
+    }
+
+    if (matchedTempId) {
+      console.log(`[UnifiedMessaging] Deduplicated message: Replaced pending ${matchedTempId} with real ${message.id}`);
+      this.replaceOptimisticMessage(conversationId, matchedTempId, message);
+      this.pendingMessages.delete(matchedTempId);
+    } else {
+      // Add to cache normally if no match found
+      this.addMessageToCache(conversationId, message);
+    }
+
     this.persistMessagesToCache(conversationId);
 
     // Update conversation

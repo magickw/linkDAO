@@ -507,11 +507,20 @@ export class MessagingService {
         }
       };
     } catch (error) {
-      safeLogger.error('Error sending message:', error);
+      safeLogger.error('Error sending message:', {
+        error,
+        params: { conversationId, fromAddress, contentType: data.contentType },
+        stack: error instanceof Error ? error.stack : undefined
+      });
+
       if (error instanceof Error && error.message.includes('database')) {
         throw new Error('Messaging service temporarily unavailable. Database connection error.');
       }
-      throw new Error('Failed to send message');
+      // Re-throw original error if it's already specific, otherwise generic
+      if (error instanceof Error && error.message.includes('limit')) {
+        throw error;
+      }
+      throw new Error(`Failed to send message: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

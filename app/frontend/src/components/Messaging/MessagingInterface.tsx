@@ -349,7 +349,8 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     if (isViewingDM && selectedDM) {
       sendMessage({ conversationId: selectedDM, fromAddress: address, content: newMessage.trim(), messageType: 'text' } as any).catch(err => {
         console.warn('Failed to send DM via hook', err);
-        setMessages(prev => [...prev, message]);
+        // Do NOT manually add to local state here - the hook handles optimistic updates
+        // and we don't want duplicates if the hook retries or when network recovers
       });
     } else {
       setMessages(prev => [...prev, message]);

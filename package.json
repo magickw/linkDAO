@@ -21,6 +21,7 @@
     "@playwright/test": "npm:@empty@1.0.0"
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.0.3",
     "axios": "^1.13.2",
     "chart.js": "^4.5.0",
     "cloudinary": "^2.8.0",

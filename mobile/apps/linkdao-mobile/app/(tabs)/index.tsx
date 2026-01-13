@@ -3,7 +3,7 @@
  * Main feed showing posts from communities and users
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,33 +15,52 @@ export default function FeedScreen() {
   const posts = usePostsStore((state) => state.posts);
   const loading = usePostsStore((state) => state.loading);
   const hasMore = usePostsStore((state) => state.hasMore);
+  const currentPage = usePostsStore((state) => state.currentPage);
   const setPosts = usePostsStore((state) => state.setPosts);
   const setLoading = usePostsStore((state) => state.setLoading);
   const setError = usePostsStore((state) => state.setError);
   const updatePost = usePostsStore((state) => state.updatePost);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     loadPosts();
   }, []);
 
-  const loadPosts = async () => {
-    setLoading(true);
+  const loadPosts = async (page: number = 1) => {
+    if (page === 1) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+
     try {
-      const response = await postsService.getFeed(1, 20);
-      setPosts(response.posts);
+      const response = await postsService.getFeed(page, 20);
+      if (page === 1) {
+        setPosts(response.posts);
+      } else {
+        // Append new posts to existing ones
+        setPosts([...posts, ...response.posts]);
+      }
     } catch (error) {
       setError('Failed to load posts');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadPosts();
+    await loadPosts(1);
     setRefreshing(false);
   };
+
+  const loadMore = useCallback(() => {
+    if (!loading && !loadingMore && hasMore && !refreshing) {
+      loadPosts(currentPage + 1);
+    }
+  }, [loading, loadingMore, hasMore, refreshing, currentPage]);
 
   const handleLike = async (postId: string) => {
     const post = posts.find((p) => p.id === postId);
@@ -98,6 +117,18 @@ export default function FeedScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />
         }
+        onScroll={({ nativeEvent }) => {
+          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+          const paddingToBottom = 20;
+          const isCloseToBottom =
+            layoutMeasurement.height + contentOffset.y >=
+            contentSize.height - paddingToBottom;
+
+          if (isCloseToBottom) {
+            loadMore();
+          }
+        }}
+        scrollEventThrottle={400}
       >
         {/* Create Post Button */}
         <TouchableOpacity
@@ -155,6 +186,21 @@ export default function FeedScreen() {
                 </View>
               </View>
             ))}
+          </View>
+        )}
+
+        {/* Loading More Indicator */}
+        {loadingMore && (
+          <View style={styles.loadingMoreContainer}>
+            <ActivityIndicator size="small" color="#3b82f6" />
+            <Text style={styles.loadingMoreText}>Loading more posts...</Text>
+          </View>
+        )}
+
+        {/* End of Feed */}
+        {!hasMore && posts.length > 0 && (
+          <View style={styles.endOfFeedContainer}>
+            <Text style={styles.endOfFeedText}>You're all caught up!</Text>
           </View>
         )}
 
@@ -306,5 +352,25 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 14,
     color: '#9ca3af',
+  },
+  loadingMoreContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 24,
+  },
+  loadingMoreText: {
+    marginLeft: 12,
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  endOfFeedContainer: {
+    alignItems: 'center',
+    paddingVertical: 24,
+  },
+  endOfFeedText: {
+    fontSize: 14,
+    color: '#9ca3af',
+    fontStyle: 'italic',
   },
 });

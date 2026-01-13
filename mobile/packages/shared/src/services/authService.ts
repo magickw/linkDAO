@@ -180,7 +180,9 @@ class AuthService {
     // This will be implemented differently for web vs mobile
     // Web: localStorage
     // Mobile: AsyncStorage
-    if (typeof window !== 'undefined' && window.localStorage) {
+    // For now, just check if we're in a browser environment
+    const isBrowser = typeof window !== 'undefined' && window.localStorage !== undefined;
+    if (isBrowser) {
       try {
         window.localStorage.setItem('linkdao_token', token);
         window.localStorage.setItem('linkdao_user', JSON.stringify(user));
@@ -194,7 +196,8 @@ class AuthService {
    * Clear session (platform-specific)
    */
   private async clearSession(): Promise<void> {
-    if (typeof window !== 'undefined' && window.localStorage) {
+    const isBrowser = typeof window !== 'undefined' && window.localStorage !== undefined;
+    if (isBrowser) {
       try {
         window.localStorage.removeItem('linkdao_token');
         window.localStorage.removeItem('linkdao_user');
@@ -208,7 +211,8 @@ class AuthService {
    * Restore session from storage (platform-specific)
    */
   async restoreSession(): Promise<AuthResponse> {
-    if (typeof window !== 'undefined' && window.localStorage) {
+    const isBrowser = typeof window !== 'undefined' && window.localStorage !== undefined;
+    if (isBrowser) {
       try {
         const token = window.localStorage.getItem('linkdao_token');
         const userStr = window.localStorage.getItem('linkdao_user');

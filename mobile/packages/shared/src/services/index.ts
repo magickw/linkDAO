@@ -4,11 +4,11 @@
  */
 
 // API Client
-export { apiClient, ApiClient } from './apiClient';
+export { apiClient } from './apiClient';
 export type { ApiResponse, ApiError } from './apiClient';
 
 // Auth Service
-export { authService, AuthService } from './authService';
+export { authService } from './authService';
 export type { AuthUser, AuthResponse, LoginCredentials, RegisterData } from './authService';
 
 // Messaging Services
@@ -23,3 +23,5 @@ export type { AuthUser, AuthResponse, LoginCredentials, RegisterData } from './a
 // export { OfflineManager, offlineManager } from './OfflineManager';
 
 // Additional services will be exported here as they are migrated
+
+export {};

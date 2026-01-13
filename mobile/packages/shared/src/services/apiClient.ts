@@ -72,7 +72,7 @@ class ApiClient {
     // Response interceptor
     this.instance.interceptors.response.use(
       (response) => {
-        return response.data;
+        return response;
       },
       (error: AxiosError) => {
         return Promise.reject(this.handleError(error));
@@ -114,7 +114,7 @@ class ApiClient {
   async get<T = any>(url: string, config?: InternalAxiosRequestConfig): Promise<ApiResponse<T>> {
     try {
       const response = await this.instance.get<T>(url, config);
-      return { success: true, data: response };
+      return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: (error as ApiError).message };
     }
@@ -126,7 +126,7 @@ class ApiClient {
   async post<T = any>(url: string, data?: any, config?: InternalAxiosRequestConfig): Promise<ApiResponse<T>> {
     try {
       const response = await this.instance.post<T>(url, data, config);
-      return { success: true, data: response };
+      return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: (error as ApiError).message };
     }
@@ -138,7 +138,7 @@ class ApiClient {
   async put<T = any>(url: string, data?: any, config?: InternalAxiosRequestConfig): Promise<ApiResponse<T>> {
     try {
       const response = await this.instance.put<T>(url, data, config);
-      return { success: true, data: response };
+      return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: (error as ApiError).message };
     }
@@ -150,7 +150,7 @@ class ApiClient {
   async patch<T = any>(url: string, data?: any, config?: InternalAxiosRequestConfig): Promise<ApiResponse<T>> {
     try {
       const response = await this.instance.patch<T>(url, data, config);
-      return { success: true, data: response };
+      return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: (error as ApiError).message };
     }
@@ -162,7 +162,7 @@ class ApiClient {
   async delete<T = any>(url: string, config?: InternalAxiosRequestConfig): Promise<ApiResponse<T>> {
     try {
       const response = await this.instance.delete<T>(url, config);
-      return { success: true, data: response };
+      return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: (error as ApiError).message };
     }
@@ -188,7 +188,7 @@ class ApiClient {
         },
       });
 
-      return { success: true, data: response };
+      return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: (error as ApiError).message };
     }

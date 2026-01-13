@@ -3,18 +3,76 @@
  * Chat conversations and messaging
  */
 
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useMessagesStore } from '../../src/store';
+import { messagingService } from '../../src/services';
 
 export default function MessagesScreen() {
-  const conversations = [
-    { id: 1, name: 'John Doe', lastMessage: 'Hey, how are you?', time: '2m', unread: 2, online: true, avatar: '#3b82f6' },
-    { id: 2, name: 'Community Chat', lastMessage: 'Alice: Great meeting today!', time: '15m', unread: 0, online: false, avatar: '#8b5cf6' },
-    { id: 3, name: 'Support Team', lastMessage: 'Your ticket has been resolved', time: '1h', unread: 1, online: true, avatar: '#10b981' },
-    { id: 4, name: 'Trading Group', lastMessage: 'Bob: Market is looking bullish', time: '3h', unread: 0, online: false, avatar: '#f59e0b' },
-  ];
+  const conversations = useMessagesStore((state) => state.conversations);
+  const loading = useMessagesStore((state) => state.loading);
+  const setConversations = useMessagesStore((state) => state.setConversations);
+  const setLoading = useMessagesStore((state) => state.setLoading);
+  const markAsRead = useMessagesStore((state) => state.markAsRead);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    loadConversations();
+  }, []);
+
+  const loadConversations = async () => {
+    setLoading(true);
+    try {
+      const convos = await messagingService.getConversations();
+      setConversations(convos);
+    } catch (error) {
+      console.error('Failed to load conversations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadConversations();
+    setRefreshing(false);
+  };
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (query.length > 2) {
+      try {
+        const results = await messagingService.searchConversations(query);
+        setConversations(results);
+      } catch (error) {
+        console.error('Search failed:', error);
+      }
+    } else if (query.length === 0) {
+      await loadConversations();
+    }
+  };
+
+  const handleConversationPress = async (conversationId: string) => {
+    await markAsRead(conversationId);
+    router.push(`/messages/${conversationId}`);
+  };
+
+  const formatTime = (timestamp?: string) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+    return `${Math.floor(diff / 86400)}d`;
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -35,41 +93,65 @@ export default function MessagesScreen() {
         />
       </View>
 
-      <ScrollView style={styles.content}>
-        {conversations.map((conversation) => (
-          <TouchableOpacity
-            key={conversation.id}
-            style={styles.conversationCard}
-            onPress={() => router.push(`/messages/${conversation.id}`)}
-          >
-            <View style={styles.avatarContainer}>
-              <View style={[styles.avatar, { backgroundColor: conversation.avatar }]} />
-              {conversation.online && <View style={styles.onlineIndicator} />}
-            </View>
-            <View style={styles.conversationInfo}>
-              <View style={styles.conversationHeader}>
-                <Text style={styles.conversationName}>{conversation.name}</Text>
-                <Text style={styles.conversationTime}>{conversation.time}</Text>
+      <ScrollView
+        style={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />
+        }
+      >
+        {/* Loading State */}
+        {loading && conversations.length === 0 && (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color="#3b82f6" />
+            <Text style={styles.loadingText}>Loading conversations...</Text>
+          </View>
+        )}
+
+        {/* Conversations */}
+        {conversations.length > 0 &&
+          conversations.map((conversation) => (
+            <TouchableOpacity
+              key={conversation.id}
+              style={styles.conversationCard}
+              onPress={() => handleConversationPress(conversation.id)}
+            >
+              <View style={styles.avatarContainer}>
+                <View style={[styles.avatar, conversation.avatar && { backgroundColor: conversation.avatar }]} />
+                {conversation.isOnline && <View style={styles.onlineIndicator} />}
               </View>
-              <View style={styles.conversationDetails}>
-                <Text
-                  style={[
-                    styles.lastMessage,
-                    conversation.unread > 0 && styles.lastMessageUnread,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {conversation.lastMessage}
-                </Text>
-                {conversation.unread > 0 && (
-                  <View style={styles.unreadBadge}>
-                    <Text style={styles.unreadText}>{conversation.unread}</Text>
-                  </View>
-                )}
+              <View style={styles.conversationInfo}>
+                <View style={styles.conversationHeader}>
+                  <Text style={styles.conversationName}>{conversation.name}</Text>
+                  <Text style={styles.conversationTime}>{formatTime(conversation.lastMessageTime)}</Text>
+                </View>
+                <View style={styles.conversationDetails}>
+                  <Text
+                    style={[
+                      styles.lastMessage,
+                      conversation.unreadCount > 0 && styles.lastMessageUnread,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {conversation.lastMessage || 'No messages yet'}
+                  </Text>
+                  {conversation.unreadCount > 0 && (
+                    <View style={styles.unreadBadge}>
+                      <Text style={styles.unreadText}>{conversation.unreadCount}</Text>
+                    </View>
+                  )}
+                </View>
               </View>
-            </View>
-          </TouchableOpacity>
-        ))}
+            </TouchableOpacity>
+          ))}
+
+        {/* Empty State */}
+        {!loading && conversations.length === 0 && (
+          <View style={styles.centerContainer}>
+            <Ionicons name="chatbubbles-outline" size={64} color="#9ca3af" />
+            <Text style={styles.emptyText}>No conversations yet</Text>
+            <Text style={styles.emptySubtext}>Start a new conversation!</Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -200,5 +282,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     color: '#ffffff',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 64,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6b7280',
+  },
+  emptyText: {
+    marginTop: 16,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  emptySubtext: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#9ca3af',
   },
 });
