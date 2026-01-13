@@ -19,4 +19,11 @@ config.resolver.nodeModulesPaths = [
 // 3. Force Metro to resolve (sub)dependencies only from the `nodeModulesPaths`
 config.resolver.disableHierarchicalLookup = true;
 
+// 4. Add resolver aliases for Node.js modules
+config.resolver.alias = {
+  ws: 'react-native-url-polyfill',
+  stream: 'readable-stream',
+  crypto: 'react-native-crypto',
+};
+
 module.exports = config;

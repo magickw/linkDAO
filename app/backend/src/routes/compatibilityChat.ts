@@ -335,7 +335,11 @@ router.get('/api/chat/history/:conversationId', authMiddleware, async (req: Requ
 // Post a message (matches frontend expectation)
 router.post('/api/messaging/conversations/:conversationId/messages', csrfProtection, authMiddleware, async (req: Request, res: Response) => {
   const { conversationId } = req.params;
-  const { fromAddress, content, contentType, deliveryStatus } = req.body || {};
+  const { content, contentType, deliveryStatus } = req.body || {};
+  
+  // Use provided fromAddress or fallback to authenticated user
+  const userAddress = (req as any).user?.address || (req as any).userId;
+  const fromAddress = req.body?.fromAddress || userAddress;
 
   safeLogger.info('[compatibilityChat] Creating message', { conversationId, fromAddress, contentLength: content?.length });
 

@@ -522,6 +522,7 @@ class UnifiedMessagingService {
         {
           method: 'POST',
           body: JSON.stringify({
+            fromAddress: this.currentUserAddress,
             content,
             contentType,
             attachments,
