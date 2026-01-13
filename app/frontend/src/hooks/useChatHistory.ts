@@ -36,24 +36,36 @@ export const useChatHistory = (): UseChatHistoryReturn => {
   const [messageReactions, setMessageReactions] = useState<Map<string, MessageReaction[]>>(new Map());
   const conversationLimit = 20;
 
-  // React Query for conversations
+  // React Query for conversations with better error handling
   const {
     data: conversationsData,
     fetchNextPage,
     hasNextPage,
     isLoading: isConversationsLoading,
     isFetchingNextPage,
-    refetch: refetchConversations
+    refetch: refetchConversations,
+    error: conversationsQueryError
   } = useInfiniteQuery({
     queryKey: ['conversations', user?.address],
     queryFn: async ({ pageParam = 0 }) => {
       if (!user?.address) return { conversations: [], hasMore: false };
-      // Use the new unified service
-      const conversations = await unifiedMessagingService.getConversations({
-        limit: conversationLimit,
-        offset: pageParam as number
-      });
-      return { conversations, hasMore: conversations.length === conversationLimit };
+      try {
+        // Use the new unified service with timeout
+        const conversations = await Promise.race([
+          unifiedMessagingService.getConversations({
+            limit: conversationLimit,
+            offset: pageParam as number
+          }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Request timeout - backend may be unavailable')), 10000)
+          )
+        ]) as Conversation[];
+        return { conversations, hasMore: conversations.length === conversationLimit };
+      } catch (error) {
+        console.error('Failed to fetch conversations:', error);
+        // Return empty result instead of throwing to prevent infinite loading
+        return { conversations: [], hasMore: false };
+      }
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
@@ -65,6 +77,8 @@ export const useChatHistory = (): UseChatHistoryReturn => {
     enabled: !!user?.address,
     staleTime: 30000,
     gcTime: 1000 * 60 * 5,
+    retry: 2, // Only retry twice
+    retryDelay: 1000, // 1 second delay between retries
   });
 
   const conversations = useMemo(() => {
@@ -350,7 +364,7 @@ export const useChatHistory = (): UseChatHistoryReturn => {
     conversations,
     loading,
     conversationsLoading: isConversationsLoading,
-    error,
+    error: error || (conversationsQueryError ? String(conversationsQueryError) : null),
     hasMore,
     hasMoreConversations: !!hasNextPage,
     loadMessages,

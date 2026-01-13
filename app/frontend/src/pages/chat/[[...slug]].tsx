@@ -633,14 +633,67 @@ export default function ChatPage() {
     ? `Chat with ${truncateAddress(getOtherParticipant(selectedConversation))} | LinkDAO`
     : 'Chat | LinkDAO';
 
-  // Show loading state
-  if (authLoading) {
+  // Add timeout for loading state to prevent infinite loading when backend is down
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  
+  useEffect(() => {
+    if (authLoading || conversationsLoading) {
+      const timer = setTimeout(() => {
+        setLoadingTimeout(true);
+      }, 10000); // 10 second timeout
+      
+      return () => clearTimeout(timer);
+    } else {
+      setLoadingTimeout(false);
+    }
+  }, [authLoading, conversationsLoading]);
+
+  // Show loading state with timeout
+  if ((authLoading || conversationsLoading) && !loadingTimeout) {
     return (
       <Layout title="Chat - LinkDAO" fullWidth={true} hideFooter={true}>
         <div className="h-[calc(100vh-80px)] bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
             <p className="text-gray-500 dark:text-gray-400">Loading chat...</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">This may take a moment...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Show error state if loading timed out or there's an error
+  if (loadingTimeout || conversationsError) {
+    return (
+      <Layout title="Chat - LinkDAO" fullWidth={true} hideFooter={true}>
+        <div className="h-[calc(100vh-80px)] bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+          <div className="max-w-md w-full mx-4 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center border border-gray-200 dark:border-gray-700">
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Chat Service Unavailable</h1>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              {conversationsError || 'The chat service is temporarily unavailable. Please try again later.'}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setLoadingTimeout(false);
+                  loadConversations();
+                }}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
+              >
+                <MessageCircle className="h-5 w-5" />
+                Retry
+              </button>
+              <button
+                onClick={() => router.push('/')}
+                className="flex-1 px-4 py-3 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                Go Home
+              </button>
+            </div>
           </div>
         </div>
       </Layout>

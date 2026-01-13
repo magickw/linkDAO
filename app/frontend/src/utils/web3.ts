@@ -288,26 +288,21 @@ export async function getProvider() {
     console.warn('Error getting provider:', e);
   }
 
-// Last-resort: use a simple JsonRpcProvider with staticNetwork
-console.log('Using fallback provider');
-try {
-  const provider = new ethers.JsonRpcProvider('https://eth.llamarpc.com', 1, {
-    staticNetwork: true,  // Prevent network detection issues
-    polling: false
-  });
-  cachedProvider = provider;
-  providerCreationAttempts = 0;
-  return provider;
-} catch (fallbackError) {
-  console.warn('Fallback provider creation failed:', fallbackError);
-  lastProviderError = fallbackError instanceof Error ? fallbackError : new Error('Unknown error');
-  return null;
-}
-  } catch (error) {
-  console.error('Error getting provider:', error);
-  lastProviderError = error instanceof Error ? error : new Error('Unknown error');
-  return null;
-}
+  // Last-resort: use a simple JsonRpcProvider with staticNetwork
+  console.log('Using fallback provider');
+  try {
+    const provider = new ethers.JsonRpcProvider('https://eth.llamarpc.com', 1, {
+      staticNetwork: true,  // Prevent network detection issues
+      polling: false
+    });
+    cachedProvider = provider;
+    providerCreationAttempts = 0;
+    return provider;
+  } catch (fallbackError) {
+    console.warn('Fallback provider creation failed:', fallbackError);
+    lastProviderError = fallbackError instanceof Error ? fallbackError : new Error('Unknown error');
+    return null;
+  }
 }
 
 /**
