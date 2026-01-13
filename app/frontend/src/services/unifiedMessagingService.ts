@@ -523,6 +523,9 @@ class UnifiedMessagingService {
           method: 'POST',
           body: JSON.stringify({
             fromAddress: this.currentUserAddress,
+            // senderAddress refers to the message author's wallet address (messaging schema)
+            // NOT to be confused with 'sender' in payment transactions
+            senderAddress: this.currentUserAddress, // Include both for compatibility
             content,
             contentType,
             attachments,
@@ -1456,9 +1459,11 @@ class UnifiedMessagingService {
 
   // Transform helpers
   private transformMessage(data: any): Message {
+    const fromAddress = data.fromAddress || data.senderAddress || data.sender_address;
     return {
       ...data,
-      fromAddress: data.fromAddress || data.senderAddress || data.sender_address,
+      fromAddress,
+      senderAddress: fromAddress, // Ensure symmetry
       timestamp: new Date(data.timestamp || data.createdAt || data.sentAt || data.sent_at || data.created_at),
       editedAt: data.editedAt || data.edited_at ? new Date(data.editedAt || data.edited_at) : undefined,
       deletedAt: data.deletedAt || data.deleted_at ? new Date(data.deletedAt || data.deleted_at) : undefined

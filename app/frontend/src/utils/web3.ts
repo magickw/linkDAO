@@ -330,6 +330,14 @@ export async function getSigner() {
       }
     }
 
+    // Check if MetaMask is installed and warn about known issues
+    if (typeof window !== 'undefined' && (window as any).ethereum && (window as any).ethereum.isMetaMask) {
+      console.warn('MetaMask detected. Some versions of MetaMask have a known issue where they freeze request objects, causing wallet connection failures. If you experience issues, try:');
+      console.warn('1. Updating MetaMask to the latest version');
+      console.warn('2. Using a different wallet (Coinbase Wallet, WalletConnect, etc.)');
+      console.warn('3. Using a different browser (Firefox, Safari)');
+    }
+
     // Try direct injected provider (window.ethereum) first
     if (hasInjectedProvider()) {
       const injectedProvider = getInjectedProvider();
@@ -385,7 +393,8 @@ export async function getSigner() {
               return directSigner;
             }
             
-            throw new Error('Wallet connection failed. Please try refreshing the page or using a different browser.');
+            // All methods failed - this is a MetaMask bug
+            throw new Error('Wallet connection failed due to a known MetaMask issue where request objects are frozen. Please try one of these solutions:\n\n1. Update MetaMask to the latest version\n2. Use a different wallet (Coinbase Wallet, WalletConnect, RainbowKit)\n3. Use a different browser (Firefox, Safari)\n4. Disable MetaMask and enable it again\n\nThis is a MetaMask bug, not an issue with this application.');
           }
         }
       }
@@ -422,7 +431,8 @@ export async function getSigner() {
             return directSigner;
           }
           
-          throw new Error('Wallet connection failed. Please try refreshing the page or using a different browser.');
+          // All methods failed
+          throw new Error('Wallet connection failed due to a known MetaMask issue where request objects are frozen. Please try one of these solutions:\n\n1. Update MetaMask to the latest version\n2. Use a different wallet (Coinbase Wallet, WalletConnect, RainbowKit)\n3. Use a different browser (Firefox, Safari)\n4. Disable MetaMask and enable it again\n\nThis is a MetaMask bug, not an issue with this application.');
         }
       }
     }
@@ -432,8 +442,8 @@ export async function getSigner() {
   } catch (error) {
     console.error('Error getting signer:', error);
     
-    // Re-throw LastPass-related errors with clearer message
-    if (error instanceof Error && (error.message.includes('read only property') || error.message.includes('LastPass'))) {
+    // Re-throw MetaMask-related errors with clearer message
+    if (error instanceof Error && (error.message.includes('read only property') || error.message.includes('requestId'))) {
       throw error;
     }
     

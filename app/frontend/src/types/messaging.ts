@@ -2,6 +2,7 @@ export interface Message {
   id: string;
   conversationId: string;
   fromAddress: string;
+  senderAddress?: string; // Alias for fromAddress for backend compatibility
   content: string;
   contentType: 'text' | 'image' | 'file' | 'post_share' | 'voice';
   timestamp: Date;

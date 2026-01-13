@@ -36,7 +36,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
   const profile = sellerData.profile as UnifiedSellerProfile | null | undefined;
   const profileLoading = sellerData.loading;
   const profileError = sellerData.error;
-  const { dashboard, stats, notifications, unreadNotifications, loading, markNotificationRead, address: dashboardAddress } = useUnifiedSellerDashboard(mockWalletAddress);
+  const { dashboard, stats, notifications, unreadNotifications, loading, error: dashboardError, markNotificationRead, address: dashboardAddress } = useUnifiedSellerDashboard(mockWalletAddress);
   const { getTierById, getNextTier } = useSellerTiers();
   const { listings, loading: listingsLoading, refetch: fetchListings } = useUnifiedSellerListings(dashboardAddress);
   const [activeTab, setActiveTab] = useState('overview');
@@ -337,10 +337,15 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
     );
   }
 
+  // Handle errors from either profile or dashboard
+  const activeError = profileError || dashboardError;
+
   // Show error if there's an API error (different from profile not found)
-  if (profileError && !(profileError instanceof Error && profileError.message.includes('not found'))) {
-    const errorMessage = profileError instanceof Error ? profileError.message : String(profileError);
+  if (activeError && !(activeError instanceof Error && activeError.message.includes('not found'))) {
+    const errorMessage = activeError instanceof Error ? activeError.message : String(activeError);
     const isServerError = errorMessage.includes('500') || errorMessage.includes('Server error');
+    // Check for auth errors
+    const isAuthError = errorMessage.includes('sign in') || errorMessage.includes('authenticate') || errorMessage.includes('401') || errorMessage.includes('403');
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
@@ -352,33 +357,55 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
               </svg>
             </div>
             <h1 className="text-2xl font-bold text-white mb-2">
-              {isServerError ? 'Server Error' : 'Error Loading Profile'}
+              {isAuthError ? 'Authentication Required' : isServerError ? 'Server Error' : 'Error Loading Dashboard'}
             </h1>
             <p className="text-gray-300 mb-4">
-              {isServerError
-                ? 'Our servers are experiencing issues. Please try again in a few minutes.'
-                : 'There was an error loading your seller profile. Please try again.'
+              {isAuthError
+                ? 'Please sign in to access your seller dashboard.'
+                : isServerError
+                  ? 'Our servers are experiencing issues. Please try again in a few minutes.'
+                  : 'There was an error loading your seller dashboard. Please try again.'
               }
             </p>
-            <div className="text-left bg-red-500/10 rounded-lg p-4 mb-6">
-              <p className="text-red-300 text-sm font-mono break-all">
-                {errorMessage}
-              </p>
-              {isServerError && (
-                <p className="text-red-300 text-xs mt-2">
-                  Error Code: 500 - Internal Server Error
+            {!isAuthError && (
+              <div className="text-left bg-red-500/10 rounded-lg p-4 mb-6">
+                <p className="text-red-300 text-sm font-mono break-all">
+                  {errorMessage}
                 </p>
-              )}
-            </div>
+                {isServerError && (
+                  <p className="text-red-300 text-xs mt-2">
+                    Error Code: 500 - Internal Server Error
+                  </p>
+                )}
+              </div>
+            )}
           </div>
           <div className="space-y-3">
-            <Button
-              onClick={() => sellerData.refetch()}
-              variant="primary"
-              className="w-full"
-            >
-              Try Again
-            </Button>
+            {isAuthError ? (
+              <Button
+                onClick={() => {
+                  // Redirect to login or trigger wallet connect
+                  // For now, reload to trigger auth flow
+                  window.location.reload();
+                }}
+                variant="primary"
+                className="w-full"
+              >
+                Sign In
+              </Button>
+            ) : (
+              <Button
+                onClick={() => {
+                  sellerData.refetch();
+                  // We need to refetch dashboard too, but rely on window reload for now as it's cleaner
+                  window.location.reload();
+                }}
+                variant="primary"
+                className="w-full"
+              >
+                Try Again
+              </Button>
+            )}
             <Button
               onClick={() => router.push('/marketplace')}
               variant="secondary"

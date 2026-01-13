@@ -337,9 +337,10 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
   const { conversationId } = req.params;
   const { content, contentType, deliveryStatus } = req.body || {};
   
-  // Use provided fromAddress or fallback to authenticated user
+  // Use provided senderAddress/fromAddress or fallback to authenticated user
+  // Prefer senderAddress to match DB schema
   const userAddress = (req as any).user?.address || (req as any).userId;
-  const fromAddress = req.body?.fromAddress || userAddress;
+  const fromAddress = req.body?.senderAddress || req.body?.fromAddress || userAddress;
 
   safeLogger.info('[compatibilityChat] Creating message', { conversationId, fromAddress, contentLength: content?.length });
 
@@ -347,7 +348,7 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
     return res.status(400).json({ error: 'valid conversation_id required' });
   }
   if (!fromAddress || !content) {
-    return res.status(400).json({ error: 'fromAddress and content required' });
+    return res.status(400).json({ error: 'senderAddress/fromAddress and content required' });
   }
 
   if (hasDb) {
