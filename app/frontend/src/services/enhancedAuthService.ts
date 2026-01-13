@@ -131,7 +131,16 @@ class EnhancedAuthService {
 
       // Proceed with normal session load
       if (sessionDataStr) {
-        const sessionData: SessionData | null = JSON.parse(sessionDataStr);
+        let sessionData: SessionData | null = null;
+        try {
+          sessionData = JSON.parse(sessionDataStr);
+        } catch (parseError) {
+          console.warn('⚠️ Failed to parse stored session data, clearing corrupted storage:', parseError);
+          localStorage.removeItem(this.STORAGE_KEYS.SESSION_DATA);
+          // Also clear other related keys to ensure a clean state
+          this.clearStoredSession();
+          return;
+        }
 
         // Check validity...
         if (sessionData && Date.now() < sessionData.expiresAt) {
