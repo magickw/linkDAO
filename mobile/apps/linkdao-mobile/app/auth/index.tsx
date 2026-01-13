@@ -13,12 +13,11 @@ import { authService } from '@linkdao/shared';
 
 export default function LoginScreen() {
   const [walletAddress, setWalletAddress] = useState('');
-  const [signature, setSignature] = useState('');
   const [loading, setLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [connector, setConnector] = useState<any>(null);
 
-  const { walletAddress: paramWalletAddress, signature: paramSignature, connector: paramConnector } = useLocalSearchParams();
+  const { walletAddress: paramWalletAddress, connector: paramConnector } = useLocalSearchParams();
 
   const setUser = useAuthStore((state) => state.setUser);
   const setToken = useAuthStore((state) => state.setToken);
@@ -28,13 +27,13 @@ export default function LoginScreen() {
 
   // Handle wallet connection from wallet-connect screen
   useEffect(() => {
-    if (paramWalletAddress && paramSignature) {
+    if (paramWalletAddress) {
       setWalletAddress(paramWalletAddress as string);
-      setSignature(paramSignature as string);
       setIsConnected(true);
       setConnector(paramConnector as string);
+      // Signature will be generated during authentication
     }
-  }, [paramWalletAddress, paramSignature, paramConnector]);
+  }, [paramWalletAddress, paramConnector]);
 
   // Auto-authenticate if wallet is connected but user is not authenticated
   useEffect(() => {
@@ -72,51 +71,8 @@ export default function LoginScreen() {
     }
   };
 
-  const handleLogin = async () => {
-    if (!walletAddress || !signature) {
-      Alert.alert('Error', 'Please connect your wallet and sign the message');
-      return;
-    }
-
-    setLoading(true);
-    setLoadingStore(true);
-
-    try {
-      const response = await authService.login({
-        address: walletAddress,
-        signature,
-        message: 'Sign in to LinkDAO',
-      });
-
-      if (response.success && response.data) {
-        setToken(response.data.token);
-        setUser(response.data.user);
-        router.replace('/(tabs)');
-      } else {
-        Alert.alert('Login Failed', response.error || 'Invalid credentials');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to login. Please try again.');
-    } finally {
-      setLoading(false);
-      setLoadingStore(false);
-    }
-  };
-
   const handleWalletConnect = () => {
     router.push('/auth/wallet-connect');
-  };
-
-  const generateSignature = () => {
-    // This would integrate with a wallet provider like WalletConnect or native wallet
-    // For now, simulate signature generation
-    const mockSignature = `0x${Math.random().toString(16).substr(2, 64)}`;
-    const mockAddress = `0x${Math.random().toString(16).substr(2, 40)}`;
-    setSignature(mockSignature);
-    setWalletAddress(mockAddress);
-    setIsConnected(true);
-    setConnector({ name: 'Mock' });
-    Alert.alert('Success', 'Signature generated successfully');
   };
 
   const handleClearStorage = () => {
@@ -166,17 +122,6 @@ export default function LoginScreen() {
               </Text>
               <TouchableOpacity onPress={handleWalletConnect}>
                 <Ionicons name="link" size={20} color="#3b82f6" />
-              </TouchableOpacity>
-            </View>
-
-            {/* Signature */}
-            <View style={styles.inputContainer}>
-              <Ionicons name="key-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
-              <Text style={styles.input}>
-                {signature ? `${signature.slice(0, 10)}...${signature.slice(-6)}` : 'No signature'}
-              </Text>
-              <TouchableOpacity onPress={generateSignature}>
-                <Ionicons name="create-outline" size={20} color="#3b82f6" />
               </TouchableOpacity>
             </View>
 

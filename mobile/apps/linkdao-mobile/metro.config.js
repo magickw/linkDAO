@@ -19,4 +19,19 @@ config.resolver.nodeModulesPaths = [
 // 3. Force Metro to resolve (sub)dependencies only from the `nodeModulesPaths`
 config.resolver.disableHierarchicalLookup = true;
 
+// 4. Add polyfills for WalletConnect
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  // Redirect ws to react-native-compat
+  if (moduleName === 'ws') {
+    return context.resolveRequest(
+      context,
+      '@walletconnect/react-native-compat',
+      platform
+    );
+  }
+
+  // Call the default resolver
+  return context.resolveRequest(context, moduleName, platform);
+};
+
 module.exports = config;

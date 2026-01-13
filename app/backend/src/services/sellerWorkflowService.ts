@@ -298,7 +298,7 @@ export class SellerWorkflowService {
             await this.orderService.updateOrderStatus(orderId, OrderStatus.SHIPPED, {
                 trackingNumber,
                 carrier,
-                shippedAt: new Date().toISOString()
+                shippedAt: new Date()
             });
 
             // Start delivery monitoring
@@ -704,7 +704,7 @@ export class SellerWorkflowService {
             if (normalizedStatus === OrderStatus.PAID) {
                 await this.orderService.updateOrderStatus(orderId, OrderStatus.PROCESSING, {
                     serviceStarted: true,
-                    serviceStartedAt: new Date().toISOString()
+                    serviceStartedAt: new Date()
                 });
             }
 
@@ -746,7 +746,7 @@ export class SellerWorkflowService {
                 throw new Error(`Cannot complete service with status: ${order.serviceStatus}`);
             }
 
-            const completedAt = new Date().toISOString();
+            const completedAt = new Date();
 
             await this.databaseService.updateOrder(orderId, {
                 serviceStatus: 'completed',
@@ -798,7 +798,7 @@ export class SellerWorkflowService {
                 throw new Error(`Order must be PAID, PROCESSING or PENDING to complete digital delivery. Current status: ${order.status}`);
             }
 
-            const completedAt = new Date().toISOString();
+            const completedAt = new Date();
 
             // Update order status to DELIVERED
             await this.orderService.updateOrderStatus(orderId, OrderStatus.DELIVERED, {

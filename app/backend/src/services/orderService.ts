@@ -221,7 +221,10 @@ export class OrderService {
         buyerConfirmedAt,
         serviceStarted,
         serviceStartedAt,
-        isServiceOrder
+        isServiceOrder,
+        shippedAt,
+        trackingNumber,
+        carrier
       } = metadata || {};
 
       const success = await databaseService.updateOrder(orderId, {
@@ -239,7 +242,10 @@ export class OrderService {
         buyerConfirmedAt,
         serviceStarted,
         serviceStartedAt,
-        isServiceOrder
+        isServiceOrder,
+        shippedAt,
+        trackingNumber,
+        carrier
       });
 
       if (success) {

@@ -3,6 +3,7 @@ import { safeLogger } from '../utils/safeLogger';
 import { conversations, chatMessages, blockedUsers, messageReadStatus, conversationParticipants, messageReactions } from '../db/schema';
 // import { notificationService } from './notificationService';
 import { eq, desc, asc, and, or, like, inArray, sql, gt, lt, isNull, count } from 'drizzle-orm';
+import communityNotificationService from './communityNotificationService';
 import { sanitizeMessage, sanitizeConversation, sanitizeSearchQuery } from '../utils/sanitization';
 import { cacheService } from './cacheService';
 
@@ -506,8 +507,8 @@ export class MessagingService {
             userAddress: participant,
             type: isMentioned ? 'mention' : 'message',
             title: isMentioned ? 'You were mentioned in a message' : 'New message',
-            message: messageContent.length > 100 
-              ? messageContent.substring(0, 100) + '...' 
+            message: messageContent.length > 100
+              ? messageContent.substring(0, 100) + '...'
               : messageContent,
             data: {
               conversationId,
@@ -518,11 +519,17 @@ export class MessagingService {
             priority: 'medium' as const
           };
 
-          // Store notification in database
-          await db.insert(userNotifications).values({
-            ...notificationData,
-            isRead: false,
-            createdAt: new Date()
+          // Send notification via CommunityNotificationService (handles DB, Email, Push)
+          await communityNotificationService.sendNotification({
+            userAddress: participant,
+            communityId: conversationId, // Using conversationId as context
+            communityName: 'Private Message', // Generic name or specific if group
+            type: isMentioned ? 'mention' : 'new_post', // Mapping roughly to supported types
+            title: notificationData.title,
+            message: notificationData.message,
+            actionUrl: `/messages/${conversationId}`,
+            userName: fromAddress, // Simplified for now
+            metadata: notificationData.data
           });
 
           // Send real-time notification via WebSocket

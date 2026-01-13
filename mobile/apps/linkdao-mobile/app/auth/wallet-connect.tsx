@@ -1,6 +1,6 @@
 /**
  * Wallet Connect Screen
- * Handle wallet connection and signature generation
+ * Handle wallet connection and signature generation using WalletConnect SDK
  */
 
 import { useState, useEffect } from 'react';
@@ -8,22 +8,23 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
+import { walletConnectService } from '../../src/services/walletConnectService';
 
-// Mock wallet providers - in production, integrate with WalletConnect SDK or native wallet
+// Wallet providers
 const WALLET_PROVIDERS = [
-  {
-    id: 'metamask',
-    name: 'MetaMask',
-    icon: 'wallet-outline',
-    color: '#f6851b',
-    description: 'Connect with MetaMask wallet',
-  },
   {
     id: 'walletconnect',
     name: 'WalletConnect',
     icon: 'qr-code-outline',
     color: '#3b99fc',
     description: 'Scan QR code with mobile wallet',
+  },
+  {
+    id: 'metamask',
+    name: 'MetaMask',
+    icon: 'wallet-outline',
+    color: '#f6851b',
+    description: 'Connect with MetaMask wallet',
   },
   {
     id: 'coinbase',
@@ -46,19 +47,40 @@ export default function WalletConnectScreen() {
   const [connecting, setConnecting] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [signature, setSignature] = useState<string | null>(null);
+  const [pairingUri, setPairingUri] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const { mode = 'login' } = useLocalSearchParams<{ mode?: 'login' | 'register' }>();
 
   useEffect(() => {
-    // Check if wallet is already connected
-    checkWalletConnection();
+    // Initialize WalletConnect service
+    initializeWalletConnect();
   }, []);
 
+  useEffect(() => {
+    // Check if wallet is already connected
+    if (isInitialized) {
+      checkWalletConnection();
+    }
+  }, [isInitialized]);
+
+  const initializeWalletConnect = async () => {
+    try {
+      await walletConnectService.initialize();
+      setIsInitialized(true);
+    } catch (error) {
+      console.error('Failed to initialize WalletConnect:', error);
+      Alert.alert('Error', 'Failed to initialize wallet service');
+    }
+  };
+
   const checkWalletConnection = async () => {
-    // In production, check if wallet is already connected via WalletConnect or native wallet
-    // For now, mock the check
-    const mockAddress = '0x1234567890abcdef1234567890abcdef12345678';
-    setWalletAddress(mockAddress);
+    if (walletConnectService.isConnected()) {
+      const accounts = walletConnectService.getAccounts();
+      if (accounts.length > 0) {
+        setWalletAddress(accounts[0]);
+      }
+    }
   };
 
   const handleConnect = async (providerId: string) => {
@@ -66,55 +88,103 @@ export default function WalletConnectScreen() {
     setConnecting(true);
 
     try {
-      // Simulate wallet connection delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      if (providerId === 'walletconnect') {
+        // Generate pairing URI for WalletConnect
+        const uri = await walletConnectService.getPairingUri();
+        setPairingUri(uri);
 
-      // Mock wallet address
-      const mockAddress = '0x' + Math.random().toString(16).substr(2, 40);
-      setWalletAddress(mockAddress);
-
-      // Generate signature
-      const mockSignature = '0x' + Math.random().toString(16).substr(2, 130);
-      setSignature(mockSignature);
-
-      Alert.alert(
-        'Wallet Connected',
-        `Successfully connected to ${providerId}`,
-        [
-          {
-            text: 'Continue',
-            onPress: () => {
-              // Pass wallet data back to login screen using router.setParams
-              router.setParams({
-                walletAddress: mockAddress,
-                signature: mockSignature,
-                connector: providerId
-              });
+        Alert.alert(
+          'WalletConnect QR Code',
+          'Scan this QR code with your mobile wallet app to connect',
+          [
+            {
+              text: 'Copy URI',
+              onPress: () => {
+                // In production, show QR code or copy URI to clipboard
+                Alert.alert('URI Copied', uri);
+              },
             },
-          },
-        ]
-      );
+            {
+              text: 'Manual Pair',
+              onPress: async () => {
+                // For testing, you can manually pair with the URI
+                await walletConnectService.pair(uri);
+                // Wait for connection
+                setTimeout(async () => {
+                  if (walletConnectService.isConnected()) {
+                    const accounts = walletConnectService.getAccounts();
+                    if (accounts.length > 0) {
+                      setWalletAddress(accounts[0]);
+                      setSelectedProvider(providerId);
+                    }
+                  }
+                }, 2000);
+              },
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+          ]
+        );
+      } else {
+        // For other providers, simulate connection
+        // In production, integrate with their native SDKs
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // Mock wallet address
+        const mockAddress = '0x' + Math.random().toString(16).substr(2, 40);
+        setWalletAddress(mockAddress);
+        setSelectedProvider(providerId);
+
+        // Auto-navigate back after connection
+        Alert.alert(
+          'Wallet Connected',
+          `Successfully connected to ${providerId}`,
+          [
+            {
+              text: 'Continue',
+              onPress: () => {
+                router.setParams({
+                  walletAddress: mockAddress,
+                  connector: providerId
+                });
+              },
+            },
+          ]
+        );
+      }
     } catch (error) {
+      console.error('Connection error:', error);
       Alert.alert('Connection Failed', 'Unable to connect to wallet. Please try again.');
     } finally {
       setConnecting(false);
     }
   };
 
-  const handleDisconnect = () => {
-    setWalletAddress(null);
-    setSignature(null);
-    setSelectedProvider(null);
+  const handleDisconnect = async () => {
+    try {
+      await walletConnectService.disconnect();
+      setWalletAddress(null);
+      setSignature(null);
+      setSelectedProvider(null);
+      setPairingUri(null);
+    } catch (error) {
+      console.error('Disconnect error:', error);
+    }
   };
 
   const handleContinue = () => {
-    if (!walletAddress || !signature) {
+    if (!walletAddress) {
       Alert.alert('Error', 'Please connect your wallet first');
       return;
     }
 
-    // Navigate back with wallet data
-    router.back();
+    // Navigate back with wallet data (signature will be generated during authentication)
+    router.setParams({
+      walletAddress: walletAddress,
+      connector: selectedProvider || 'wallet'
+    });
   };
 
   return (

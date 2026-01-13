@@ -1,8 +1,31 @@
 // Polyfills for browser APIs required by web3 libraries (viem, wagmi, etc.)
 
+// Import random values polyfill first
+require('react-native-get-random-values');
+
 // Initialize window object if it doesn't exist
 if (typeof window === 'undefined') {
   global.window = {};
+}
+
+// Polyfill crypto.getRandomValues for React Native
+if (typeof global.crypto === 'undefined') {
+  global.crypto = {};
+}
+
+if (typeof global.crypto.getRandomValues !== 'function') {
+  const getRandomValues = (array) => {
+    for (let i = 0; i < array.length; i++) {
+      array[i] = Math.floor(Math.random() * 256);
+    }
+    return array;
+  };
+  global.crypto.getRandomValues = getRandomValues;
+}
+
+// Polyfill crypto.subtle for React Native
+if (typeof global.crypto.subtle === 'undefined') {
+  global.crypto.subtle = {};
 }
 
 // Polyfill addEventListener

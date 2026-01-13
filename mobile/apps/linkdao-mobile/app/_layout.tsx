@@ -10,6 +10,21 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAuthStore } from '../src/store';
 import { WalletLoginBridge } from '../src/components/WalletLoginBridge';
+import { walletConnectService } from '../src/services/walletConnectService';
+import { setWalletAdapter } from '@linkdao/shared';
+
+// Initialize wallet adapter
+setWalletAdapter({
+  signMessage: async (message: string, address: string) => {
+    return await walletConnectService.signMessage(message, address);
+  },
+  getAccounts: () => {
+    return walletConnectService.getAccounts();
+  },
+  isConnected: () => {
+    return walletConnectService.isConnected();
+  },
+});
 
 export default function RootLayout() {
   const { isAuthenticated } = useAuthStore();
@@ -18,6 +33,18 @@ export default function RootLayout() {
   const { walletAddress, signature, connector } = useLocalSearchParams();
 
   useEffect(() => {
+    // Initialize WalletConnect service
+    const initWalletConnect = async () => {
+      try {
+        await walletConnectService.initialize();
+        console.log('✅ WalletConnect initialized');
+      } catch (error) {
+        console.error('❌ Failed to initialize WalletConnect:', error);
+      }
+    };
+
+    initWalletConnect();
+
     // Mark as ready after initial render
     setIsReady(true);
   }, []);

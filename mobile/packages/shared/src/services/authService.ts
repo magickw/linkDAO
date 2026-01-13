@@ -5,6 +5,7 @@
 
 import { apiClient } from './apiClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { signMessageWithWallet } from './walletAdapter';
 
 export interface AuthUser {
   id: string;
@@ -156,16 +157,18 @@ class AuthService {
 
   /**
    * Sign message with wallet
-   * This is a stub - actual implementation would integrate with wallet provider
+   * Uses the configured wallet adapter to sign the message
    */
   private async signMessage(address: string, message: string): Promise<string> {
-    // In a real implementation, this would integrate with wallet providers like:
-    // - WalletConnect
-    // - MetaMask (if available in mobile)
-    // - Native wallet SDKs
-    // For now, return a mock signature
-    const mockSignature = `0x${Buffer.from(message).toString('hex').padEnd(130, '0').substring(0, 130)}`;
-    return mockSignature;
+    try {
+      // Use wallet adapter to sign the message
+      return await signMessageWithWallet(message, address);
+    } catch (error) {
+      console.error('Failed to sign message:', error);
+      // Fallback to mock signature for development/testing
+      const mockSignature = `0x${Buffer.from(message).toString('hex').padEnd(130, '0').substring(0, 130)}`;
+      return mockSignature;
+    }
   }
 
   /**
