@@ -7,6 +7,7 @@ import SettingsScreen from '../screens/settings/SettingsScreen';
 import SendScreen from '../screens/transaction/SendScreen';
 import ReceiveScreen from '../screens/transaction/ReceiveScreen';
 import SwapScreen from '../screens/transaction/SwapScreen';
+import TokenDetailScreen from '../screens/assets/TokenDetailScreen';
 
 const Tab = createBottomTabNavigator();
 const AssetsStack = createStackNavigator();
@@ -18,6 +19,7 @@ function AssetsNavigator() {
       <AssetsStack.Screen name="Send" component={SendScreen} />
       <AssetsStack.Screen name="Receive" component={ReceiveScreen} />
       <AssetsStack.Screen name="Swap" component={SwapScreen} />
+      <AssetsStack.Screen name="TokenDetail" component={TokenDetailScreen} options={({ route }: any) => ({ title: route.params.token.symbol })} />
     </AssetsStack.Navigator>
   );
 }

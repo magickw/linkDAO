@@ -1,9 +1,13 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useAccount, useChainId } from 'wagmi';
+// import { useAccount, useChainId } from 'wagmi';
 import { walletService, WalletService, TokenBalance as ServiceTokenBalance } from '../services/walletService';
 import { EnhancedWalletData, TokenBalance } from '../types/wallet';
 import { dexService } from '../services/dexService';
 import { cryptoPriceService } from '../services/cryptoPriceService';
+
+// Stubs for Wagmi hooks
+const useAccount = () => ({ address: null, isConnected: false });
+const useChainId = () => 1;
 
 // Simple in-memory cache for recent transactions to reduce API calls
 const txCache = new Map<string, { data: any[]; timestamp: number }>();

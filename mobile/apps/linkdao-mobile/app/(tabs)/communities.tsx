@@ -3,18 +3,80 @@
  * Browse and manage communities
  */
 
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useCommunitiesStore } from '../../src/store';
+import { communitiesService } from '../../src/services';
 
 export default function CommunitiesScreen() {
-  const communities = [
-    { id: 1, name: 'DeFi Enthusiasts', members: 2450, posts: 120, avatar: '#3b82f6' },
-    { id: 2, name: 'NFT Collectors', members: 1890, posts: 89, avatar: '#8b5cf6' },
-    { id: 3, name: 'Web3 Developers', members: 3200, posts: 156, avatar: '#10b981' },
-    { id: 4, name: 'Crypto Traders', members: 4100, posts: 234, avatar: '#f59e0b' },
-  ];
+  const communities = useCommunitiesStore((state) => state.communities);
+  const featuredCommunities = useCommunitiesStore((state) => state.featuredCommunities);
+  const loading = useCommunitiesStore((state) => state.loading);
+  const setCommunities = useCommunitiesStore((state) => state.setCommunities);
+  const setFeaturedCommunities = useCommunitiesStore((state) => state.setFeaturedCommunities);
+  const setLoading = useCommunitiesStore((state) => state.setLoading);
+  const joinCommunity = useCommunitiesStore((state) => state.joinCommunity);
+  const leaveCommunity = useCommunitiesStore((state) => state.leaveCommunity);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    loadCommunities();
+  }, []);
+
+  const loadCommunities = async () => {
+    setLoading(true);
+    try {
+      const [allCommunities, featured] = await Promise.all([
+        communitiesService.getCommunities(),
+        communitiesService.getFeaturedCommunities(),
+      ]);
+      setCommunities(allCommunities);
+      setFeaturedCommunities(featured);
+    } catch (error) {
+      console.error('Failed to load communities:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadCommunities();
+    setRefreshing(false);
+  };
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (query.length > 2) {
+      try {
+        const results = await communitiesService.searchCommunities(query);
+        setCommunities(results);
+      } catch (error) {
+        console.error('Search failed:', error);
+      }
+    } else if (query.length === 0) {
+      await loadCommunities();
+    }
+  };
+
+  const handleJoinToggle = async (communityId: string, isJoined: boolean) => {
+    try {
+      if (isJoined) {
+        await communitiesService.leaveCommunity(communityId);
+        leaveCommunity(communityId);
+      } else {
+        await communitiesService.joinCommunity(communityId);
+        joinCommunity(communityId);
+      }
+    } catch (error) {
+      console.error('Failed to toggle join:', error);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -35,47 +97,78 @@ export default function CommunitiesScreen() {
         />
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />
+        }
+      >
+        {/* Loading State */}
+        {loading && communities.length === 0 && (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color="#3b82f6" />
+            <Text style={styles.loadingText}>Loading communities...</Text>
+          </View>
+        )}
+
         {/* Featured Communities */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Featured</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.featuredScroll}>
-            {communities.slice(0, 2).map((community) => (
-              <TouchableOpacity
-                key={community.id}
-                style={styles.featuredCard}
-                onPress={() => router.push(`/community/${community.id}`)}
-              >
-                <View style={[styles.featuredAvatar, { backgroundColor: community.avatar }]} />
-                <Text style={styles.featuredName}>{community.name}</Text>
-                <Text style={styles.featuredMembers}>{community.members.toLocaleString()} members</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+        {!loading && featuredCommunities.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Featured</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.featuredScroll}>
+              {featuredCommunities.map((community) => (
+                <TouchableOpacity
+                  key={community.id}
+                  style={styles.featuredCard}
+                  onPress={() => router.push(`/community/${community.id}`)}
+                >
+                  <View style={[styles.featuredAvatar, community.avatar && { backgroundColor: community.avatar }]} />
+                  <Text style={styles.featuredName}>{community.name}</Text>
+                  <Text style={styles.featuredMembers}>{community.members.toLocaleString()} members</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* All Communities */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>All Communities</Text>
-          {communities.map((community) => (
-            <TouchableOpacity
-              key={community.id}
-              style={styles.communityCard}
-              onPress={() => router.push(`/community/${community.id}`)}
-            >
-              <View style={[styles.avatar, { backgroundColor: community.avatar }]} />
-              <View style={styles.communityInfo}>
-                <Text style={styles.communityName}>{community.name}</Text>
-                <Text style={styles.communityStats}>
-                  {community.members.toLocaleString()} members • {community.posts} posts
-                </Text>
-              </View>
-              <TouchableOpacity style={styles.joinButton}>
-                <Text style={styles.joinButtonText}>Join</Text>
+        {!loading && communities.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>All Communities</Text>
+            {communities.map((community) => (
+              <TouchableOpacity
+                key={community.id}
+                style={styles.communityCard}
+                onPress={() => router.push(`/community/${community.id}`)}
+              >
+                <View style={[styles.avatar, community.avatar && { backgroundColor: community.avatar }]} />
+                <View style={styles.communityInfo}>
+                  <Text style={styles.communityName}>{community.name}</Text>
+                  <Text style={styles.communityStats}>
+                    {community.members.toLocaleString()} members • {community.posts} posts
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.joinButton, community.isJoined && styles.joinButtonJoined]}
+                  onPress={() => handleJoinToggle(community.id, community.isJoined)}
+                >
+                  <Text style={[styles.joinButtonText, community.isJoined && styles.joinButtonTextJoined]}>
+                    {community.isJoined ? 'Joined' : 'Join'}
+                  </Text>
+                </TouchableOpacity>
               </TouchableOpacity>
-            </TouchableOpacity>
-          ))}
-        </View>
+            ))}
+          </View>
+        )}
+
+        {/* Empty State */}
+        {!loading && communities.length === 0 && (
+          <View style={styles.centerContainer}>
+            <Ionicons name="people-outline" size={64} color="#9ca3af" />
+            <Text style={styles.emptyText}>No communities found</Text>
+            <Text style={styles.emptySubtext}>Try a different search term</Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -211,9 +304,37 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
   },
+  joinButtonJoined: {
+    backgroundColor: '#e5e7eb',
+  },
   joinButtonText: {
     fontSize: 14,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  joinButtonTextJoined: {
+    color: '#6b7280',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 64,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6b7280',
+  },
+  emptyText: {
+    marginTop: 16,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  emptySubtext: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#9ca3af',
   },
 });

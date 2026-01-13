@@ -99,6 +99,18 @@ router.post(
 );
 
 /**
+ * @route GET /api/orders/mine
+ * @desc Get orders for authenticated user
+ * @access Private
+ */
+router.get(
+  '/mine',
+  orderRateLimit,
+  authMiddleware,
+  orderController.getMyOrders.bind(orderController)
+);
+
+/**
  * @route GET /api/orders/:id
  * @desc Get order by ID
  * @access Private

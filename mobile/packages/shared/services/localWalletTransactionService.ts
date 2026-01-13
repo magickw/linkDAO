@@ -161,6 +161,14 @@ export class LocalWalletTransactionService {
     }
   }
 
+import { Config } from '../constants/config';
+
+// ... (other imports and interfaces)
+
+export class LocalWalletTransactionService {
+  
+  // ... (sendTransaction method)
+
   private getChain(chainId: number) {
     switch (chainId) {
       case 1: return mainnet;
@@ -174,23 +182,17 @@ export class LocalWalletTransactionService {
   }
 
   private getRpcUrl(chainId: number): string | undefined {
-    const getEnv = (key: string, fallback: string): string => {
-      if (typeof process !== 'undefined' && process.env) {
-        return process.env[key] || process.env['NEXT_PUBLIC_' + key] || process.env['EXPO_PUBLIC_' + key] || fallback;
-      }
-      return fallback;
-    };
-
     switch (chainId) {
-      case 8453: return getEnv('BASE_RPC_URL', 'https://mainnet.base.org');
-      case 84532: return getEnv('BASE_SEPOLIA_RPC_URL', 'https://sepolia.base.org');
-      case 11155111: return getEnv('SEPOLIA_RPC_URL', 'https://ethereum-sepolia-rpc.publicnode.com');
-      case 137: return getEnv('POLYGON_RPC_URL', 'https://polygon-rpc.com');
-      case 42161: return getEnv('ARBITRUM_RPC_URL', 'https://arb1.arbitrum.io/rpc');
+      case 8453: return Config.baseRpcUrl;
+      case 84532: return 'https://sepolia.base.org';
+      case 11155111: return 'https://ethereum-sepolia-rpc.publicnode.com';
+      case 137: return Config.polygonRpcUrl;
+      case 42161: return Config.arbitrumRpcUrl;
       case 1: 
-      default: return getEnv('MAINNET_RPC_URL', 'https://eth.llamarpc.com');
+      default: return Config.mainnetRpcUrl;
     }
   }
+}
 }
 
 export const localWalletTransactionService = new LocalWalletTransactionService();

@@ -3,6 +3,9 @@
  * All constants and configuration that can be shared between apps
  */
 
+// Environment Configuration
+export { ENV_CONFIG } from './environment';
+
 // Chain Configuration
 export const SUPPORTED_CHAINS = {
   ETHEREUM: { chainId: 1, name: 'Ethereum', symbol: 'ETH', rpcUrl: 'https://eth.llamarpc.com' },

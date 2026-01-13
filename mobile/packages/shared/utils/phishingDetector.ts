@@ -60,25 +60,31 @@ const HARDCODED_MALICIOUS_ADDRESSES = [
   '0x68b3465833fb72A70ecDF485E0e4C7bd8665fc45',
 ].filter(addr => /^0x[a-fA-F0-9]{40}$/.test(addr));
 
+import { getStorage } from './storage';
+
 /**
  * Initialize the malicious address database
  * Loads from cache and fetches fresh data if needed
  */
 export const initializePhishingDetector = async (): Promise<void> => {
-  // Load from local storage first (fast)
-  loadFromLocalStorage();
+  const storage = getStorage();
+  if (!storage) return;
+
+  // Load from storage first (fast)
+  await loadFromLocalStorage();
 
   // Then fetch fresh data in background
-  await refreshMaliciousAddresses();
+  refreshMaliciousAddresses().catch(() => {});
 };
 
 /**
- * Load cached addresses from local storage
+ * Load cached addresses from storage
  */
-const loadFromLocalStorage = (): void => {
+const loadFromLocalStorage = async (): Promise<void> => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const timestamp = localStorage.getItem(STORAGE_TIMESTAMP_KEY);
+    const storage = getStorage();
+    const stored = await storage.getItem(STORAGE_KEY);
+    const timestamp = await storage.getItem(STORAGE_TIMESTAMP_KEY);
 
     if (stored && timestamp) {
       const addresses = JSON.parse(stored) as string[];
@@ -97,13 +103,14 @@ const loadFromLocalStorage = (): void => {
 };
 
 /**
- * Save addresses to local storage
+ * Save addresses to storage
  */
-const saveToLocalStorage = (): void => {
+const saveToLocalStorage = async (): Promise<void> => {
   try {
+    const storage = getStorage();
     const addresses = Array.from(KNOWN_MALICIOUS_ADDRESSES);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(addresses));
-    localStorage.setItem(STORAGE_TIMESTAMP_KEY, lastFetchTime.toString());
+    await storage.setItem(STORAGE_KEY, JSON.stringify(addresses));
+    await storage.setItem(STORAGE_TIMESTAMP_KEY, lastFetchTime.toString());
   } catch {
     // Ignore storage errors
   }
@@ -379,22 +386,4 @@ export const getPhishingDetectorStats = (): {
  */
 function parseEther(eth: string): bigint {
   return BigInt(Math.floor(parseFloat(eth) * 1e18));
-}
-
-// Auto-initialize on module load
-if (typeof window !== 'undefined') {
-  // Initialize in browser environment
-  loadFromLocalStorage();
-  
-  // Fetch fresh data in background (don't block)
-  refreshMaliciousAddresses().catch(() => {
-    // Ignore initialization errors
-  });
-
-  // Periodically update every 4 hours
-  setInterval(() => {
-    refreshMaliciousAddresses().catch((err) => {
-      console.warn('Failed to update malicious addresses:', err);
-    });
-  }, 4 * 60 * 60 * 1000);
 }

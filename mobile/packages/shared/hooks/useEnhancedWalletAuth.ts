@@ -5,9 +5,16 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useAccount, useSignMessage, useDisconnect } from 'wagmi';
-import { useEnhancedAuth } from '@/context/EnhancedAuthContext';
-import { enhancedAuthService } from '@/services/enhancedAuthService';
+// import { useAccount, useSignMessage, useDisconnect } from 'wagmi';
+import { enhancedAuthService } from '../services/enhancedAuthService';
+
+// Stubs for Contexts and Wagmi hooks
+const useEnhancedAuth = () => ({
+  user: null, isAuthenticated: false, isLoading: false, isRecovering: false, error: null,
+  authenticateWallet: async () => ({ success: false }), recoverSession: async () => false, logout: async () => {}, clearError: () => {}
+});
+const useAccount = () => ({ address: null, isConnected: false, connector: null, chainId: 1 });
+const useDisconnect = () => ({ disconnect: () => {} });
 
 interface WalletInfo {
   isBaseWallet: boolean;

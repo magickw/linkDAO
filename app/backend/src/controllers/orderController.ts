@@ -75,6 +75,46 @@ export class OrderController {
   }
 
   /**
+   * Get orders by authenticated user (uses token ID)
+   * @query role - Optional: 'buyer' (default) or 'seller'
+   */
+  async getMyOrders(req: Request, res: Response): Promise<Response> {
+    try {
+      const userId = (req as any).user.id;
+      const { status, limit = 50, offset = 0, role = 'buyer' } = req.query;
+
+      // Validate role if provided
+      if (role && role !== 'buyer' && role !== 'seller') {
+        throw new ValidationError('Invalid role. Must be "buyer" or "seller"');
+      }
+
+      // Use getOrdersByUserId which uses UUID directly
+      let orders = await orderService.getOrdersByUserId(userId, role as 'buyer' | 'seller');
+
+      // Filter by status if provided
+      if (status) {
+        orders = orders.filter(order => order.status === status);
+      }
+
+      // Apply pagination
+      const paginatedOrders = orders.slice(Number(offset), Number(offset) + Number(limit));
+
+      return res.json({
+        orders: paginatedOrders,
+        total: orders.length,
+        limit: Number(limit),
+        offset: Number(offset),
+        role: role
+      });
+    } catch (error: any) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError(error.message);
+    }
+  }
+
+  /**
    * Get orders by user address
    * @query role - Optional: 'buyer' to get only orders placed as buyer, 'seller' to get only orders received as seller
    */

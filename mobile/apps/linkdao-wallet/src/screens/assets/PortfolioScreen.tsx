@@ -44,7 +44,10 @@ export default function PortfolioScreen(props: any) {
   };
 
   const renderTokenItem = ({ item }: { item: TokenBalance }) => (
-    <View style={styles.tokenItem}>
+    <TouchableOpacity 
+        style={styles.tokenItem} 
+        onPress={() => (props.navigation as any).navigate('TokenDetail', { token: item })}
+    >
       <View>
         <Text style={styles.tokenSymbol}>{item.symbol}</Text>
         <Text style={styles.tokenName}>{item.name}</Text>
@@ -53,7 +56,7 @@ export default function PortfolioScreen(props: any) {
         <Text style={styles.tokenBalance}>{parseFloat(item.balanceFormatted).toFixed(4)}</Text>
         <Text style={styles.tokenValueUSD}>${(item.valueUSD || 0).toFixed(2)}</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (

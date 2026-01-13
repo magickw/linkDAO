@@ -23,7 +23,7 @@ if (typeof window !== 'undefined' && !(window as any)[DEPRECATION_KEY]) {
   );
 }
 
-import { Message as ChatMessage, Conversation, ChatHistoryRequest, ChatHistoryResponse } from '@/types/messaging';
+import { Message as ChatMessage, Conversation, ChatHistoryRequest, ChatHistoryResponse } from '../types/messaging';
 import { OfflineManager } from './OfflineManager';
 
 class ChatHistoryService {

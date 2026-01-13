@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Message as ChatMessage, Conversation, ChatHistoryRequest, MessageReaction } from '@/types/messaging';
-import { unifiedMessagingService } from '@/services/unifiedMessagingService'; // Use the new unified service
-import { useAuth } from '@/context/AuthContext';
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { Message as ChatMessage, Conversation, ChatHistoryRequest, MessageReaction } from '../types/messaging';
+import { unifiedMessagingService } from '../services/unifiedMessagingService'; // Use the new unified service
+// import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+
+// Stubs
+const useAuth = () => ({ user: null });
+const useInfiniteQuery = (any: any) => ({ data: null, fetchNextPage: async () => {}, hasNextPage: false, isLoading: false, isFetchingNextPage: false, refetch: async () => {} });
+const useQueryClient = () => ({ setQueryData: () => {} });
 
 interface UseChatHistoryReturn {
   messages: ChatMessage[];

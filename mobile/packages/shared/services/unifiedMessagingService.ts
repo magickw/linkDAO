@@ -13,14 +13,13 @@
  * - conversationManagementService.ts
  */
 
-import {
-  Message,
-  Conversation,
-  MessageAttachment,
-  TypingIndicator,
-  ConversationSettings,
+import { 
+  Message as ChatMessage, 
+  Conversation, 
+  ChatHistoryRequest, 
+  ChatHistoryResponse,
   MessageReaction
-} from '@/types/messaging';
+} from '../types/messaging';
 import { OfflineManager } from './OfflineManager';
 import { enhancedAuthService } from './enhancedAuthService';
 

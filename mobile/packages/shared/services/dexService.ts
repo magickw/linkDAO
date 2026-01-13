@@ -56,13 +56,17 @@ export interface TokenInfo {
   logoURI?: string;
 }
 
+import { Config } from '../constants/config';
+
+// ... (Token and other interfaces)
+
 export class DEXService {
   private baseUrl: string;
   private enabled: boolean;
 
   constructor() {
-    this.baseUrl = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_BACKEND_URL) || 'http://localhost:10000';
-    this.enabled = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_ENABLE_DEX === 'true') || true; // Default to true if not set
+    this.baseUrl = Config.backendUrl;
+    this.enabled = Config.enableDex;
   }
 
   /**

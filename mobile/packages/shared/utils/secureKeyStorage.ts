@@ -340,7 +340,7 @@ export class SecureKeyStorage {
         };
 
         // Encrypt the export data with the wallet password
-        const { encrypt } = await import('@/utils/cryptoUtils');
+        const { encrypt } = await import('./cryptoUtils');
         const { encrypted, iv, salt } = await encrypt(JSON.stringify(exportData), password);
 
         // Return encrypted data with metadata needed for decryption
@@ -375,7 +375,7 @@ export class SecureKeyStorage {
       }
 
       // Decrypt the export package
-      const { decrypt } = await import('@/utils/cryptoUtils');
+      const { decrypt } = await import('./cryptoUtils');
       let decryptedDataJson: string | undefined;
       let importData: any;
 

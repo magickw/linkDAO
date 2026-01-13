@@ -1,18 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert, TextInput, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert, TextInput, ActivityIndicator, Modal, ScrollView } from 'react-native';
 import { CameraView, Camera } from 'expo-camera';
-import { walletService } from '@linkdao/shared/services/walletService';
 import { localWalletTransactionService } from '@linkdao/shared/services/localWalletTransactionService';
 import { SecureKeyStorage } from '@linkdao/shared/utils/secureKeyStorage';
-import { parseEther } from 'viem';
+import { isAddress, parseEther } from 'viem';
 
-export default function SendScreen({ navigation }: any) {
+const NETWORKS = [
+  { id: 1, name: 'Ethereum', symbol: 'ETH' },
+  { id: 8453, name: 'Base', symbol: 'ETH' },
+  { id: 137, name: 'Polygon', symbol: 'MATIC' },
+  { id: 42161, name: 'Arbitrum', symbol: 'ETH' },
+];
+
+export default function SendScreen({ route, navigation }: any) {
+  const initialToken = route.params?.initialToken || 'ETH';
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedNetwork, setSelectedNetwork] = useState(NETWORKS[0]);
   
   // Password Verification State
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -26,21 +34,26 @@ export default function SendScreen({ navigation }: any) {
     getPermissions();
   }, []);
 
-  const handleBarCodeScanned = ({ type, data }: any) => {
+  const handleBarCodeScanned = ({ data }: any) => {
     setScanned(true);
     setIsScanning(false);
-    if (data.startsWith('0x') && data.length === 42) {
+    if (isAddress(data)) {
         setRecipient(data);
     } else if (data.startsWith('ethereum:')) {
-        setRecipient(data.replace('ethereum:', ''));
+        const addr = data.split(':')[1]?.split('@')[0];
+        if (isAddress(addr)) setRecipient(addr);
     } else {
         Alert.alert('Invalid QR Code', 'Scanned data is not a valid address');
     }
   };
 
   const handleSendPress = () => {
-    if (!recipient || !amount) {
-        Alert.alert('Error', 'Please enter recipient and amount');
+    if (!isAddress(recipient)) {
+        Alert.alert('Error', 'Please enter a valid recipient address');
+        return;
+    }
+    if (!amount || parseFloat(amount) <= 0) {
+        Alert.alert('Error', 'Please enter a valid amount');
         return;
     }
     setShowPasswordModal(true);
@@ -62,7 +75,7 @@ export default function SendScreen({ navigation }: any) {
         const result = await localWalletTransactionService.sendTransaction({
             to: recipient,
             value: parseEther(amount),
-            chainId: 1, // Default to Mainnet or get from store
+            chainId: selectedNetwork.id,
             walletAddress: activeWallet,
             password: password
         });
@@ -101,9 +114,24 @@ export default function SendScreen({ navigation }: any) {
             </TouchableOpacity>
           </View>
       ) : (
-      <View style={styles.content}>
-        <Text style={styles.title}>Send</Text>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Send Assets</Text>
         
+        <View style={styles.inputContainer}>
+            <Text style={styles.label}>Network</Text>
+            <View style={styles.networkGrid}>
+                {NETWORKS.map(net => (
+                    <TouchableOpacity 
+                        key={net.id} 
+                        style={[styles.networkButton, selectedNetwork.id === net.id && styles.selectedNetwork]}
+                        onPress={() => setSelectedNetwork(net)}
+                    >
+                        <Text style={[styles.networkText, selectedNetwork.id === net.id && styles.selectedNetworkText]}>{net.name}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+        </View>
+
         <View style={styles.inputContainer}>
             <Text style={styles.label}>Recipient Address</Text>
             <View style={styles.row}>
@@ -122,7 +150,7 @@ export default function SendScreen({ navigation }: any) {
         </View>
 
         <View style={styles.inputContainer}>
-            <Text style={styles.label}>Amount (ETH)</Text>
+            <Text style={styles.label}>Amount ({selectedNetwork.symbol})</Text>
             <TextInput
                 style={styles.input}
                 placeholder="0.00"
@@ -137,9 +165,9 @@ export default function SendScreen({ navigation }: any) {
             onPress={handleSendPress}
             disabled={isLoading}
         >
-            {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.sendButtonText}>Send Transaction</Text>}
+            {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.sendButtonText}>Review & Send</Text>}
         </TouchableOpacity>
-      </View>
+      </ScrollView>
       )}
 
       {/* Password Modal */}
@@ -184,11 +212,11 @@ export default function SendScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  content: { flex: 1, padding: 20 },
+  content: { padding: 20 },
   cameraContainer: { flex: 1 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 30 },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 25 },
   inputContainer: { marginBottom: 20 },
-  label: { fontSize: 16, color: '#666', marginBottom: 5 },
+  label: { fontSize: 16, color: '#666', marginBottom: 8, fontWeight: '500' },
   input: { 
       backgroundColor: '#f9f9f9', 
       padding: 15, 
@@ -197,6 +225,18 @@ const styles = StyleSheet.create({
       borderColor: '#eee',
       fontSize: 16
   },
+  networkGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  networkButton: { 
+      paddingVertical: 10, 
+      paddingHorizontal: 15, 
+      borderRadius: 20, 
+      borderWidth: 1, 
+      borderColor: '#ddd',
+      backgroundColor: '#fff'
+  },
+  selectedNetwork: { borderColor: '#007AFF', backgroundColor: '#007AFF' },
+  networkText: { color: '#666', fontWeight: '500' },
+  selectedNetworkText: { color: '#fff' },
   row: { flexDirection: 'row', gap: 10 },
   scanButton: { 
       justifyContent: 'center', 
@@ -244,48 +284,4 @@ const styles = StyleSheet.create({
   confirmButton: { backgroundColor: '#007AFF' },
   cancelButtonText: { color: '#666', fontWeight: '600' },
   confirmButtonText: { color: '#fff', fontWeight: 'bold' }
-});
-
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { flex: 1, padding: 20 },
-  cameraContainer: { flex: 1 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 30 },
-  inputContainer: { marginBottom: 20 },
-  label: { fontSize: 16, color: '#666', marginBottom: 5 },
-  input: { 
-      backgroundColor: '#f9f9f9', 
-      padding: 15, 
-      borderRadius: 12, 
-      borderWidth: 1, 
-      borderColor: '#eee',
-      fontSize: 16
-  },
-  row: { flexDirection: 'row', gap: 10 },
-  scanButton: { 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      backgroundColor: '#f0f0f0', 
-      paddingHorizontal: 20, 
-      borderRadius: 12 
-  },
-  scanButtonText: { color: '#007AFF', fontWeight: '600' },
-  sendButton: { 
-      backgroundColor: '#007AFF', 
-      padding: 18, 
-      borderRadius: 15, 
-      alignItems: 'center',
-      marginTop: 20
-  },
-  sendButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
-  closeButton: {
-      position: 'absolute',
-      bottom: 50,
-      alignSelf: 'center',
-      backgroundColor: 'rgba(0,0,0,0.7)',
-      padding: 15,
-      borderRadius: 25
-  },
-  closeButtonText: { color: '#fff', fontSize: 16 }
 });

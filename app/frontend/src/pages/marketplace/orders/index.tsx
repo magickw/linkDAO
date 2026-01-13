@@ -135,8 +135,8 @@ export default function OrdersPage() {
 
             // Get auth token from various storage locations
             let token = localStorage.getItem('token') ||
-                       localStorage.getItem('authToken') ||
-                       localStorage.getItem('auth_token');
+                localStorage.getItem('authToken') ||
+                localStorage.getItem('auth_token');
 
             // Also try to get from linkdao_session_data
             if (!token) {
@@ -159,7 +159,8 @@ export default function OrdersPage() {
                 headers['Authorization'] = `Bearer ${token}`;
             }
 
-            const response = await fetch(`${API_BASE_URL}/api/orders/user/${user.address}?role=buyer`, {
+            // Use /mine endpoint which uses the auth token to identify the user securely
+            const response = await fetch(`${API_BASE_URL}/api/orders/mine?role=buyer`, {
                 headers,
                 credentials: 'include'
             });
@@ -339,42 +340,42 @@ export default function OrdersPage() {
                         </div>
                     </GlassPanel>
 
-            {/* Orders List */}
-            {filteredOrders.length === 0 ? (
-                <div className="text-center py-12 bg-white/5 rounded-xl">
-                    <Package size={48} className="mx-auto text-white/40 mb-4" />
-                    <h3 className="text-xl font-semibold text-white mb-2">
-                        {searchQuery || filterStatus !== 'all' ? 'No orders found' : 'No orders yet'}
-                    </h3>
-                    <p className="text-white/60 mb-4">
-                        {searchQuery || filterStatus !== 'all'
-                            ? 'Try adjusting your filters or search query'
-                            : 'Start shopping to see your orders here'
-                        }
-                    </p>
-                    {!searchQuery && filterStatus === 'all' && (
-                        <Link
-                            href="/marketplace"
-                            className="inline-block px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                        >
-                            Browse Marketplace
-                        </Link>
+                    {/* Orders List */}
+                    {filteredOrders.length === 0 ? (
+                        <div className="text-center py-12 bg-white/5 rounded-xl">
+                            <Package size={48} className="mx-auto text-white/40 mb-4" />
+                            <h3 className="text-xl font-semibold text-white mb-2">
+                                {searchQuery || filterStatus !== 'all' ? 'No orders found' : 'No orders yet'}
+                            </h3>
+                            <p className="text-white/60 mb-4">
+                                {searchQuery || filterStatus !== 'all'
+                                    ? 'Try adjusting your filters or search query'
+                                    : 'Start shopping to see your orders here'
+                                }
+                            </p>
+                            {!searchQuery && filterStatus === 'all' && (
+                                <Link
+                                    href="/marketplace"
+                                    className="inline-block px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                                >
+                                    Browse Marketplace
+                                </Link>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {filteredOrders.map((order) => (
+                                <OrderCard
+                                    key={order.id}
+                                    order={order}
+                                    onViewDetails={() => setSelectedOrder(order)}
+                                    onCancelOrder={() => handleCancelOrder(order)}
+                                    canCancel={canCancelOrder(order)}
+                                    isCancelling={cancellingOrderId === order.id}
+                                />
+                            ))}
+                        </div>
                     )}
-                </div>
-            ) : (
-                <div className="space-y-4">
-                    {filteredOrders.map((order) => (
-                        <OrderCard
-                            key={order.id}
-                            order={order}
-                            onViewDetails={() => setSelectedOrder(order)}
-                            onCancelOrder={() => handleCancelOrder(order)}
-                            canCancel={canCancelOrder(order)}
-                            isCancelling={cancellingOrderId === order.id}
-                        />
-                    ))}
-                </div>
-            )}
 
                     {/* Order Details Modal */}
                     {selectedOrder && (
@@ -589,22 +590,22 @@ INVOICE
 ========================================
 Order #: ${order.orderNumber}
 Date: ${new Date(order.createdAt).toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-})}
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        })}
 Status: ${(order.status || 'pending').toUpperCase()}
 
 ITEMS
 ----------------------------------------
 ${(order.items || []).map(item =>
-`${item.productName}
+            `${item.productName}
   Quantity: ${item.quantity || 1}
   Unit Price: $${(item.price || 0).toFixed(2)}
   Total: $${(item.total || 0).toFixed(2)}`
-).join('\n\n')}
+        ).join('\n\n')}
 
 ----------------------------------------
 SUMMARY

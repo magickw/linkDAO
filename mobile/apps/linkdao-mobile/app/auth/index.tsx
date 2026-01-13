@@ -4,19 +4,45 @@
  */
 
 import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useAuthStore } from '../../src/store';
+import { authService } from '@linkdao/shared';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    // TODO: Implement login logic
-    router.replace('/(tabs)');
+  const setUser = useAuthStore((state) => state.setUser);
+  const setToken = useAuthStore((state) => state.setToken);
+  const setLoading: (loading: boolean) => void = useAuthStore((state) => state.setLoading);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter email and password');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await authService.login(email, password);
+
+      if (response.success && response.data) {
+        setToken(response.data.token);
+        setUser(response.data.user);
+        router.replace('/(tabs)');
+      } else {
+        Alert.alert('Login Failed', response.error || 'Invalid credentials');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to login. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleWalletConnect = () => {
@@ -84,8 +110,14 @@ export default function LoginScreen() {
             </TouchableOpacity>
 
             {/* Login Button */}
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-              <Text style={styles.loginButtonText}>Sign In</Text>
+            <TouchableOpacity
+              style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+              onPress={handleLogin}
+              disabled={loading}
+            >
+              <Text style={styles.loginButtonText}>
+                {loading ? 'Signing In...' : 'Sign In'}
+              </Text>
             </TouchableOpacity>
 
             {/* Divider */}
@@ -199,6 +231,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 24,
+  },
+  loginButtonDisabled: {
+    opacity: 0.6,
   },
   loginButtonText: {
     fontSize: 16,

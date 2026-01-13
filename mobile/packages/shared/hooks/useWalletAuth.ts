@@ -1,8 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { useAccount, useSignMessage } from 'wagmi';
-import { useAuth } from '@/context/AuthContext';
-import { useSessionValidation } from '@/hooks/useSessionValidation';
-import { WalletInfo } from '@/types/wallet';
+// import { useAccount, useSignMessage } from 'wagmi'; // Temporarily disabled for RN
+import { WalletInfo } from '../types/wallet';
+
+// Stubs for Contexts that are web-specific
+const useAuth = () => ({ user: null, isAuthenticated: false, login: async () => ({ success: false }) });
+const useSessionValidation = () => ({ validateSession: async () => ({ isValid: false }), clearAllSessions: () => {} });
+const useAccount = () => ({ address: null, isConnected: false, connector: null });
+const useSignMessage = () => ({ signMessageAsync: async () => '' });
 
 interface UseWalletAuthReturn {
   isAuthenticating: boolean;

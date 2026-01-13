@@ -789,9 +789,13 @@ export class SellerWorkflowService {
 
             // For digital products, we can transition from PAID or PROCESSING to DELIVERED
             // Normalize status comparison to handle case differences (DB stores lowercase, enum is uppercase)
+            // Allow PENDING status as well since some orders may appear as pending
             const normalizedStatus = (order.status || '').toUpperCase();
-            if (normalizedStatus !== OrderStatus.PAID && normalizedStatus !== OrderStatus.PROCESSING) {
-                throw new Error(`Order must be PAID or PROCESSING to complete digital delivery. Current status: ${order.status}`);
+            if (normalizedStatus !== OrderStatus.PAID &&
+                normalizedStatus !== OrderStatus.PROCESSING &&
+                normalizedStatus !== 'PENDING' &&
+                normalizedStatus !== OrderStatus.PAYMENT_PENDING) {
+                throw new Error(`Order must be PAID, PROCESSING or PENDING to complete digital delivery. Current status: ${order.status}`);
             }
 
             const completedAt = new Date().toISOString();

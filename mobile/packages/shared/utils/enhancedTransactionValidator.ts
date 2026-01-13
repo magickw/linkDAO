@@ -4,7 +4,7 @@
  */
 
 import { parseEther, formatUnits } from 'viem';
-import { contractVerificationService, ContractRiskAssessment } from '@/services/contractVerificationService';
+import { contractVerificationService, ContractRiskAssessment } from '../services/contractVerificationService';
 
 export interface ValidationResult {
   valid: boolean;
