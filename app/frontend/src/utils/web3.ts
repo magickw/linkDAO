@@ -371,9 +371,19 @@ export async function getSigner() {
         } catch (e: any) {
           console.warn('Failed to create signer from injected provider:', e);
           
-          // Check if it's a LastPass-related error
+          // If it's a frozen object error, try viem instead
           if (e?.message?.includes('read only property') || e?.message?.includes('requestId')) {
-            throw new Error('Wallet connection failed due to browser extension interference (likely LastPass). Please disable LastPass for this site or use a different browser to enable wallet features.');
+            console.log('Trying viem as fallback for frozen object issue...');
+            const viemSigner = await getViemSigner();
+            if (viemSigner) {
+              // Convert viem signer to ethers signer
+              const ethersSigner = await viemToEthersSigner(viemSigner);
+              if (ethersSigner) {
+                return ethersSigner;
+              }
+            }
+            
+            throw new Error('Wallet connection failed due to browser extension interference. Please try disabling browser extensions or use a different browser.');
           }
         }
       }
@@ -391,9 +401,19 @@ export async function getSigner() {
       } catch (e: any) {
         console.warn('Last resort signer creation failed:', e);
         
-        // Check if it's a LastPass-related error
+        // Try viem as fallback
         if (e?.message?.includes('read only property') || e?.message?.includes('requestId')) {
-          throw new Error('Wallet connection failed due to browser extension interference (likely LastPass). Please disable LastPass for this site or use a different browser to enable wallet features.');
+          console.log('Trying viem as fallback for frozen object issue...');
+          const viemSigner = await getViemSigner();
+          if (viemSigner) {
+            // Convert viem signer to ethers signer
+            const ethersSigner = await viemToEthersSigner(viemSigner);
+            if (ethersSigner) {
+              return ethersSigner;
+            }
+          }
+          
+          throw new Error('Wallet connection failed due to browser extension interference. Please try disabling browser extensions or use a different browser.');
         }
       }
     }
@@ -432,6 +452,82 @@ export async function getAccount() {
     return client?.account || null;
   } catch (error) {
     console.error('Error getting account:', error);
+    return null;
+  }
+}
+
+/**
+ * Get a viem wallet client (signer) that works better with frozen objects
+ */
+export async function getViemSigner() {
+  try {
+    if (!hasInjectedProvider()) {
+      return null;
+    }
+
+    const injectedProvider = getInjectedProvider();
+    if (!injectedProvider) {
+      return null;
+    }
+
+    // Create a viem wallet client directly from the injected provider
+    // viem handles frozen objects better than ethers.js
+    const { createWalletClient, custom } = await import('viem');
+    const { http } = await import('viem');
+    
+    try {
+      const walletClient = createWalletClient({
+        transport: custom(injectedProvider),
+      });
+
+      // Test if it works by getting accounts
+      const accounts = await walletClient.getAddresses();
+      if (accounts.length === 0) {
+        console.warn('No accounts found');
+        return null;
+      }
+
+      console.log('Successfully created viem wallet client with address:', accounts[0]);
+      return walletClient;
+    } catch (e) {
+      console.warn('Failed to create viem wallet client:', e);
+      return null;
+    }
+  } catch (error) {
+    console.error('Error getting viem signer:', error);
+    return null;
+  }
+}
+
+/**
+ * Convert viem wallet client to ethers.js signer
+ * This allows using viem's better frozen object handling while maintaining compatibility with ethers.js contracts
+ */
+export async function viemToEthersSigner(viemWalletClient: any): Promise<ethers.Signer | null> {
+  try {
+    if (!viemWalletClient) {
+      return null;
+    }
+
+    const injectedProvider = getInjectedProvider();
+    if (!injectedProvider) {
+      return null;
+    }
+
+    // Wrap the provider and create an ethers.js signer
+    const wrappedProvider = wrapProvider(injectedProvider);
+    const provider = new ethers.BrowserProvider(wrappedProvider as any, "any");
+    
+    // Get the signer for the viem wallet's account
+    const accounts = await viemWalletClient.getAddresses();
+    if (accounts.length === 0) {
+      return null;
+    }
+
+    const signer = await provider.getSigner(accounts[0] as `0x${string}`);
+    return signer;
+  } catch (error) {
+    console.error('Error converting viem to ethers signer:', error);
     return null;
   }
 }
