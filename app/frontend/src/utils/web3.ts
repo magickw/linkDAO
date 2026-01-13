@@ -13,114 +13,158 @@ let cachedProvider: ethers.Provider | null = null;
 /**
  * Wrap an EIP-1193 provider to avoid "Cannot assign to read only property" errors.
  * This happens when extensions like LastPass freeze request objects.
- * 
- * Uses Proxy for complete isolation from frozen extension objects.
- */
-/**
- * Wrap an EIP-1193 provider to avoid "Cannot assign to read only property" errors.
- * This happens when extensions like LastPass freeze request objects.
- * 
- * Uses a Facade pattern instead of Proxy to avoid "property is read-only" errors
- * when the extension freezes the provider object itself.
+ *
+ * Uses complete isolation - we capture the original request function via bind()
+ * and never expose the original provider object to ethers.js. This prevents
+ * any attempts to modify frozen objects.
  */
 export function wrapProvider(provider: any): any {
   if (!provider) return provider;
 
-  // Create a facade object with only the specific methods we need
-  // This avoids Proxy traps hitting frozen properties on the original object
-  const facade: any = {
-    // Flag to indicate this is a wrapped provider
-    isWrapped: true,
+  // If already wrapped, return as-is
+  if (provider.isWrapped) return provider;
 
-    // Copy some common properties safely if they exist and aren't frozen/getters
-    // We wrap this in try/catch for each property
-  };
+  // Create a completely fresh object with NO prototype chain
+  // This ensures ethers.js can freely add/modify properties on it
+  const wrappedProvider: any = Object.create(null);
 
-  try {
-    if (provider.isMetaMask) facade.isMetaMask = provider.isMetaMask;
-  } catch (e) { }
+  // Mark as wrapped to prevent double-wrapping
+  wrappedProvider.isWrapped = true;
 
-  // Safe request wrapper
-  facade.request = async (args: any) => {
+  // Internal state that ethers.js might try to add
+  // Pre-create these so ethers.js doesn't need to add new properties
+  wrappedProvider._requestId = 0;
+  wrappedProvider._events = {};
+  wrappedProvider._emitted = {};
+
+  // Safely copy static properties
+  try { wrappedProvider.isMetaMask = !!provider.isMetaMask; } catch {}
+  try { wrappedProvider.chainId = provider.chainId; } catch {}
+  try { wrappedProvider.networkVersion = provider.networkVersion; } catch {}
+  try { wrappedProvider.selectedAddress = provider.selectedAddress; } catch {}
+
+  // CRITICAL: Capture the request function via bind() so we never pass
+  // the original provider object to ethers.js. The bound function
+  // internally references 'provider' but ethers.js never sees it.
+  const boundRequest = provider.request.bind(provider);
+
+  wrappedProvider.request = async (args: any) => {
     try {
-      // Create completely new request object with no references to original
+      // Create completely new request object
       const safeRequest = {
         method: String(args?.method || ''),
         params: args?.params ? JSON.parse(JSON.stringify(args.params)) : []
       };
 
-      // Call original request
-      // We use Function.prototype.call to avoid property access issues
-      const result = await provider.request.call(provider, safeRequest);
+      // Call the bound request function - this internally uses
+      // the original provider as 'this', but we never expose it
+      const result = await boundRequest(safeRequest);
 
-      // Return deep cloned result to ensure no frozen objects
-      if (result === undefined) return result;
-      return JSON.parse(JSON.stringify(result));
+      // Deep clone result to ensure no frozen objects leak through
+      if (result === undefined || result === null) return result;
+      try {
+        return JSON.parse(JSON.stringify(result));
+      } catch {
+        // If result can't be serialized (e.g., has circular refs), return as-is
+        return result;
+      }
     } catch (error: any) {
-      // Create new error object to avoid frozen error objects
-      const safeError: any = new Error(error?.message || 'Request failed');
+      // Create a new error object to avoid frozen error objects
+      const message = error?.message || error?.toString() || 'Request failed';
+      const safeError: any = new Error(message);
       if (error?.code !== undefined) safeError.code = error.code;
       if (error?.data !== undefined) {
         try {
           safeError.data = JSON.parse(JSON.stringify(error.data));
         } catch {
-          safeError.data = error.data;
+          safeError.data = String(error.data);
         }
       }
       throw safeError;
     }
   };
 
-  // Safe send wrapper (legacy)
-  facade.send = (...args: any[]) => {
-    try {
-      const safeArgs = args.map(arg => {
-        if (typeof arg === 'function') return arg;
-        try {
-          return JSON.parse(JSON.stringify(arg));
-        } catch {
-          return arg;
-        }
-      });
-      return provider.send.apply(provider, safeArgs);
-    } catch (error: any) {
-      const safeError = new Error(error?.message || 'Send failed');
-      throw safeError;
-    }
-  };
+  // Legacy send method - capture via bind
+  if (typeof provider.send === 'function') {
+    const boundSend = provider.send.bind(provider);
+    wrappedProvider.send = (...args: any[]) => {
+      try {
+        const safeArgs = args.map(arg => {
+          if (typeof arg === 'function') return arg;
+          try {
+            return JSON.parse(JSON.stringify(arg));
+          } catch {
+            return arg;
+          }
+        });
+        return boundSend(...safeArgs);
+      } catch (error: any) {
+        throw new Error(error?.message || 'Send failed');
+      }
+    };
+  }
 
-  // Safe sendAsync wrapper (legacy)
-  facade.sendAsync = (...args: any[]) => {
-    try {
-      const safeArgs = args.map(arg => {
-        if (typeof arg === 'function') return arg;
-        try {
-          return JSON.parse(JSON.stringify(arg));
-        } catch {
-          return arg;
-        }
-      });
-      return provider.sendAsync.apply(provider, safeArgs);
-    } catch (error: any) {
-      const safeError = new Error(error?.message || 'SendAsync failed');
-      throw safeError;
-    }
-  };
+  // Legacy sendAsync method - capture via bind
+  if (typeof provider.sendAsync === 'function') {
+    const boundSendAsync = provider.sendAsync.bind(provider);
+    wrappedProvider.sendAsync = (...args: any[]) => {
+      try {
+        const safeArgs = args.map(arg => {
+          if (typeof arg === 'function') return arg;
+          try {
+            return JSON.parse(JSON.stringify(arg));
+          } catch {
+            return arg;
+          }
+        });
+        return boundSendAsync(...safeArgs);
+      } catch (error: any) {
+        throw new Error(error?.message || 'SendAsync failed');
+      }
+    };
+  }
 
-  // Bind event listeners
+  // Event listener methods - capture via bind
   if (typeof provider.on === 'function') {
-    facade.on = provider.on.bind(provider);
+    wrappedProvider.on = provider.on.bind(provider);
   }
-
+  if (typeof provider.once === 'function') {
+    wrappedProvider.once = provider.once.bind(provider);
+  }
+  if (typeof provider.off === 'function') {
+    wrappedProvider.off = provider.off.bind(provider);
+  }
   if (typeof provider.removeListener === 'function') {
-    facade.removeListener = provider.removeListener.bind(provider);
+    wrappedProvider.removeListener = provider.removeListener.bind(provider);
   }
-
   if (typeof provider.removeAllListeners === 'function') {
-    facade.removeAllListeners = provider.removeAllListeners.bind(provider);
+    wrappedProvider.removeAllListeners = provider.removeAllListeners.bind(provider);
+  }
+  if (typeof provider.emit === 'function') {
+    wrappedProvider.emit = provider.emit.bind(provider);
+  }
+  if (typeof provider.listeners === 'function') {
+    wrappedProvider.listeners = provider.listeners.bind(provider);
   }
 
-  return facade;
+  // Add enable method for legacy compatibility
+  if (typeof provider.enable === 'function') {
+    wrappedProvider.enable = provider.enable.bind(provider);
+  } else {
+    // Fallback enable that uses request
+    wrappedProvider.enable = async () => {
+      return wrappedProvider.request({ method: 'eth_requestAccounts' });
+    };
+  }
+
+  // isConnected method
+  if (typeof provider.isConnected === 'function') {
+    wrappedProvider.isConnected = provider.isConnected.bind(provider);
+  } else {
+    wrappedProvider.isConnected = () => true;
+  }
+
+  return wrappedProvider;
 }
 
 /**
@@ -152,13 +196,19 @@ export async function getProvider() {
       console.log('Injected provider:', injectedProvider);
 
       if (injectedProvider) {
-        // Create BrowserProvider with "any" network to prevent detection issues
-        // This is crucial for fixing "JsonRpcProvider failed to detect network" errors
-        const provider = new ethers.BrowserProvider(injectedProvider as any, "any");
-        console.log('Created BrowserProvider with "any" network');
-        cachedProvider = provider;
-        providerCreationAttempts = 0; // Reset on success
-        return provider;
+        try {
+          // CRITICAL: Wrap the provider to avoid "Cannot assign to read only property" errors
+          const wrappedProvider = wrapProvider(injectedProvider);
+          // Create BrowserProvider with "any" network to prevent detection issues
+          // This is crucial for fixing "JsonRpcProvider failed to detect network" errors
+          const provider = new ethers.BrowserProvider(wrappedProvider as any, "any");
+          console.log('Created BrowserProvider with "any" network');
+          cachedProvider = provider;
+          providerCreationAttempts = 0; // Reset on success
+          return provider;
+        } catch (e) {
+          console.warn('Failed to create provider from wagmi client:', e);
+        }
       }
     }
 
@@ -167,8 +217,10 @@ export async function getProvider() {
       const injectedProvider = getInjectedProvider();
       if (injectedProvider) {
         try {
+          // CRITICAL: Wrap the provider to avoid "Cannot assign to read only property" errors
+          const wrappedProvider = wrapProvider(injectedProvider);
           // Use "any" network here as well
-          const provider = new ethers.BrowserProvider(injectedProvider, "any");
+          const provider = new ethers.BrowserProvider(wrappedProvider, "any");
           console.log('Created BrowserProvider from direct injected provider with "any" network');
           cachedProvider = provider;
           providerCreationAttempts = 0;

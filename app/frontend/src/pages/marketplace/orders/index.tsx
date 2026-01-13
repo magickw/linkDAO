@@ -25,6 +25,8 @@ import Link from 'next/link';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
 import Layout from '@/components/Layout';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Order {
     id: string;
@@ -40,6 +42,34 @@ interface Order {
     trackingUrl?: string;
     paymentMethod?: string;
     estimatedDelivery?: Date;
+    seller?: {
+        walletAddress: string;
+        handle?: string;
+        displayName?: string;
+        avatar?: string;
+        address?: {
+            street: string;
+            city: string;
+            state: string;
+            postalCode: string;
+            country: string;
+        };
+    };
+    buyer?: {
+        walletAddress: string;
+        handle?: string;
+        displayName?: string;
+        avatar?: string;
+        address?: {
+            street: string;
+            city: string;
+            state: string;
+            postalCode: string;
+            country: string;
+        };
+    };
+    serviceCompletedAt?: Date;
+    actualDelivery?: Date;
 }
 
 interface OrderItem {
@@ -191,8 +221,12 @@ export default function OrdersPage() {
                 shippingAddress: order.shippingAddress || order.shipping_address || null,
                 trackingNumber: order.trackingNumber || order.tracking_number || null,
                 trackingUrl: order.trackingUrl || order.tracking_url || null,
-                paymentMethod: order.paymentMethod || order.payment_method || null,
-                estimatedDelivery: order.estimatedDelivery || order.estimated_delivery || null
+                paymentMethod: order.paymentMethod || order.payment_method || order.paymentToken || 'Crypto',
+                estimatedDelivery: order.estimatedDelivery || order.estimated_delivery || null,
+                seller: order.seller,
+                buyer: order.buyer,
+                serviceCompletedAt: order.serviceCompletedAt ? new Date(order.serviceCompletedAt) : undefined,
+                actualDelivery: order.actualDelivery ? new Date(order.actualDelivery) : undefined
             }));
             setOrders(sanitizedOrders);
         } catch (error) {
@@ -584,61 +618,151 @@ function OrderDetailsModal({ order, onClose, onCancelOrder, canCancel, isCancell
 
     // Handle invoice download
     const handleDownloadInvoice = () => {
-        // Create invoice content
-        const invoiceContent = `
-INVOICE
-========================================
-Order #: ${order.orderNumber}
-Date: ${new Date(order.createdAt).toLocaleDateString('en-US', {
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        })}
-Status: ${(order.status || 'pending').toUpperCase()}
+        const doc = new jsPDF();
 
-ITEMS
-----------------------------------------
-${(order.items || []).map(item =>
-            `${item.productName}
-  Quantity: ${item.quantity || 1}
-  Unit Price: $${(item.price || 0).toFixed(2)}
-  Total: $${(item.total || 0).toFixed(2)}`
-        ).join('\n\n')}
+        // Helper to format currency
+        const formatCurrency = (amount: number) =>
+            `$${amount.toFixed(2)}`;
 
-----------------------------------------
-SUMMARY
-----------------------------------------
-Subtotal: $${subtotal.toFixed(2)}
-Shipping: $${shipping.toFixed(2)}${isDigitalOnly ? ' (Digital Delivery)' : ''}
-Tax: $${Math.max(0, tax).toFixed(2)}
-----------------------------------------
-TOTAL: $${(order.total || 0).toFixed(2)} ${order.currency || 'USD'}
-========================================
+        // Helper to format date
+        const formatDate = (date: Date) => new Date(date).toLocaleDateString('en-US', {
+            month: 'long', day: 'numeric', year: 'numeric'
+        });
 
-${order.shippingAddress ? `
-SHIPPING ADDRESS
-----------------------------------------
-${order.shippingAddress.firstName || ''} ${order.shippingAddress.lastName || ''}
-${order.shippingAddress.addressLine1 || ''}
-${order.shippingAddress.addressLine2 ? order.shippingAddress.addressLine2 + '\n' : ''}${order.shippingAddress.city || ''}, ${order.shippingAddress.state || ''} ${order.shippingAddress.postalCode || ''}
-${order.shippingAddress.country || ''}
-` : ''}
+        // --- Header ---
+        doc.setFontSize(20);
+        doc.text('TAX INVOICE', 14, 22);
 
-Thank you for your order!
-        `.trim();
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Order #: ${order.orderNumber}`, 14, 30);
+        doc.text(`Date Placed: ${formatDate(order.createdAt)}`, 14, 35);
+        doc.text(`Status: ${(order.status || 'pending').toUpperCase()}`, 14, 40);
+        doc.text(`Payment Method: ${order.paymentMethod || 'Crypto'}`, 14, 45);
 
-        // Create and download the file
-        const blob = new Blob([invoiceContent], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `invoice-${order.orderNumber}.txt`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        // --- Seller & Buyer Grid ---
+        const startY = 55;
+
+        // Seller Column
+        doc.setFontSize(11);
+        doc.setTextColor(0);
+        doc.text('SELLER', 14, startY);
+        doc.setFontSize(9);
+        doc.setTextColor(80);
+
+        let sellerY = startY + 6;
+        const sellerName = order.seller?.displayName || order.seller?.handle || 'Unknown Seller';
+        doc.text(sellerName, 14, sellerY);
+
+        if (order.seller?.address) {
+            sellerY += 5;
+            doc.text(order.seller.address.street, 14, sellerY);
+            sellerY += 5;
+            doc.text(`${order.seller.address.city}, ${order.seller.address.state} ${order.seller.address.postalCode}`, 14, sellerY);
+            sellerY += 5;
+            doc.text(order.seller.address.country, 14, sellerY);
+        }
+        sellerY += 5;
+        doc.text(order.seller?.walletAddress || '', 14, sellerY);
+
+        // Buyer Column
+        doc.setFontSize(11);
+        doc.setTextColor(0);
+        doc.text('BUYER', 105, startY);
+        doc.setFontSize(9);
+        doc.setTextColor(80);
+
+        let buyerY = startY + 6;
+        const buyerName = order.buyer?.displayName || order.buyer?.handle || 'Unknown Buyer';
+        doc.text(buyerName, 105, buyerY);
+
+        // Prefer physical address, fallback to shipping for display
+        const buyerAddress = order.buyer?.address || order.shippingAddress;
+
+        if (buyerAddress) {
+            buyerY += 5;
+            // Handle different structure of shippingAddress vs physicalAddress
+            const street = buyerAddress.street || buyerAddress.addressLine1 || '';
+            const street2 = buyerAddress.addressLine2 || '';
+            const city = buyerAddress.city || '';
+            const state = buyerAddress.state || '';
+            const postalCode = buyerAddress.postalCode || '';
+            const country = buyerAddress.country || '';
+
+            doc.text(street, 105, buyerY);
+            if (street2) {
+                buyerY += 5;
+                doc.text(street2, 105, buyerY);
+            }
+            buyerY += 5;
+            doc.text(`${city}, ${state} ${postalCode}`, 105, buyerY);
+            buyerY += 5;
+            doc.text(country, 105, buyerY);
+        }
+        buyerY += 5;
+        doc.text(order.buyer?.walletAddress || '', 105, buyerY);
+
+
+        // --- Items Table ---
+        const tableY = Math.max(sellerY, buyerY) + 15;
+
+        const tableBody = (order.items || []).map(item => [
+            item.productName,
+            item.quantity.toString(),
+            formatCurrency(item.price),
+            formatCurrency(item.total)
+        ]);
+
+        autoTable(doc, {
+            startY: tableY,
+            head: [['Item', 'Quantity', 'Unit Price', 'Total']],
+            body: tableBody,
+            theme: 'grid',
+            headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+            styles: { fontSize: 9 },
+            columnStyles: {
+                0: { cellWidth: 'auto' }, // Item name
+                1: { cellWidth: 25, halign: 'center' }, // Qty
+                2: { cellWidth: 35, halign: 'right' }, // Price
+                3: { cellWidth: 35, halign: 'right' }, // Total
+            }
+        });
+
+        // --- Summary ---
+        const finalY = (doc as any).lastAutoTable.finalY + 10;
+
+        doc.setFontSize(9);
+        doc.setTextColor(0);
+
+        const summaryX = 140;
+        const currency = order.currency || 'USD';
+
+        doc.text(`Subtotal:`, summaryX, finalY);
+        doc.text(formatCurrency(subtotal), 195, finalY, { align: 'right' });
+
+        doc.text(`Shipping:`, summaryX, finalY + 6);
+        doc.text(formatCurrency(shipping), 195, finalY + 6, { align: 'right' });
+
+        doc.text(`Tax:`, summaryX, finalY + 12);
+        doc.text(formatCurrency(tax), 195, finalY + 12, { align: 'right' });
+
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`TOTAL (${currency}):`, summaryX, finalY + 20);
+        doc.text(formatCurrency(order.total), 195, finalY + 20, { align: 'right' });
+
+        // --- Footer ---
+        const pageHeight = doc.internal.pageSize.getHeight();
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.setLineWidth(0.1);
+        doc.line(14, pageHeight - 20, 196, pageHeight - 20);
+        doc.text('Thank you for your business.', 14, pageHeight - 15);
+        doc.text('Generated by LinkDAO', 196, pageHeight - 15, { align: 'right' });
+
+        // Save PDF
+        doc.save(`invoice-${order.orderNumber}.pdf`);
     };
 
     return (
@@ -668,6 +792,28 @@ Thank you for your order!
                             <XCircle size={24} className="text-white/60" />
                         </button>
                     </div>
+
+                    {/* Seller Information */}
+                    {order.seller && (
+                        <div className="mb-6 p-4 bg-white/5 rounded-lg border border-white/10">
+                            <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider mb-3">Seller Information</h3>
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-full overflow-hidden bg-white/10">
+                                    {order.seller.avatar ? (
+                                        <img src={order.seller.avatar} alt="Seller" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-white/40">
+                                            {order.seller.displayName?.charAt(0) || order.seller.handle?.charAt(0) || '?'}
+                                        </div>
+                                    )}
+                                </div>
+                                <div>
+                                    <p className="text-white font-medium">{order.seller.displayName || order.seller.handle || 'Unknown'}</p>
+                                    <p className="text-white/60 text-sm font-mono truncate max-w-[200px]">{order.seller.walletAddress}</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Order Items */}
                     <div className="mb-6">

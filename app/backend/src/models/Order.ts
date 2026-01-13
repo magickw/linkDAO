@@ -219,6 +219,34 @@ export interface MarketplaceOrder {
   orderNumber?: string;
   total?: number;
   items?: OrderItem[];
+  seller?: {
+    id: string;
+    walletAddress: string;
+    handle?: string;
+    displayName?: string;
+    avatar?: string;
+    address?: {
+      street: string;
+      city: string;
+      state: string;
+      postalCode: string;
+      country: string;
+    };
+  };
+  buyer?: {
+    id: string;
+    walletAddress: string;
+    handle?: string;
+    displayName?: string;
+    avatar?: string;
+    address?: {
+      street: string;
+      city: string;
+      state: string;
+      postalCode: string;
+      country: string;
+    };
+  };
 }
 
 // Blockchain Event Models

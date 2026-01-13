@@ -19,6 +19,9 @@ export type { AuthUser, AuthResponse, LoginCredentials, RegisterData } from './a
 // export { WalletService } from './walletService';
 // export { localWalletTransactionService } from './localWalletTransactionService';
 
+// Wallet Adapter
+export * from './walletAdapter';
+
 // Offline Support
 // export { OfflineManager, offlineManager } from './OfflineManager';
 

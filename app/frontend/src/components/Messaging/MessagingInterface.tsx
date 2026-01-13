@@ -220,7 +220,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     if (!hookConversations) return;
     const mapped: DirectMessageConversation[] = hookConversations.map(c => {
       const participantAddress = Array.isArray(c.participants)
-        ? (c.participants.find((p: any) => p !== address) || c.participants[0])
+        ? (c.participants.find((p: any) => p?.toLowerCase() !== address?.toLowerCase()) || c.participants[0])
         : (c.participants as any);
 
       // Get participant profile to fetch avatar

@@ -725,6 +725,34 @@ export class OrderService {
       sellerId: seller.id?.toString(),
       buyerWalletAddress: buyer.walletAddress,
       sellerWalletAddress: seller.walletAddress,
+      buyer: {
+        id: buyer.id?.toString(),
+        walletAddress: buyer.walletAddress,
+        handle: buyer.handle,
+        displayName: buyer.displayName,
+        avatar: buyer.avatarCid ? `https://ipfs.io/ipfs/${buyer.avatarCid}` : undefined,
+        address: buyer.billingAddress1 ? {
+          street: buyer.billingAddress1 + (buyer.billingAddress2 ? ` ${buyer.billingAddress2}` : ''),
+          city: buyer.billingCity || '',
+          state: buyer.billingState || '',
+          postalCode: buyer.billingZipCode || '',
+          country: buyer.billingCountry || ''
+        } : undefined
+      },
+      seller: {
+        id: seller.id?.toString(),
+        walletAddress: seller.walletAddress,
+        handle: seller.handle,
+        displayName: seller.displayName,
+        avatar: seller.avatarCid ? `https://ipfs.io/ipfs/${seller.avatarCid}` : undefined,
+        address: seller.billingAddress1 ? {
+          street: seller.billingAddress1 + (seller.billingAddress2 ? ` ${seller.billingAddress2}` : ''),
+          city: seller.billingCity || '',
+          state: seller.billingState || '',
+          postalCode: seller.billingZipCode || '',
+          country: seller.billingCountry || ''
+        } : undefined
+      },
       escrowId,
       amount: dbOrder.amount,
       total: orderTotal,

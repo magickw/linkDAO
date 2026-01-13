@@ -1,8 +1,5 @@
 // Polyfills for browser APIs required by web3 libraries (viem, wagmi, etc.)
 
-// Import random values polyfill first
-require('react-native-get-random-values');
-
 // Initialize window object if it doesn't exist
 if (typeof window === 'undefined') {
   global.window = {};

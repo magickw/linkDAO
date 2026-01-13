@@ -47,7 +47,6 @@ export default function WalletConnectScreen() {
   const [connecting, setConnecting] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [signature, setSignature] = useState<string | null>(null);
-  const [pairingUri, setPairingUri] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
   const { mode = 'login' } = useLocalSearchParams<{ mode?: 'login' | 'register' }>();

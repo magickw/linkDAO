@@ -1457,7 +1457,8 @@ class UnifiedMessagingService {
   private transformMessage(data: any): Message {
     return {
       ...data,
-      timestamp: new Date(data.timestamp || data.createdAt),
+      fromAddress: data.fromAddress || data.senderAddress,
+      timestamp: new Date(data.timestamp || data.createdAt || data.sentAt),
       editedAt: data.editedAt ? new Date(data.editedAt) : undefined,
       deletedAt: data.deletedAt ? new Date(data.deletedAt) : undefined
     };

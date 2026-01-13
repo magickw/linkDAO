@@ -13,19 +13,6 @@ import { WalletLoginBridge } from '../src/components/WalletLoginBridge';
 import { walletService } from '../src/services/walletConnectService';
 import { setWalletAdapter } from '@linkdao/shared';
 
-// Initialize wallet adapter
-setWalletAdapter({
-  signMessage: async (message: string, address: string) => {
-    return await walletService.signMessage(message, address);
-  },
-  getAccounts: () => {
-    return walletService.getAccounts();
-  },
-  isConnected: () => {
-    return walletService.isConnected();
-  },
-});
-
 export default function RootLayout() {
   const { isAuthenticated } = useAuthStore();
   const [isReady, setIsReady] = useState(false);
@@ -33,6 +20,19 @@ export default function RootLayout() {
   const { walletAddress, signature, connector } = useLocalSearchParams();
 
   useEffect(() => {
+    // Initialize wallet adapter
+    setWalletAdapter({
+      signMessage: async (message: string, address: string) => {
+        return await walletService.signMessage(message, address);
+      },
+      getAccounts: () => {
+        return walletService.getAccounts();
+      },
+      isConnected: () => {
+        return walletService.isConnected();
+      },
+    });
+
     // Initialize wallet service
     const initWalletService = async () => {
       try {
