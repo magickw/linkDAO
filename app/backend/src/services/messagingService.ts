@@ -292,13 +292,15 @@ export class MessagingService {
 
     try {
       this.validateAddress(userAddress);
+      // Normalize to lowercase to ensure matching against DB
+      const normalizedAddress = userAddress.toLowerCase();
       const conversation = await db
         .select()
         .from(conversations)
         .where(
           and(
             eq(conversations.id, conversationId),
-            sql`${conversations.participants} ? ${userAddress}`
+            sql`${conversations.participants} ? ${normalizedAddress}`
           )
         )
         .limit(1);
@@ -366,10 +368,10 @@ export class MessagingService {
       let whereConditions = [eq(chatMessages.conversationId, conversationId)];
 
       // Add pagination filters
-      if (before) {
+      if (before && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(before)) {
         whereConditions.push(lt(chatMessages.sentAt, sql`(SELECT timestamp FROM chat_messages WHERE id = ${before})`));
       }
-      if (after) {
+      if (after && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(after)) {
         whereConditions.push(gt(chatMessages.sentAt, sql`(SELECT timestamp FROM chat_messages WHERE id = ${after})`));
       }
 
@@ -431,11 +433,6 @@ export class MessagingService {
     const { conversationId, fromAddress, content, encryptedContent, encryptionMetadata } = data;
 
     safeLogger.info(`[MessagingService] sendMessage called for conversation ${conversationId} from ${fromAddress}`);
-
-
-    safeLogger.info(`[MessagingService] sendMessage called for conversation ${conversationId} from ${fromAddress}`);
-
-
     try {
       // Check if user is participant
       const conversation = await this.getConversationDetails({ conversationId, userAddress: fromAddress });
@@ -496,8 +493,15 @@ export class MessagingService {
         .where(eq(conversations.id, conversationId));
 
       // Send notification to other participants
-      const participants = JSON.parse(conversation.participants as string);
-      const otherParticipants = participants.filter((p: string) => p !== fromAddress);
+      // Safely handle participants parsing (might be string or object)
+      let participants: string[];
+      if (typeof conversation.participants === 'string') {
+        participants = JSON.parse(conversation.participants);
+      } else {
+        participants = conversation.participants as unknown as string[];
+      }
+
+      const otherParticipants = participants.filter((p: string) => p !== fromAddress.toLowerCase());
 
       // Send notifications to other participants
       for (const participant of otherParticipants) {
@@ -657,9 +661,16 @@ export class MessagingService {
         };
       }
 
-      // Parse participants from JSON
-      const participants = JSON.parse(conversation.participants as string);
-      const updatedParticipants = participants.filter((p: string) => p !== userAddress);
+      // Parse participants from JSON safely
+      let participants: string[];
+      if (typeof conversation.participants === 'string') {
+        participants = JSON.parse(conversation.participants);
+      } else {
+        participants = conversation.participants as unknown as string[];
+      }
+
+      const normalizedUserAddress = userAddress.toLowerCase();
+      const updatedParticipants = participants.filter((p: string) => p !== normalizedUserAddress);
 
       if (updatedParticipants.length === 0) {
         // If no participants left, delete the conversation and messages

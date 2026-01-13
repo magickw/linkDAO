@@ -1,10 +1,11 @@
 /**
  * Messaging Service
- * API service for messaging and conversations
+ * API service for messaging and conversations with real-time support
  */
 
 import { apiClient } from '@linkdao/shared';
 import { Message, Conversation } from '../store';
+import { webSocketService } from './webSocketService';
 
 export interface CreateMessageData {
   conversationId: string;
@@ -19,6 +20,30 @@ export interface CreateConversationData {
 }
 
 class MessagingService {
+  private messageListeners: Map<string, (message: Message) => void> = new Map();
+
+  /**
+   * Subscribe to new messages in a conversation
+   */
+  subscribeToMessages(conversationId: string, callback: (message: Message) => void): () => void {
+    const eventName = `message:new:${conversationId}`;
+    
+    const listener = (data: any) => {
+      if (data.conversationId === conversationId) {
+        callback(data);
+      }
+    };
+
+    this.messageListeners.set(conversationId, callback);
+    webSocketService.on(eventName, listener);
+
+    // Return unsubscribe function
+    return () => {
+      webSocketService.off(eventName, listener);
+      this.messageListeners.delete(conversationId);
+    };
+  }
+
   /**
    * Get all conversations
    */
@@ -73,6 +98,12 @@ class MessagingService {
     );
 
     if (response.success && response.data) {
+      // Emit message through WebSocket for real-time updates
+      webSocketService.emit('message:send', {
+        conversationId: data.conversationId,
+        message: response.data,
+      });
+      
       return response.data;
     }
 

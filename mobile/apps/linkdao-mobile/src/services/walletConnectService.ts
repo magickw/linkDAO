@@ -6,6 +6,8 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Linking, Platform } from 'react-native';
+import { MetaMaskSDK } from '@metamask/sdk-react-native';
+import { createAppKit } from '@reown/appkit-react-native';
 
 const STORAGE_KEY = 'wallet_connection';
 
@@ -22,12 +24,41 @@ class WalletService {
   private isConnected: boolean = false;
   private activeConnection: WalletConnection | null = null;
   private currentProvider: WalletProvider | null = null;
+  private metamaskSDK: MetaMaskSDK | null = null;
+  private appKit: any = null;
 
   /**
    * Initialize wallet service
    */
   async initialize() {
     try {
+      // Initialize MetaMask SDK
+      this.metamaskSDK = new MetaMaskSDK({
+        dappMetadata: {
+          name: 'LinkDAO',
+          url: 'https://linkdao.io',
+        },
+        logging: true,
+        checkInstallationImmediately: false,
+        checkInstallationOnAllCalls: false,
+        delayInstallationCheck: false,
+      });
+
+      // Initialize Reown AppKit (WalletConnect)
+      this.appKit = createAppKit({
+        projectId: process.env.WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID',
+        metadata: {
+          name: 'LinkDAO',
+          description: 'Decentralized Social Platform',
+          url: 'https://linkdao.io',
+          icons: ['https://linkdao.io/icon.png'],
+        },
+        networks: [1, 137], // Ethereum mainnet and Polygon
+        features: {
+          analytics: true,
+        },
+      });
+
       await this.restoreConnection();
       console.log('✅ Wallet service initialized');
     } catch (error) {
@@ -92,11 +123,53 @@ class WalletService {
    */
   private async connectMetaMask(): Promise<string> {
     try {
-      const scheme = 'metamask://';
-      const appLink = Platform.select({
-        ios: 'https://apps.apple.com/app/metamask/id1438144202',
-        android: 'https://play.google.com/store/apps/details?id=io.metamask',
+      if (!this.metamaskSDK) {
+        throw new Error('MetaMask SDK not initialized');
+      }
+
+      console.log('🦊 Connecting to MetaMask...');
+
+      // Check if MetaMask is installed
+      const isInstalled = await this.metamaskSDK.isMetaMaskInstalled();
+      
+      if (!isInstalled) {
+        console.log('MetaMask not installed, redirecting to app store...');
+        const appLink = Platform.select({
+          ios: 'https://apps.apple.com/app/metamask/id1438144202',
+          android: 'https://play.google.com/store/apps/details?id=io.metamask',
+        });
+        
+        if (appLink) {
+          await Linking.openURL(appLink);
+        }
+        
+        throw new Error('MetaMask is not installed. Please install it from the app store.');
+      }
+
+      // Connect to MetaMask
+      const result = await this.metamaskSDK.connect({
+        requiredNamespaces: {
+          eip155: {
+            methods: ['eth_sendTransaction', 'eth_signTransaction', 'eth_sign', 'personal_sign', 'eth_signTypedData'],
+            chains: ['eip155:1', 'eip155:137'], // Ethereum mainnet and Polygon
+            events: ['chainChanged', 'accountsChanged'],
+          },
+        },
       });
+
+      if (!result || !result.accounts || result.accounts.length === 0) {
+        throw new Error('Failed to get accounts from MetaMask');
+      }
+
+      const address = result.accounts[0];
+      console.log('✅ Connected to MetaMask:', address);
+
+      return address;
+    } catch (error) {
+      console.error('❌ Failed to connect to MetaMask:', error);
+      throw error;
+    }
+  }
 
       // Check if MetaMask is installed
       const canOpen = await Linking.canOpenURL(scheme);
@@ -121,15 +194,29 @@ class WalletService {
   }
 
   /**
-   * Connect via WalletConnect
+   * Connect via WalletConnect (Reown AppKit)
    */
   private async connectWalletConnect(): Promise<string> {
     try {
-      // For demo, generate a mock address
-      // In production, integrate with @reown/appkit-react-native
-      const mockAddress = this.generateMockAddress();
-      console.log('🔗 WalletConnect connection simulated:', mockAddress);
-      return mockAddress;
+      if (!this.appKit) {
+        throw new Error('Reown AppKit not initialized');
+      }
+
+      console.log('🔗 Connecting via WalletConnect...');
+
+      // Open WalletConnect modal
+      const result = await this.appKit.openModal({
+        view: 'Connect',
+      });
+
+      if (!result || !result.address) {
+        throw new Error('Failed to get address from WalletConnect');
+      }
+
+      const address = result.address;
+      console.log('✅ Connected via WalletConnect:', address);
+
+      return address;
     } catch (error) {
       console.error('❌ WalletConnect connection failed:', error);
       throw error;
@@ -263,14 +350,30 @@ class WalletService {
 
       console.log('🔐 Signing message with', this.activeConnection.provider, ':', message);
 
-      // Simulate signing delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      let signature: string;
 
-      // In production, this would use the wallet SDK to sign
-      // For demo, generate a mock signature based on the message
-      const signature = this.generateMockSignature(message, address);
+      // Use real wallet SDK for MetaMask
+      if (this.activeConnection.provider === 'metamask' && this.metamaskSDK) {
+        signature = await this.metamaskSDK.signMessage({
+          message: message,
+        });
+        console.log('✅ Message signed with MetaMask');
+      } 
+      // Use Reown AppKit for WalletConnect
+      else if (this.activeConnection.provider === 'walletconnect' && this.appKit) {
+        const result = await this.appKit.signMessage({
+          message: message,
+        });
+        signature = result;
+        console.log('✅ Message signed with WalletConnect');
+      } 
+      else {
+        // Simulate signing for other wallets (in production, integrate their SDKs)
+        await new Promise(resolve => setTimeout(resolve, 500));
+        signature = this.generateMockSignature(message, address);
+        console.log('✅ Message signed (simulated)');
+      }
 
-      console.log('✅ Message signed');
       return signature;
     } catch (error) {
       console.error('❌ Failed to sign message:', error);

@@ -87,6 +87,15 @@ export const useWebSocket = (config: UseWebSocketConfig): WebSocketHookReturn =>
       console.log('[useWebSocket] Reusing existing WebSocket connection');
       serviceRef.current = existingClient;
 
+      // FIX: Immediately sync connection state if already connected
+      if (serviceRef.current.isConnected()) {
+        setConnectionState(prevState => ({
+          ...prevState,
+          status: 'connected',
+          mode: 'websocket'
+        }));
+      }
+
       // Ensure we are authenticated with the current address
       if (config.walletAddress) {
         // Authenticate will handle checking if we need to re-auth

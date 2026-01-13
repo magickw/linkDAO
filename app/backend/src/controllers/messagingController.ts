@@ -135,6 +135,8 @@ export class MessagingController {
       }
 
       const { id } = req.params;
+      safeLogger.info(`[MessagingController] getConversationMessages called for ${id} by ${userAddress}, query:`, req.query);
+
       const {
         page = 1,
         limit = 50,
@@ -162,7 +164,10 @@ export class MessagingController {
 
       res.json(apiResponse.success(messages.data || messages, 'Messages retrieved successfully'));
     } catch (error) {
-      safeLogger.error('Error getting conversation messages:', error);
+      safeLogger.error('[MessagingController] Error getting conversation messages:', error);
+      if (error instanceof Error) {
+        safeLogger.error('[MessagingController] Stack:', error.stack);
+      }
       if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
         res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
       } else {
@@ -184,7 +189,7 @@ export class MessagingController {
       const rateLimitKey = `msg_rate_${userAddress}`;
       // Note: In production, use Redis for rate limiting
       // For now, this is a placeholder for the rate limiting logic
-      
+
       const { id } = req.params;
       const {
         content,

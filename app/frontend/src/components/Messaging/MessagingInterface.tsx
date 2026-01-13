@@ -9,7 +9,7 @@ import {
   MessageCircle, Search, Send, User, Plus, Hash, Lock,
   ThumbsUp, Heart, Zap, Rocket, Globe, Users, X, ChevronDown, ChevronRight,
   Image, Link as LinkIcon, Wallet, Vote, Calendar, Tag, Settings, ArrowLeftRight,
-  Phone, Video, Shield, ArrowLeft
+  Phone, Video, Shield, ArrowLeft, Wifi, WifiOff
 } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import CrossChainBridge from './CrossChainBridge';
@@ -19,6 +19,7 @@ import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import Web3SwipeGestureHandler from '@/components/Mobile/Web3SwipeGestureHandler';
 import { motion, PanInfo } from 'framer-motion';
 import { UserProfile } from '../../models/UserProfile';
+import useWebSocket from '../../hooks/useWebSocket';
 
 
 interface ChatChannel {
@@ -132,6 +133,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   const { address, isConnected } = useAccount();
   const { isMobile, triggerHapticFeedback, touchTargetClasses } = useMobileOptimization();
   const { resolveName, resolvedNames, isLoading } = useENSIntegration();
+  const { isConnected: isSocketConnected } = useWebSocket({ walletAddress: address || '' });
 
   // Helper function to get the best display name for a participant
   const getParticipantDisplayName = (participantAddress: string): string => {
@@ -872,6 +874,13 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
                 <MessageCircle size={20} className="mr-2" />
                 LinkDAO Chat
+                <div className="ml-2" title={isSocketConnected ? "Online" : "Offline"}>
+                  {isSocketConnected ? (
+                    <Wifi size={16} className="text-green-500" />
+                  ) : (
+                    <WifiOff size={16} className="text-red-500" />
+                  )}
+                </div>
               </h2>
               <button
                 className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
