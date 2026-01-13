@@ -50,11 +50,28 @@ export function wrapProvider(provider: any): any {
 
   wrappedProvider.request = async (args: any) => {
     try {
-      // Create completely new request object
-      const safeRequest = {
-        method: String(args?.method || ''),
-        params: args?.params ? JSON.parse(JSON.stringify(args.params)) : []
-      };
+      // Create a Proxy for the request object to intercept any property access
+      const safeRequest = new Proxy(Object.create(null), {
+        get(target, prop) {
+          // If ethers.js tries to set a property, intercept it
+          if (prop === 'requestId' || prop === 'id' || prop === 'jsonrpc') {
+            return 0; // Default value
+          }
+          // For other properties, return undefined
+          return undefined;
+        },
+        set(target, prop, value) {
+          // Allow ethers.js to set properties on our proxy
+          target[prop] = value;
+          return true;
+        }
+      });
+
+      // Set the required properties
+      safeRequest.method = String(args?.method || '');
+      safeRequest.params = args?.params ? JSON.parse(JSON.stringify(args.params)) : [];
+      safeRequest.jsonrpc = '2.0';
+      safeRequest.id = Date.now();
 
       // Call the bound request function - this internally uses
       // the original provider as 'this', but we never expose it
@@ -310,20 +327,19 @@ export async function getProvider() {
  */
 export async function getSigner() {
   try {
-    // Skip wagmi getWalletClient entirely to avoid connector.getChainId errors
-    // Go directly to injected provider
-
     // Try direct injected provider (window.ethereum) first
     if (hasInjectedProvider()) {
       const injectedProvider = getInjectedProvider();
       if (injectedProvider) {
         try {
-          // Wrap provider to avoid read-only property errors and create provider with explicit network configuration
+          // Wrap provider to avoid read-only property errors
           const wrappedProvider = wrapProvider(injectedProvider);
-          // Use "any" network here as well
+
+          // Create a BrowserProvider with the wrapped provider
+          // Use "any" network to avoid strict detection
           const provider = new ethers.BrowserProvider(wrappedProvider as any, "any");
 
-          // Try to get signer with timeout to prevent hanging
+          // Get signer with timeout to prevent hanging
           const signerPromise = provider.getSigner();
           const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Signer timeout')), 5000)
@@ -346,12 +362,10 @@ export async function getSigner() {
       }
     }
 
-    // Fallback: try to create signer from window.ethereum directly
+    // Fallback: try window.ethereum directly
     if (typeof window !== 'undefined' && (window as any).ethereum) {
       try {
-        // Wrap provider to avoid read-only property errors
         const wrappedProvider = wrapProvider((window as any).ethereum);
-        // Use "any" network here as well
         const provider = new ethers.BrowserProvider(wrappedProvider as any, "any");
         const signer = await provider.getSigner();
         const address = await signer.getAddress();
