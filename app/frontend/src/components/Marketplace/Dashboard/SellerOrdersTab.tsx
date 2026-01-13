@@ -585,6 +585,39 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
                                 </ul>
                             </div>
 
+                            {/* Buyer Information */}
+                            <div className="mb-4 p-3 bg-gray-800/50 rounded-lg">
+                                <h4 className="text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
+                                    <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                    Buyer Information
+                                </h4>
+                                <div className="space-y-1">
+                                    {order.buyerName && (
+                                        <p className="text-sm text-white">{order.buyerName}</p>
+                                    )}
+                                    <p className="text-sm text-gray-400 font-mono">
+                                        {order.buyerAddress ? (
+                                            <>
+                                                {order.buyerAddress.slice(0, 6)}...{order.buyerAddress.slice(-4)}
+                                                <button
+                                                    onClick={() => navigator.clipboard.writeText(order.buyerAddress)}
+                                                    className="ml-2 text-purple-400 hover:text-purple-300"
+                                                    title="Copy full address"
+                                                >
+                                                    <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                    </svg>
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <span className="text-gray-500 italic">No buyer address available</span>
+                                        )}
+                                    </p>
+                                </div>
+                            </div>
+
                             {/* Show delivery type badge */}
                             <div className="mb-4 flex flex-wrap gap-2">
                                 {isNFTOrder(order) ? (

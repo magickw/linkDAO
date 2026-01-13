@@ -47,7 +47,7 @@ class AuthService {
   private readonly USER_KEY = 'linkdao_user';
 
   /**
-   * Login with wallet signature
+   * Login with credentials
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
@@ -68,6 +68,127 @@ class AuthService {
     } catch (error) {
       return { success: false, error: 'Login failed' };
     }
+  }
+
+  /**
+   * Authenticate with wallet (similar to web app's enhancedAuthService)
+   * This is the main authentication method for wallet-based login
+   */
+  async authenticateWallet(
+    address: string,
+    connector: any,
+    status: string,
+    options: { retries?: number; timeout?: number } = {}
+  ): Promise<AuthResponse> {
+    const { retries = 3, timeout = 30000 } = options;
+
+    try {
+      // Step 1: Get authentication message and nonce from backend
+      const { nonce, message } = await this.getNonce(address);
+
+      // Step 2: Sign the message with wallet
+      const signature = await this.signMessage(address, message);
+
+      // Step 3: Verify signature with backend
+      const response = await apiClient.post<{ token: string; user: AuthUser; requires2FA?: boolean; userId?: string }>(
+        '/api/auth/wallet-connect',
+        {
+          walletAddress: address,
+          signature,
+          message
+        }
+      );
+
+      if (response.success && response.data) {
+        // Check if 2FA is required
+        if (response.data.requires2FA) {
+          return {
+            success: true,
+            requires2FA: true,
+            userId: response.data.userId,
+            walletAddress: address
+          } as any;
+        }
+
+        this.token = response.data.token;
+        this.currentUser = this.createUserData(address, response.data.user);
+        apiClient.setToken(this.token);
+
+        await this.persistSession(this.token, this.currentUser);
+
+        return { success: true, token: this.token, user: this.currentUser };
+      }
+
+      return { success: false, error: response.error || 'Authentication failed' };
+    } catch (error) {
+      return { success: false, error: (error as Error).message || 'Authentication failed' };
+    }
+  }
+
+  /**
+   * Get authentication nonce and message from backend
+   */
+  private async getNonce(address: string): Promise<{ nonce: string; message: string }> {
+    try {
+      const response = await apiClient.post<{ nonce: string; message }>(
+        '/api/auth/nonce',
+        { walletAddress: address }
+      );
+
+      if (response.success && response.data) {
+        return {
+          nonce: response.data.nonce,
+          message: response.data.message
+        };
+      }
+
+      // Fallback nonce generation
+      const fallbackNonce = `fallback_nonce_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const fallbackMessage = `Sign this message to authenticate with LinkDAO: ${Date.now()}`;
+      return { nonce: fallbackNonce, message: fallbackMessage };
+    } catch (error) {
+      // Fallback nonce generation
+      const fallbackNonce = `fallback_nonce_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const fallbackMessage = `Sign this message to authenticate with LinkDAO: ${Date.now()}`;
+      return { nonce: fallbackNonce, message: fallbackMessage };
+    }
+  }
+
+  /**
+   * Sign message with wallet
+   * This is a stub - actual implementation would integrate with wallet provider
+   */
+  private async signMessage(address: string, message: string): Promise<string> {
+    // In a real implementation, this would integrate with wallet providers like:
+    // - WalletConnect
+    // - MetaMask (if available in mobile)
+    // - Native wallet SDKs
+    // For now, return a mock signature
+    const mockSignature = `0x${Buffer.from(message).toString('hex').padEnd(130, '0').substring(0, 130)}`;
+    return mockSignature;
+  }
+
+  /**
+   * Create user data from backend response
+   */
+  private createUserData(address: string, userData?: any): AuthUser {
+    return {
+      id: userData?.id || `user_${address}`,
+      address: address,
+      handle: userData?.handle || `user_${address.slice(0, 6)}`,
+      ens: userData?.ens,
+      email: userData?.email,
+      kycStatus: userData?.kycStatus || 'none',
+      role: (userData?.role as any) || 'user',
+      permissions: userData?.permissions || [],
+      isActive: userData?.isActive !== false,
+      isSuspended: userData?.isSuspended === true,
+      createdAt: userData?.createdAt || new Date().toISOString(),
+      updatedAt: userData?.updatedAt || new Date().toISOString(),
+      chainId: userData?.chainId,
+      preferences: userData?.preferences,
+      privacySettings: userData?.privacySettings
+    };
   }
 
   /**

@@ -4,71 +4,53 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Stack, router, useSegments } from 'expo-router';
+import { Stack, router, useSegments, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAuthStore } from '../src/store';
-import { authService } from '@linkdao/shared';
+import { WalletLoginBridge } from '../src/components/WalletLoginBridge';
 
 export default function RootLayout() {
-  const { isAuthenticated, user, token, setUser, setToken, setLoading } = useAuthStore();
-  const [isInitialized, setIsInitialized] = useState(false);
+  const { isAuthenticated } = useAuthStore();
+  const [isReady, setIsReady] = useState(false);
   const segments = useSegments();
+  const { walletAddress, signature, connector } = useLocalSearchParams();
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      setLoading(true);
-      try {
-        // Try to restore session from storage
-        const response = await authService.restoreSession();
-        if (response.success && response.data) {
-          setToken(response.data.token);
-          setUser(response.data.user);
-        }
-      } catch (error) {
-        console.error('Failed to restore session:', error);
-      } finally {
-        setLoading(false);
-        setIsInitialized(true);
-      }
-    };
-
-    initializeAuth();
-  }, [setToken, setUser, setLoading]);
+    // Mark as ready after initial render
+    setIsReady(true);
+  }, []);
 
   useEffect(() => {
-    // Only redirect after initialization is complete
-    if (!isInitialized) return;
+    if (!isReady) return;
 
     const inAuthGroup = segments[0] === '(tabs)';
 
-    // If not authenticated and trying to access protected routes, redirect to auth
+    // Navigate only after root layout is ready
     if (!isAuthenticated && inAuthGroup) {
       router.replace('/auth');
-    }
-
-    // If authenticated and on auth page, redirect to tabs
-    if (isAuthenticated && !inAuthGroup) {
+    } else if (isAuthenticated && !inAuthGroup) {
       router.replace('/(tabs)');
     }
-  }, [isAuthenticated, isInitialized, segments]);
-
-  // Show loading state while initializing
-  if (!isInitialized) {
-    return (
-      <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#ffffff' }}>
-        <SafeAreaProvider>
-          <StatusBar style="auto" />
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
-    );
-  }
+  }, [isAuthenticated, isReady, segments]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <StatusBar style="auto" />
+        {/* Auto-authentication bridge for wallet connections */}
+        <WalletLoginBridge
+          autoLogin={true}
+          walletAddress={walletAddress as string}
+          connector={connector as any}
+          onLoginSuccess={({ user }) => {
+            console.log('✅ Auto-login successful for:', user.address);
+          }}
+          onLoginError={(error) => {
+            console.error('❌ Auto-login failed:', error);
+          }}
+        />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="auth" options={{ headerShown: false }} />

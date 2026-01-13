@@ -1,1 +1,45 @@
-{"extends": "../../tsconfig.json", "compilerOptions": {"baseUrl": ".", "paths": {"@/*": ["./src/*"], "@/components/*": ["./src/components/*"], "@/screens/*": ["./src/screens/*"], "@/navigation/*": ["./src/navigation/*"], "@/services/*": ["./src/services/*"], "@/hooks/*": ["./src/hooks/*"], "@/utils/*": ["./src/utils/*"], "@/types/*": ["./src/types/*"], "@/store/*": ["./src/store/*"], "@/constants/*": ["./src/constants/*"]}}, "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"], "exclude": ["node_modules"]}
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@/components/*": [
+        "./src/components/*"
+      ],
+      "@/screens/*": [
+        "./src/screens/*"
+      ],
+      "@/navigation/*": [
+        "./src/navigation/*"
+      ],
+      "@/services/*": [
+        "./src/services/*"
+      ],
+      "@/hooks/*": [
+        "./src/hooks/*"
+      ],
+      "@/utils/*": [
+        "./src/utils/*"
+      ],
+      "@/types/*": [
+        "./src/types/*"
+      ],
+      "@/store/*": [
+        "./src/store/*"
+      ],
+      "@/constants/*": [
+        "./src/constants/*"
+      ]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

@@ -31,10 +31,21 @@ export class OfflineManager {
   };
   private listeners: ((state: OfflineState) => void)[] = [];
   private syncInterval?: NodeJS.Timeout;
+  private baseUrl: string;
 
   private constructor() {
     // Check if we're in a browser environment before accessing window
     const isBrowser = typeof window !== 'undefined';
+
+    // Determine the correct base URL for API calls
+    let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
+    if (isBrowser) {
+      const hostname = window.location.hostname;
+      if (hostname === 'www.linkdao.io' || hostname === 'linkdao.io' || hostname === 'app.linkdao.io') {
+        backendUrl = 'https://api.linkdao.io';
+      }
+    }
+    this.baseUrl = backendUrl;
 
     if (isBrowser) {
       this.initializeEventListeners();
@@ -301,7 +312,7 @@ export class OfflineManager {
       throw new Error('conversationId is required for sending messages');
     }
 
-    const response = await fetch(`/api/messaging/conversations/${conversationId}/messages`, {
+    const response = await fetch(`${this.baseUrl}/api/messaging/conversations/${conversationId}/messages`, {
       method: 'POST',
       headers: await enhancedAuthService.getAuthHeaders(),
       body: JSON.stringify(messageData)
@@ -316,7 +327,7 @@ export class OfflineManager {
    * Execute mark messages read action
    */
   private async executeMarkMessagesRead(payload: any): Promise<void> {
-    const response = await fetch('/api/chat/messages/read', {
+    const response = await fetch(`${this.baseUrl}/api/messaging/messages/read`, {
       method: 'POST',
       headers: await enhancedAuthService.getAuthHeaders(),
       body: JSON.stringify(payload)
@@ -332,7 +343,7 @@ export class OfflineManager {
    */
   private async executeAddReaction(payload: any): Promise<void> {
     const { messageId, emoji } = payload;
-    const response = await fetch(`/api/chat/messages/${messageId}/reactions`, {
+    const response = await fetch(`${this.baseUrl}/api/messaging/messages/${messageId}/reactions`, {
       method: 'POST',
       headers: await enhancedAuthService.getAuthHeaders(),
       body: JSON.stringify({ emoji })
@@ -348,7 +359,7 @@ export class OfflineManager {
    */
   private async executeRemoveReaction(payload: any): Promise<void> {
     const { messageId, emoji } = payload;
-    const response = await fetch(`/api/chat/messages/${messageId}/reactions`, {
+    const response = await fetch(`${this.baseUrl}/api/messaging/messages/${messageId}/reactions`, {
       method: 'DELETE',
       headers: await enhancedAuthService.getAuthHeaders(),
       body: JSON.stringify({ emoji })
@@ -364,7 +375,7 @@ export class OfflineManager {
    */
   private async executeDeleteMessage(payload: any): Promise<void> {
     const { messageId } = payload;
-    const response = await fetch(`/api/chat/messages/${messageId}`, {
+    const response = await fetch(`${this.baseUrl}/api/messaging/messages/${messageId}`, {
       method: 'DELETE',
       headers: await enhancedAuthService.getAuthHeaders()
     });

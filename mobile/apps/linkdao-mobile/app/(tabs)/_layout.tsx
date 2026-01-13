@@ -8,9 +8,8 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useWebSocket } from '../../src/hooks/useWebSocket';
 import { usePostsStore } from '../../src/store';
-import { AuthGuard } from '../../src/components/AuthGuard';
 
-function TabLayoutContent() {
+export default function TabLayout() {
   const { isConnected, on, off } = useWebSocket();
   const addPost = usePostsStore((state) => state.addPost);
   const updatePost = usePostsStore((state) => state.updatePost);
@@ -100,13 +99,5 @@ function TabLayoutContent() {
         }}
       />
     </Tabs>
-  );
-}
-
-export default function TabLayout() {
-  return (
-    <AuthGuard>
-      <TabLayoutContent />
-    </AuthGuard>
   );
 }

@@ -2,4 +2,5 @@
 import './polyfills';
 import 'react-native-gesture-handler';
 
-export { default } from './app/_layout';
+// Import the Expo Router entry point
+import 'expo-router/entry';

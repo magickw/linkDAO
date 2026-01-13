@@ -16,102 +16,111 @@ let cachedProvider: ethers.Provider | null = null;
  * 
  * Uses Proxy for complete isolation from frozen extension objects.
  */
+/**
+ * Wrap an EIP-1193 provider to avoid "Cannot assign to read only property" errors.
+ * This happens when extensions like LastPass freeze request objects.
+ * 
+ * Uses a Facade pattern instead of Proxy to avoid "property is read-only" errors
+ * when the extension freezes the provider object itself.
+ */
 export function wrapProvider(provider: any): any {
   if (!provider) return provider;
 
-  // Create a Proxy that intercepts ALL property access and method calls
-  // This ensures complete isolation from the original provider's frozen objects
-  return new Proxy(provider, {
-    get(target, prop, receiver) {
-      const value = target[prop];
+  // Create a facade object with only the specific methods we need
+  // This avoids Proxy traps hitting frozen properties on the original object
+  const facade: any = {
+    // Flag to indicate this is a wrapped provider
+    isWrapped: true,
 
-      // For methods, wrap them to ensure arguments and results are safe
-      if (typeof value === 'function') {
-        return function (...args: any[]) {
-          // Special handling for the request method
-          if (prop === 'request') {
-            return (async () => {
-              try {
-                // Create completely new request object with no references to original
-                const safeRequest = {
-                  method: String(args[0]?.method || ''),
-                  params: args[0]?.params ? JSON.parse(JSON.stringify(args[0].params)) : []
-                };
+    // Copy some common properties safely if they exist and aren't frozen/getters
+    // We wrap this in try/catch for each property
+  };
 
-                // Call original request
-                const result = await value.call(target, safeRequest);
+  try {
+    if (provider.isMetaMask) facade.isMetaMask = provider.isMetaMask;
+  } catch (e) { }
 
-                // Return deep cloned result to ensure no frozen objects
-                return JSON.parse(JSON.stringify(result));
-              } catch (error: any) {
-                // Create new error object to avoid frozen error objects
-                const safeError: any = new Error(error?.message || 'Request failed');
-                if (error?.code !== undefined) safeError.code = error.code;
-                if (error?.data !== undefined) {
-                  try {
-                    safeError.data = JSON.parse(JSON.stringify(error.data));
-                  } catch {
-                    safeError.data = error.data;
-                  }
-                }
-                throw safeError;
-              }
-            })();
-          }
+  // Safe request wrapper
+  facade.request = async (args: any) => {
+    try {
+      // Create completely new request object with no references to original
+      const safeRequest = {
+        method: String(args?.method || ''),
+        params: args?.params ? JSON.parse(JSON.stringify(args.params)) : []
+      };
 
-          // For send/sendAsync (legacy methods)
-          if (prop === 'send' || prop === 'sendAsync') {
-            try {
-              // Deep clone arguments
-              const safeArgs = args.map(arg => {
-                if (typeof arg === 'function') return arg; // Keep callbacks as-is
-                try {
-                  return JSON.parse(JSON.stringify(arg));
-                } catch {
-                  return arg;
-                }
-              });
-              return value.apply(target, safeArgs);
-            } catch (error: any) {
-              const safeError = new Error(error?.message || 'Send failed');
-              throw safeError;
-            }
-          }
+      // Call original request
+      // We use Function.prototype.call to avoid property access issues
+      const result = await provider.request.call(provider, safeRequest);
 
-          // For event listeners (on, removeListener, etc.)
-          if (prop === 'on' || prop === 'removeListener' || prop === 'removeAllListeners') {
-            return value.bind(target);
-          }
-
-          // For other methods, just bind and call
-          return value.bind(target);
-        };
-      }
-
-      // For non-function properties, return the value directly
-      // but ensure it's not a frozen object
-      if (value && typeof value === 'object') {
+      // Return deep cloned result to ensure no frozen objects
+      if (result === undefined) return result;
+      return JSON.parse(JSON.stringify(result));
+    } catch (error: any) {
+      // Create new error object to avoid frozen error objects
+      const safeError: any = new Error(error?.message || 'Request failed');
+      if (error?.code !== undefined) safeError.code = error.code;
+      if (error?.data !== undefined) {
         try {
-          return JSON.parse(JSON.stringify(value));
+          safeError.data = JSON.parse(JSON.stringify(error.data));
         } catch {
-          return value;
+          safeError.data = error.data;
         }
       }
-
-      return value;
-    },
-
-    // Ensure property setting works
-    set(target, prop, value) {
-      try {
-        target[prop] = value;
-        return true;
-      } catch {
-        // If setting fails (frozen object), just return true to avoid errors
-        return true;
-      }
+      throw safeError;
     }
-  });
+  };
+
+  // Safe send wrapper (legacy)
+  facade.send = (...args: any[]) => {
+    try {
+      const safeArgs = args.map(arg => {
+        if (typeof arg === 'function') return arg;
+        try {
+          return JSON.parse(JSON.stringify(arg));
+        } catch {
+          return arg;
+        }
+      });
+      return provider.send.apply(provider, safeArgs);
+    } catch (error: any) {
+      const safeError = new Error(error?.message || 'Send failed');
+      throw safeError;
+    }
+  };
+
+  // Safe sendAsync wrapper (legacy)
+  facade.sendAsync = (...args: any[]) => {
+    try {
+      const safeArgs = args.map(arg => {
+        if (typeof arg === 'function') return arg;
+        try {
+          return JSON.parse(JSON.stringify(arg));
+        } catch {
+          return arg;
+        }
+      });
+      return provider.sendAsync.apply(provider, safeArgs);
+    } catch (error: any) {
+      const safeError = new Error(error?.message || 'SendAsync failed');
+      throw safeError;
+    }
+  };
+
+  // Bind event listeners
+  if (typeof provider.on === 'function') {
+    facade.on = provider.on.bind(provider);
+  }
+
+  if (typeof provider.removeListener === 'function') {
+    facade.removeListener = provider.removeListener.bind(provider);
+  }
+
+  if (typeof provider.removeAllListeners === 'function') {
+    facade.removeAllListeners = provider.removeAllListeners.bind(provider);
+  }
+
+  return facade;
 }
 
 /**

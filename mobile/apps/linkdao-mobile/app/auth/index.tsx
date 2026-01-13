@@ -3,11 +3,11 @@
  * User authentication with wallet signature
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '../../src/store';
 import { authService } from '@linkdao/shared';
 
@@ -15,11 +15,62 @@ export default function LoginScreen() {
   const [walletAddress, setWalletAddress] = useState('');
   const [signature, setSignature] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [connector, setConnector] = useState<any>(null);
+
+  const { walletAddress: paramWalletAddress, signature: paramSignature, connector: paramConnector } = useLocalSearchParams();
 
   const setUser = useAuthStore((state) => state.setUser);
   const setToken = useAuthStore((state) => state.setToken);
   const setLoadingStore = useAuthStore((state) => state.setLoading);
   const clearStorage = useAuthStore((state) => state.clearStorage);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  // Handle wallet connection from wallet-connect screen
+  useEffect(() => {
+    if (paramWalletAddress && paramSignature) {
+      setWalletAddress(paramWalletAddress as string);
+      setSignature(paramSignature as string);
+      setIsConnected(true);
+      setConnector(paramConnector as string);
+    }
+  }, [paramWalletAddress, paramSignature, paramConnector]);
+
+  // Auto-authenticate if wallet is connected but user is not authenticated
+  useEffect(() => {
+    if (isConnected && walletAddress && !isAuthenticated && !loading) {
+      handleAutoLogin();
+    }
+  }, [isConnected, walletAddress, isAuthenticated, loading]);
+
+  const handleAutoLogin = async () => {
+    setLoading(true);
+    setLoadingStore(true);
+
+    try {
+      const response = await authService.authenticateWallet(
+        walletAddress,
+        connector,
+        'connected'
+      );
+
+      if (response.success && response.token && response.user) {
+        setToken(response.token);
+        setUser(response.user);
+        router.replace('/(tabs)');
+      } else if (response.requires2FA) {
+        // Handle 2FA if required
+        Alert.alert('2FA Required', 'Please complete 2FA verification');
+      } else {
+        Alert.alert('Authentication Failed', response.error || 'Failed to authenticate wallet');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to authenticate. Please try again.');
+    } finally {
+      setLoading(false);
+      setLoadingStore(false);
+    }
+  };
 
   const handleLogin = async () => {
     if (!walletAddress || !signature) {
@@ -63,6 +114,8 @@ export default function LoginScreen() {
     const mockAddress = `0x${Math.random().toString(16).substr(2, 40)}`;
     setSignature(mockSignature);
     setWalletAddress(mockAddress);
+    setIsConnected(true);
+    setConnector({ name: 'Mock' });
     Alert.alert('Success', 'Signature generated successfully');
   };
 
@@ -109,7 +162,7 @@ export default function LoginScreen() {
             <View style={styles.inputContainer}>
               <Ionicons name="wallet-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
               <Text style={styles.input}>
-                {walletAddress || 'Not connected'}
+                {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Not connected'}
               </Text>
               <TouchableOpacity onPress={handleWalletConnect}>
                 <Ionicons name="link" size={20} color="#3b82f6" />
@@ -129,12 +182,15 @@ export default function LoginScreen() {
 
             {/* Login Button */}
             <TouchableOpacity
-              style={[styles.loginButton, loading && styles.loginButtonDisabled]}
-              onPress={handleLogin}
+              style={[
+                styles.loginButton,
+                (!isConnected || loading) && styles.loginButtonDisabled
+              ]}
+              onPress={isConnected ? handleAutoLogin : handleWalletConnect}
               disabled={loading}
             >
               <Text style={styles.loginButtonText}>
-                {loading ? 'Signing In...' : 'Sign In with Wallet'}
+                {loading ? 'Authenticating...' : isConnected ? 'Authenticate' : 'Sign In with Wallet'}
               </Text>
             </TouchableOpacity>
 

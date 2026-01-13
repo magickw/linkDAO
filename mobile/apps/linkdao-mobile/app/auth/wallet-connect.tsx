@@ -84,8 +84,12 @@ export default function WalletConnectScreen() {
           {
             text: 'Continue',
             onPress: () => {
-              // Pass wallet data back to previous screen
-              router.back();
+              // Pass wallet data back to login screen using router.setParams
+              router.setParams({
+                walletAddress: mockAddress,
+                signature: mockSignature,
+                connector: providerId
+              });
             },
           },
         ]

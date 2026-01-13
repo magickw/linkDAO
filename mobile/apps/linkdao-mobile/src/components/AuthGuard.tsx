@@ -3,7 +3,7 @@
  * Protects authenticated routes by checking authentication state
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { router } from 'expo-router';
 import { useAuthStore } from '../store';
 
@@ -13,9 +13,12 @@ interface AuthGuardProps {
 
 export function AuthGuard({ children }: AuthGuardProps) {
   const { isAuthenticated } = useAuthStore();
+  const isMounted = useRef(false);
 
   useEffect(() => {
-    // If not authenticated, redirect to auth
+    isMounted.current = true;
+    
+    // Only navigate after component is mounted
     if (!isAuthenticated) {
       router.replace('/auth');
     }
