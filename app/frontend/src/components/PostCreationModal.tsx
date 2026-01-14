@@ -26,6 +26,14 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
   const [nftAddress, setNftAddress] = useState('');
   const [nftTokenId, setNftTokenId] = useState('');
 
+  // Social sharing state
+  const [shareToSocialMedia, setShareToSocialMedia] = useState({
+    twitter: false,
+    facebook: false,
+    linkedin: false,
+    threads: false,
+  });
+
   const uploadFile = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append('file', file);
@@ -85,6 +93,7 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
         author: '', // This will be filled by the parent component
         content: finalContent,
         tags: tagArray,
+        shareToSocialMedia
       };
 
       // Add type-specific data
@@ -232,6 +241,8 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
                 disabled={isLoading}
                 showPreview={false}
                 className="min-h-[200px]"
+                shareToSocialMedia={shareToSocialMedia}
+                onShareToSocialMediaChange={setShareToSocialMedia}
               />
             </div>
           )}

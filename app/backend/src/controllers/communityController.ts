@@ -487,7 +487,7 @@ export class CommunityController {
       }
 
       const { id } = req.params;
-      const { title, content, mediaUrls = [], tags = [], pollData } = req.body;
+      const { title, content, mediaUrls = [], tags = [], pollData, shareToSocialMedia } = req.body;
 
       // Perform AI moderation before creating post
       try {
@@ -537,7 +537,8 @@ export class CommunityController {
         content,
         mediaUrls,
         tags,
-        pollData
+        pollData,
+        shareToSocialMedia
       });
 
       if (!post.success) {

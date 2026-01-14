@@ -32,14 +32,32 @@ interface AdvancedRichTextEditorProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  shareToSocialMedia?: {
+    twitter?: boolean;
+    facebook?: boolean;
+    linkedin?: boolean;
+    threads?: boolean;
+  };
+  onShareToSocialMediaChange?: (shareToSocialMedia: any) => void;
 }
+
+/**
+ * Helper to count images in HTML content
+ */
+const countImages = (html: string): number => {
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  return div.querySelectorAll('img').length;
+};
 
 const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
   value,
   onChange,
   placeholder = 'Share your thoughts...',
   disabled = false,
-  className = ''
+  className = '',
+  shareToSocialMedia = {},
+  onShareToSocialMediaChange
 }) => {
   const [showImageDialog, setShowImageDialog] = useState(false);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
@@ -406,6 +424,86 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
 
       {/* Video Embeds */}
       {videoEmbeds}
+
+      {/* Social Media Sharing & Limits */}
+      <div className="bg-gray-50 border-t px-4 py-3 dark:bg-gray-800/50">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400">
+              Share to:
+            </span>
+            <div className="flex items-center gap-2">
+              {[
+                { id: 'twitter', label: '𝕏', color: 'hover:text-black hover:bg-gray-200 dark:hover:text-white dark:hover:bg-gray-700', activeColor: 'text-black bg-gray-200 dark:text-white dark:bg-gray-700 ring-1 ring-gray-300 dark:ring-gray-600', name: 'Twitter/X', charLimit: 280, imageLimit: 4 },
+                { id: 'facebook', label: 'f', color: 'hover:text-[#1877F2] hover:bg-blue-50 dark:hover:bg-blue-900/20', activeColor: 'text-[#1877F2] bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800', name: 'Facebook', charLimit: 63206, imageLimit: 10 },
+                { id: 'linkedin', label: 'in', color: 'hover:text-[#0A66C2] hover:bg-blue-50 dark:hover:bg-blue-900/20', activeColor: 'text-[#0A66C2] bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800', name: 'LinkedIn', charLimit: 3000, imageLimit: 9 },
+                { id: 'threads', label: '@', color: 'hover:text-black hover:bg-gray-200 dark:hover:text-white dark:hover:bg-gray-700', activeColor: 'text-black bg-gray-200 dark:text-white dark:bg-gray-700 ring-1 ring-gray-300 dark:ring-gray-600', name: 'Threads', charLimit: 500, imageLimit: 10 },
+              ].map((platform) => {
+                const isActive = !!(shareToSocialMedia as any)[platform.id];
+                const plainText = value.replace(/<[^>]*>/g, '');
+                const charCount = plainText.length;
+                const imageCount = countImages(value);
+                const isOverCharLimit = charCount > platform.charLimit;
+                const isOverImageLimit = imageCount > platform.imageLimit;
+
+                return (
+                  <div key={platform.id} className="relative group">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onShareToSocialMediaChange) {
+                          onShareToSocialMediaChange({
+                            ...shareToSocialMedia,
+                            [platform.id]: !isActive
+                          });
+                        }
+                      }}
+                      disabled={disabled}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all ${
+                        isActive ? platform.activeColor : `text-gray-400 ${platform.color}`
+                      } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      title={`${isActive ? 'Disable' : 'Enable'} sharing to ${platform.name}`}
+                    >
+                      <span className="text-sm font-bold">{platform.label}</span>
+                    </button>
+                    
+                    {isActive && (isOverCharLimit || isOverImageLimit) && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" />
+                    )}
+
+                    {/* Platform-specific limits Tooltip */}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-gray-900 text-white text-[10px] rounded shadow-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-10">
+                      <div className="font-bold border-b border-gray-700 mb-1 pb-1">{platform.name} Limits</div>
+                      <div className={`flex justify-between ${charCount > platform.charLimit ? 'text-red-400' : 'text-gray-300'}`}>
+                        <span>Characters:</span>
+                        <span>{charCount}/{platform.charLimit}</span>
+                      </div>
+                      <div className={`flex justify-between ${imageCount > platform.imageLimit ? 'text-red-400' : 'text-gray-300'}`}>
+                        <span>Images:</span>
+                        <span>{imageCount}/{platform.imageLimit}</span>
+                      </div>
+                      <div className="mt-1 text-gray-500 italic">
+                        Post will be truncated if over limit.
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+            <div className="flex flex-col items-end">
+              <span className={value.replace(/<[^>]*>/g, '').length > 280 ? 'text-amber-600 font-medium' : ''}>
+                {value.replace(/<[^>]*>/g, '').length} characters
+              </span>
+              <span>
+                {countImages(value)} images
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Image Dialog */}
       {showImageDialog && (

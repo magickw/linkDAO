@@ -142,6 +142,9 @@ export class SocialMediaIntegrationService {
           continue;
         }
 
+        // Resolve media CIDs to URLs if needed
+        const resolvedMediaUrls = this.resolveMediaUrls(mediaUrls);
+
         // Adapt content for platform
         const adaptedContent = this.adaptContentForPlatform(content, platform);
 
@@ -149,7 +152,7 @@ export class SocialMediaIntegrationService {
         const provider = getOAuthProvider(platform);
         const socialContent: SocialMediaContent = {
           text: adaptedContent,
-          mediaUrls: mediaUrls,
+          mediaUrls: resolvedMediaUrls,
         };
 
         const postResult = await provider.postContent(accessToken, socialContent);
@@ -162,7 +165,7 @@ export class SocialMediaIntegrationService {
             connectionId: connection.id,
             platform,
             contentSent: adaptedContent,
-            mediaSent: mediaUrls ? JSON.stringify(mediaUrls) : null,
+            mediaSent: resolvedMediaUrls ? JSON.stringify(resolvedMediaUrls) : null,
             externalPostId: postResult.externalPostId,
             externalPostUrl: postResult.externalPostUrl,
             postStatus: postResult.success ? 'posted' : 'failed',
@@ -208,6 +211,25 @@ export class SocialMediaIntegrationService {
     }
 
     return results;
+  }
+
+  /**
+   * Resolve IPFS CIDs to gateway URLs
+   */
+  private resolveMediaUrls(mediaUrls?: string[]): string[] | undefined {
+    if (!mediaUrls || mediaUrls.length === 0) return undefined;
+
+    return mediaUrls.map(url => {
+      // Check if it's already a URL
+      if (url.startsWith('http')) return url;
+      
+      // Check if it's a CID (v0 or v1)
+      if (url.startsWith('Qm') || url.startsWith('bafy')) {
+        return `https://ipfs.io/ipfs/${url}`;
+      }
+      
+      return url;
+    });
   }
 
   /**

@@ -8,6 +8,13 @@ interface RichTextEditorProps {
   showPreview?: boolean;
   disabled?: boolean;
   className?: string;
+  shareToSocialMedia?: {
+    twitter?: boolean;
+    facebook?: boolean;
+    linkedin?: boolean;
+    threads?: boolean;
+  };
+  onShareToSocialMediaChange?: (shareToSocialMedia: any) => void;
 }
 
 const RichTextEditor: React.FC<RichTextEditorProps> = ({
@@ -16,7 +23,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   placeholder = 'Share your thoughts...',
   showPreview = false, // Note: showPreview is not used in the advanced editor since it's always WYSIWYG
   disabled = false,
-  className = ''
+  className = '',
+  shareToSocialMedia,
+  onShareToSocialMediaChange
 }) => {
   return (
     <AdvancedRichTextEditor
@@ -25,6 +34,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       placeholder={placeholder}
       disabled={disabled}
       className={className}
+      shareToSocialMedia={shareToSocialMedia}
+      onShareToSocialMediaChange={onShareToSocialMediaChange}
     />
   );
 };

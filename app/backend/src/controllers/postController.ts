@@ -29,7 +29,7 @@ export class PostController {
     try {
       console.log('POST /api/posts - Creating post');
 
-      const { content, author, type = 'text', visibility = 'public', tags, media, parentId, onchainRef } = req.body;
+      const { content, author, type = 'text', visibility = 'public', tags, media, parentId, onchainRef, shareToSocialMedia } = req.body;
 
       if (!content || content.trim() === '') {
         return res.status(400).json({
@@ -52,7 +52,8 @@ export class PostController {
         tags,
         media,
         parentId,
-        onchainRef
+        onchainRef,
+        shareToSocialMedia
       };
 
       // Create post using PostService

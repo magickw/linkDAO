@@ -57,7 +57,8 @@ export class PostService {
         onchainRef: data.onchainRef,
         title: data.title,
         pollData: data.poll,
-        proposalData: data.proposal
+        proposalData: data.proposal,
+        shareToSocialMedia: data.shareToSocialMedia
       });
 
       if (!response.success) {

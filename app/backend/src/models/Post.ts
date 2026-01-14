@@ -41,6 +41,12 @@ export interface CreatePostInput {
     lat?: number;
     lng?: number;
   };
+  shareToSocialMedia?: {
+    twitter?: boolean;
+    facebook?: boolean;
+    linkedin?: boolean;
+    threads?: boolean;
+  };
 }
 
 export interface UpdatePostInput {

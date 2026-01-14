@@ -90,7 +90,8 @@ export class StatusService {
         tags: data.tags,
         onchainRef: data.onchainRef,
         poll: data.poll,
-        proposal: data.proposal
+        proposal: data.proposal,
+        shareToSocialMedia: data.shareToSocialMedia
       }, { headers });
 
       if (!response.success) {

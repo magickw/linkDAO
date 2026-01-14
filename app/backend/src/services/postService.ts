@@ -8,6 +8,8 @@ import { databaseService } from './databaseService'; // Import the singleton ins
 import { UserProfileService } from './userProfileService';
 import { aiContentModerationService } from './aiContentModerationService';
 import { InputSanitizer, SANITIZATION_CONFIGS } from '../utils/sanitizer';
+import { socialMediaIntegrationService } from './socialMediaIntegrationService';
+import { SocialPlatform, isSupportedPlatform } from './oauth';
 
 // Use the singleton instance instead of creating a new one
 // const databaseService = new DatabaseService();
@@ -236,6 +238,32 @@ export class PostService {
         moderationWarning: moderationWarning,
         riskScore: moderationReport.overallRiskScore
       };
+
+      // Handle social media cross-posting
+      if (input.shareToSocialMedia) {
+        const platformsToPost: SocialPlatform[] = [];
+        
+        for (const [platform, shouldShare] of Object.entries(input.shareToSocialMedia)) {
+          if (shouldShare === true && isSupportedPlatform(platform)) {
+            platformsToPost.push(platform as SocialPlatform);
+          }
+        }
+
+        if (platformsToPost.length > 0) {
+          // Process asynchronously
+          socialMediaIntegrationService.postToConnectedPlatforms(
+            post.id,
+            user.id,
+            platformsToPost,
+            input.content,
+            input.media
+          ).then(results => {
+            safeLogger.info('Social media cross-posting results:', results);
+          }).catch(error => {
+            safeLogger.error('Error in social media cross-posting:', error);
+          });
+        }
+      }
 
       // Log moderation result for analytics
       safeLogger.info(`[MODERATION] Post ${post.id} created with status: ${postStatus}, risk: ${moderationReport.overallRiskScore.toFixed(2)}`);

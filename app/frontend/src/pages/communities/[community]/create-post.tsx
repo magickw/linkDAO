@@ -21,6 +21,14 @@ const CreateCommunityPostPage: React.FC = () => {
   const [communityData, setCommunityData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
+  // Social sharing state
+  const [shareToSocialMedia, setShareToSocialMedia] = useState({
+    twitter: false,
+    facebook: false,
+    linkedin: false,
+    threads: false,
+  });
+  
   const { address } = useAccount();
   const { addToast } = useToast();
 
@@ -86,7 +94,8 @@ const CreateCommunityPostPage: React.FC = () => {
         title: title.trim(),
         content: content.trim(),
         tags,
-        author: address
+        author: address,
+        shareToSocialMedia
       };
 
       await CommunityPostService.createCommunityPost(postData);
@@ -188,6 +197,8 @@ const CreateCommunityPostPage: React.FC = () => {
                 onChange={setContent}
                 placeholder="Share your thoughts..."
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y min-h-[200px]"
+                shareToSocialMedia={shareToSocialMedia}
+                onShareToSocialMediaChange={setShareToSocialMedia}
               />
             </div>
 

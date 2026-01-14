@@ -48,6 +48,8 @@ import { feedService } from './feedService';
 import { generateShareId } from '../utils/shareIdGenerator';
 import { sanitizeInput, sanitizeObject, validateLength, InputSanitizer, SANITIZATION_CONFIGS } from '../utils/sanitizer';
 import { communityCacheService, CommunityCacheService } from './communityCacheService';
+import { socialMediaIntegrationService } from './socialMediaIntegrationService';
+import { SocialPlatform } from './oauth/baseOAuthProvider';
 
 interface ListCommunitiesOptions {
   page: number;
@@ -95,6 +97,12 @@ interface CreateCommunityPostData {
   mediaUrls: string[];
   tags: string[];
   pollData?: any;
+  shareToSocialMedia?: {
+    twitter?: boolean;
+    facebook?: boolean;
+    linkedin?: boolean;
+    threads?: boolean;
+  };
 }
 
 interface ModerationData {
@@ -1853,7 +1861,7 @@ export class CommunityService {
 
   // Create community post
   async createCommunityPost(data: CreateCommunityPostData) {
-    const { communityId, authorAddress, title, content, mediaUrls, tags, pollData } = data;
+    const { communityId, authorAddress, title, content, mediaUrls, tags, pollData, shareToSocialMedia } = data;
     // Normalize author address to lowercase for consistent comparisons
     const normalizedAuthorAddress = authorAddress.toLowerCase();
 
@@ -1993,6 +2001,31 @@ export class CommunityService {
       } catch (mentionError) {
         safeLogger.warn('Failed to send mention notifications:', mentionError);
         // Don't fail the post creation if mention notifications fail
+      }
+
+      // Handle social media cross-posting
+      if (shareToSocialMedia) {
+        const platformsToPost: SocialPlatform[] = [];
+        
+        if (shareToSocialMedia.twitter) platformsToPost.push('twitter');
+        if (shareToSocialMedia.facebook) platformsToPost.push('facebook');
+        if (shareToSocialMedia.linkedin) platformsToPost.push('linkedin');
+        if (shareToSocialMedia.threads) platformsToPost.push('threads');
+
+        if (platformsToPost.length > 0) {
+          // Process asynchronously to not block the response
+          socialMediaIntegrationService.postToConnectedPlatforms(
+            newPost[0].id.toString(),
+            userResult[0].id,
+            platformsToPost,
+            content,
+            mediaUrls
+          ).then(results => {
+            safeLogger.info('Social media cross-posting results:', results);
+          }).catch(error => {
+            safeLogger.error('Error in social media cross-posting:', error);
+          });
+        }
       }
 
       return {
