@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useCommunitiesStore } from '../../src/store';
 import { communitiesService } from '../../src/services';
+import CreateCommunityModal from '../../src/components/CreateCommunityModal';
 
 interface Community {
   id: string;
@@ -46,6 +47,7 @@ export default function CommunitiesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'discover' | 'my-communities'>('discover');
   const [hasUnread, setHasUnread] = useState(true);
 
@@ -121,16 +123,16 @@ export default function CommunitiesScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Communities</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.notificationButton}
             onPress={() => setShowNotifications(true)}
           >
             <Ionicons name="notifications-outline" size={24} color="#1f2937" />
             {hasUnread && <View style={styles.notificationBadge} />}
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.createButton}
-            onPress={() => router.push('/modal/create-post')}
+            onPress={() => setShowCreateModal(true)}
           >
             <Ionicons name="add" size={24} color="#ffffff" />
           </TouchableOpacity>
@@ -275,21 +277,21 @@ export default function CommunitiesScreen() {
         {/* Empty State */}
         {!loading && displayedCommunities.length === 0 && (
           <View style={styles.centerContainer}>
-            <Ionicons 
-              name={selectedTab === 'my-communities' ? 'people-outline' : 'search-outline'} 
-              size={64} 
-              color="#9ca3af" 
+            <Ionicons
+              name={selectedTab === 'my-communities' ? 'people-outline' : 'search-outline'}
+              size={64}
+              color="#9ca3af"
             />
             <Text style={styles.emptyText}>
               {selectedTab === 'my-communities' ? 'No communities yet' : 'No communities found'}
             </Text>
             <Text style={styles.emptySubtext}>
-              {selectedTab === 'my-communities' 
-                ? 'Join communities to see them here' 
+              {selectedTab === 'my-communities'
+                ? 'Join communities to see them here'
                 : 'Try a different search term'}
             </Text>
             {selectedTab === 'my-communities' && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.discoverButton}
                 onPress={() => setSelectedTab('discover')}
               >
@@ -299,6 +301,15 @@ export default function CommunitiesScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Create Community Modal */}
+      <CreateCommunityModal
+        visible={showCreateModal}
+        onClose={() => {
+          setShowCreateModal(false);
+          loadCommunities(); // Refresh communities list
+        }}
+      />
 
       {/* Notifications Modal */}
       <Modal
@@ -323,8 +334,8 @@ export default function CommunitiesScreen() {
                     <Ionicons
                       name={
                         activity.type === 'mention' ? 'at-outline' :
-                        activity.type === 'post' ? 'chatbubble-outline' :
-                        'people-outline'
+                          activity.type === 'post' ? 'chatbubble-outline' :
+                            'people-outline'
                       }
                       size={20}
                       color={activity.unread ? '#ffffff' : '#3b82f6'}
@@ -340,7 +351,7 @@ export default function CommunitiesScreen() {
               ))}
             </ScrollView>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.markAllReadButton}
               onPress={() => setHasUnread(false)}
             >

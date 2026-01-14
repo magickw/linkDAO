@@ -360,15 +360,18 @@ export class CommunityWeb3Service {
       }
 
       // Convert postId to bytes32 correctly
-      // If it's a UUID, we need to strip hyphens and pad it. 
-      // If it's already a hex string, use it. Otherwise, use ethers.id (keccak256 hash).
+      // If it's a UUID, we need to strip hyphens and pad it to the RIGHT.
+      // Solidity bytes32 is left-aligned, so padding should be at the end.
       let postIdBytes32;
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       
       if (uuidRegex.test(input.postId)) {
-        // Correctly format UUID as bytes32: remove hyphens and pad to 32 bytes
-        const hexUuid = '0x' + input.postId.replace(/-/g, '');
-        postIdBytes32 = ethers.zeroPadValue(hexUuid, 32);
+        // Remove hyphens and ensure lowercase
+        const cleanHex = input.postId.replace(/-/g, '').toLowerCase();
+        // Construct 32-byte hex string (64 characters + 0x)
+        // UUID is 16 bytes (32 chars). We need 32 more chars (16 bytes) of zeros at the END.
+        postIdBytes32 = '0x' + cleanHex.padEnd(64, '0');
+        console.log(`[Web3Service] Formatted UUID ${input.postId} to bytes32 (right-padded): ${postIdBytes32}`);
       } else if (input.postId.startsWith('0x') && input.postId.length === 66) {
         postIdBytes32 = input.postId;
       } else {
@@ -389,9 +392,7 @@ export class CommunityWeb3Service {
       
       // Common transaction overrides for robustness
       const txOverrides = {
-        // Add a fallback gas limit if estimation fails, but try estimation first
-        // If estimateGas fails with 'missing revert data', it often means the contract reverted
-        // but sometimes it's just a provider/extension glitch.
+        // Add a fallback gas limit if estimation fails
       };
 
       try {
@@ -419,7 +420,7 @@ export class CommunityWeb3Service {
         // If gas estimation fails, try sending with a fixed gas limit as a last resort
         console.warn('Gas estimation failed, attempting with fixed gas limit:', estimateError.message);
         
-        const fallbackOverrides = { ...txOverrides, gasLimit: 300000 };
+        const fallbackOverrides = { ...txOverrides, gasLimit: 400000 }; // Slightly higher for safety
         
         if (input.message && input.message.trim()) {
           tx = await tipRouterContract.tipWithComment(
@@ -452,7 +453,8 @@ export class CommunityWeb3Service {
         if (sessionToken) {
           const backendUrl = ENV_CONFIG.BACKEND_URL || 'http://localhost:10000';
 
-          await fetch(`${backendUrl}/api/tips`, {
+          // Added cache buster to prevent any 404/proxy issues
+          await fetch(`${backendUrl}/api/tips?t=${Date.now()}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

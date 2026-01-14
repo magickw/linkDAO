@@ -326,11 +326,20 @@ export async function getProvider() {
     // Last-resort: use a simple JsonRpcProvider with staticNetwork
     console.log('Using fallback provider');
     try {
+      const fallbackRpcs = [
+        'https://ethereum-sepolia-rpc.publicnode.com',
+        'https://rpc.ankr.com/eth_sepolia',
+        'https://1rpc.io/sepolia'
+      ];
+      
       const network = ethers.Network.from(11155111);
-      const provider = new ethers.JsonRpcProvider('https://ethereum-sepolia-rpc.publicnode.com', network, {
+      // Try the first working fallback RPC
+      const provider = new ethers.JsonRpcProvider(fallbackRpcs[0], network, {
         staticNetwork: network,
-        polling: false
+        polling: false,
+        batchMaxCount: 1 // Disable batching for fallback to improve reliability
       });
+      
       cachedProvider = provider;
       providerCreationAttempts = 0;
       return provider;

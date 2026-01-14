@@ -1,11 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { safeLogger } from '../utils/safeLogger';
 import { csrfProtection } from '../middleware/csrfProtection';
+import { authMiddleware } from '../middleware/authMiddleware';
 import { sellerOrderService } from '../services/sellerOrderService';
+import { SellerWorkflowService } from '../services/sellerWorkflowService';
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '../utils/apiResponse';
 import { cachingMiddleware, rateLimitWithCache } from '../middleware/cachingMiddleware';
 
 const router = Router();
+const sellerWorkflowService = new SellerWorkflowService();
 
 /**
  * GET /api/marketplace/seller/orders/:walletAddress
@@ -428,10 +431,6 @@ router.get('/export',
     }
   });
 
-// Initialize SellerWorkflowService
-import { SellerWorkflowService } from '../services/sellerWorkflowService';
-import { authMiddleware } from '../middleware/authMiddleware';
-const sellerWorkflowService = new SellerWorkflowService();
 
 /**
  * POST /api/marketplace/seller/orders/:orderId/process

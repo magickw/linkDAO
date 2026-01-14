@@ -8,7 +8,7 @@
         "icon": "./assets/icon.png",
         "userInterfaceStyle": "automatic",
         "splash": {
-            "image": "./assets/logo.png",
+            "image": "./assets/splash.png",
             "resizeMode": "contain",
             "backgroundColor": "#ffffff"
         },
@@ -17,14 +17,39 @@
         ],
         "ios": {
             "supportsTablet": true,
-            "bundleIdentifier": "com.linkdao.mobile"
+            "bundleIdentifier": "io.linkdao.mobile",
+            "associatedDomains": [
+                "applinks:linkdao.io",
+                "applinks:www.linkdao.io"
+            ]
         },
         "android": {
             "adaptiveIcon": {
-                "foregroundImage": "./assets/logo.png",
+                "foregroundImage": "./assets/adaptive-icon.png",
                 "backgroundColor": "#ffffff"
             },
-            "package": "com.linkdao.mobile"
+            "package": "io.linkdao.mobile",
+            "intentFilters": [
+                {
+                    "action": "VIEW",
+                    "autoVerify": true,
+                    "data": [
+                        {
+                            "scheme": "https",
+                            "host": "linkdao.io",
+                            "pathPrefix": "/oauth-callback"
+                        },
+                        {
+                            "scheme": "linkdao",
+                            "host": "oauth-callback"
+                        }
+                    ],
+                    "category": [
+                        "BROWSABLE",
+                        "DEFAULT"
+                    ]
+                }
+            ]
         },
         "web": {
             "favicon": "./assets/logo.png"

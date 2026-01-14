@@ -8,9 +8,12 @@ import { Stack, router, useSegments, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as Linking from 'expo-linking';
+import { Alert } from 'react-native';
 import { useAuthStore } from '../src/store';
 import { WalletLoginBridge } from '../src/components/WalletLoginBridge';
 import { walletService } from '../src/services/walletConnectService';
+import { socialMediaService } from '../src/services/socialMediaService';
 import { setWalletAdapter } from '@linkdao/shared';
 import ErrorBoundary from '../src/components/ErrorBoundary';
 
@@ -46,8 +49,37 @@ export default function RootLayout() {
 
     initWalletService();
 
+    // Set up deep link listener for OAuth callbacks
+    const handleDeepLink = async (event: { url: string }) => {
+      const { path, queryParams } = Linking.parse(event.url);
+
+      if (path === 'oauth-callback') {
+        const result = await socialMediaService.handleOAuthCallback(event.url);
+
+        if (result.success) {
+          Alert.alert(
+            'Connected!',
+            `Successfully connected to ${result.platform}`,
+            [{ text: 'OK' }]
+          );
+        } else {
+          Alert.alert(
+            'Connection Failed',
+            result.error || 'Failed to connect account',
+            [{ text: 'OK' }]
+          );
+        }
+      }
+    };
+
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
     // Mark as ready after initial render
     setIsReady(true);
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   useEffect(() => {

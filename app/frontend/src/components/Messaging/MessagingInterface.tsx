@@ -176,6 +176,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   // Add state to track if we're viewing a DM or channel
   const [isViewingDM, setIsViewingDM] = useState(false);
   const [selectedDM, setSelectedDM] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Initialize with passed conversationId from parent
   useEffect(() => {
@@ -580,24 +581,50 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     // You could add a toast notification here
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !address) return;
 
-    // Create attachment object
-    const attachment = {
-      type: 'image' as const,
-      url: URL.createObjectURL(file),
-      name: file.name,
-      metadata: {
-        imageUrl: URL.createObjectURL(file)
+    try {
+      setIsUploading(true);
+      console.log('Uploading file:', file.name, file.type);
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      // Use the unified upload endpoint
+      const response = await fetch('/api/messaging/attachments', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('linkdao_access_token')}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) throw new Error('Upload failed');
+
+      const result = await response.json();
+      const attachment = result.data;
+
+      // Send the message immediately with the attachment
+      if (isViewingDM && selectedDM) {
+        await sendMessage({
+          conversationId: selectedDM,
+          fromAddress: address,
+          content: `Shared a file: ${file.name}`,
+          contentType: file.type.startsWith('image/') ? 'image' : 'file',
+          attachments: [attachment]
+        } as any);
       }
-    };
 
-    // Add to current message (you would normally upload to a server first)
-    // For now, just log it
-    console.log('File uploaded:', attachment);
-    setShowAttachmentModal(false);
+      setShowAttachmentModal(false);
+      safeAddToast('File shared successfully!', 'success');
+    } catch (error) {
+      console.error('File upload error:', error);
+      safeAddToast('Failed to upload file. Please try again.', 'error');
+    } finally {
+      setIsTipping(false);
+    }
   };
 
   const shareNFT = (contractAddress: string, tokenId: string, price?: string) => {
@@ -1574,156 +1601,112 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
           <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 w-full max-w-md">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Share Content</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-                Share NFTs, transactions, images, and files in the channel.
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+                Directly upload files or share blockchain data in this channel.
               </p>
 
               <div className="space-y-3">
                 <button
-                  className={`w-full bg-purple-600 hover:bg-purple-700 text-white text-sm py-3 rounded flex items-center justify-center ${touchTargetClasses}`}
-                  onClick={() => setAttachmentType('nft')}
+                  className={`w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-3 rounded-lg flex items-center justify-center transition-colors ${touchTargetClasses}`}
+                  onClick={() => !isUploading && fileInputRef.current?.click()}
+                  disabled={isUploading}
                 >
-                  <Image size={16} className="mr-2" />
-                  Share NFT
+                  {isUploading ? (
+                    <>
+                      <Loader2 size={18} className="mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Image size={18} className="mr-2" />
+                      Upload Image or File
+                    </>
+                  )}
                 </button>
 
-                <button
-                  className={`w-full bg-green-600 hover:bg-green-700 text-white text-sm py-3 rounded flex items-center justify-center ${touchTargetClasses}`}
-                  onClick={() => setAttachmentType('transaction')}
-                >
-                  <Wallet size={16} className="mr-2" />
-                  Share Transaction
-                </button>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    className={`bg-purple-600 hover:bg-purple-700 text-white text-xs py-3 rounded-lg flex items-center justify-center transition-colors ${touchTargetClasses}`}
+                    onClick={() => setAttachmentType('nft')}
+                  >
+                    <Image size={14} className="mr-2" />
+                    Share NFT
+                  </button>
 
-                <button
-                  className={`w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-3 rounded flex items-center justify-center ${touchTargetClasses}`}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Image size={16} className="mr-2" />
-                  Upload Image
-                </button>
-
-                <button
-                  className={`w-full bg-gray-500 dark:bg-gray-600 hover:bg-gray-600 dark:hover:bg-gray-500 text-white text-sm py-3 rounded flex items-center justify-center ${touchTargetClasses}`}
-                  onClick={() => setAttachmentType('file')}
-                >
-                  <LinkIcon size={16} className="mr-2" />
-                  Share File
-                </button>
+                  <button
+                    className={`bg-emerald-600 hover:bg-emerald-700 text-white text-xs py-3 rounded-lg flex items-center justify-center transition-colors ${touchTargetClasses}`}
+                    onClick={() => setAttachmentType('transaction')}
+                  >
+                    <Wallet size={14} className="mr-2" />
+                    Blockchain Tx
+                  </button>
+                </div>
               </div>
 
-              <div className="flex space-x-2 mt-6">
+              {/* Form Areas for specific types */}
+              <div className="mt-4">
+                {/* NFT Form */}
+                {attachmentType === 'nft' && (
+                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700 animate-fadeIn">
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Share NFT</h4>
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        placeholder="Contract Address"
+                        className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Token ID"
+                        className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                      <button
+                        className={`w-full bg-purple-600 hover:bg-purple-700 text-white text-sm py-2 rounded-lg ${touchTargetClasses}`}
+                        onClick={() => selectedDM && shareNFT('0x...', '1234')}
+                      >
+                        Confirm NFT Share
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Transaction Form */}
+                {attachmentType === 'transaction' && (
+                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700 animate-fadeIn">
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Share Transaction</h4>
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        placeholder="Transaction Hash"
+                        className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                      <button
+                        className={`w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm py-2 rounded-lg ${touchTargetClasses}`}
+                        onClick={() => selectedDM && shareTransaction('0x123...', 'success')}
+                      >
+                        Confirm Tx Share
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-center mt-6">
                 <button
-                  className={`flex-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-sm py-2 rounded ${touchTargetClasses}`}
-                  onClick={() => setShowAttachmentModal(false)}
+                  className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 font-medium"
+                  onClick={() => {
+                    setShowAttachmentModal(false);
+                    setAttachmentType(null);
+                  }}
                 >
                   Cancel
                 </button>
               </div>
 
-              {/* NFT Form */}
-              {attachmentType === 'nft' && (
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Share NFT</h4>
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      placeholder="Contract Address"
-                      className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Token ID"
-                      className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Price (optional)"
-                      className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                    <button
-                      className={`w-full bg-purple-600 hover:bg-purple-700 text-white text-sm py-2 rounded ${touchTargetClasses}`}
-                      onClick={() => selectedChannel && shareNFT('0x...', '1234', '0.5')}
-                    >
-                      Share NFT
-                    </button>
-
-                  </div>
-                </div>
-              )}
-
-              {/* Transaction Form */}
-              {attachmentType === 'transaction' && (
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Share Transaction</h4>
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      placeholder="Transaction Hash"
-                      className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                    <select className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                      <option value="success">Success</option>
-                      <option value="failed">Failed</option>
-                      <option value="pending">Pending</option>
-                    </select>
-                    <button
-                      className={`w-full bg-green-600 hover:bg-green-700 text-white text-sm py-2 rounded ${touchTargetClasses}`}
-                      onClick={() => selectedChannel && shareTransaction('0x123...abc', 'success')}
-                    >
-                      Share Transaction
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* File Form */}
-              {attachmentType === 'file' && (
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Share File</h4>
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      placeholder="File Name"
-                      className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                    <input
-                      type="text"
-                      placeholder="File URL"
-                      className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                    <button
-                      className={`w-full bg-gray-500 dark:bg-gray-600 hover:bg-gray-600 dark:hover:bg-gray-500 text-white text-sm py-2 rounded ${touchTargetClasses}`}
-                      onClick={() => {
-                        const inputs = document.querySelectorAll('.mt-4.pt-4 input');
-                        const fileName = (inputs[2] as HTMLInputElement)?.value || '';
-                        const fileUrl = (inputs[3] as HTMLInputElement)?.value || '';
-                        
-                        if (fileUrl) {
-                          const attachment = {
-                            type: 'file' as const,
-                            url: fileUrl,
-                            name: fileName || 'Shared File',
-                          };
-                          console.log('File shared:', attachment);
-                          setShowAttachmentModal(false);
-                          setAttachmentType(null);
-                        } else {
-                          alert('Please enter a file URL');
-                        }
-                      }}
-                    >
-                      Share File
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {/* Hidden file input */}
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
                 onChange={handleFileUpload}
                 className="hidden"
               />

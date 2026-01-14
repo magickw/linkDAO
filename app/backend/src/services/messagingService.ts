@@ -486,10 +486,10 @@ export class MessagingService {
           senderAddress: fromAddress,
           content: messageContent,
           messageType: sanitizedMessage.messageType || 'text',
-          encryptionMetadata: data.encryptionMetadata,
+          encryptionMetadata: data.encryptionMetadata || null,
           replyToId: data.replyToId,
-          attachments: sanitizedMessage.attachments ? JSON.stringify(sanitizedMessage.attachments) : null,
-          timestamp: new Date() // Use 'timestamp' to match the database column name
+          attachments: sanitizedMessage.attachments || null, // Drizzle handles jsonb objects/arrays directly
+          sentAt: new Date() // Use 'sentAt' (the Drizzle property name), not 'timestamp'
         })
         .returning();
 

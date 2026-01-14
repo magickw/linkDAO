@@ -9,6 +9,9 @@ export { messagingService } from './messagingService';
 export { webSocketService } from './webSocketService';
 export { walletService } from './walletConnectService';
 export { offlineManager } from './offlineManager';
+export { marketplaceService } from './marketplaceService';
+export { paymentService } from './paymentService';
+export { socialMediaService } from './socialMediaService';
 
 export {
   isBiometricAvailable,

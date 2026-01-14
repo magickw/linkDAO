@@ -22,6 +22,7 @@ interface AuthState {
   setError: (error: string | null) => void;
   logout: () => void;
   clearStorage: () => void;
+  setMockAuth: () => void; // Development only
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -42,6 +43,23 @@ export const useAuthStore = create<AuthState>()(
         set({ user: null, token: null, isAuthenticated: false, error: null, isLoading: false });
         // Clear the persisted storage
         useAuthStore.persist.clearStorage();
+      },
+      setMockAuth: () => {
+        // Development only - set mock authenticated user
+        const mockUser: AuthUser = {
+          id: 'mock-user-id',
+          address: '0x1234567890123456789012345678901234567890',
+          displayName: 'Test User',
+          email: 'test@linkdao.io',
+          role: 'user',
+        };
+        set({
+          user: mockUser,
+          token: 'mock-jwt-token',
+          isAuthenticated: true,
+          error: null,
+        });
+        console.log('🧪 Mock authentication enabled for development');
       },
     }),
     {
