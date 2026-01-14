@@ -100,6 +100,7 @@ export default function PostInteractionBar({
   const [showAwardModal, setShowAwardModal] = useState(false);
   const [tipAmount, setTipAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState('USDC');
+  const [isTipping, setIsTipping] = useState(false);
 
   // Handle comment button click
   const handleCommentClick = () => {
@@ -191,6 +192,10 @@ export default function PostInteractionBar({
     }
 
     try {
+      setIsTipping(true);
+      setShowTipInput(false);
+      addToast('Initiating blockchain transaction...', 'info');
+
       // Use real blockchain tipping functionality
       const txHash = await communityWeb3Service.tipCommunityPost({
         postId: post.id,
@@ -201,22 +206,33 @@ export default function PostInteractionBar({
       });
 
       if (onTip) {
-        // Let the parent component handle the success message
         await onTip(post.id, tipAmount, selectedToken);
-        // Don't show success message here since the parent component will handle it
       } else {
-        // Only show success message if there's no parent handler
-        addToast(`Successfully tipped ${tipAmount} ${selectedToken}! Transaction: ${txHash.substring(0, 10)}...`, 'success');
+        addToast(
+          <div className="flex flex-col gap-1">
+            <span>Successfully tipped {tipAmount} {selectedToken}!</span>
+            <a 
+              href={`https://sepolia.etherscan.io/tx/${txHash}`} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-xs underline"
+            >
+              View on Etherscan
+            </a>
+          </div> as any, 
+          'success'
+        );
       }
 
       setTipAmount('');
-      setShowTipInput(false);
     } catch (error: any) {
       console.error('Error sending tip:', error);
-      // Only show error message here
       addToast(`Failed to send tip: ${error.message || 'Please try again.'}`, 'error');
+    } finally {
+      setIsTipping(false);
     }
   };
+
 
   const handleUpvoteClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -241,7 +257,17 @@ export default function PostInteractionBar({
   };
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={`space-y-4 relative ${className}`}>
+      {/* Tipping Status Mini-Overlay */}
+      {isTipping && (
+        <div className="absolute -top-2 left-0 right-0 z-20 flex justify-center pointer-events-none">
+          <div className="bg-blue-600 text-white text-xs px-3 py-1 rounded-full shadow-lg flex items-center gap-2 animate-bounce">
+            <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+            Blockchain transaction in progress...
+          </div>
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
         <div className="flex items-center space-x-1 sm:space-x-4">

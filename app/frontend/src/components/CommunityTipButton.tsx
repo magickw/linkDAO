@@ -71,7 +71,20 @@ export default function CommunityTipButton({
 
       // Only show success message here if there's no parent handler
       if (!onTip) {
-        addToast(`Successfully tipped ${tipAmount} ${selectedToken.symbol}!`, 'success');
+        addToast(
+          <div className="flex flex-col gap-1">
+            <span>Successfully tipped {tipAmount} {selectedToken.symbol}!</span>
+            <a 
+              href={`https://sepolia.etherscan.io/tx/${txHash}`} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-xs underline"
+            >
+              View on Etherscan
+            </a>
+          </div> as any, 
+          'success'
+        );
       }
       
       // Call parent handler if provided

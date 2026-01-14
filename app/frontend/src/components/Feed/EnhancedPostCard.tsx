@@ -296,6 +296,9 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
     }
   };
 
+  const [isTipping, setIsTipping] = useState(false);
+  const [lastTxHash, setLastTxHash] = useState<string | null>(null);
+
   const handleTip = async (amount?: string, token?: string, message?: string) => {
     try {
       if (!amount || parseFloat(amount) <= 0) {
@@ -303,8 +306,13 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
         return;
       }
 
+      setIsTipping(true);
+      setLastTxHash(null);
+      setShowTipModal(false);
+      
+      safeAddToast('Initiating blockchain transaction...', 'info');
+
       // Perform on-chain tipping using communityWeb3Service
-      // This handles approval, on-chain transaction, and backend recording
       const txHash = await communityWeb3Service.tipCommunityPost({
         postId: post.id,
         recipientAddress: getUserAddress(post),
@@ -313,31 +321,38 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
         message: message || ''
       });
 
+      setLastTxHash(txHash);
+      
       if (onTip) {
-        // Let the parent component handle the success message
         await onTip(post.id, amount, token, message);
-        
-        // Invalidate feed cache to reflect updated tip counts
         await invalidateFeedCache();
-
-        // Invalidate user cache for tip history
         if (post.author) {
           await invalidateUserCache(post.author, ['tips', 'earnings']);
         }
-
-        // If tipping in a community, invalidate community cache
         if (post.communityId) {
           await invalidateCommunityCache(post.communityId, ['posts', 'activity']);
         }
-      } else {
-        // Only show success message if there's no parent handler
-        safeAddToast(`Successfully tipped ${amount} ${token || 'LDAO'}! Transaction: ${txHash.substring(0, 10)}...`, 'success');
       }
-      setShowTipModal(false);
+
+      safeAddToast(
+        <div className="flex flex-col gap-1">
+          <span>Successfully tipped {amount} {token || 'LDAO'}!</span>
+          <a 
+            href={`https://sepolia.etherscan.io/tx/${txHash}`} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-xs underline flex items-center gap-1"
+          >
+            View on Etherscan <ExternalLink size={12} />
+          </a>
+        </div> as any, 
+        'success'
+      );
     } catch (error: any) {
-      // Only show error message here
       console.error('Tipping error:', error);
       safeAddToast(`Failed to send tip: ${error.message || 'Please try again.'}`, 'error');
+    } finally {
+      setIsTipping(false);
     }
   };
 
@@ -394,7 +409,20 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
   };
 
   return (
-    <article role="article" className={className}>
+    <article role="article" className={`relative ${className}`}>
+      {/* Tipping Status Overlay */}
+      {isTipping && (
+        <div className="absolute inset-0 z-10 bg-white/60 dark:bg-gray-900/60 backdrop-blur-[1px] flex items-center justify-center rounded-xl transition-all duration-300">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-xl border border-blue-100 dark:border-blue-900 flex flex-col items-center gap-3 animate-fadeIn">
+            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+            <div className="text-center">
+              <p className="font-semibold text-gray-900 dark:text-white">Processing Tip</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Waiting for blockchain confirmation...</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <div>

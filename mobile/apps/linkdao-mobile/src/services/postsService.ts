@@ -14,6 +14,19 @@ export interface CreatePostData {
     thumbnail?: string;
   }>;
   communityId?: string;
+  mediaUrls?: string[];
+  tags?: string[];
+  pollData?: {
+    question: string;
+    options: string[];
+    duration: number;
+  };
+  shareToSocialMedia?: {
+    twitter?: boolean;
+    facebook?: boolean;
+    linkedin?: boolean;
+    threads?: boolean;
+  };
 }
 
 export interface PostsResponse {
