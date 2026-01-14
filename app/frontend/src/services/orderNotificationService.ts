@@ -416,8 +416,8 @@ class OrderNotificationService {
           token = sessionData.token || sessionData.accessToken;
         }
       } catch (error) {
-        console.warn('Failed to parse session data for order notifications, clearing corrupted storage');
-        localStorage.removeItem('linkdao_session_data');
+        // Don't clear session data - let auth service handle session management
+        console.warn('Failed to parse session data for order notifications');
       }
     }
 

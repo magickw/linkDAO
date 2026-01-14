@@ -47,8 +47,8 @@ class OrderService {
             token = sessionData.token || sessionData.accessToken || '';
           }
         } catch (error) {
-          console.warn('Failed to parse linkdao_session_data, clearing corrupted storage');
-          localStorage.removeItem('linkdao_session_data');
+          // Don't clear session data - let auth service handle session management
+          console.warn('Failed to parse linkdao_session_data');
         }
       }
 

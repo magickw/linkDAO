@@ -495,8 +495,8 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
           authToken = sessionData.token || sessionData.accessToken || '';
         }
       } catch (e) {
-        console.warn('Failed to parse session data, clearing storage');
-        localStorage.removeItem('linkdao_session_data');
+        // Don't clear session data - let auth service handle session management
+        console.warn('Failed to parse session data');
       }
     }
 
