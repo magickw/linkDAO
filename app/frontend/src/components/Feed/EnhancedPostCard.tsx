@@ -303,19 +303,20 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
         return;
       }
 
-      // Use post service tipping
-      const txHash = await PostService.sendTip(
-        post.id,
-        parseFloat(amount),
-        token || 'LDAO',
-        message || ''
-      );
+      // Perform on-chain tipping using communityWeb3Service
+      // This handles approval, on-chain transaction, and backend recording
+      const txHash = await communityWeb3Service.tipCommunityPost({
+        postId: post.id,
+        recipientAddress: getUserAddress(post),
+        amount: amount,
+        token: token || 'LDAO',
+        message: message || ''
+      });
 
       if (onTip) {
         // Let the parent component handle the success message
         await onTip(post.id, amount, token, message);
-        // Don't show success message here since the parent component will handle it
-
+        
         // Invalidate feed cache to reflect updated tip counts
         await invalidateFeedCache();
 
@@ -335,6 +336,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       setShowTipModal(false);
     } catch (error: any) {
       // Only show error message here
+      console.error('Tipping error:', error);
       safeAddToast(`Failed to send tip: ${error.message || 'Please try again.'}`, 'error');
     }
   };

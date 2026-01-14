@@ -2020,7 +2020,8 @@ export class CommunityService {
             userResult[0].id,
             platformsToPost,
             content,
-            mediaUrls
+            mediaUrls,
+            'post' // This is a community post
           ).then(results => {
             safeLogger.info('Social media cross-posting results:', results);
           }).catch(error => {

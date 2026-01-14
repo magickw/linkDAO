@@ -258,7 +258,8 @@ export class PostService {
             user.id,
             platformsToPost,
             input.content,
-            input.media
+            input.media,
+            'post' // This is a community post
           ).then(results => {
             safeLogger.info('Social media cross-posting results:', results);
           }).catch(error => {

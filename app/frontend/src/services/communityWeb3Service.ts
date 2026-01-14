@@ -359,8 +359,22 @@ export class CommunityWeb3Service {
         console.log('Approval confirmed');
       }
 
-      // Convert postId to bytes32
-      const postIdBytes32 = ethers.id(input.postId);
+      // Convert postId to bytes32 correctly
+      // If it's a UUID, we need to strip hyphens and pad it. 
+      // If it's already a hex string, use it. Otherwise, use ethers.id (keccak256 hash).
+      let postIdBytes32;
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      
+      if (uuidRegex.test(input.postId)) {
+        // Correctly format UUID as bytes32: remove hyphens and pad to 32 bytes
+        const hexUuid = '0x' + input.postId.replace(/-/g, '');
+        postIdBytes32 = ethers.zeroPadValue(hexUuid, 32);
+      } else if (input.postId.startsWith('0x') && input.postId.length === 66) {
+        postIdBytes32 = input.postId;
+      } else {
+        // Fallback for non-UUID strings
+        postIdBytes32 = ethers.id(input.postId);
+      }
 
       // Convert token to paymentMethod enum (0 = LDAO, 1 = USDC, 2 = USDT)
       let paymentMethod = 0;
@@ -372,23 +386,59 @@ export class CommunityWeb3Service {
 
       // Send tip (with or without comment)
       let tx;
-      if (input.message && input.message.trim()) {
-        console.log(`Tipping ${input.amount} ${input.token} with comment to ${input.recipientAddress}`);
-        tx = await tipRouterContract.tipWithComment(
-          postIdBytes32,
-          input.recipientAddress,
-          amountInUnits,
-          paymentMethod,
-          input.message.trim()
-        );
-      } else {
-        console.log(`Tipping ${input.amount} ${input.token} to ${input.recipientAddress}`);
-        tx = await tipRouterContract.tip(
-          postIdBytes32,
-          input.recipientAddress,
-          amountInUnits,
-          paymentMethod
-        );
+      
+      // Common transaction overrides for robustness
+      const txOverrides = {
+        // Add a fallback gas limit if estimation fails, but try estimation first
+        // If estimateGas fails with 'missing revert data', it often means the contract reverted
+        // but sometimes it's just a provider/extension glitch.
+      };
+
+      try {
+        if (input.message && input.message.trim()) {
+          console.log(`Tipping ${input.amount} ${input.token} with comment to ${input.recipientAddress}`);
+          tx = await tipRouterContract.tipWithComment(
+            postIdBytes32,
+            input.recipientAddress,
+            amountInUnits,
+            paymentMethod,
+            input.message.trim(),
+            txOverrides
+          );
+        } else {
+          console.log(`Tipping ${input.amount} ${input.token} to ${input.recipientAddress}`);
+          tx = await tipRouterContract.tip(
+            postIdBytes32,
+            input.recipientAddress,
+            amountInUnits,
+            paymentMethod,
+            txOverrides
+          );
+        }
+      } catch (estimateError: any) {
+        // If gas estimation fails, try sending with a fixed gas limit as a last resort
+        console.warn('Gas estimation failed, attempting with fixed gas limit:', estimateError.message);
+        
+        const fallbackOverrides = { ...txOverrides, gasLimit: 300000 };
+        
+        if (input.message && input.message.trim()) {
+          tx = await tipRouterContract.tipWithComment(
+            postIdBytes32,
+            input.recipientAddress,
+            amountInUnits,
+            paymentMethod,
+            input.message.trim(),
+            fallbackOverrides
+          );
+        } else {
+          tx = await tipRouterContract.tip(
+            postIdBytes32,
+            input.recipientAddress,
+            amountInUnits,
+            paymentMethod,
+            fallbackOverrides
+          );
+        }
       }
 
       // Wait for transaction confirmation
@@ -397,11 +447,11 @@ export class CommunityWeb3Service {
 
       // Record tip to backend
       try {
-        const sessionToken = typeof window !== 'undefined' ? sessionStorage.getItem('linkdao_access_token') : null;
+        // Unified storage uses localStorage
+        const sessionToken = typeof window !== 'undefined' ? localStorage.getItem('linkdao_access_token') : null;
         if (sessionToken) {
           const backendUrl = ENV_CONFIG.BACKEND_URL || 'http://localhost:10000';
 
-          // Fire and forget - or await? Await is safer to ensure it's recorded before UI updates
           await fetch(`${backendUrl}/api/tips`, {
             method: 'POST',
             headers: {
@@ -421,7 +471,6 @@ export class CommunityWeb3Service {
         }
       } catch (backendError) {
         console.error('Failed to record tip to backend:', backendError);
-        // We don't throw here because the on-chain transaction succeeded
       }
 
       return receipt.hash;

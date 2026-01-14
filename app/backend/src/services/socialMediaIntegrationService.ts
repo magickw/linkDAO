@@ -50,7 +50,7 @@ export interface SocialMediaAnalytics {
 
 // New interface for OAuth-based posting results
 export interface SocialPostResult {
-  statusId: string;
+  contentId: string;
   platform: SocialPlatform;
   connectionId: string;
   success: boolean;
@@ -90,14 +90,17 @@ export class SocialMediaIntegrationService {
 
   /**
    * Post content to connected social media platforms via OAuth
-   * This is the main method for status synchronization
+   * This is the main method for status and post synchronization
+   * @param contentId - Either a status ID or post ID
+   * @param contentType - 'status' or 'post' to determine which table to reference
    */
   async postToConnectedPlatforms(
-    statusId: string,
+    contentId: string,
     userId: string,
     platforms: SocialPlatform[],
     content: string,
-    mediaUrls?: string[]
+    mediaUrls?: string[],
+    contentType: 'status' | 'post' = 'post'
   ): Promise<SocialPostResult[]> {
     const results: SocialPostResult[] = [];
 
@@ -108,7 +111,7 @@ export class SocialMediaIntegrationService {
 
         if (!connection) {
           results.push({
-            statusId,
+            contentId,
             platform,
             connectionId: '',
             success: false,
@@ -119,7 +122,7 @@ export class SocialMediaIntegrationService {
 
         if (connection.status !== 'active') {
           results.push({
-            statusId,
+            contentId,
             platform,
             connectionId: connection.id,
             success: false,
@@ -133,7 +136,7 @@ export class SocialMediaIntegrationService {
 
         if (!accessToken) {
           results.push({
-            statusId,
+            contentId,
             platform,
             connectionId: connection.id,
             success: false,
@@ -157,11 +160,13 @@ export class SocialMediaIntegrationService {
 
         const postResult = await provider.postContent(accessToken, socialContent);
 
-        // Store post record in database
+        // Store post record in database with correct reference
         const postRecord = await db
           .insert(socialMediaPosts)
           .values({
-            statusId,
+            // Use postId for community posts, statusId for user statuses
+            postId: contentType === 'post' ? contentId : null,
+            statusId: contentType === 'status' ? contentId : null,
             connectionId: connection.id,
             platform,
             contentSent: adaptedContent,
@@ -178,7 +183,7 @@ export class SocialMediaIntegrationService {
         await socialMediaConnectionService.updateLastUsed(connection.id);
 
         results.push({
-          statusId,
+          contentId,
           platform,
           connectionId: connection.id,
           success: postResult.success,
@@ -189,19 +194,21 @@ export class SocialMediaIntegrationService {
 
         if (postResult.success) {
           safeLogger.info(`Posted to ${platform}`, {
-            statusId,
+            contentId,
+            contentType,
             externalPostId: postResult.externalPostId,
           });
         } else {
           safeLogger.warn(`Failed to post to ${platform}`, {
-            statusId,
+            contentId,
+            contentType,
             error: postResult.error,
           });
         }
       } catch (error) {
         safeLogger.error(`Error posting to ${platform}:`, error);
         results.push({
-          statusId,
+          contentId,
           platform,
           connectionId: '',
           success: false,

@@ -2,16 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Button, StyleSheet, TextInput, TouchableOpacity, Alert, SafeAreaView } from 'react-native';
 import { generateMnemonic, derivePrivateKeyFromMnemonic, deriveAddressFromPrivateKey } from '@linkdao/shared/utils/bip39Utils';
 import { SecureKeyStorage } from '@linkdao/shared/utils/secureKeyStorage';
+import { useScreenshotProtection } from '../../components/withScreenshotProtection';
 
 export default function CreateWalletScreen({ navigation }: any) {
   const [mnemonic, setMnemonic] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [step, setStep] = useState(1); // 1: Mnemonic, 2: Password
+  
+  // Enable screenshot protection
+  const { enableProtection, disableProtection } = useScreenshotProtection();
 
   useEffect(() => {
     setMnemonic(generateMnemonic());
-  }, []);
+    enableProtection();
+    return () => disableProtection();
+  }, [enableProtection, disableProtection]);
 
   const handleNextStep = () => {
     setStep(2);

@@ -4,6 +4,7 @@ import { CameraView, Camera } from 'expo-camera';
 import { localWalletTransactionService } from '@linkdao/shared/services/localWalletTransactionService';
 import { SecureKeyStorage } from '@linkdao/shared/utils/secureKeyStorage';
 import { isAddress, parseEther } from 'viem';
+import { useScreenshotProtection } from '../../components/withScreenshotProtection';
 
 const NETWORKS = [
   { id: 1, name: 'Ethereum', symbol: 'ETH' },
@@ -25,6 +26,14 @@ export default function SendScreen({ route, navigation }: any) {
   // Password Verification State
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [password, setPassword] = useState('');
+  
+  // Enable screenshot protection for sensitive transaction screen
+  const { enableProtection, disableProtection } = useScreenshotProtection();
+
+  useEffect(() => {
+    enableProtection();
+    return () => disableProtection();
+  }, [enableProtection, disableProtection]);
 
   useEffect(() => {
     const getPermissions = async () => {

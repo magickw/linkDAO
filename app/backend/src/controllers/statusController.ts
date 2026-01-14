@@ -89,7 +89,8 @@ export class StatusController {
               authenticatedUser.id,
               platformsToShare,
               content,
-              media // Pass media URLs if available
+              media, // Pass media URLs if available
+              'status' // This is a user status
             );
 
             console.log('Social media posting results:', socialMediaResults);
