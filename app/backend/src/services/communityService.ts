@@ -1922,6 +1922,7 @@ export class CommunityService {
           contentCid: `local-${Date.now()}`, // Temporary CID for local content
           mediaCids: mediaUrls ? JSON.stringify(mediaUrls) : null,
           tags: tags ? JSON.stringify(tags) : null,
+          shareId: generateShareId(), // Generate short, shareable ID for URLs
           createdAt: new Date(),
           updatedAt: new Date()
         })
@@ -2006,7 +2007,7 @@ export class CommunityService {
       // Handle social media cross-posting
       if (shareToSocialMedia) {
         const platformsToPost: SocialPlatform[] = [];
-        
+
         if (shareToSocialMedia.twitter) platformsToPost.push('twitter');
         if (shareToSocialMedia.facebook) platformsToPost.push('facebook');
         if (shareToSocialMedia.linkedin) platformsToPost.push('linkedin');

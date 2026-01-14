@@ -489,7 +489,7 @@ export class MessagingService {
           encryptionMetadata: data.encryptionMetadata,
           replyToId: data.replyToId,
           attachments: sanitizedMessage.attachments ? JSON.stringify(sanitizedMessage.attachments) : null,
-          sentAt: new Date()
+          timestamp: new Date() // Use 'timestamp' to match the database column name
         })
         .returning();
 
@@ -505,13 +505,21 @@ export class MessagingService {
       // Send notification to other participants
       // Safely handle participants parsing (might be string or object)
       let participants: string[];
-      if (typeof conversation.participants === 'string') {
-        participants = JSON.parse(conversation.participants);
-      } else {
-        participants = conversation.participants as unknown as string[];
+      try {
+        if (typeof conversation.participants === 'string') {
+          participants = JSON.parse(conversation.participants);
+        } else if (Array.isArray(conversation.participants)) {
+          participants = conversation.participants as string[];
+        } else {
+          safeLogger.warn(`Unexpected participants format for conversation ${conversationId}:`, typeof conversation.participants);
+          participants = [];
+        }
+      } catch (parseError) {
+        safeLogger.error(`Error parsing participants for conversation ${conversationId}:`, parseError);
+        participants = [];
       }
 
-      const otherParticipants = participants.filter((p: string) => p !== fromAddress.toLowerCase());
+      const otherParticipants = participants.filter((p: string) => p && p.toLowerCase() !== fromAddress.toLowerCase());
 
       // Send notifications to other participants
       for (const participant of otherParticipants) {

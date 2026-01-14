@@ -1115,6 +1115,7 @@ export class FeedService {
           dao: communityId,
           mediaCids: JSON.stringify(mediaUrls),
           tags: JSON.stringify(tags),
+          shareId: generateShareId(), // Generate short, shareable ID for URLs
           createdAt: new Date(),
           stakedValue: '0'
         })
@@ -1155,7 +1156,7 @@ export class FeedService {
       // Handle social media cross-posting
       if (shareToSocialMedia) {
         const platformsToPost: SocialPlatform[] = [];
-        
+
         if (shareToSocialMedia.twitter) platformsToPost.push('twitter');
         if (shareToSocialMedia.facebook) platformsToPost.push('facebook');
         if (shareToSocialMedia.linkedin) platformsToPost.push('linkedin');
