@@ -205,10 +205,12 @@ export async function getProvider() {
     if (!config || !config.connectors || config.connectors.length === 0) {
       console.warn('Wagmi config not properly initialized, skipping getPublicClient');
     } else {
-      const client = getPublicClient(config).catch(e => {
+      let client = null;
+      try {
+        client = getPublicClient(config);
+      } catch (e) {
         console.warn('Wagmi getPublicClient failed:', e);
-        return null;
-      });
+      }
       console.log('Public client:', client);
 
       // Check if client is available before accessing transport
@@ -266,9 +268,8 @@ export async function getProvider() {
         console.log('Creating JsonRpcProvider with RPC:', envRpc, 'Chain ID:', chainId);
         
         // Correct way to initialize JsonRpcProvider in ethers v6 with static network
-        // Passing undefined as 2nd arg and network in options prevents detection
         const network = ethers.Network.from(chainId);
-        const provider = new ethers.JsonRpcProvider(envRpc, undefined, {
+        const provider = new ethers.JsonRpcProvider(envRpc, network, {
           staticNetwork: network, 
           polling: false 
         });
@@ -295,7 +296,7 @@ export async function getProvider() {
     if (rpcUrl) {
       // Correct way to initialize JsonRpcProvider in ethers v6 with static network
       const network = ethers.Network.from(chainId);
-      const provider = new ethers.JsonRpcProvider(rpcUrl, undefined, {
+      const provider = new ethers.JsonRpcProvider(rpcUrl, network, {
         staticNetwork: network,
         polling: false
       });
@@ -313,7 +314,7 @@ export async function getProvider() {
   console.log('Using fallback provider');
   try {
     const network = ethers.Network.from(11155111);
-    const provider = new ethers.JsonRpcProvider('https://ethereum-sepolia-rpc.publicnode.com', undefined, {
+    const provider = new ethers.JsonRpcProvider('https://ethereum-sepolia-rpc.publicnode.com', network, {
       staticNetwork: network,
       polling: false
     });

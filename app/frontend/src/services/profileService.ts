@@ -1,6 +1,7 @@
 import { UserProfile, CreateUserProfileInput, UpdateUserProfileInput } from '../models/UserProfile';
 import { deduplicatedFetch } from '../utils/requestDeduplication';
 import { csrfService } from './csrfService';
+import { enhancedAuthService } from './enhancedAuthService';
 
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
@@ -20,18 +21,24 @@ export class ProfileService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
     try {
-      // Get auth token from localStorage - check multiple possible storage keys
-      const token = localStorage.getItem('linkdao_access_token') ||
-        localStorage.getItem('authToken') ||
-        localStorage.getItem('token') ||
-        localStorage.getItem('auth_token');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
+      // Get auth headers from enhancedAuthService
+      let headers: HeadersInit = await enhancedAuthService.getAuthHeaders();
+      const authHeaders = headers as Record<string, string>;
 
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      // If token is missing, attempt to refresh
+      if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
+        try {
+          const refreshResult = await enhancedAuthService.refreshToken();
+          if (refreshResult.success) {
+            headers = await enhancedAuthService.getAuthHeaders();
+          }
+        } catch (e) {
+          console.warn('Token refresh failed in createProfile:', e);
+        }
       }
+
+      // Add Content-Type
+      headers = { ...headers, 'Content-Type': 'application/json' };
 
       // Add CSRF headers for authenticated requests
       try {
@@ -242,18 +249,24 @@ export class ProfileService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
     try {
-      // Get auth token from localStorage - check multiple possible storage keys
-      const token = localStorage.getItem('linkdao_access_token') ||
-        localStorage.getItem('authToken') ||
-        localStorage.getItem('token') ||
-        localStorage.getItem('auth_token');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
+      // Get auth headers from enhancedAuthService
+      let headers: HeadersInit = await enhancedAuthService.getAuthHeaders();
+      const authHeaders = headers as Record<string, string>;
 
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      // If token is missing, attempt to refresh
+      if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
+        try {
+          const refreshResult = await enhancedAuthService.refreshToken();
+          if (refreshResult.success) {
+            headers = await enhancedAuthService.getAuthHeaders();
+          }
+        } catch (e) {
+          console.warn('Token refresh failed in updateProfile:', e);
+        }
       }
+
+      // Add Content-Type
+      headers = { ...headers, 'Content-Type': 'application/json' };
 
       // Add CSRF headers for authenticated requests
       try {
@@ -329,18 +342,24 @@ export class ProfileService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
     try {
-      // Get auth token from localStorage - check multiple possible storage keys
-      const token = localStorage.getItem('linkdao_access_token') ||
-        localStorage.getItem('authToken') ||
-        localStorage.getItem('token') ||
-        localStorage.getItem('auth_token');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
+      // Get auth headers from enhancedAuthService
+      let headers: HeadersInit = await enhancedAuthService.getAuthHeaders();
+      const authHeaders = headers as Record<string, string>;
 
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      // If token is missing, attempt to refresh
+      if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
+        try {
+          const refreshResult = await enhancedAuthService.refreshToken();
+          if (refreshResult.success) {
+            headers = await enhancedAuthService.getAuthHeaders();
+          }
+        } catch (e) {
+          console.warn('Token refresh failed in updateProfileByAddress:', e);
+        }
       }
+
+      // Add Content-Type
+      headers = { ...headers, 'Content-Type': 'application/json' };
 
       // Add CSRF headers for authenticated requests
       try {
@@ -404,18 +423,24 @@ export class ProfileService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
     try {
-      // Get auth token from localStorage - check multiple possible storage keys
-      const token = localStorage.getItem('linkdao_access_token') ||
-        localStorage.getItem('authToken') ||
-        localStorage.getItem('token') ||
-        localStorage.getItem('auth_token');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
+      // Get auth headers from enhancedAuthService
+      let headers: HeadersInit = await enhancedAuthService.getAuthHeaders();
+      const authHeaders = headers as Record<string, string>;
 
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      // If token is missing, attempt to refresh
+      if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
+        try {
+          const refreshResult = await enhancedAuthService.refreshToken();
+          if (refreshResult.success) {
+            headers = await enhancedAuthService.getAuthHeaders();
+          }
+        } catch (e) {
+          console.warn('Token refresh failed in deleteProfile:', e);
+        }
       }
+
+      // Add Content-Type
+      headers = { ...headers, 'Content-Type': 'application/json' };
 
       // Add CSRF headers for authenticated requests
       try {

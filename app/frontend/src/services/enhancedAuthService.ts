@@ -1026,7 +1026,7 @@ class EnhancedAuthService {
         : null;
 
       if (storedBackendUrl && storedBackendUrl !== this.baseUrl) {
-        console.log('🔄 Backend URL changed, clearing token', {
+        console.warn('🔄 Backend URL changed, clearing token', {
           storedUrl: storedBackendUrl,
           currentUrl: this.baseUrl
         });
@@ -1056,16 +1056,21 @@ class EnhancedAuthService {
         if (storedToken) {
           // Verify the session is still valid
           if (sessionDataStr) {
-            const sessionData: SessionData | null = JSON.parse(sessionDataStr);
+            let sessionData: SessionData | null = null;
+            try {
+              sessionData = JSON.parse(sessionDataStr);
+            } catch (e) {
+              console.warn('Failed to parse session data in getToken, clearing storage');
+              this.clearStoredSession();
+              return null;
+            }
+
             if (sessionData && Date.now() < sessionData.expiresAt) {
               // Check if the stored session is for the same backend
               const storedBackendUrl = localStorage.getItem(this.STORAGE_KEYS.BACKEND_URL) ||
                 sessionStorage.getItem(this.STORAGE_KEYS.BACKEND_URL);
               if (storedBackendUrl && storedBackendUrl !== this.baseUrl) {
-                console.log('🔄 Backend URL changed, clearing token', {
-                  storedUrl: storedBackendUrl,
-                  currentUrl: this.baseUrl
-                });
+                console.warn('🔄 Backend URL changed (storage), clearing token');
                 this.clearStoredSession();
                 return null;
               }
@@ -1077,19 +1082,19 @@ class EnhancedAuthService {
               // Fallback: ensure refresh token is loaded from separate storage if missing from sessionData
               if (!sessionData.refreshToken) {
                 const storedRefreshToken = localStorage.getItem(this.STORAGE_KEYS.REFRESH_TOKEN) ||
-                  sessionStorage.getItem(this.STORAGE_KEYS.REFRESH_TOKEN);
+                  localStorage.getItem(this.STORAGE_KEYS.REFRESH_TOKEN);
                 if (storedRefreshToken) {
                   sessionData.refreshToken = storedRefreshToken;
-                  console.log('🔄 Restored refresh token from separate storage in getValidToken');
                 }
               }
 
-              // Ensure wallet address is also stored separately for API client access
-              if (sessionData.user?.address) {
-                localStorage.setItem(this.STORAGE_KEYS.WALLET_ADDRESS, sessionData.user.address);
-              }
-
               return storedToken;
+            } else {
+              console.warn('Session expired in getToken', { 
+                now: Date.now(), 
+                expiresAt: sessionData?.expiresAt 
+              });
+              this.clearStoredSession();
             }
           }
         }

@@ -48,7 +48,20 @@ export class StatusService {
 
       // Check if we have a valid token
       if (!authHeaders['Authorization']) {
-        // For development mode, create a development token
+        // Attempt to refresh token automatically
+        try {
+          console.log('Token missing in createStatus, attempting refresh...');
+          const refreshResult = await enhancedAuthService.refreshToken();
+          if (refreshResult.success) {
+            authHeaders = await enhancedAuthService.getAuthHeaders();
+          }
+        } catch (e) {
+          console.warn('Token refresh failed in createStatus:', e);
+        }
+
+        // Re-check after refresh attempt
+        if (!authHeaders['Authorization']) {
+          // For development mode, create a development token
         if (ENV_CONFIG.IS_DEVELOPMENT) {
           const devToken = `dev_session_${Date.now()}_0xee034b53d4ccb101b2a4faec27708be507197350_${Date.now()}`;
           authHeaders['Authorization'] = `Bearer ${devToken}`;

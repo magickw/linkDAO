@@ -489,13 +489,14 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
     let authToken = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
     if (!authToken) {
       try {
-        const sessionData = localStorage.getItem('linkdao_session_data');
-        if (sessionData) {
-          const parsed = JSON.parse(sessionData);
-          authToken = parsed.token || parsed.accessToken || '';
+        const sessionDataStr = localStorage.getItem('linkdao_session_data');
+        if (sessionDataStr) {
+          const sessionData = JSON.parse(sessionDataStr);
+          authToken = sessionData.token || sessionData.accessToken || '';
         }
       } catch (e) {
-        console.warn('Failed to parse session data');
+        console.warn('Failed to parse session data, clearing storage');
+        localStorage.removeItem('linkdao_session_data');
       }
     }
 

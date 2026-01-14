@@ -732,6 +732,9 @@ export class WalletService {
         try {
           // Fetch native token transactions
           const nativeUrl = new URL(config.baseUrl);
+          if (config.baseUrl.includes('/v2/api')) {
+            nativeUrl.searchParams.set('chainid', String(this.chainId));
+          }
           nativeUrl.searchParams.set('module', 'account');
           nativeUrl.searchParams.set('action', 'txlist');
           nativeUrl.searchParams.set('address', address);
@@ -743,6 +746,9 @@ export class WalletService {
           
           // Fetch ERC-20 token transactions
           const erc20Url = new URL(config.baseUrl);
+          if (config.baseUrl.includes('/v2/api')) {
+            erc20Url.searchParams.set('chainid', String(this.chainId));
+          }
           erc20Url.searchParams.set('module', 'account');
           erc20Url.searchParams.set('action', 'tokentx');
           erc20Url.searchParams.set('address', address);

@@ -259,6 +259,20 @@ export class CommunityPostService {
         console.log('Using development token');
       }
 
+      // If still no valid auth headers, try to refresh token
+      if (!hasAuthToken) {
+        try {
+          console.log('Token missing in createComment, attempting refresh...');
+          const refreshResult = await enhancedAuthService.refreshToken();
+          if (refreshResult.success) {
+            authHeaders = await enhancedAuthService.getAuthHeaders();
+            hasAuthToken = authHeaders['Authorization'] && authHeaders['Authorization'] !== 'Bearer null';
+          }
+        } catch (e) {
+          console.warn('Token refresh failed in createComment:', e);
+        }
+      }
+
       // If still no valid auth headers, throw error
       if (!hasAuthToken) {
         throw new Error('No valid authentication token available');

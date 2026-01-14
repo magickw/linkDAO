@@ -745,7 +745,19 @@ export class FeedService {
   static async addComment(postId: string, content: string, parentCommentId?: string): Promise<any> {
     try {
       // Get base auth headers from enhancedAuthService
-      const authHeaders = await enhancedAuthService.getAuthHeaders();
+      let authHeaders = await enhancedAuthService.getAuthHeaders();
+
+      // If token is missing, attempt to refresh
+      if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
+        try {
+          const refreshResult = await enhancedAuthService.refreshToken();
+          if (refreshResult.success) {
+            authHeaders = await enhancedAuthService.getAuthHeaders();
+          }
+        } catch (e) {
+          console.warn('Token refresh failed in addComment:', e);
+        }
+      }
 
       // Add CSRF headers for authenticated requests
       let headers = { ...authHeaders };
@@ -960,7 +972,19 @@ export class FeedService {
       }
 
       // Get base auth headers from enhancedAuthService
-      const authHeaders = await enhancedAuthService.getAuthHeaders();
+      let authHeaders = await enhancedAuthService.getAuthHeaders();
+
+      // If token is missing, attempt to refresh
+      if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
+        try {
+          const refreshResult = await enhancedAuthService.refreshToken();
+          if (refreshResult.success) {
+            authHeaders = await enhancedAuthService.getAuthHeaders();
+          }
+        } catch (e) {
+          console.warn('Token refresh failed in addReaction:', e);
+        }
+      }
 
       // Verify auth headers were properly set
       if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
@@ -1155,7 +1179,20 @@ export class FeedService {
         });
 
         // Record the tip in the database for tracking
-        const authHeaders = await enhancedAuthService.getAuthHeaders();
+        let authHeaders = await enhancedAuthService.getAuthHeaders();
+
+        // If token is missing, attempt to refresh
+        if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
+          try {
+            const refreshResult = await enhancedAuthService.refreshToken();
+            if (refreshResult.success) {
+              authHeaders = await enhancedAuthService.getAuthHeaders();
+            }
+          } catch (e) {
+            console.warn('Token refresh failed in sendTip:', e);
+          }
+        }
+
         const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/tip`, {
           method: 'POST',
           headers: {
@@ -1198,7 +1235,20 @@ export class FeedService {
         return { ...tip, txHash };
       } else {
         // For other token types, use the existing backend-only approach
-        const authHeaders = await enhancedAuthService.getAuthHeaders();
+        let authHeaders = await enhancedAuthService.getAuthHeaders();
+
+        // If token is missing, attempt to refresh
+        if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
+          try {
+            const refreshResult = await enhancedAuthService.refreshToken();
+            if (refreshResult.success) {
+              authHeaders = await enhancedAuthService.getAuthHeaders();
+            }
+          } catch (e) {
+            console.warn('Token refresh failed in sendTip (non-LDAO):', e);
+          }
+        }
+
         const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/tip`, {
           method: 'POST',
           headers: {
@@ -1262,7 +1312,20 @@ export class FeedService {
   // Share post
   static async sharePost(postId: string, platform: string, message?: string): Promise<any> {
     try {
-      const authHeaders = await enhancedAuthService.getAuthHeaders();
+      let authHeaders = await enhancedAuthService.getAuthHeaders();
+
+      // If token is missing, attempt to refresh
+      if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
+        try {
+          const refreshResult = await enhancedAuthService.refreshToken();
+          if (refreshResult.success) {
+            authHeaders = await enhancedAuthService.getAuthHeaders();
+          }
+        } catch (e) {
+          console.warn('Token refresh failed in sharePost:', e);
+        }
+      }
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/posts/${postId}/share`, {
         method: 'POST',
         headers: {
@@ -1320,7 +1383,20 @@ export class FeedService {
   // Toggle bookmark
   static async toggleBookmark(postId: string): Promise<any> {
     try {
-      const authHeaders = await enhancedAuthService.getAuthHeaders();
+      let authHeaders = await enhancedAuthService.getAuthHeaders();
+
+      // If token is missing, attempt to refresh
+      if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
+        try {
+          const refreshResult = await enhancedAuthService.refreshToken();
+          if (refreshResult.success) {
+            authHeaders = await enhancedAuthService.getAuthHeaders();
+          }
+        } catch (e) {
+          console.warn('Token refresh failed in toggleBookmark:', e);
+        }
+      }
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/posts/${postId}/bookmark`, {
         method: 'POST',
         headers: {
@@ -1454,7 +1530,20 @@ export class FeedService {
   // Upvote a post
   static async upvotePost(postId: string): Promise<any> {
     try {
-      const authHeaders = await enhancedAuthService.getAuthHeaders();
+      let authHeaders = await enhancedAuthService.getAuthHeaders();
+
+      // If token is missing, attempt to refresh
+      if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
+        try {
+          const refreshResult = await enhancedAuthService.refreshToken();
+          if (refreshResult.success) {
+            authHeaders = await enhancedAuthService.getAuthHeaders();
+          }
+        } catch (e) {
+          console.warn('Token refresh failed in upvotePost:', e);
+        }
+      }
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/upvote`, {
         method: 'POST',
         headers: {
@@ -1503,7 +1592,20 @@ export class FeedService {
   // Downvote a post
   static async downvotePost(postId: string): Promise<any> {
     try {
-      const authHeaders = await enhancedAuthService.getAuthHeaders();
+      let authHeaders = await enhancedAuthService.getAuthHeaders();
+
+      // If token is missing, attempt to refresh
+      if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
+        try {
+          const refreshResult = await enhancedAuthService.refreshToken();
+          if (refreshResult.success) {
+            authHeaders = await enhancedAuthService.getAuthHeaders();
+          }
+        } catch (e) {
+          console.warn('Token refresh failed in downvotePost:', e);
+        }
+      }
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/downvote`, {
         method: 'POST',
         headers: {

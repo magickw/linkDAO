@@ -1439,22 +1439,56 @@ class UnifiedMessagingService {
 
   // API helpers
   private async makeRequest(endpoint: string, options: RequestInit = {}): Promise<Response> {
-    const authHeaders = await enhancedAuthService.getAuthHeaders();
+    let authHeaders = await enhancedAuthService.getAuthHeaders();
+
+    // If token is missing, attempt to refresh
+    if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
+      try {
+        const refreshResult = await enhancedAuthService.refreshToken();
+        if (refreshResult.success) {
+          authHeaders = await enhancedAuthService.getAuthHeaders();
+        }
+      } catch (e) {
+        console.warn('Token refresh failed in makeRequest (pre-check):', e);
+      }
+    }
 
     // Ensure Content-Type is not manually set for FormData
     const isFormData = options.body instanceof FormData;
 
     // Build headers in correct order: base headers, auth headers, then allow options to override
-    const headers: Record<string, string> = {
+    const buildHeaders = () => ({
       ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...authHeaders,
       ...(options.headers as Record<string, string> || {})
-    };
-
-    return fetch(`${this.baseUrl}${endpoint}`, {
-      ...options,
-      headers
     });
+
+    let response = await fetch(`${this.baseUrl}${endpoint}`, {
+      ...options,
+      headers: buildHeaders()
+    });
+
+    // If 401, try to refresh and retry
+    if (response.status === 401) {
+      try {
+        console.log('[UnifiedMessaging] 401 Unauthorized, refreshing token...');
+        const refreshResult = await enhancedAuthService.refreshToken();
+        
+        if (refreshResult.success) {
+          console.log('[UnifiedMessaging] Token refreshed, retrying request...');
+          authHeaders = await enhancedAuthService.getAuthHeaders();
+          
+          response = await fetch(`${this.baseUrl}${endpoint}`, {
+            ...options,
+            headers: buildHeaders()
+          });
+        }
+      } catch (e) {
+        console.error('[UnifiedMessaging] Token refresh failed on 401:', e);
+      }
+    }
+
+    return response;
   }
 
   // Transform helpers

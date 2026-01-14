@@ -44,10 +44,10 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
 
     // Skip authentication if:
     // 1. Auto-login is disabled
-    // 2. No wallet address or connector
+    // 2. No wallet address
     // 3. User is already authenticated and skipIfAuthenticated is true
     // 4. Already handled this address
-    if (!autoLogin || !walletAddress || !connector) {
+    if (!autoLogin || !walletAddress) {
       console.log('WalletLoginBridge: Skipping login, conditions not met');
       return;
     }
