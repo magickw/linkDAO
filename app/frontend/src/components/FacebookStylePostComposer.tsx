@@ -50,6 +50,12 @@ const FacebookStylePostComposer = React.memo(({
   const [selectedLocation, setSelectedLocation] = useState<{ name: string, address?: string } | null>(null);
   const [gettingCurrentLocation, setGettingCurrentLocation] = useState(false);
 
+  // Social Sharing State
+  const [shareToTwitter, setShareToTwitter] = useState(false);
+  const [shareToFacebook, setShareToFacebook] = useState(false);
+  const [shareToLinkedIn, setShareToLinkedIn] = useState(false);
+  const [shareToThreads, setShareToThreads] = useState(false);
+
   const [uploadError, setUploadError] = useState<string>('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -295,6 +301,12 @@ const FacebookStylePostComposer = React.memo(({
         content: finalContent,
         tags: tagArray,
         media: mediaCids.length > 0 ? mediaCids : undefined,
+        shareToSocialMedia: {
+          twitter: shareToTwitter,
+          facebook: shareToFacebook,
+          linkedin: shareToLinkedIn,
+          threads: shareToThreads,
+        },
         // We could also pass structured data like location and links if the backend supports it
       };
 
@@ -310,6 +322,10 @@ const FacebookStylePostComposer = React.memo(({
       setIsExpanded(false);
       setShowEmojiPicker(false);
       setShowLocationPicker(false);
+      setShareToTwitter(false);
+      setShareToFacebook(false);
+      setShareToLinkedIn(false);
+      setShareToThreads(false);
       setUploadError('');
     } catch (error) {
       console.error('Error submitting post:', error);
@@ -317,7 +333,7 @@ const FacebookStylePostComposer = React.memo(({
       const errorMessage = error instanceof Error ? error.message : 'Failed to create post. Please try again.';
       setUploadError(errorMessage);
     }
-  }, [content, selectedLocation, selectedFiles, onSubmit, extractHashtags, userName]);
+  }, [content, selectedLocation, selectedFiles, onSubmit, extractHashtags, userName, shareToTwitter, shareToFacebook, shareToLinkedIn, shareToThreads]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -404,6 +420,10 @@ const FacebookStylePostComposer = React.memo(({
     setIsExpanded(false);
     setShowEmojiPicker(false);
     setShowLocationPicker(false);
+    setShareToTwitter(false);
+    setShareToFacebook(false);
+    setShareToLinkedIn(false);
+    setShareToThreads(false);
     setUploadError('');
   }, []);
 
@@ -708,6 +728,60 @@ const FacebookStylePostComposer = React.memo(({
                       )}
                     </div>
                   )}
+                </div>
+
+                <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+
+                {/* Social Share Buttons */}
+                <div className="flex items-center gap-1">
+                   <button
+                    type="button"
+                    onClick={() => setShareToTwitter(!shareToTwitter)}
+                    className={`p-2 rounded-lg transition-all ${shareToTwitter
+                      ? 'text-black dark:text-white bg-gray-100 dark:bg-gray-700 ring-1 ring-gray-300 dark:ring-gray-600'
+                      : 'text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    title="Share to Twitter/X"
+                    disabled={isLoading}
+                  >
+                    <span className="text-sm font-bold">𝕏</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShareToFacebook(!shareToFacebook)}
+                    className={`p-2 rounded-lg transition-all ${shareToFacebook
+                      ? 'text-[#1877F2] bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800'
+                      : 'text-gray-400 hover:text-[#1877F2] hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                      }`}
+                    title="Share to Facebook"
+                    disabled={isLoading}
+                  >
+                    <span className="text-sm font-bold">f</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShareToLinkedIn(!shareToLinkedIn)}
+                    className={`p-2 rounded-lg transition-all ${shareToLinkedIn
+                      ? 'text-[#0A66C2] bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800'
+                      : 'text-gray-400 hover:text-[#0A66C2] hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                      }`}
+                    title="Share to LinkedIn"
+                    disabled={isLoading}
+                  >
+                    <span className="text-sm font-bold">in</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShareToThreads(!shareToThreads)}
+                    className={`p-2 rounded-lg transition-all ${shareToThreads
+                      ? 'text-black dark:text-white bg-gray-100 dark:bg-gray-700 ring-1 ring-gray-300 dark:ring-gray-600'
+                      : 'text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    title="Share to Threads"
+                    disabled={isLoading}
+                  >
+                    <span className="text-sm font-bold">@</span>
+                  </button>
                 </div>
               </div>
 
