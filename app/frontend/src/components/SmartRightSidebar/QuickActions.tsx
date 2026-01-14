@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { EnhancedWalletData, QuickAction, TokenBalance } from '../../types/wallet';
 import { useNetworkSwitch } from '../../hooks/useNetworkSwitch';
@@ -53,10 +53,11 @@ const QuickActions = React.memo(function QuickActions({
   };
 
   // Calculate per-chain portfolio values from token balances
-  const getChainBreakdown = (balances: TokenBalance[]): Map<number, number> => {
+  const chainBreakdown = useMemo(() => {
+    if (!displayWalletData?.balances) return new Map<number, number>();
+    
     const breakdown = new Map<number, number>();
-
-    balances.forEach(token => {
+    displayWalletData.balances.forEach(token => {
       if (token.chainBreakdown) {
         token.chainBreakdown.forEach(cb => {
           const current = breakdown.get(cb.chainId) || 0;
@@ -75,14 +76,15 @@ const QuickActions = React.memo(function QuickActions({
         breakdown.set(currentChainId, current + (token.valueUSD || 0));
       }
     });
-
     return breakdown;
-  };
+  }, [displayWalletData?.balances, currentChainId]);
 
   // Get unique chains from token balances
-  const getActiveChains = (balances: TokenBalance[]): number[] => {
+  const activeChains = useMemo(() => {
+    if (!displayWalletData?.balances) return [];
+
     const chains = new Set<number>();
-    balances.forEach(token => {
+    displayWalletData.balances.forEach(token => {
       if (token.chainBreakdown) {
         token.chainBreakdown.forEach(cb => chains.add(cb.chainId));
       } else if (token.chains) {
@@ -97,7 +99,7 @@ const QuickActions = React.memo(function QuickActions({
       if (!isTestnetA && isTestnetB) return -1;
       return a - b;
     });
-  };
+  }, [displayWalletData?.balances]);
 
   // Handle case where there are no quick actions
   const quickActions = displayWalletData?.quickActions || [

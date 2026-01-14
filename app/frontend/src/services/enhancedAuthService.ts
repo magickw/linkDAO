@@ -121,8 +121,18 @@ class EnhancedAuthService {
       if (!sessionDataStr) {
         sessionDataStr = sessionStorage.getItem(this.STORAGE_KEYS.SESSION_DATA);
         if (sessionDataStr) {
-          // Migrate to localStorage
-          localStorage.setItem(this.STORAGE_KEYS.SESSION_DATA, sessionDataStr);
+          try {
+            // Validate JSON before migrating
+            JSON.parse(sessionDataStr);
+            // Migrate to localStorage
+            localStorage.setItem(this.STORAGE_KEYS.SESSION_DATA, sessionDataStr);
+            // Clear from sessionStorage to prevent re-migration
+            sessionStorage.removeItem(this.STORAGE_KEYS.SESSION_DATA);
+          } catch (e) {
+            console.warn('⚠️ Found corrupted session data in sessionStorage, clearing:', e);
+            sessionStorage.removeItem(this.STORAGE_KEYS.SESSION_DATA);
+            sessionDataStr = null;
+          }
         }
       }
 

@@ -466,6 +466,12 @@ export function useWalletData({
   useEffect(() => {
     if (!walletData || !enableTransactionHistory || !address) return;
 
+    // Skip if we already have transactions populated (e.g. from price update)
+    // We only want to fetch if they were reset (e.g. by fetchWalletData) or haven't been loaded
+    if (walletData.recentTransactions && walletData.recentTransactions.length > 0) {
+      return;
+    }
+
     const fetchTransactionHistory = async () => {
       try {
         const cacheKey = `${address}:${maxTransactions}`;
