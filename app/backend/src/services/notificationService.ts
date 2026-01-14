@@ -1,6 +1,7 @@
 import { DatabaseService } from './databaseService';
 import { safeLogger } from '../utils/safeLogger';
 import { OrderNotification } from '../models/Order';
+import { getWebSocketService } from './webSocketService';
 
 const databaseService = new DatabaseService();
 
@@ -183,12 +184,16 @@ export class NotificationService {
       // Store notification in database
       await databaseService.createNotification(notification);
 
-      // Send real-time notification
+      // Send real-time notification with type in metadata
       await this.sendRealTimeNotification(userAddress, {
         title: template.title,
         message,
         actionUrl,
-        metadata
+        metadata: {
+          ...metadata,
+          type: type, // Include type for category conversion
+          orderId: orderId
+        }
       });
 
       // Send email notification if enabled
@@ -426,19 +431,41 @@ export class NotificationService {
     }
   ): Promise<void> {
     try {
-      // Implementation would depend on your real-time system (WebSocket, Server-Sent Events, etc.)
-      // For now, we'll just log it
-      safeLogger.info(`Real-time notification to ${userAddress}:`, notification);
-
-      // Example WebSocket implementation:
-      // const wsService = WebSocketService.getInstance();
-      // wsService.sendToUser(userAddress, {
-      //   type: 'notification',
-      //   data: notification
-      // });
+      // Get WebSocket service instance
+      const wsService = getWebSocketService();
+      if (wsService) {
+        // Extract category from metadata or convert type to category format
+        const category = notification.metadata?.category || this.convertTypeToCategory(notification.metadata?.type);
+        
+        wsService.sendNotification(userAddress, {
+          type: 'notification',
+          title: notification.title,
+          message: notification.message,
+          category: category,
+          data: {
+            actionUrl: notification.actionUrl,
+            ...notification.metadata
+          },
+          priority: 'medium',
+          timestamp: new Date()
+        });
+        safeLogger.info(`Real-time notification sent to ${userAddress}:`, notification);
+      } else {
+        safeLogger.warn('WebSocket service not available, notification not sent in real-time');
+      }
     } catch (error) {
       safeLogger.error('Error sending real-time notification:', error);
     }
+  }
+
+  /**
+   * Convert notification type to category format expected by frontend
+   */
+  private convertTypeToCategory(type: string): string {
+    if (!type) return 'system';
+    
+    // Convert snake_case to lowercase format expected by frontend
+    return type.toLowerCase().replace(/_/g, '_');
   }
 
   private async sendEmailNotification(

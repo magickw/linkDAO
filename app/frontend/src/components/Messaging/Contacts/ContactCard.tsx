@@ -78,7 +78,7 @@ const ContactCard: React.FC<ContactCardProps> = ({ contact, className = '', onCo
           <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-medium">
             {contact.avatar ? (
               <img
-                src={contact.avatar}
+                src={contact.avatar.startsWith('http') ? contact.avatar : `https://ipfs.io/ipfs/${contact.avatar}`}
                 alt={contact.nickname}
                 className="w-full h-full rounded-full object-cover"
               />

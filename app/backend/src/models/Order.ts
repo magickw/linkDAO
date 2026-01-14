@@ -8,6 +8,9 @@ export interface CreateOrderInput {
   paymentToken: string;
   quantity?: number;
   shippingAddress?: ShippingAddress;
+  billingAddress?: ShippingAddress;
+  paymentMethod?: string;
+  paymentDetails?: any;
   notes?: string;
 }
 
@@ -173,6 +176,8 @@ export interface MarketplaceOrder {
   createdAt: string;
   updatedAt?: string;
   shippingAddress?: ShippingAddress;
+  billingAddress?: ShippingAddress;
+  paymentDetails?: any;
   trackingInfo?: TrackingInfo;
   events?: OrderEvent[];
   notes?: string;

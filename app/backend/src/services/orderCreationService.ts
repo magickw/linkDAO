@@ -21,6 +21,16 @@ export interface OrderCreationRequest {
     country: string;
     phoneNumber?: string;
   };
+  billingAddress?: {
+    fullName: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    phoneNumber?: string;
+  };
   paymentMethod: 'crypto' | 'fiat';
   paymentDetails?: {
     // For crypto payments
@@ -140,7 +150,11 @@ export class OrderCreationService {
         orderTotals.tax.toString(),
         orderTotals.shippingCost.toString(),
         orderTotals.platformFee.toString(),
-        orderTotals.taxBreakdown
+        orderTotals.taxBreakdown,
+        request.shippingAddress,
+        request.billingAddress || request.shippingAddress, // Fallback to shipping if billing not provided
+        request.paymentMethod,
+        request.paymentDetails
       );
 
       // 6. Send notifications

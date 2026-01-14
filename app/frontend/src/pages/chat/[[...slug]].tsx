@@ -168,7 +168,11 @@ export default function ChatPage() {
     const profile = getParticipantProfile(participantAddress);
     const cid = profile?.avatarCid || profile?.profileCid;
     if (cid) {
-      // Use IPFS gateway to resolve the CID
+      // Check if it's already a full URL (e.g. Cloudinary)
+      if (cid.startsWith('http')) {
+        return cid;
+      }
+      // Otherwise treat as IPFS CID
       return `https://ipfs.io/ipfs/${cid}`;
     }
     return null;

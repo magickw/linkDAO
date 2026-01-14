@@ -2,7 +2,12 @@ import { getPublicClient, getWalletClient, getChainId } from '@wagmi/core'
 import { config } from '@/lib/wagmi'
 import { ethers } from 'ethers'
 import { getChainRpcUrl } from '@/lib/wagmi'
-import { hasInjectedProvider, getInjectedProvider } from '@/utils/walletConnector'
+import { hasInjectedProvider, getInjectedProvider, listenForEIP6963Providers } from '@/utils/walletConnector'
+
+// Initialize EIP-6963 listener
+if (typeof window !== 'undefined') {
+  listenForEIP6963Providers();
+}
 
 // Provider creation state to prevent infinite retries
 let providerCreationAttempts = 0;
@@ -54,7 +59,7 @@ export function wrapProvider(provider: any): any {
     if (obj === null || typeof obj !== 'object') {
       return obj;
     }
-    
+
     if (typeof obj === 'bigint') {
       return obj.toString();
     }
@@ -204,7 +209,7 @@ export async function getProvider() {
 
   // Start new provider creation
   providerCreationAttempts++;
-  
+
   providerPromise = (async () => {
     try {
       console.log('Getting provider...');
@@ -213,7 +218,7 @@ export async function getProvider() {
       if (!config || !config.connectors || config.connectors.length === 0) {
         console.warn('Wagmi config not properly initialized, skipping getPublicClient');
       } else {
-        let client = null;
+        let client: any = null;
         try {
           client = getPublicClient(config);
         } catch (e) {
@@ -274,14 +279,14 @@ export async function getProvider() {
         try {
           const chainId = envChainId ? parseInt(envChainId, 10) : 11155111;
           console.log('Creating JsonRpcProvider with RPC:', envRpc, 'Chain ID:', chainId);
-          
+
           // Correct way to initialize JsonRpcProvider in ethers v6 with static network
           const network = ethers.Network.from(chainId);
           const provider = new ethers.JsonRpcProvider(envRpc, network, {
-            staticNetwork: network, 
-            polling: false 
+            staticNetwork: network,
+            polling: false
           });
-          
+
           cachedProvider = provider;
           providerCreationAttempts = 0;
           return provider;
@@ -399,7 +404,7 @@ export async function getSigner() {
           }
         } catch (e: any) {
           console.warn('Failed to create signer from injected provider:', e);
-          
+
           // If it's a frozen object error, try viem instead
           if (e?.message?.includes('read only property') || e?.message?.includes('requestId')) {
             console.log('Trying viem as fallback for frozen object issue...');
@@ -411,14 +416,14 @@ export async function getSigner() {
                 return ethersSigner;
               }
             }
-            
+
             // If viem also fails, try direct JSON-RPC
             console.log('Trying direct JSON-RPC as final fallback...');
             const directSigner = await getDirectJsonRpcSigner();
             if (directSigner) {
               return directSigner;
             }
-            
+
             // All methods failed - this is a MetaMask bug
             throw new Error('Wallet connection failed due to a known MetaMask issue where request objects are frozen. Please try one of these solutions:\n\n1. Update MetaMask to the latest version\n2. Use a different wallet (Coinbase Wallet, WalletConnect, RainbowKit)\n3. Use a different browser (Firefox, Safari)\n4. Disable MetaMask and enable it again\n\nThis is a MetaMask bug, not an issue with this application.');
           }
@@ -437,7 +442,7 @@ export async function getSigner() {
         return signer;
       } catch (e: any) {
         console.warn('Last resort signer creation failed:', e);
-        
+
         // Try viem as fallback
         if (e?.message?.includes('read only property') || e?.message?.includes('requestId')) {
           console.log('Trying viem as fallback for frozen object issue...');
@@ -449,14 +454,14 @@ export async function getSigner() {
               return ethersSigner;
             }
           }
-          
+
           // If viem also fails, try direct JSON-RPC
           console.log('Trying direct JSON-RPC as final fallback...');
           const directSigner = await getDirectJsonRpcSigner();
           if (directSigner) {
             return directSigner;
           }
-          
+
           // All methods failed
           throw new Error('Wallet connection failed due to a known MetaMask issue where request objects are frozen. Please try one of these solutions:\n\n1. Update MetaMask to the latest version\n2. Use a different wallet (Coinbase Wallet, WalletConnect, RainbowKit)\n3. Use a different browser (Firefox, Safari)\n4. Disable MetaMask and enable it again\n\nThis is a MetaMask bug, not an issue with this application.');
         }
@@ -467,12 +472,12 @@ export async function getSigner() {
     return null;
   } catch (error) {
     console.error('Error getting signer:', error);
-    
+
     // Re-throw MetaMask-related errors with clearer message
     if (error instanceof Error && (error.message.includes('read only property') || error.message.includes('requestId'))) {
       throw error;
     }
-    
+
     return null;
   }
 }
@@ -610,7 +615,7 @@ export async function getDirectJsonRpcSigner(): Promise<ethers.Signer | null> {
             method: 'eth_feeHistory',
             params: [4, 'latest', []]
           });
-          
+
           return {
             gasPrice: gasPrice ? ethers.toBigInt(gasPrice[0]) : undefined,
             maxFeePerGas: maxFeePerGas ? ethers.toBigInt(maxFeePerGas[0]) : undefined,
@@ -641,28 +646,28 @@ export async function getDirectJsonRpcSigner(): Promise<ethers.Signer | null> {
           method: 'eth_sendTransaction',
           params: [tx]
         });
-        
+
         // Wait for confirmation
-        let receipt = null;
+        let receipt: any = null;
         let attempts = 0;
         const maxAttempts = 60; // Wait up to 60 seconds
-        
+
         while (!receipt && attempts < maxAttempts) {
           receipt = await wrappedProvider.request({
             method: 'eth_getTransactionReceipt',
             params: [hash]
           });
-          
+
           if (!receipt) {
             await new Promise(resolve => setTimeout(resolve, 1000));
             attempts++;
           }
         }
-        
+
         if (!receipt) {
           throw new Error('Transaction confirmation timeout');
         }
-        
+
         return {
           hash: receipt.hash,
           blockNumber: parseInt(receipt.blockNumber, 16),
@@ -722,11 +727,11 @@ export async function getViemSigner() {
     // viem handles frozen objects better than ethers.js
     const { createWalletClient, custom } = await import('viem');
     const { http } = await import('viem');
-    
+
     try {
       // Wrap the provider to ensure it's safe even for viem
       const wrappedProvider = wrapProvider(injectedProvider);
-      
+
       const walletClient = createWalletClient({
         transport: custom(wrappedProvider),
       });
@@ -768,7 +773,7 @@ export async function viemToEthersSigner(viemWalletClient: any): Promise<ethers.
     // Wrap the provider and create an ethers.js signer
     const wrappedProvider = wrapProvider(injectedProvider);
     const provider = new ethers.BrowserProvider(wrappedProvider as any, "any");
-    
+
     // Get the signer for the viem wallet's account
     const accounts = await viemWalletClient.getAddresses();
     if (accounts.length === 0) {

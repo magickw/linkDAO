@@ -1571,7 +1571,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
         )}
         {/* Attachment Modal */}
         {showAttachmentModal && (
-          <div className="fixed inset-0 bg-black/70 z-30 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 w-full max-w-md">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Share Content</h3>
               <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
@@ -1672,6 +1672,48 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                       onClick={() => selectedChannel && shareTransaction('0x123...abc', 'success')}
                     >
                       Share Transaction
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* File Form */}
+              {attachmentType === 'file' && (
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Share File</h4>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="File Name"
+                      className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                    <input
+                      type="text"
+                      placeholder="File URL"
+                      className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                    <button
+                      className={`w-full bg-gray-500 dark:bg-gray-600 hover:bg-gray-600 dark:hover:bg-gray-500 text-white text-sm py-2 rounded ${touchTargetClasses}`}
+                      onClick={() => {
+                        const inputs = document.querySelectorAll('.mt-4.pt-4 input');
+                        const fileName = (inputs[2] as HTMLInputElement)?.value || '';
+                        const fileUrl = (inputs[3] as HTMLInputElement)?.value || '';
+                        
+                        if (fileUrl) {
+                          const attachment = {
+                            type: 'file' as const,
+                            url: fileUrl,
+                            name: fileName || 'Shared File',
+                          };
+                          console.log('File shared:', attachment);
+                          setShowAttachmentModal(false);
+                          setAttachmentType(null);
+                        } else {
+                          alert('Please enter a file URL');
+                        }
+                      }}
+                    >
+                      Share File
                     </button>
                   </div>
                 </div>

@@ -98,8 +98,8 @@ const OrderDetailPage: React.FC = () => {
         unitPrice: serviceOrder.items[0]?.unitPrice || serviceOrder.total,
         totalPrice: serviceOrder.items[0]?.totalPrice || serviceOrder.total
       },
-      shippingAddress: undefined,
-      billingAddress: undefined,
+      shippingAddress: serviceOrder.shippingAddress,
+      billingAddress: serviceOrder.billingAddress,
       trackingNumber: serviceOrder.trackingNumber,
       trackingCarrier: undefined,
       estimatedDelivery: serviceOrder.estimatedDelivery?.toISOString(),
@@ -133,7 +133,7 @@ const OrderDetailPage: React.FC = () => {
           // Convert the service Order type to the types/order.ts Order type
           const convertedOrder = convertServiceOrderToTypesOrder(apiOrder);
           setOrder(convertedOrder);
-            
+
           // Fetch the timeline using getOrderTrackingStatus
           try {
             const trackingStatus = await orderService.getOrderTrackingStatus(orderId);
@@ -287,11 +287,21 @@ const OrderDetailPage: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 bg-white/5 rounded-lg space-y-2">
-                  <h3 className="text-sm font-semibold text-white/80 uppercase tracking-wide">Amount paid</h3>
+                  <h3 className="text-sm font-semibold text-white/80 uppercase tracking-wide">Payment</h3>
                   <p className="text-2xl font-semibold text-white">{totalPaid}</p>
-                  {order.paymentMethod && (
-                    <p className="text-sm text-white/60">Method: {order.paymentMethod}</p>
-                  )}
+                  <div className="text-sm text-white/60 space-y-1">
+                    <p>Method: {order.paymentMethod?.toUpperCase()}</p>
+                    {order.paymentDetails && (
+                      <div className="text-xs text-white/50 pt-1 border-t border-white/10 mt-1">
+                        {order.paymentDetails.tokenSymbol && <p>Token: {order.paymentDetails.tokenSymbol}</p>}
+                        {order.paymentDetails.transactionHash && (
+                          <p title={order.paymentDetails.transactionHash}>
+                            Tx: {order.paymentDetails.transactionHash.slice(0, 6)}...{order.paymentDetails.transactionHash.slice(-4)}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="p-4 bg-white/5 rounded-lg space-y-2">
@@ -307,6 +317,26 @@ const OrderDetailPage: React.FC = () => {
                     </div>
                   ) : (
                     <p className="text-sm text-white/60">Digital delivery</p>
+                  )}
+                </div>
+
+                <div className="p-4 bg-white/5 rounded-lg space-y-2">
+                  <h3 className="text-sm font-semibold text-white/80 uppercase tracking-wide">Billing</h3>
+                  {order.billingAddress ? (
+                    <div className="text-sm text-white/70 space-y-1">
+                      <p>{order.billingAddress.name}</p>
+                      <p>{order.billingAddress.street}</p>
+                      <p>
+                        {order.billingAddress.city}, {order.billingAddress.state} {order.billingAddress.postalCode}
+                      </p>
+                      <p>{order.billingAddress.country}</p>
+                    </div>
+                  ) : order.shippingAddress ? (
+                    <div className="text-sm text-white/60">
+                      <p>Same as shipping address</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-white/60">Not provided</p>
                   )}
                 </div>
               </div>
@@ -360,7 +390,7 @@ const OrderDetailPage: React.FC = () => {
                       addToast('Connect your wallet to export receipts.', 'info');
                       return;
                     }
-                    
+
                     // Create a simple CSV export since exportOrderHistory doesn't exist
                     const csvContent = [
                       ['Order ID', 'Status', 'Amount', 'Currency', 'Created At', 'Tracking Number'],
@@ -373,7 +403,7 @@ const OrderDetailPage: React.FC = () => {
                         order.trackingNumber || ''
                       ]
                     ].map(row => row.join(',')).join('\n');
-                    
+
                     const blob = new Blob([csvContent], { type: 'text/csv' });
                     const url = window.URL.createObjectURL(blob);
                     const link = document.createElement('a');

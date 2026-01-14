@@ -68,7 +68,17 @@ export class OrderService {
         sellerUser.id,
         input.amount,
         input.paymentToken,
-        escrowId
+        escrowId,
+        undefined, // variantId
+        undefined, // orderId
+        '0', // taxAmount
+        '0', // shippingCost
+        '0', // platformFee
+        [], // taxBreakdown
+        input.shippingAddress,
+        input.billingAddress || input.shippingAddress,
+        input.paymentMethod || 'crypto',
+        input.paymentDetails
       );
 
       if (!dbOrder) {
@@ -222,7 +232,6 @@ export class OrderService {
         serviceStarted,
         serviceStartedAt,
         isServiceOrder,
-        shippedAt,
         trackingNumber,
         carrier
       } = metadata || {};
@@ -243,7 +252,6 @@ export class OrderService {
         serviceStarted,
         serviceStartedAt,
         isServiceOrder,
-        shippedAt,
         trackingNumber,
         carrier
       });
@@ -760,7 +768,9 @@ export class OrderService {
       currency: dbOrder.paymentToken || 'USD',
       status: (dbOrder.status?.toUpperCase() as OrderStatus) || OrderStatus.CREATED,
       createdAt: dbOrder.createdAt?.toISOString() || new Date().toISOString(),
-      shippingAddress: this.formatShippingAddress(dbOrder),
+      shippingAddress: this.formatAddress(dbOrder.shippingAddress) || this.formatShippingAddress(dbOrder), // Try JSON first, fallback to columns
+      billingAddress: this.formatAddress(dbOrder.billingAddress),
+      paymentDetails: typeof dbOrder.paymentDetails === 'string' ? JSON.parse(dbOrder.paymentDetails) : dbOrder.paymentDetails,
       items,
       product: product ? {
         id: product.id?.toString() || '',
@@ -790,6 +800,24 @@ export class OrderService {
       buyerConfirmedAt: dbOrder.buyerConfirmedAt?.toISOString(),
       serviceNotes: dbOrder.serviceNotes
     };
+  }
+
+  private formatAddress(addressData: any) {
+    if (!addressData) return undefined;
+    try {
+      const address = typeof addressData === 'string' ? JSON.parse(addressData) : addressData;
+      return {
+        name: address.fullName || address.name || '',
+        street: address.addressLine1 || address.street || '',
+        city: address.city || '',
+        state: address.state || '',
+        postalCode: address.postalCode || '',
+        country: address.country || '',
+        phone: address.phoneNumber || address.phone
+      };
+    } catch (e) {
+      return undefined;
+    }
   }
 
   private formatShippingAddress(dbOrder: any) {
