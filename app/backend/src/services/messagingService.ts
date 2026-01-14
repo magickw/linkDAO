@@ -139,11 +139,11 @@ export class MessagingService {
                 'id', m.id,
                 'content', m.content,
                 'senderAddress', m.sender_address,
-                'timestamp', m.timestamp
+                'timestamp', m.sent_at
               )
               FROM chat_messages m
               WHERE m.conversation_id = ${conversations.id}
-              ORDER BY m.timestamp DESC
+              ORDER BY m.sent_at DESC
               LIMIT 1)
             `
           })

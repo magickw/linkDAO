@@ -58,7 +58,7 @@ async function main() {
       if (hasConv && hasChat) {
         // left join and select a few fields
         const joined = await sql.unsafe(
-          `SELECT c.id AS conversation_id, c.participants, c.unread_count, m.id AS message_id, m.content, m.timestamp AS message_timestamp
+          `SELECT c.id AS conversation_id, c.participants, c.unread_count, m.id AS message_id, m.content, m.sent_at AS message_timestamp
            FROM public.conversations c
            LEFT JOIN public.chat_messages m ON CAST(m.conversation_id AS text) = CAST(c.id AS text)
            ORDER BY c.created_at DESC NULLS LAST

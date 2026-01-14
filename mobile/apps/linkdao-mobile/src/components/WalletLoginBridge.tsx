@@ -33,6 +33,13 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
   const isMountedRef = useRef(true);
 
   useEffect(() => {
+    // In development mode, skip wallet login bridge entirely
+    // Mock auth is handled in _layout.tsx
+    if (__DEV__) {
+      console.log('🧪 WalletLoginBridge: Disabled in development mode');
+      return;
+    }
+
     isMountedRef.current = true;
 
     console.log('WalletLoginBridge: useEffect triggered', {
@@ -74,37 +81,37 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       Promise.resolve().then(() => {
         return authService.authenticateWallet(walletAddress, connector, 'connected');
       })
-      .then(result => {
-        if (!isMountedRef.current) {
-          console.log('WalletLoginBridge: Component unmounted, ignoring result');
-          return;
-        }
-        if (result.success && result.token && result.user) {
-          lastAuthenticatedAddress = walletAddress;
-          console.log(`✅ Login successful for ${walletAddress}`);
-          setUser(result.user);
-          setToken(result.token);
-          if (onLoginSuccess) {
-            onLoginSuccess({ address: walletAddress, user: result.user });
+        .then(result => {
+          if (!isMountedRef.current) {
+            console.log('WalletLoginBridge: Component unmounted, ignoring result');
+            return;
           }
-        } else {
-          console.error(`❌ Login failed for ${walletAddress}:`, result.error);
+          if (result.success && result.token && result.user) {
+            lastAuthenticatedAddress = walletAddress;
+            console.log(`✅ Login successful for ${walletAddress}`);
+            setUser(result.user);
+            setToken(result.token);
+            if (onLoginSuccess) {
+              onLoginSuccess({ address: walletAddress, user: result.user });
+            }
+          } else {
+            console.error(`❌ Login failed for ${walletAddress}:`, result.error);
+            if (onLoginError) {
+              onLoginError(result.error || 'Authentication failed');
+            }
+          }
+        })
+        .catch((error: any) => {
+          if (!isMountedRef.current) {
+            console.log('WalletLoginBridge: Component unmounted, ignoring error');
+            return;
+          }
+          const errorMessage = error?.message || 'An unknown error occurred';
+          console.error('💥 Login threw an exception:', errorMessage);
           if (onLoginError) {
-            onLoginError(result.error || 'Authentication failed');
+            onLoginError(errorMessage);
           }
-        }
-      })
-      .catch((error: any) => {
-        if (!isMountedRef.current) {
-          console.log('WalletLoginBridge: Component unmounted, ignoring error');
-          return;
-        }
-        const errorMessage = error?.message || 'An unknown error occurred';
-        console.error('💥 Login threw an exception:', errorMessage);
-        if (onLoginError) {
-          onLoginError(errorMessage);
-        }
-      });
+        });
     };
 
     // Use setTimeout(0) to defer execution to next tick

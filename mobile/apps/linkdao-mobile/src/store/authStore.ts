@@ -52,6 +52,8 @@ export const useAuthStore = create<AuthState>()(
           displayName: 'Test User',
           email: 'test@linkdao.io',
           role: 'user',
+          tier: 'free',
+          createdAt: new Date().toISOString(),
         };
         set({
           user: mockUser,

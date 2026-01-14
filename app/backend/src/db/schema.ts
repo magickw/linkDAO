@@ -3802,7 +3802,7 @@ export const chatMessages = pgTable("chat_messages", {
   isPinned: boolean("is_pinned").default(false),
   pinnedBy: varchar("pinned_by", { length: 66 }),
   pinnedAt: timestamp("pinned_at"),
-  sentAt: timestamp("timestamp").defaultNow(),
+  sentAt: timestamp("sent_at").defaultNow(),
   editedAt: timestamp("edited_at"),
   deletedAt: timestamp("deleted_at"),
   // Phase 5 additions

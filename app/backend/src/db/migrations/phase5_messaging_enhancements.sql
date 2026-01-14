@@ -629,13 +629,13 @@ BEGIN
         cm.conversation_id,
         cm.content,
         cm.sender_address,
-        cm.timestamp,
+        cm.sent_at as timestamp,
         ts_rank(cm.search_vector, plainto_tsquery('english', p_query)) as rank
     FROM chat_messages cm
     WHERE cm.search_vector @@ plainto_tsquery('english', p_query)
     AND cm.deleted_at IS NULL
     AND (p_conversation_id IS NULL OR cm.conversation_id = p_conversation_id)
-    ORDER BY rank DESC, cm.timestamp DESC
+    ORDER BY rank DESC, cm.sent_at DESC
     LIMIT p_limit
     OFFSET p_offset;
 END;

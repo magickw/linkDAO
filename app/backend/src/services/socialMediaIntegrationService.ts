@@ -151,6 +151,15 @@ export class SocialMediaIntegrationService {
         // Adapt content for platform
         const adaptedContent = this.adaptContentForPlatform(content, platform);
 
+        safeLogger.info(`Posting to ${platform}`, {
+          contentId,
+          userId,
+          platform,
+          originalContentLength: content?.length || 0,
+          adaptedContentLength: adaptedContent.length,
+          mediaCount: resolvedMediaUrls?.length || 0,
+        });
+
         // Get OAuth provider and post
         const provider = getOAuthProvider(platform);
         const socialContent: SocialMediaContent = {
@@ -240,18 +249,44 @@ export class SocialMediaIntegrationService {
   }
 
   /**
+   * Strip HTML tags from content
+   */
+  private stripHtml(html: string): string {
+    if (!html) return '';
+    
+    // Remove HTML tags
+    let text = html.replace(/<[^>]*>/g, '');
+    
+    // Replace HTML entities
+    text = text.replace(/&nbsp;/g, ' ')
+               .replace(/&amp;/g, '&')
+               .replace(/&lt;/g, '<')
+               .replace(/&gt;/g, '>')
+               .replace(/&quot;/g, '"')
+               .replace(/&#39;/g, "'");
+    
+    // Remove extra whitespace
+    text = text.replace(/\s+/g, ' ').trim();
+    
+    return text;
+  }
+
+  /**
    * Adapt content for a specific platform's requirements
    */
   adaptContentForPlatform(content: string, platform: SocialPlatform): string {
+    // Strip HTML tags first
+    const plainText = this.stripHtml(content);
+    
     const limit = PLATFORM_CHAR_LIMITS[platform];
 
     // If content fits, return as-is
-    if (content.length <= limit) {
-      return content;
+    if (plainText.length <= limit) {
+      return plainText;
     }
 
     // Truncate with ellipsis, leaving room for "..."
-    return content.substring(0, limit - 3) + '...';
+    return plainText.substring(0, limit - 3) + '...';
   }
 
   /**

@@ -969,6 +969,7 @@ function CommunityPostCardEnhanced({
                     contentCid: post.contentCid,
                     shareId: post.shareId,
                     author: post.author,
+                    walletAddress: post.walletAddress, // Pass walletAddress explicitly
                     authorProfile: post.authorProfile,
                     communityId: community.id,
                     communityName: community.displayName || community.name,

@@ -49,6 +49,12 @@ export default function RootLayout() {
 
     initWalletService();
 
+    // Enable mock authentication in development mode
+    if (__DEV__ && !isAuthenticated) {
+      console.log('🧪 Development mode: Enabling mock authentication');
+      useAuthStore.getState().setMockAuth();
+    }
+
     // Set up deep link listener for OAuth callbacks
     const handleDeepLink = async (event: { url: string }) => {
       const { path, queryParams } = Linking.parse(event.url);
