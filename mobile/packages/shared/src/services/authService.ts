@@ -139,13 +139,24 @@ class AuthService {
       
       console.log('📡 Backend response:', JSON.stringify(response));
 
-      if (response.success && response.data) {
-        console.log('✅ Got nonce from backend:', response.data.nonce);
-        console.log('✅ Got message from backend:', response.data.message);
-        return {
-          nonce: response.data.nonce,
-          message: response.data.message
-        };
+      // Handle double-wrapped response structure
+      let nonce: string | undefined;
+      let message: string | undefined;
+      
+      if (response.data && response.data.data) {
+        // Backend is returning { success: true, data: { success: true, data: { nonce, message } } }
+        nonce = response.data.data.nonce;
+        message = response.data.data.message;
+      } else if (response.data) {
+        // Backend is returning { success: true, data: { nonce, message } }
+        nonce = response.data.nonce;
+        message = response.data.message;
+      }
+
+      if (nonce && message) {
+        console.log('✅ Got nonce from backend:', nonce);
+        console.log('✅ Got message from backend:', message);
+        return { nonce, message };
       }
 
       console.warn('⚠️ Backend response not successful, using fallback');
