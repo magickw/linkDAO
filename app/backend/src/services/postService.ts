@@ -10,6 +10,7 @@ import { aiContentModerationService } from './aiContentModerationService';
 import { InputSanitizer, SANITIZATION_CONFIGS } from '../utils/sanitizer';
 import { socialMediaIntegrationService } from './socialMediaIntegrationService';
 import { SocialPlatform, isSupportedPlatform } from './oauth';
+import { generateShareId } from '../utils/shareIdGenerator';
 
 // Use the singleton instance instead of creating a new one
 // const databaseService = new DatabaseService();
@@ -228,6 +229,7 @@ export class PostService {
         author: input.author,
         parentId: input.parentId || null,
         contentCid,
+        content: dbPost.content, // Include content for immediate local update
         shareId: dbPost.shareId || '', // Include shareId from database
         mediaCids,
         tags: input.tags || [],

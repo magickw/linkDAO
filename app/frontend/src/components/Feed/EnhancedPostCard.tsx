@@ -380,11 +380,15 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
   };
 
   const copyToClipboard = async () => {
+    const shareId = post.shareId || post.id;
     const url = post.communityId
-      ? `${window.location.origin}/communities/${post.communityId}/posts/${post.id}`
-      : `${window.location.origin}/posts/${post.id}`;
+      ? `${window.location.origin}/cp/${shareId}`
+      : `${window.location.origin}/p/${shareId}`;
     await navigator.clipboard.writeText(url);
-    handleShare();
+    safeAddToast('Share link copied to clipboard!', 'success');
+    if (onShare) {
+      await onShare(post.id);
+    }
   };
 
   return (
