@@ -1144,8 +1144,12 @@ class CartService {
               token = sessionData.token || sessionData.accessToken || '';
             }
           } catch (error) {
-            console.warn('Failed to parse linkdao_session_data in listener, clearing storage');
-            localStorage.removeItem('linkdao_session_data');
+            console.warn('Failed to parse linkdao_session_data in listener:', error, 'Value:', sessionDataStr);
+            // Only clear if it's definitely not a transient issue (e.g. empty string is handled by if check)
+            if (sessionDataStr && (sessionDataStr === 'undefined' || sessionDataStr === '[object Object]' || !sessionDataStr.startsWith('{'))) {
+               console.warn('Clearing definitely corrupted storage');
+               localStorage.removeItem('linkdao_session_data');
+            }
           }
         }
 

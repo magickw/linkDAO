@@ -120,9 +120,13 @@ export default function WalletConnectScreen() {
           {
             text: 'Continue',
             onPress: () => {
-              router.setParams({
-                walletAddress: address,
-                connector: providerId
+              // Navigate back to auth screen with wallet address
+              router.replace({
+                pathname: '/auth',
+                params: {
+                  walletAddress: address,
+                  connector: providerId
+                }
               });
             },
           },

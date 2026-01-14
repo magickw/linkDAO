@@ -9,6 +9,14 @@ import { isSupportedPlatform } from '../services/oauth';
 import { safeLogger } from '../utils/safeLogger';
 import { apiResponse } from '../utils/apiResponse';
 
+// Helper to get the primary frontend URL (first one from comma-separated list)
+function getPrimaryFrontendUrl(): string {
+  const frontendUrls = process.env.FRONTEND_URL || 'http://localhost:3000';
+  // FRONTEND_URL may contain multiple comma-separated URLs for CORS
+  // Extract just the first one for redirects
+  return frontendUrls.split(',')[0].trim();
+}
+
 class SocialMediaOAuthController {
   /**
    * Initiate OAuth flow for a platform
@@ -57,7 +65,7 @@ class SocialMediaOAuthController {
       if (error) {
         safeLogger.warn('OAuth provider error:', { platform, error, error_description });
         // Redirect to frontend with error
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const frontendUrl = getPrimaryFrontendUrl();
         res.redirect(`${frontendUrl}/settings/connections?error=${encodeURIComponent(String(error_description || error))}&platform=${platform}`);
         return;
       }
@@ -78,13 +86,13 @@ class SocialMediaOAuthController {
       );
 
       // Redirect to frontend with success
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const frontendUrl = getPrimaryFrontendUrl();
       res.redirect(`${frontendUrl}/settings/connections?success=true&platform=${platform}&username=${encodeURIComponent(connection.platformUsername || connection.platformDisplayName || '')}`);
     } catch (error) {
       safeLogger.error('OAuth callback error:', error);
 
       // Redirect to frontend with error
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const frontendUrl = getPrimaryFrontendUrl();
       const errorMessage = error instanceof Error ? error.message : 'OAuth callback failed';
       res.redirect(`${frontendUrl}/settings/connections?error=${encodeURIComponent(errorMessage)}&platform=${req.params.platform}`);
     }

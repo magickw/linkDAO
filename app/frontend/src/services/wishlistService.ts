@@ -89,11 +89,13 @@ class WishlistService {
                     const sessionData = JSON.parse(sessionDataStr);
                     token = sessionData.token || sessionData.accessToken || '';
                   }
-                } catch (error) {
-                  console.warn('Failed to parse linkdao_session_data in listener, clearing storage');
-                  localStorage.removeItem('linkdao_session_data');
-                }
-              }
+                      } catch (error) {
+                        console.warn('Failed to parse linkdao_session_data in listener:', error, 'Value:', sessionDataStr);
+                        // Only clear if it's definitely corrupted
+                        if (sessionDataStr && (sessionDataStr === 'undefined' || sessionDataStr === '[object Object]' || !sessionDataStr.startsWith('{'))) {
+                           localStorage.removeItem('linkdao_session_data');
+                        }
+                      }              }
       this.isAuthenticated = !!token;
       this.authToken = token;
     }
