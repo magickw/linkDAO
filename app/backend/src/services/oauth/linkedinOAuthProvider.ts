@@ -21,9 +21,10 @@ const getLinkedInScopes = (): string[] => {
   if (envScopes) {
     return envScopes.split(/[\s,]+/).filter(s => s.length > 0);
   }
-  // Default to minimal scope that should work with most apps
+  // Default to OpenID Connect scopes required for authentication
+  // plus w_member_social for posting content
   // Users can add more via LINKEDIN_SCOPES env var
-  return ['profile', 'w_member_social'];
+  return ['openid', 'profile', 'email', 'w_member_social'];
 };
 
 export class LinkedInOAuthProvider extends BaseOAuthProvider {
