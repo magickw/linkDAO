@@ -195,6 +195,8 @@ class WalletService {
       }
 
       console.log('🔐 Signing message with', this.activeConnection.provider, ':', message);
+      console.log('🔐 Message type:', typeof message);
+      console.log('🔐 Message length:', message?.length);
 
       // For development, use ethers.js to sign the message
       // In production, this would interact with the actual wallet

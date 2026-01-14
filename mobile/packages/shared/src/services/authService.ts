@@ -131,23 +131,30 @@ class AuthService {
    */
   private async getNonce(address: string): Promise<{ nonce: string; message: string }> {
     try {
+      console.log('📡 Requesting nonce from backend for address:', address);
       const response = await apiClient.post<{ nonce: string; message }>(
         '/api/auth/nonce',
         { walletAddress: address }
       );
+      
+      console.log('📡 Backend response:', JSON.stringify(response));
 
       if (response.success && response.data) {
+        console.log('✅ Got nonce from backend:', response.data.nonce);
+        console.log('✅ Got message from backend:', response.data.message);
         return {
           nonce: response.data.nonce,
           message: response.data.message
         };
       }
 
+      console.warn('⚠️ Backend response not successful, using fallback');
       // Fallback nonce generation
       const fallbackNonce = `fallback_nonce_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const fallbackMessage = `Sign this message to authenticate with LinkDAO: ${Date.now()}`;
       return { nonce: fallbackNonce, message: fallbackMessage };
     } catch (error) {
+      console.error('❌ Failed to get nonce from backend:', error);
       // Fallback nonce generation
       const fallbackNonce = `fallback_nonce_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const fallbackMessage = `Sign this message to authenticate with LinkDAO: ${Date.now()}`;

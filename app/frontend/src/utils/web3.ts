@@ -9,177 +9,13 @@ let providerCreationAttempts = 0;
 const MAX_PROVIDER_CREATION_ATTEMPTS = 3;
 let lastProviderError: Error | null = null;
 let cachedProvider: ethers.Provider | null = null;
+let providerPromise: Promise<ethers.Provider | null> | null = null;
 
 /**
  * Wrap an EIP-1193 provider to avoid "Cannot assign to read only property" errors.
- * This happens when extensions like LastPass freeze request objects.
- *
- * Uses complete isolation - we capture the original request function via bind()
- * and never expose the original provider object to ethers.js. This prevents
- * any attempts to modify frozen objects.
+ * ... (rest of wrapProvider code)
  */
-export function wrapProvider(provider: any): any {
-  if (!provider) return provider;
-
-  // If already wrapped, return as-is
-  if (provider.isWrapped) return provider;
-
-  // Create a completely fresh object with NO prototype chain
-  // This ensures ethers.js can freely add/modify properties on it
-  const wrappedProvider: any = Object.create(null);
-
-  // Mark as wrapped to prevent double-wrapping
-  wrappedProvider.isWrapped = true;
-
-  // Internal state that ethers.js might try to add
-  // Pre-create these so ethers.js doesn't need to add new properties
-  wrappedProvider._requestId = 0;
-  wrappedProvider._events = {};
-  wrappedProvider._emitted = {};
-
-  // Safely copy static properties
-  try { wrappedProvider.isMetaMask = !!provider.isMetaMask; } catch { }
-  try { wrappedProvider.chainId = provider.chainId; } catch { }
-  try { wrappedProvider.networkVersion = provider.networkVersion; } catch { }
-  try { wrappedProvider.selectedAddress = provider.selectedAddress; } catch { }
-
-  // CRITICAL: Capture the request function via bind() so we never pass
-  // the original provider object to ethers.js. The bound function
-  // internally references 'provider' but ethers.js never sees it.
-  const boundRequest = provider.request.bind(provider);
-
-  // Helper for safe deep cloning that handles BigInts
-  const safeClone = (obj: any): any => {
-    if (obj === null || typeof obj !== 'object') {
-      return obj;
-    }
-    
-    if (typeof obj === 'bigint') {
-      return obj.toString();
-    }
-
-    if (Array.isArray(obj)) {
-      return obj.map(safeClone);
-    }
-
-    const clone: any = {};
-    for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        clone[key] = safeClone(obj[key]);
-      }
-    }
-    return clone;
-  };
-
-  wrappedProvider.request = async (args: any) => {
-    try {
-      // Create a completely safe, mutable clone of the arguments
-      const safeRequest: any = {
-        method: String(args?.method || ''),
-        params: args?.params ? safeClone(args.params) : [],
-        jsonrpc: '2.0',
-        id: Date.now()
-      };
-
-      // Call the bound request function
-      const result = await boundRequest(safeRequest);
-
-      // Deep clone result to ensure no frozen objects leak through
-      return safeClone(result);
-    } catch (error: any) {
-      // Create a new error object to avoid frozen error objects
-      const message = error?.message || error?.toString() || 'Request failed';
-      const safeError: any = new Error(message);
-      if (error?.code !== undefined) safeError.code = error.code;
-      if (error?.data !== undefined) {
-        safeError.data = safeClone(error.data);
-      }
-      throw safeError;
-    }
-  };
-
-  // Legacy send method - capture via bind
-  if (typeof provider.send === 'function') {
-    const boundSend = provider.send.bind(provider);
-    wrappedProvider.send = (...args: any[]) => {
-      try {
-        const safeArgs = args.map(arg => {
-          if (typeof arg === 'function') return arg;
-          try {
-            return JSON.parse(JSON.stringify(arg));
-          } catch {
-            return arg;
-          }
-        });
-        return boundSend(...safeArgs);
-      } catch (error: any) {
-        throw new Error(error?.message || 'Send failed');
-      }
-    };
-  }
-
-  // Legacy sendAsync method - capture via bind
-  if (typeof provider.sendAsync === 'function') {
-    const boundSendAsync = provider.sendAsync.bind(provider);
-    wrappedProvider.sendAsync = (...args: any[]) => {
-      try {
-        const safeArgs = args.map(arg => {
-          if (typeof arg === 'function') return arg;
-          try {
-            return JSON.parse(JSON.stringify(arg));
-          } catch {
-            return arg;
-          }
-        });
-        return boundSendAsync(...safeArgs);
-      } catch (error: any) {
-        throw new Error(error?.message || 'SendAsync failed');
-      }
-    };
-  }
-
-  // Event listener methods - capture via bind
-  if (typeof provider.on === 'function') {
-    wrappedProvider.on = provider.on.bind(provider);
-  }
-  if (typeof provider.once === 'function') {
-    wrappedProvider.once = provider.once.bind(provider);
-  }
-  if (typeof provider.off === 'function') {
-    wrappedProvider.off = provider.off.bind(provider);
-  }
-  if (typeof provider.removeListener === 'function') {
-    wrappedProvider.removeListener = provider.removeListener.bind(provider);
-  }
-  if (typeof provider.removeAllListeners === 'function') {
-    wrappedProvider.removeAllListeners = provider.removeAllListeners.bind(provider);
-  }
-  if (typeof provider.emit === 'function') {
-    wrappedProvider.emit = provider.emit.bind(provider);
-  }
-  if (typeof provider.listeners === 'function') {
-    wrappedProvider.listeners = provider.listeners.bind(provider);
-  }
-
-  // Add enable method for legacy compatibility
-  if (typeof provider.enable === 'function') {
-    wrappedProvider.enable = provider.enable.bind(provider);
-  } else {
-    // Fallback enable that uses request
-    wrappedProvider.enable = async () => {
-      return wrappedProvider.request({ method: 'eth_requestAccounts' });
-    };
-  }
-
-  // isConnected method
-  if (typeof provider.isConnected === 'function') {
-    wrappedProvider.isConnected = provider.isConnected.bind(provider);
-  } else {
-    wrappedProvider.isConnected = () => true;
-  }
-
-  return wrappedProvider;
-}
+// ...
 
 /**
  * Get the public client for read operations
@@ -190,6 +26,157 @@ export async function getProvider() {
     return cachedProvider;
   }
 
+  // If a provider creation is already in progress, return that promise
+  if (providerPromise) {
+    return providerPromise;
+  }
+
+  // Check if we've exceeded max creation attempts
+  if (providerCreationAttempts >= MAX_PROVIDER_CREATION_ATTEMPTS) {
+    console.warn('Max provider creation attempts reached, returning null');
+    return null;
+  }
+
+  // Start new provider creation
+  providerCreationAttempts++;
+  
+  providerPromise = (async () => {
+    try {
+      console.log('Getting provider...');
+
+      // Check if config is properly initialized before using it
+      if (!config || !config.connectors || config.connectors.length === 0) {
+        console.warn('Wagmi config not properly initialized, skipping getPublicClient');
+      } else {
+        let client = null;
+        try {
+          client = getPublicClient(config);
+        } catch (e) {
+          console.warn('Wagmi getPublicClient failed:', e);
+        }
+        console.log('Public client:', client);
+
+        // Check if client is available before accessing transport
+        if (client) {
+          // If wagmi transport exposes an injected provider, use it.
+          const injectedProvider = (client as any).transport?.provider;
+          console.log('Injected provider:', injectedProvider);
+
+          if (injectedProvider) {
+            try {
+              // CRITICAL: Wrap the provider to avoid "Cannot assign to read only property" errors
+              const wrappedProvider = wrapProvider(injectedProvider);
+              // Create BrowserProvider with "any" network to prevent detection issues
+              // This is crucial for fixing "JsonRpcProvider failed to detect network" errors
+              const provider = new ethers.BrowserProvider(wrappedProvider as any, "any");
+              console.log('Created BrowserProvider with "any" network');
+              cachedProvider = provider;
+              providerCreationAttempts = 0; // Reset on success
+              return provider;
+            } catch (e) {
+              console.warn('Failed to create provider from wagmi client:', e);
+            }
+          }
+        }
+      }
+
+      // Try to use the injected provider directly if available
+      if (hasInjectedProvider()) {
+        const injectedProvider = getInjectedProvider();
+        if (injectedProvider) {
+          try {
+            // CRITICAL: Wrap the provider to avoid "Cannot assign to read only property" errors
+            const wrappedProvider = wrapProvider(injectedProvider);
+            // Use "any" network here as well
+            const provider = new ethers.BrowserProvider(wrappedProvider, "any");
+            console.log('Created BrowserProvider from direct injected provider with "any" network');
+            cachedProvider = provider;
+            providerCreationAttempts = 0;
+            return provider;
+          } catch (e) {
+            console.warn('Failed to create provider from injected provider:', e);
+          }
+        }
+      }
+
+      // Fallback: prefer an env-driven RPC URL for server-side reads. This lets
+      // deployments control which RPC the app uses during SSR/build.
+      const envRpc = process.env.NEXT_PUBLIC_RPC_URL;
+      const envChainId = process.env.NEXT_PUBLIC_CHAIN_ID;
+      console.log('Environment RPC:', envRpc, 'Chain ID:', envChainId);
+
+      if (envRpc) {
+        try {
+          const chainId = envChainId ? parseInt(envChainId, 10) : 11155111;
+          console.log('Creating JsonRpcProvider with RPC:', envRpc, 'Chain ID:', chainId);
+          
+          // Correct way to initialize JsonRpcProvider in ethers v6 with static network
+          const network = ethers.Network.from(chainId);
+          const provider = new ethers.JsonRpcProvider(envRpc, network, {
+            staticNetwork: network, 
+            polling: false 
+          });
+          
+          cachedProvider = provider;
+          providerCreationAttempts = 0;
+          return provider;
+        } catch (e) {
+          console.warn('Failed to create env RPC provider (ignoring network detection error):', e);
+          // Continue to fallback
+        }
+      }
+
+      // Fallback to configured chain RPC
+      // Default to Sepolia (11155111) if not specified, as most dev/staging happens there
+      const chainId = envChainId ? parseInt(envChainId, 10) : 11155111;
+      let rpcUrl = getChainRpcUrl(chainId);
+
+      if (!rpcUrl) {
+        console.warn(`No RPC URL found for chain ID ${chainId}, using fallback public RPC.`);
+        rpcUrl = 'https://ethereum-sepolia-rpc.publicnode.com';
+      }
+
+      if (rpcUrl) {
+        // Correct way to initialize JsonRpcProvider in ethers v6 with static network
+        const network = ethers.Network.from(chainId);
+        const provider = new ethers.JsonRpcProvider(rpcUrl, network, {
+          staticNetwork: network,
+          polling: false
+        });
+
+        // Don't wait for network detection - just return the provider
+        cachedProvider = provider;
+        providerCreationAttempts = 0;
+        return provider;
+      }
+    } catch (e) {
+      console.warn('Error getting provider:', e);
+    }
+
+    // Last-resort: use a simple JsonRpcProvider with staticNetwork
+    console.log('Using fallback provider');
+    try {
+      const network = ethers.Network.from(11155111);
+      const provider = new ethers.JsonRpcProvider('https://ethereum-sepolia-rpc.publicnode.com', network, {
+        staticNetwork: network,
+        polling: false
+      });
+      cachedProvider = provider;
+      providerCreationAttempts = 0;
+      return provider;
+    } catch (fallbackError) {
+      console.warn('Fallback provider creation failed:', fallbackError);
+      lastProviderError = fallbackError instanceof Error ? fallbackError : new Error('Unknown error');
+      return null;
+    }
+  })().finally(() => {
+    // Clear the promise when done, so subsequent calls (if failed) can try again
+    // But if success, cachedProvider will be set, so getProvider returns it immediately
+    providerPromise = null;
+  });
+
+  return providerPromise;
+}
   // Check if we've exceeded max creation attempts
   if (providerCreationAttempts >= MAX_PROVIDER_CREATION_ATTEMPTS) {
     console.warn('Max provider creation attempts reached, returning null');

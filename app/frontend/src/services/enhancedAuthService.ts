@@ -743,7 +743,7 @@ class EnhancedAuthService {
       sessionId
     });
 
-    this.sessionData = {
+    const newSessionData: SessionData = {
       token,
       user: normalizedUser,
       timestamp: now,
@@ -752,15 +752,26 @@ class EnhancedAuthService {
       sessionId // Add session ID
     };
 
-    this.token = token;
-
     // Persist to localStorage for better persistence
     if (typeof window !== 'undefined') {
       try {
         // Clear old session data to prevent session fixation
-        this.clearStoredSession();
+        // Note: We clear BEFORE setting the new session data to avoid race conditions
+        // Preserve SESSION_KEY as it's used for encryption and should persist
+        Object.entries(this.STORAGE_KEYS).forEach(([name, key]) => {
+          if (name !== 'SESSION_KEY') {
+            localStorage.removeItem(key);
+          }
+        });
+        localStorage.removeItem(this.STORAGE_KEYS.SESSION_DATA + '_id');
 
-        localStorage.setItem(this.STORAGE_KEYS.SESSION_DATA, JSON.stringify(this.sessionData));
+        // Now set the new session data
+        this.sessionData = newSessionData;
+        this.token = token;
+
+        localStorage.setItem(this.STORAGE_KEYS.SESSION_DATA, JSON.stringify(newSessionData));
+        // Store session ID separately for validation
+        localStorage.setItem(this.STORAGE_KEYS.SESSION_DATA + '_id', sessionId);
         localStorage.setItem(this.STORAGE_KEYS.ACCESS_TOKEN, token);
 
         // Remove plain text address from storage (migration)
