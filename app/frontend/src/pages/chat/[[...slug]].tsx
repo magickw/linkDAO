@@ -511,7 +511,8 @@ export default function ChatPage() {
 
   const getOtherParticipant = (conversation: Conversation) => {
     if (!address) return 'Unknown';
-    return conversation.participants.find(p => p !== address) || 'Unknown';
+    const normalizedAddress = address.toLowerCase();
+    return conversation.participants.find(p => p.toLowerCase() !== normalizedAddress) || 'Unknown';
   };
 
   const truncateAddress = (addr: string) => {

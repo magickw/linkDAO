@@ -314,8 +314,9 @@ class UnifiedMessagingService {
         throw new Error(`Failed to fetch conversation: ${response.statusText}`);
       }
 
-      const conversation = await response.json();
-      const transformed = this.transformConversation(conversation);
+      const responseData = await response.json();
+      const payload = responseData.data || responseData;
+      const transformed = this.transformConversation(payload);
 
       // Update cache
       this.conversationsCache.set(conversationId, transformed);
@@ -440,8 +441,11 @@ class UnifiedMessagingService {
         throw new Error(`Failed to fetch messages: ${response.statusText}`);
       }
 
-      const data = await response.json();
-      const messages = (data.messages || []).map((m: any) => this.transformMessage(m));
+      const responseData = await response.json();
+      // Unwrap API response: backend wraps data in { success, data, message } structure
+      const payload = responseData.data || responseData;
+      const messagesArray = payload.messages || payload || [];
+      const messages = (Array.isArray(messagesArray) ? messagesArray : []).map((m: any) => this.transformMessage(m));
 
       // Update cache
       this.updateMessagesCache(conversationId, messages, !before && !after);
@@ -449,8 +453,8 @@ class UnifiedMessagingService {
 
       return {
         messages,
-        hasMore: data.hasMore || false,
-        nextCursor: data.nextCursor
+        hasMore: payload.hasMore || payload.pagination?.hasMore || false,
+        nextCursor: payload.nextCursor || payload.pagination?.nextCursor
       };
     } catch (error) {
       console.error('[UnifiedMessaging] Error fetching messages:', error);
@@ -1126,10 +1130,13 @@ class UnifiedMessagingService {
       throw new Error(`Failed to fetch conversations: ${response.statusText}`);
     }
 
-    const data = await response.json();
-    const conversations = Array.isArray(data)
-      ? data
-      : (data.conversations || data.data || []);
+    const responseData = await response.json();
+    const payload = responseData.data || responseData;
+    const conversationsArray = Array.isArray(payload)
+      ? payload
+      : (payload.conversations || payload.data || []);
+
+    const conversations = Array.isArray(conversationsArray) ? conversationsArray : [];
 
     return conversations.map((c: any) => this.transformConversation(c));
   }
@@ -1156,8 +1163,9 @@ class UnifiedMessagingService {
         }
         throw new Error('Failed to fetch');
       })
-      .then(data => {
-        const conv = this.transformConversation(data);
+      .then(responseData => {
+        const payload = responseData.data || responseData;
+        const conv = this.transformConversation(payload);
         this.conversationsCache.set(conversationId, conv);
         this.persistConversationsToCache();
       })
@@ -1176,8 +1184,10 @@ class UnifiedMessagingService {
         }
         throw new Error('Failed to fetch');
       })
-      .then(data => {
-        const messages = (data.messages || []).map((m: any) => this.transformMessage(m));
+      .then(responseData => {
+        const payload = responseData.data || responseData;
+        const messagesArray = payload.messages || payload || [];
+        const messages = (Array.isArray(messagesArray) ? messagesArray : []).map((m: any) => this.transformMessage(m));
         this.updateMessagesCache(conversationId, messages, true);
         this.persistMessagesToCache(conversationId);
       })
@@ -1493,20 +1503,41 @@ class UnifiedMessagingService {
 
   // Transform helpers
   private transformMessage(data: any): Message {
-    const fromAddress = data.fromAddress || data.senderAddress || data.sender_address;
+    const fromAddress = data.fromAddress || data.senderAddress || data.sender_address || data.sender || data.authorAddress || data.author;
+    
+    if (!fromAddress && process.env.NODE_ENV === 'development') {
+      console.warn('[UnifiedMessaging] TransformMessage: No sender address found in data:', data);
+    }
+
     return {
       ...data,
-      fromAddress,
-      senderAddress: fromAddress, // Ensure symmetry
-      timestamp: new Date(data.timestamp || data.createdAt || data.sentAt || data.sent_at || data.created_at),
+      fromAddress: fromAddress || '',
+      senderAddress: fromAddress || '', // Ensure symmetry
+      timestamp: new Date(data.timestamp || data.createdAt || data.sentAt || data.sent_at || data.created_at || data.timestamp || Date.now()),
       editedAt: data.editedAt || data.edited_at ? new Date(data.editedAt || data.edited_at) : undefined,
       deletedAt: data.deletedAt || data.deleted_at ? new Date(data.deletedAt || data.deleted_at) : undefined
     };
   }
 
   private transformConversation(data: any): Conversation {
+    let participants = data.participants;
+    if (typeof participants === 'string') {
+      try {
+        participants = JSON.parse(participants);
+      } catch (e) {
+        // Fallback if not a JSON string (could be comma separated or single address)
+        participants = participants.split(',').map((p: string) => p.trim());
+      }
+    }
+
+    // Normalize all participant addresses to lowercase for reliable comparison
+    const normalizedParticipants = Array.isArray(participants)
+      ? participants.map((p: any) => typeof p === 'string' ? p.toLowerCase() : String(p).toLowerCase())
+      : [];
+
     return {
       ...data,
+      participants: normalizedParticipants,
       lastActivity: new Date(data.lastActivity || data.updatedAt || data.createdAt),
       createdAt: new Date(data.createdAt),
       lastMessage: data.lastMessage ? this.transformMessage(data.lastMessage) : undefined,

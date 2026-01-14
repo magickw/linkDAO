@@ -340,7 +340,12 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
   // Use provided senderAddress/fromAddress or fallback to authenticated user
   // Prefer senderAddress to match DB schema
   const userAddress = (req as any).user?.address || (req as any).userId;
-  const fromAddress = req.body?.senderAddress || req.body?.fromAddress || userAddress;
+  let fromAddress = req.body?.senderAddress || req.body?.fromAddress || userAddress;
+  
+  // Normalize address to lowercase
+  if (fromAddress && typeof fromAddress === 'string') {
+    fromAddress = fromAddress.toLowerCase();
+  }
 
   safeLogger.info('[compatibilityChat] Creating message', { conversationId, fromAddress, contentLength: content?.length });
 
@@ -353,6 +358,13 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
 
   if (hasDb) {
     try {
+      // Verify conversation exists
+      const conversationExists = await db.select({ id: conversations.id }).from(conversations).where(eq(conversations.id, conversationId)).limit(1);
+      
+      if (conversationExists.length === 0) {
+        return res.status(404).json({ error: 'Conversation not found' });
+      }
+
       // Insert message into database
       const inserted = await db.insert(chatMessages).values({
         conversationId: conversationId,
