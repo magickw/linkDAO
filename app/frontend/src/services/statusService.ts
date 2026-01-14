@@ -62,11 +62,12 @@ export class StatusService {
         // Re-check after refresh attempt
         if (!authHeaders['Authorization']) {
           // For development mode, create a development token
-        if (ENV_CONFIG.IS_DEVELOPMENT) {
-          const devToken = `dev_session_${Date.now()}_0xee034b53d4ccb101b2a4faec27708be507197350_${Date.now()}`;
-          authHeaders['Authorization'] = `Bearer ${devToken}`;
-        } else {
-          throw new Error('Authentication required. Please log in again.');
+          if (ENV_CONFIG.IS_DEVELOPMENT) {
+            const devToken = `dev_session_${Date.now()}_0xee034b53d4ccb101b2a4faec27708be507197350_${Date.now()}`;
+            authHeaders['Authorization'] = `Bearer ${devToken}`;
+          } else {
+            throw new Error('Authentication required. Please log in again.');
+          }
         }
       }
 
