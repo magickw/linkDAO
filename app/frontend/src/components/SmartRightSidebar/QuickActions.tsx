@@ -255,9 +255,6 @@ const QuickActions = React.memo(function QuickActions({
     );
   }
 
-  // Calculate chain breakdown
-  const chainBreakdown = getChainBreakdown(displayWalletData.balances);
-  const activeChains = getActiveChains(displayWalletData.balances);
   const currentChainInfo = CHAIN_INFO[currentChainId] || { name: 'Unknown', symbol: 'ETH', color: 'text-gray-500', bgColor: 'bg-gray-100' };
 
   return (

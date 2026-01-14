@@ -71,7 +71,8 @@ class BookmarkService {
             }
           }
         } catch (error) {
-          console.warn('Failed to parse session data for bookmark auth');
+          console.warn('Failed to parse session data for bookmark auth, clearing corrupted storage');
+          localStorage.removeItem('linkdao_session_data');
         }
       }
     }

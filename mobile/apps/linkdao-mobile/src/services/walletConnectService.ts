@@ -243,25 +243,6 @@ class WalletService {
   private async connectBase(): Promise<string> {
     throw new Error('Base Wallet integration not yet implemented. Please use MetaMask for now.');
   }
-      });
-
-      const canOpen = await Linking.canOpenURL(scheme);
-
-      if (!canOpen) {
-        if (appLink) {
-          await Linking.openURL(appLink);
-        }
-        throw new Error('Base Wallet is not installed');
-      }
-
-      const mockAddress = this.generateMockAddress();
-      console.log('📱 Base Wallet connection simulated:', mockAddress);
-      return mockAddress;
-    } catch (error) {
-      console.error('❌ Base Wallet connection failed:', error);
-      throw error;
-    }
-  }
 
   /**
    * Sign a message with the connected wallet
