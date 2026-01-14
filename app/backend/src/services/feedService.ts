@@ -6,6 +6,8 @@ import { trendingCacheService } from './trendingCacheService';
 import { getWebSocketService } from './webSocketService';
 import { MetadataService } from './metadataService';
 import { generateShareId } from '../utils/shareIdGenerator';
+import { socialMediaIntegrationService } from './socialMediaIntegrationService';
+import { SocialPlatform } from './oauth/baseOAuthProvider';
 
 interface FeedOptions {
   userAddress: string;
@@ -26,6 +28,12 @@ interface CreatePostData {
   communityId?: string;
   mediaUrls: string[];
   tags: string[];
+  shareToSocialMedia?: {
+    twitter?: boolean;
+    facebook?: boolean;
+    linkedin?: boolean;
+    threads?: boolean;
+  };
 }
 
 interface UpdatePostData {
@@ -1008,7 +1016,7 @@ export class FeedService {
 
   // Create new post
   async createPost(data: CreatePostData) {
-    const { authorAddress, content, communityId, mediaUrls, tags } = data;
+    const { authorAddress, content, communityId, mediaUrls, tags, shareToSocialMedia } = data;
 
     try {
       // First get or create user - use case-insensitive matching for consistency
@@ -1142,6 +1150,31 @@ export class FeedService {
           contentType: 'post',
           post: postResponse // Include the full post data
         });
+      }
+
+      // Handle social media cross-posting
+      if (shareToSocialMedia) {
+        const platformsToPost: SocialPlatform[] = [];
+        
+        if (shareToSocialMedia.twitter) platformsToPost.push('twitter');
+        if (shareToSocialMedia.facebook) platformsToPost.push('facebook');
+        if (shareToSocialMedia.linkedin) platformsToPost.push('linkedin');
+        if (shareToSocialMedia.threads) platformsToPost.push('threads');
+
+        if (platformsToPost.length > 0) {
+          // Process asynchronously to not block the response
+          socialMediaIntegrationService.postToConnectedPlatforms(
+            newPost[0].id.toString(),
+            userId,
+            platformsToPost,
+            content,
+            mediaUrls
+          ).then(results => {
+            safeLogger.info('Social media cross-posting results:', results);
+          }).catch(error => {
+            safeLogger.error('Error in social media cross-posting:', error);
+          });
+        }
       }
 
       return postResponse;

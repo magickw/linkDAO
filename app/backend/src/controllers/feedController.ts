@@ -215,7 +215,8 @@ export class FeedController {
         communityId,
         mediaUrls = [],
         tags = [],
-        pollData
+        pollData,
+        shareToSocialMedia
       } = req.body;
 
       // Validate required fields
@@ -231,7 +232,8 @@ export class FeedController {
         content: content, // Pass the actual content, not the CID
         communityId,
         mediaUrls,
-        tags
+        tags,
+        shareToSocialMedia
       });
 
       res.status(201).json(apiResponse.success(post, 'Post created successfully'));
