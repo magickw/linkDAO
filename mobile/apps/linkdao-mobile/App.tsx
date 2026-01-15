@@ -1,5 +1,4 @@
-// CRITICAL: Must be the very first import to prevent HostFunction errors
-// This initializes the native gesture handler module before any other code runs
+// CRITICAL: Must be the very first import to initialize the native gesture handler module
 import 'react-native-gesture-handler';
 
 // Import the Expo Router entry point

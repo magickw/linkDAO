@@ -257,10 +257,8 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       if (getParticipantProfile && participantAddress) {
         const profile = getParticipantProfile(participantAddress);
         if (profile) {
-          // Priority: direct avatar URL > avatarCid > profileCid
-          if (profile.avatar) {
-            participantAvatar = profile.avatar;
-          } else if (profile.avatarCid) {
+          // Priority: avatarCid > profileCid
+          if (profile.avatarCid) {
             participantAvatar = `https://ipfs.io/ipfs/${profile.avatarCid}`;
           } else if (profile.profileCid) {
             participantAvatar = `https://ipfs.io/ipfs/${profile.profileCid}`;
@@ -1918,26 +1916,24 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
               </button>
             )}
           </div>
-          
+
           {/* Tab Switcher */}
           <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
             <button
               onClick={() => setRightSidebarTab('members')}
-              className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                rightSidebarTab === 'members'
-                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
+              className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${rightSidebarTab === 'members'
+                ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
             >
               Members
             </button>
             <button
               onClick={() => setRightSidebarTab('files')}
-              className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                rightSidebarTab === 'files'
-                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
+              className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${rightSidebarTab === 'files'
+                ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
             >
               Files
             </button>
@@ -1976,7 +1972,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                         </p>
                       )}
                     </div>
-                    
+
                     <div className="space-y-4">
                       <h5 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Information</h5>
                       <div className="space-y-2">
@@ -2025,7 +2021,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
             /* Files View */
             <div className="p-4">
               {(() => {
-                const allFiles = messages.flatMap(m => 
+                const allFiles = messages.flatMap(m =>
                   (m.attachments || []).map(a => ({ ...a, timestamp: m.timestamp, fromAddress: m.fromAddress }))
                 ).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
@@ -2044,14 +2040,13 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                       <div key={idx} className="group p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 border border-transparent hover:border-gray-200 dark:hover:border-gray-600 transition-all cursor-pointer"
                         onClick={() => file.url && file.url !== '#' && window.open(file.url, '_blank')}>
                         <div className="flex items-start gap-3">
-                          <div className={`p-2 rounded-lg ${
-                            file.type === 'image' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
+                          <div className={`p-2 rounded-lg ${file.type === 'image' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
                             file.type === 'transaction' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' :
-                            'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
-                          }`}>
+                              'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
+                            }`}>
                             {file.type === 'image' ? <Image size={16} /> :
-                             file.type === 'transaction' ? <Wallet size={16} /> :
-                             <LinkIcon size={16} />}
+                              file.type === 'transaction' ? <Wallet size={16} /> :
+                                <LinkIcon size={16} />}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium text-gray-900 dark:text-white truncate" title={file.name}>
@@ -2075,73 +2070,8 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
             </div>
           )}
         </div>
-      </div>                    <span className={`ml-2 text-xs px-1.5 py-0.5 rounded ${getRoleColor(member.role)} text-white`}>
-                      {getRoleLabel(member.role)}
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">{member.status}</div>
-                </div >
-
-  {/* Hover card with additional info */ }
-  < div className = "absolute left-full ml-2 top-0 hidden group-hover:block bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 w-64 z-10" >
-                  <div className="flex items-center mb-2">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center mr-2">
-                      <User size={20} className="text-white" />
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-white">{member.name}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">{member.ensName || member.address.slice(0, 6) + '...' + member.address.slice(-4)}</div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-500 dark:text-gray-400">ETH:</span>
-                    <span className="text-gray-900 dark:text-white">{member.balance?.eth.toFixed(4) || '0.0000'}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-500 dark:text-gray-400">LDAO:</span>
-                    <span className="text-gray-900 dark:text-white">{member.balance?.ld?.toLocaleString() || '0'}</span>
-                  </div>
-
-                  <div className="mt-2 flex space-x-2">
-                    <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs py-1 rounded">
-                      Tip
-                    </button>
-                    <button className="flex-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-xs py-1 rounded">
-                      Profile
-                    </button>
-                  </div>
-                </div >
-              </div >
-            ))}
-          </div >
-
-  {/* Pinned Messages Section */ }
-  < div className = "mt-6 pt-4 border-t border-gray-200 dark:border-gray-700" >
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Pinned Messages</h4>
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              No pinned messages yet
-            </div>
-          </div >
-
-  {/* Files Section */ }
-  < div className = "mt-4 pt-4 border-t border-gray-200 dark:border-gray-700" >
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Files</h4>
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              No files shared yet
-            </div>
-          </div >
-
-  {/* Polls Section */ }
-  < div className = "mt-4 pt-4 border-t border-gray-200 dark:border-gray-700" >
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Active Polls</h4>
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              No active polls
-            </div>
-          </div >
-        </div >
-      </div >
-    </div >
+      </div>
+    </div>
   );
 };
 
