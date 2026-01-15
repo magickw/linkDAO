@@ -146,7 +146,10 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
 
       if (response.ok) {
         const data = await response.json();
-        setMessages(data.messages);
+        // Reverse messages to display oldest on top, newest at bottom
+        // Backend returns messages in descending order (newest first)
+        const messages = data.messages || data.data?.messages || [];
+        setMessages([...messages].reverse());
       }
     } catch (error) {
       console.error('Failed to load messages:', error);
@@ -168,9 +171,19 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
     }
   };
 
-  const handleNewMessage = (message: Message) => {
+  const handleNewMessage = (data: any) => {
+    // Handle different WebSocket event formats
+    const message = data.message || data;
+    
     if (message.conversationId === conversation.id) {
-      setMessages(prev => [...prev, message]);
+      setMessages(prev => {
+        // Check if message already exists to avoid duplicates
+        const exists = prev.some(m => m.id === message.id);
+        if (exists) {
+          return prev;
+        }
+        return [...prev, message];
+      });
       
       // Mark as read if message is from another user
       if (message.fromAddress !== currentUserAddress) {
@@ -342,7 +355,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleSendMessage = async (content: string, contentType: 'text' | 'image' | 'file' = 'text') => {
+  const handleSendMessage = async (content: string, contentType: 'text' | 'image' | 'file' = 'text', attachments?: any[]) => {
     try {
       const response = await fetch(`/api/conversations/${conversation.id}/messages`, {
         method: 'POST',
@@ -353,12 +366,17 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
         body: JSON.stringify({
           content,
           contentType,
+          attachments,
         }),
       });
 
       if (response.ok) {
         const newMessage = await response.json();
-        // Message will be added via WebSocket event
+        // Optimistically add the message to the UI immediately
+        if (newMessage && (newMessage.data || newMessage.message)) {
+          const messageData = newMessage.data || newMessage.message;
+          setMessages(prev => [...prev, messageData]);
+        }
       }
     } catch (error) {
       console.error('Failed to send message:', error);

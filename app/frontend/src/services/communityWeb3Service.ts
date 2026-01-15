@@ -412,12 +412,17 @@ export class CommunityWeb3Service {
       // Check current allowance
       const currentAllowance = await tokenContract.allowance(userAddress, TIP_ROUTER_ADDRESS);
 
-      // Approve TipRouter to spend tokens if needed
+      // IMPORTANT: The TipRouter contract will transfer the FULL amount from the user
+      // (it splits it into creator portion + fee portion internally)
+      // So we need to approve the full amountInUnits, not just the net amount
+      // The user's input amount already represents the gross amount they want to tip
       if (currentAllowance < amountInUnits) {
-        console.log(`Approving TipRouter to spend ${input.token}...`);
+        console.log(`Approving TipRouter to spend ${input.amount} ${input.token} (full amount including fee)...`);
         const approveTx = await tokenContract.approve(TIP_ROUTER_ADDRESS, amountInUnits);
         await approveTx.wait();
         console.log('Approval confirmed');
+      } else {
+        console.log(`Sufficient allowance already exists: ${ethers.formatUnits(currentAllowance, tokenDecimals)} ${input.token}`);
       }
 
       // Convert postId to bytes32 correctly
@@ -476,9 +481,6 @@ export class CommunityWeb3Service {
       };
       console.log('Transaction Data:', JSON.stringify(debugData, null, 2));
 
-      // Send tip (with or without comment)
-      let tx;
-
       try {
         if (input.message && input.message.trim()) {
           console.log(`Tipping ${input.amount} ${input.token} with comment to ${input.recipientAddress}`);
@@ -499,41 +501,73 @@ export class CommunityWeb3Service {
           );
         }
 
+        console.log('Transaction object received:', {
+          hash: tx.hash,
+          to: tx.to,
+          from: tx.from,
+          dataLength: tx.data?.length || 0,
+          dataPreview: tx.data?.slice(0, 20) || 'NO DATA'
+        });
+
         // Verify transaction has data before waiting
         if (!tx.data || tx.data === '0x' || tx.data === '') {
-          throw new Error('Transaction encoding failed - empty data field');
+          console.error('CRITICAL: Transaction encoding failed - empty data field!');
+          console.error('Transaction object:', tx);
+          throw new Error('Transaction encoding failed - empty data field. This is a critical error in ethers.js transaction construction.');
         }
 
-        console.log('Transaction sent with data:', tx.data.slice(0, 10) + '...');
+        console.log('✅ Transaction sent successfully with data:', tx.data.slice(0, 10) + '...');
       } catch (estimateError: any) {
-        // If gas estimation fails, try sending with a fixed gas limit as a last resort
-        console.warn('Gas estimation failed, attempting with fixed gas limit:', estimateError.message);
+        console.error('Transaction failed:', estimateError);
 
-        if (input.message && input.message.trim()) {
-          tx = await tipRouterContract.tipWithComment(
-            postIdBytes32,
-            input.recipientAddress,
-            amountInUnits,
-            paymentMethod,
-            input.message.trim(),
-            { gasLimit: 400000 }
-          );
+        // Check if this is a gas estimation error or an actual transaction failure
+        if (estimateError.code === 'CALL_EXCEPTION' && estimateError.action === 'estimateGas') {
+          console.warn('Gas estimation failed, attempting with fixed gas limit:', estimateError.message);
+
+          // Try again with a fixed gas limit
+          try {
+            if (input.message && input.message.trim()) {
+              tx = await tipRouterContract.tipWithComment(
+                postIdBytes32,
+                input.recipientAddress,
+                amountInUnits,
+                paymentMethod,
+                input.message.trim(),
+                { gasLimit: 400000 }
+              );
+            } else {
+              tx = await tipRouterContract.tip(
+                postIdBytes32,
+                input.recipientAddress,
+                amountInUnits,
+                paymentMethod,
+                { gasLimit: 400000 }
+              );
+            }
+
+            console.log('Transaction object received (with fixed gas):', {
+              hash: tx.hash,
+              to: tx.to,
+              from: tx.from,
+              dataLength: tx.data?.length || 0,
+              dataPreview: tx.data?.slice(0, 20) || 'NO DATA'
+            });
+
+            // Verify transaction has data
+            if (!tx.data || tx.data === '0x' || tx.data === '') {
+              console.error('CRITICAL: Transaction encoding failed even with fixed gas!');
+              throw new Error('Transaction encoding failed - empty data field');
+            }
+
+            console.log('✅ Transaction sent with fixed gas and data:', tx.data.slice(0, 10) + '...');
+          } catch (fixedGasError: any) {
+            console.error('Fixed gas transaction also failed:', fixedGasError);
+            throw fixedGasError;
+          }
         } else {
-          tx = await tipRouterContract.tip(
-            postIdBytes32,
-            input.recipientAddress,
-            amountInUnits,
-            paymentMethod,
-            { gasLimit: 400000 }
-          );
+          // Not a gas estimation error, re-throw
+          throw estimateError;
         }
-
-        // Verify transaction has data
-        if (!tx.data || tx.data === '0x' || tx.data === '') {
-          throw new Error('Transaction encoding failed - empty data field');
-        }
-
-        console.log('Transaction sent with fixed gas and data:', tx.data.slice(0, 10) + '...');
       }
 
       // Wait for transaction confirmation

@@ -76,6 +76,43 @@ const nextConfig = {
       '@': path.resolve(__dirname, 'src'),
     };
 
+    // Handle node: protocol imports - convert to regular node module imports
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'node:crypto': 'crypto',
+      'node:stream': 'stream',
+      'node:buffer': 'buffer',
+      'node:util': 'util',
+      'node:process': 'process',
+      'node:http': 'http',
+      'node:https': 'https',
+      'node:url': 'url',
+      'node:fs': 'fs',
+    };
+
+    // Handle node: protocol imports
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      crypto: require.resolve('crypto-browserify'),
+      stream: require.resolve('stream-browserify'),
+      buffer: require.resolve('buffer'),
+    };
+    
+    // Add polyfill for crypto
+    config.plugins.push(
+      new webpack.ProvidePlugin({
+        crypto: 'crypto-browserify',
+        Buffer: ['buffer', 'Buffer'],
+      })
+    );
+
+    // Use NormalModuleReplacementPlugin to replace node: protocol imports
+    config.plugins.push(
+      new webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
+        resource.request = resource.request.replace(/^node:/, '');
+      })
+    );
+
     // Optimize babel processing for generated files
     config.module.rules.forEach(rule => {
       if (rule.test && rule.test.toString().includes('tsx?')) {

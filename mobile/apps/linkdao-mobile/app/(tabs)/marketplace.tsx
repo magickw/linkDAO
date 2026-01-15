@@ -54,7 +54,7 @@ export default function MarketplaceScreen() {
     .filter(product => {
       const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           product.seller.toLowerCase().includes(searchQuery.toLowerCase());
+        product.seller.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
       return matchesCategory && matchesSearch && matchesPrice;
     })
@@ -80,7 +80,7 @@ export default function MarketplaceScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Marketplace</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.cartButton}
           onPress={() => router.push('/marketplace/cart')}
         >
@@ -103,7 +103,7 @@ export default function MarketplaceScreen() {
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.filterButton}
           onPress={() => setShowFilters(true)}
         >
@@ -112,51 +112,62 @@ export default function MarketplaceScreen() {
       </View>
 
       {/* Categories */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
-        {categories.map((category) => (
-          <TouchableOpacity
-            key={category}
-            style={[
-              styles.categoryButton,
-              selectedCategory === category && styles.categoryButtonActive,
-            ]}
-            onPress={() => setSelectedCategory(category)}
-          >
-            <Text
-              style={[
-                styles.categoryText,
-                selectedCategory === category && styles.categoryTextActive,
-              ]}
-            >
-              {category}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* Sort Options */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sortScroll}>
-        {sortOptions.map((option) => (
-          <TouchableOpacity
-            key={option.value}
-            style={[
-              styles.sortButton,
-              sortBy === option.value && styles.sortButtonActive,
-            ]}
-            onPress={() => setSortBy(option.value)}
-          >
-            <Text
-              style={[
-                styles.sortText,
-                sortBy === option.value && styles.sortTextActive,
-              ]}
-            >
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
+            <View style={styles.categoriesScroll}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                contentContainerStyle={styles.categoriesContent}
+              >
+                {categories.map((category) => (
+                  <TouchableOpacity
+                    key={category}
+                    style={[
+                      styles.categoryButton,
+                      selectedCategory === category && styles.categoryButtonActive,
+                    ]}
+                    onPress={() => setSelectedCategory(category)}
+                  >
+                    <Text
+                      style={[
+                        styles.categoryText,
+                        selectedCategory === category && styles.categoryTextActive,
+                      ]}
+                    >
+                      {category}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+      
+            {/* Sort Options */}
+            <View style={styles.sortScroll}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                contentContainerStyle={styles.sortContent}
+              >
+                {sortOptions.map((option) => (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.sortButton,
+                      sortBy === option.value && styles.sortButtonActive,
+                    ]}
+                    onPress={() => setSortBy(option.value)}
+                  >
+                    <Text
+                      style={[
+                        styles.sortText,
+                        sortBy === option.value && styles.sortTextActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
       {/* Results Count */}
       <View style={styles.resultsContainer}>
         <Text style={styles.resultsText}>{filteredProducts.length} products found</Text>
@@ -193,7 +204,7 @@ export default function MarketplaceScreen() {
                 </View>
                 <View style={styles.productPriceContainer}>
                   <Text style={styles.productPrice}>${product.price}</Text>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.addButton}
                     onPress={() => addToCart(product)}
                   >
@@ -274,7 +285,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
@@ -308,10 +319,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ffffff',
-    margin: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
+    marginHorizontal: 4,
+    marginTop: 4,
+    marginBottom: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
@@ -328,12 +341,16 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   categoriesScroll: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 4,
     marginBottom: 8,
   },
+  categoriesContent: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
   categoryButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: '#ffffff',
     borderWidth: 1,
@@ -345,7 +362,7 @@ const styles = StyleSheet.create({
     borderColor: '#3b82f6',
   },
   categoryText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#6b7280',
   },
@@ -353,12 +370,16 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   sortScroll: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 4,
     marginBottom: 8,
   },
+  sortContent: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
   sortButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
     borderRadius: 16,
     backgroundColor: '#ffffff',
     borderWidth: 1,
@@ -370,7 +391,7 @@ const styles = StyleSheet.create({
     borderColor: '#3b82f6',
   },
   sortText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '500',
     color: '#6b7280',
   },
@@ -378,8 +399,8 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   resultsContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
   },
   resultsText: {
     fontSize: 14,
