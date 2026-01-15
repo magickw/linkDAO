@@ -36,4 +36,28 @@ config.resolver.extraNodeModules = {
   tls: require.resolve('react-native-tls'),
 };
 
+// 6. Add sourceExts to handle all file extensions properly
+config.resolver.sourceExts = [
+  ...config.resolver.sourceExts,
+  'jsx',
+  'js',
+  'json',
+  'ts',
+  'tsx',
+];
+
+// 7. Add blockList to prevent resolution of problematic paths
+config.resolver.blockList = [
+  // Block node_modules from being resolved incorrectly
+  /node_modules\/.*\/node_modules\/react-native\/.*/,
+];
+
+// 8. Inject polyfills before the main module
+config.serializer = {
+  ...config.serializer,
+  getModulesRunBeforeMainModule: () => [
+    require.resolve('./polyfills.js'),
+  ],
+};
+
 module.exports = config;

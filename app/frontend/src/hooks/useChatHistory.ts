@@ -56,7 +56,7 @@ export const useChatHistory = (): UseChatHistoryReturn => {
             limit: conversationLimit,
             offset: pageParam as number
           }),
-          new Promise((_, reject) => 
+          new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Request timeout - backend may be unavailable')), 10000)
           )
         ]) as Conversation[];
@@ -117,7 +117,7 @@ export const useChatHistory = (): UseChatHistoryReturn => {
             // Otherwise, add the new message (avoid duplicates)
             const exists = prev.some(m => m.id === message.id);
             if (!exists) {
-              return [message, ...prev];
+              return [...prev, message]; // Append to end for chronological order
             }
             return prev;
           });
@@ -152,8 +152,8 @@ export const useChatHistory = (): UseChatHistoryReturn => {
                   type: isMentioned ? 'mention' : 'message',
                   category: isMentioned ? 'comment_mention' : 'direct_message',
                   title: isMentioned ? 'You were mentioned in a message' : 'New message',
-                  message: message.content.length > 100 
-                    ? message.content.substring(0, 100) + '...' 
+                  message: message.content.length > 100
+                    ? message.content.substring(0, 100) + '...'
                     : message.content,
                   data: {
                     conversationId,
@@ -173,7 +173,7 @@ export const useChatHistory = (): UseChatHistoryReturn => {
                 }));
               }
 
-              return [message, ...prev];
+              return [...prev, message]; // Append to end for chronological order
             }
             // If it exists and has a temp ID, replace it with the real message
             const tempMessageIndex = prev.findIndex(m =>

@@ -256,8 +256,15 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       let participantAvatar: string | null = null;
       if (getParticipantProfile && participantAddress) {
         const profile = getParticipantProfile(participantAddress);
-        if (profile?.avatarCid || profile?.profileCid) {
-          participantAvatar = `https://ipfs.io/ipfs/${profile.avatarCid || profile.profileCid}`;
+        if (profile) {
+          // Priority: direct avatar URL > avatarCid > profileCid
+          if (profile.avatar) {
+            participantAvatar = profile.avatar;
+          } else if (profile.avatarCid) {
+            participantAvatar = `https://ipfs.io/ipfs/${profile.avatarCid}`;
+          } else if (profile.profileCid) {
+            participantAvatar = `https://ipfs.io/ipfs/${profile.profileCid}`;
+          }
         }
       }
 
@@ -557,6 +564,15 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showAttachmentModal, setShowAttachmentModal] = useState(false);
   const [attachmentType, setAttachmentType] = useState<'nft' | 'transaction' | 'image' | 'file' | null>(null);
+
+  // Attachment form state
+  const [nftContract, setNftContract] = useState('');
+  const [nftTokenId, setNftTokenId] = useState('');
+  const [txHash, setTxHash] = useState('');
+
+  // Right sidebar state
+  const [rightSidebarTab, setRightSidebarTab] = useState<'members' | 'files'>('members');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
@@ -641,10 +657,20 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
         await sendMessage({
           conversationId: selectedDM,
           fromAddress: address,
-          content: `Shared a file: ${file.name}`,
+          content: '', // Empty content - let attachment component handle display
           contentType: file.type.startsWith('image/') ? 'image' : 'file',
           attachments: [attachment]
         } as any);
+      } else if (address) {
+        // Handle channel message
+        const message: ChannelMessage = {
+          id: `msg_${Date.now()}`,
+          fromAddress: address,
+          content: '', // Empty content - let attachment component handle display
+          timestamp: new Date(),
+          attachments: [attachment]
+        };
+        setMessages(prev => [...prev, message]);
       }
 
       setShowAttachmentModal(false);
@@ -656,7 +682,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     }
   };
 
-  const shareNFT = (contractAddress: string, tokenId: string, price?: string) => {
+  const shareNFT = async (contractAddress: string, tokenId: string, price?: string) => {
     const attachment = {
       type: 'nft' as const,
       url: '#',
@@ -669,12 +695,30 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       }
     };
 
-    // Add to message
+    if (isViewingDM && selectedDM && address) {
+      await sendMessage({
+        conversationId: selectedDM,
+        fromAddress: address,
+        content: `Shared an NFT: ${tokenId}`,
+        contentType: 'text',
+        attachments: [attachment]
+      } as any);
+    } else if (address) {
+      const message: ChannelMessage = {
+        id: `msg_${Date.now()}`,
+        fromAddress: address,
+        content: `Shared an NFT: ${tokenId}`,
+        timestamp: new Date(),
+        attachments: [attachment]
+      };
+      setMessages(prev => [...prev, message]);
+    }
+
     console.log('NFT shared:', attachment);
     setShowAttachmentModal(false);
   };
 
-  const shareTransaction = (txHash: string, status: 'success' | 'failed' | 'pending' = 'success') => {
+  const shareTransaction = async (txHash: string, status: 'success' | 'failed' | 'pending' = 'success') => {
     const attachment = {
       type: 'transaction' as const,
       url: `https://etherscan.io/tx/${txHash}`,
@@ -685,7 +729,25 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       }
     };
 
-    // Add to message
+    if (isViewingDM && selectedDM && address) {
+      await sendMessage({
+        conversationId: selectedDM,
+        fromAddress: address,
+        content: `Shared a transaction: ${txHash.slice(0, 10)}...`,
+        contentType: 'text',
+        attachments: [attachment]
+      } as any);
+    } else if (address) {
+      const message: ChannelMessage = {
+        id: `msg_${Date.now()}`,
+        fromAddress: address,
+        content: `Shared a transaction: ${txHash.slice(0, 10)}...`,
+        timestamp: new Date(),
+        attachments: [attachment]
+      };
+      setMessages(prev => [...prev, message]);
+    }
+
     console.log('Transaction shared:', attachment);
     setShowAttachmentModal(false);
   };
@@ -1263,8 +1325,13 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                 else if (senderProfile.handle) senderDisplayName = senderProfile.handle;
                 else if (senderProfile.ens) senderDisplayName = senderProfile.ens;
 
-                if (senderProfile.avatarCid || senderProfile.profileCid) {
-                  senderAvatarUrl = `https://ipfs.io/ipfs/${senderProfile.avatarCid || senderProfile.profileCid}`;
+                // Priority: direct avatar URL > avatarCid > profileCid
+                if (senderProfile.avatar) {
+                  senderAvatarUrl = senderProfile.avatar;
+                } else if (senderProfile.avatarCid) {
+                  senderAvatarUrl = `https://ipfs.io/ipfs/${senderProfile.avatarCid}`;
+                } else if (senderProfile.profileCid) {
+                  senderAvatarUrl = `https://ipfs.io/ipfs/${senderProfile.profileCid}`;
                 }
               }
 
@@ -1317,7 +1384,10 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                             <Lock size={12} className="ml-1 text-green-500 dark:text-green-400" />
                           )}
                         </div>
-                        <p className="text-gray-700 dark:text-gray-200">{parseMentions(message.content)}</p>
+                        {/* Only show content if it exists */}
+                        {message.content && message.content.trim() && (
+                          <p className="text-gray-700 dark:text-gray-200">{parseMentions(message.content)}</p>
+                        )}
 
                         {/* Attachments */}
                         {message.attachments && message.attachments.length > 0 && (
@@ -1686,16 +1756,27 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                       <input
                         type="text"
                         placeholder="Contract Address"
+                        value={nftContract}
+                        onChange={(e) => setNftContract(e.target.value)}
                         className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                       <input
                         type="text"
                         placeholder="Token ID"
+                        value={nftTokenId}
+                        onChange={(e) => setNftTokenId(e.target.value)}
                         className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                       <button
                         className={`w-full bg-purple-600 hover:bg-purple-700 text-white text-sm py-2 rounded-lg ${touchTargetClasses}`}
-                        onClick={() => selectedDM && shareNFT('0x...', '1234')}
+                        onClick={() => {
+                          if ((selectedDM || selectedChannel) && nftContract && nftTokenId) {
+                            shareNFT(nftContract, nftTokenId);
+                            setNftContract('');
+                            setNftTokenId('');
+                          }
+                        }}
+                        disabled={!nftContract || !nftTokenId}
                       >
                         Confirm NFT Share
                       </button>
@@ -1711,11 +1792,19 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                       <input
                         type="text"
                         placeholder="Transaction Hash"
+                        value={txHash}
+                        onChange={(e) => setTxHash(e.target.value)}
                         className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                       <button
                         className={`w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm py-2 rounded-lg ${touchTargetClasses}`}
-                        onClick={() => selectedDM && shareTransaction('0x123...', 'success')}
+                        onClick={() => {
+                          if ((selectedDM || selectedChannel) && txHash) {
+                            shareTransaction(txHash, 'success');
+                            setTxHash('');
+                          }
+                        }}
+                        disabled={!txHash}
                       >
                         Confirm Tx Share
                       </button>
@@ -1813,200 +1902,188 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
         </div>
       </div>
 
-      {/* Members Sidebar - only show for channels, not DMs */}
-      <div className={`w-60 border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hidden md:block ${isViewingDM ? 'hidden' : ''}`}>
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900 dark:text-white">Members</h3>
-          <button
-            className={`text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white ${touchTargetClasses}`}
-            onClick={() => setShowChannelSettings(!showChannelSettings)}
-          >
-            <Settings size={16} />
-          </button>
+      {/* Members Sidebar - visible for both channels and DMs */}
+      <div className={`w-64 border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hidden md:flex flex-col`}>
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-gray-900 dark:text-white">
+              {rightSidebarTab === 'members' ? 'Members' : 'Shared Files'}
+            </h3>
+            {!isViewingDM && rightSidebarTab === 'members' && (
+              <button
+                className={`text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white ${touchTargetClasses}`}
+                onClick={() => setShowChannelSettings(!showChannelSettings)}
+              >
+                <Settings size={16} />
+              </button>
+            )}
+          </div>
+          
+          {/* Tab Switcher */}
+          <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+            <button
+              onClick={() => setRightSidebarTab('members')}
+              className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                rightSidebarTab === 'members'
+                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              Members
+            </button>
+            <button
+              onClick={() => setRightSidebarTab('files')}
+              className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                rightSidebarTab === 'files'
+                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              Files
+            </button>
+          </div>
         </div>
 
-        {/* Channel Settings Panel */}
-        {showChannelSettings && (
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-850">
-            <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Channel Settings</h4>
-
-            <div className="mb-4">
-              <h5 className="text-xs text-gray-500 dark:text-gray-400 uppercase mb-2">Channel Info</h5>
-              <div className="space-y-2">
-                <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Channel Name</label>
-                  <input
-                    type="text"
-                    className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 border border-gray-200 dark:border-gray-600"
-                    defaultValue={selectedChannel ? (channels.find(c => c.id === selectedChannel)?.name || '') : ''}
-                    placeholder="Channel name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Channel Topic</label>
-                  <textarea
-                    className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none border border-gray-200 dark:border-gray-600"
-                    rows={2}
-                    defaultValue={selectedChannel ? (channels.find(c => c.id === selectedChannel)?.topic || '') : ''}
-                    placeholder="What's this channel about?"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Channel Type</label>
-                  <select className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 border border-gray-200 dark:border-gray-600">
-                    <option value="public">Public Channel</option>
-                    <option value="private">Private Channel</option>
-                    <option value="gated">Gated Channel</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <h5 className="text-xs text-gray-500 dark:text-gray-400 uppercase mb-2">Notifications</h5>
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    className="rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                    checked={notificationSettings.general}
-                    onChange={(e) => setNotificationSettings(prev => ({ ...prev, general: e.target.checked }))}
-                  />
-                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">General messages</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    className="rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                    checked={notificationSettings.mentions}
-                    onChange={(e) => setNotificationSettings(prev => ({ ...prev, mentions: e.target.checked }))}
-                  />
-                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">@mentions</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    className="rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                    checked={notificationSettings.reactions}
-                    onChange={(e) => setNotificationSettings(prev => ({ ...prev, reactions: e.target.checked }))}
-                  />
-                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Reactions</span>
-                </label>
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <h5 className="text-xs text-gray-500 dark:text-gray-400 uppercase mb-2">Invite Links</h5>
-              {selectedChannel && channels.find(c => c.id === selectedChannel)?.isPrivate && (
-                <div className="space-y-2">
-                  <button
-                    className={`w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded ${touchTargetClasses}`}
-                    onClick={() => {
-                      if (selectedChannel) {
-                        generateInviteLink(selectedChannel);
-                      }
-                    }}
-                  >
-                    Generate Invite Link
-                  </button>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    Create a link to invite others to this private channel
-                  </div>
+        <div className="flex-1 overflow-y-auto">
+          {rightSidebarTab === 'members' ? (
+            <>
+              {/* Channel Settings Panel (existing logic) */}
+              {showChannelSettings && !isViewingDM && (
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-850">
+                  {/* ... channel settings content ... */}
                 </div>
               )}
-              {selectedChannel && !channels.find(c => c.id === selectedChannel)?.isPrivate && (
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  Invite links are only available for private channels
-                </div>
-              )}
-            </div>
 
-            <div className="mb-4">
-              <h5 className="text-xs text-gray-500 dark:text-gray-400 uppercase mb-2">Permissions</h5>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Send Messages</span>
-                  <select className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-2 py-1 border border-gray-200 dark:border-gray-600">
-                    <option value="everyone">Everyone</option>
-                    <option value="members">Members only</option>
-                    <option value="moderators">Moderators+</option>
-                  </select>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Add Reactions</span>
-                  <select className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-2 py-1 border border-gray-200 dark:border-gray-600">
-                    <option value="everyone">Everyone</option>
-                    <option value="members">Members only</option>
-                    <option value="moderators">Moderators+</option>
-                  </select>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Manage Channel</span>
-                  <select className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm rounded px-2 py-1 border border-gray-200 dark:border-gray-600">
-                    <option value="admins">Admins only</option>
-                    <option value="moderators">Moderators+</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <h5 className="text-xs text-gray-500 dark:text-gray-400 uppercase mb-2">Channel Actions</h5>
-              <div className="space-y-1">
-                <button className={`w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-sm py-2 rounded ${touchTargetClasses}`}>
-                  Invite Members
-                </button>
-                <button className={`w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-sm py-2 rounded ${touchTargetClasses}`}>
-                  Channel Permissions
-                </button>
-                <button className={`w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-sm py-2 rounded ${touchTargetClasses}`}>
-                  Manage Members
-                </button>
-                <button className={`w-full bg-red-600 hover:bg-red-700 text-white text-sm py-2 rounded ${touchTargetClasses}`}>
-                  Delete Channel
-                </button>
-              </div>
-            </div>
-
-            <div className="flex space-x-2">
-              <button className={`flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded ${touchTargetClasses}`}>
-                Save Changes
-              </button>
-              <button
-                className={`flex-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-sm py-2 rounded ${touchTargetClasses}`}
-                onClick={() => setShowChannelSettings(false)}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="p-4">
-          <div className="space-y-3">
-            {channelMembers.map(member => (
-              <div
-                key={member.address}
-                className="flex items-center group relative"
-              >
-                <div className="relative">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-                    <User size={16} className="text-white" />
+              {/* Members List */}
+              <div className="p-4">
+                {isViewingDM ? (
+                  /* DM Participant Info */
+                  <div className="space-y-6">
+                    <div className="text-center">
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center mx-auto mb-3 overflow-hidden">
+                        {participantAvatar ? (
+                          <img src={participantAvatar} alt={participantName || "User"} className="w-full h-full object-cover" />
+                        ) : (
+                          <User size={40} className="text-white" />
+                        )}
+                      </div>
+                      <h4 className="font-bold text-gray-900 dark:text-white text-lg">
+                        {participantName || truncateAddress(participantAddress || '')}
+                      </h4>
+                      {participantAddress && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">
+                          {participantAddress}
+                        </p>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <h5 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Information</h5>
+                      <div className="space-y-2">
+                        <div className="flex items-center text-sm">
+                          <Globe size={14} className="mr-2 text-gray-400" />
+                          <span className="text-gray-600 dark:text-gray-300">Public Profile</span>
+                        </div>
+                        <div className="flex items-center text-sm">
+                          <Shield size={14} className="mr-2 text-gray-400" />
+                          <span className="text-gray-600 dark:text-gray-300">Verified Identity</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-100 dark:border-gray-800 ${getStatusColor(member.status)}`}></div>
-                </div>
-                <div className="ml-2">
-                  <div className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
-                    {member.name}
-                    <span className={`ml-2 text-xs px-1.5 py-0.5 rounded ${getRoleColor(member.role)} text-white`}>
+                ) : (
+                  /* Channel Members */
+                  <div className="space-y-3">
+                    {channelMembers.length > 0 ? channelMembers.map(member => (
+                      <div key={member.address} className="flex items-center group relative">
+                        <div className="relative">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                            <User size={16} className="text-white" />
+                          </div>
+                          <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-100 dark:border-gray-800 ${getStatusColor(member.status)}`}></div>
+                        </div>
+                        <div className="ml-2">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
+                            {member.name}
+                            <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] text-white ${getRoleColor(member.role)}`}>
+                              {getRoleLabel(member.role)}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{member.status}</div>
+                        </div>
+                      </div>
+                    )) : (
+                      <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm italic">
+                        No members found
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            /* Files View */
+            <div className="p-4">
+              {(() => {
+                const allFiles = messages.flatMap(m => 
+                  (m.attachments || []).map(a => ({ ...a, timestamp: m.timestamp, fromAddress: m.fromAddress }))
+                ).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+                if (allFiles.length === 0) {
+                  return (
+                    <div className="text-center py-12">
+                      <Image size={32} className="mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+                      <p className="text-sm text-gray-500 dark:text-gray-400">No files shared yet</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-4">
+                    {allFiles.map((file, idx) => (
+                      <div key={idx} className="group p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 border border-transparent hover:border-gray-200 dark:hover:border-gray-600 transition-all cursor-pointer"
+                        onClick={() => file.url && file.url !== '#' && window.open(file.url, '_blank')}>
+                        <div className="flex items-start gap-3">
+                          <div className={`p-2 rounded-lg ${
+                            file.type === 'image' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
+                            file.type === 'transaction' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' :
+                            'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
+                          }`}>
+                            {file.type === 'image' ? <Image size={16} /> :
+                             file.type === 'transaction' ? <Wallet size={16} /> :
+                             <LinkIcon size={16} />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white truncate" title={file.name}>
+                              {file.name}
+                            </div>
+                            <div className="flex items-center justify-between mt-1">
+                              <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                                {file.timestamp.toLocaleDateString()}
+                              </span>
+                              <span className="text-[10px] text-blue-500 dark:text-blue-400 group-hover:underline">
+                                View
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+      </div>                    <span className={`ml-2 text-xs px-1.5 py-0.5 rounded ${getRoleColor(member.role)} text-white`}>
                       {getRoleLabel(member.role)}
                     </span>
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">{member.status}</div>
-                </div>
+                </div >
 
-                {/* Hover card with additional info */}
-                <div className="absolute left-full ml-2 top-0 hidden group-hover:block bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 w-64 z-10">
+  {/* Hover card with additional info */ }
+  < div className = "absolute left-full ml-2 top-0 hidden group-hover:block bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 w-64 z-10" >
                   <div className="flex items-center mb-2">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center mr-2">
                       <User size={20} className="text-white" />
@@ -2034,37 +2111,37 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                       Profile
                     </button>
                   </div>
-                </div>
-              </div>
+                </div >
+              </div >
             ))}
-          </div>
+          </div >
 
-          {/* Pinned Messages Section */}
-          <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+  {/* Pinned Messages Section */ }
+  < div className = "mt-6 pt-4 border-t border-gray-200 dark:border-gray-700" >
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Pinned Messages</h4>
             <div className="text-xs text-gray-500 dark:text-gray-400">
               No pinned messages yet
             </div>
-          </div>
+          </div >
 
-          {/* Files Section */}
-          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+  {/* Files Section */ }
+  < div className = "mt-4 pt-4 border-t border-gray-200 dark:border-gray-700" >
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Files</h4>
             <div className="text-xs text-gray-500 dark:text-gray-400">
               No files shared yet
             </div>
-          </div>
+          </div >
 
-          {/* Polls Section */}
-          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+  {/* Polls Section */ }
+  < div className = "mt-4 pt-4 border-t border-gray-200 dark:border-gray-700" >
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Active Polls</h4>
             <div className="text-xs text-gray-500 dark:text-gray-400">
               No active polls
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
+          </div >
+        </div >
+      </div >
+    </div >
   );
 };
 

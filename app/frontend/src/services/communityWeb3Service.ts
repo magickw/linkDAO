@@ -451,6 +451,31 @@ export class CommunityWeb3Service {
       // Send tip (with or without comment)
       let tx;
 
+      // Debug Logs for Revert Analysis
+      console.log('--- Debugging Tip Transaction ---');
+      console.log('User Address:', userAddress);
+      console.log('LDAO Token Address (ENV):', LDAO_TOKEN_ADDRESS);
+      console.log('Tip Router Address (ENV):', TIP_ROUTER_ADDRESS);
+      console.log('Token Address Used:', tokenAddress);
+      console.log('PostId (Original):', input.postId);
+      console.log('PostId (Bytes32):', postIdBytes32);
+      console.log('Recipient:', input.recipientAddress);
+      console.log('Amount (Original):', input.amount);
+      console.log('Amount (Units):', amountInUnits.toString());
+      console.log('Payment Method:', paymentMethod);
+      console.log('User Balance LDAO:', ethers.formatUnits(balance, tokenDecimals));
+      console.log('Current Allowance:', ethers.formatUnits(currentAllowance, tokenDecimals));
+
+      const debugData = {
+        postId: postIdBytes32,
+        recipient: input.recipientAddress,
+        amount: amountInUnits.toString(),
+        paymentMethod,
+        token: tokenAddress,
+        router: TIP_ROUTER_ADDRESS
+      };
+      console.log('Transaction Data:', JSON.stringify(debugData, null, 2));
+
       // Common transaction overrides for robustness
       const txOverrides = {
         // Add a fallback gas limit if estimation fails
@@ -704,7 +729,7 @@ export class CommunityWeb3Service {
       // Basic IPFS gateway handling
       let url = uri;
       if (uri.startsWith('ipfs://')) {
-        url = uri.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/');
+        url = uri.replace('ipfs://', 'https://ipfs.io/ipfs/');
       }
 
       // Fetch metadata JSON
@@ -724,7 +749,7 @@ export class CommunityWeb3Service {
       return {
         name: metadata.name || `Token #${tokenId}`,
         description: metadata.description || '',
-        image: metadata.image ? (metadata.image.startsWith('ipfs://') ? metadata.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/') : metadata.image) : '',
+        image: metadata.image ? (metadata.image.startsWith('ipfs://') ? metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/') : metadata.image) : '',
         attributes: metadata.attributes || [],
         contractAddress,
         tokenId,

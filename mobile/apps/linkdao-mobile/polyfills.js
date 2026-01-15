@@ -1,7 +1,48 @@
 // Polyfills for browser APIs required by web3 libraries (viem, wagmi, etc.)
+// All polyfills use require() for synchronous execution order
+
+// Fix for @noble/hashes _toString error on Hermes
+// Must be before any other imports
+const { Buffer } = require('buffer');
+global.Buffer = Buffer;
+
+// Fix Uint8Array.prototype methods for @noble/hashes compatibility with Hermes
+if (!Uint8Array.prototype._toString) {
+  Uint8Array.prototype._toString = function() {
+    return String.fromCharCode.apply(null, this);
+  };
+}
+
+// Ensure Uint8Array has all required methods
+if (!Uint8Array.prototype.slice) {
+  Uint8Array.prototype.slice = function(start, end) {
+    return new Uint8Array(Array.prototype.slice.call(this, start, end));
+  };
+}
+
+// Polyfill TextEncoder/TextDecoder for @noble/hashes
+if (typeof global.TextEncoder === 'undefined') {
+  try {
+    const encoding = require('text-encoding');
+    global.TextEncoder = encoding.TextEncoder;
+    global.TextDecoder = encoding.TextDecoder;
+  } catch (e) {
+    // Fallback TextEncoder implementation
+    global.TextEncoder = function TextEncoder() {};
+    global.TextEncoder.prototype.encode = function(str) {
+      const buf = Buffer.from(str, 'utf8');
+      return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+    };
+
+    global.TextDecoder = function TextDecoder() {};
+    global.TextDecoder.prototype.decode = function(arr) {
+      return Buffer.from(arr).toString('utf8');
+    };
+  }
+}
 
 // Import URL polyfill for React Native
-import 'react-native-url-polyfill/auto';
+require('react-native-url-polyfill/auto');
 
 // Initialize window object if it doesn't exist
 if (typeof window === 'undefined') {
