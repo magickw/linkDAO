@@ -557,7 +557,18 @@ class UnifiedMessagingService {
 
       return sentMessage;
     } catch (error) {
-      console.error('[UnifiedMessaging] Error sending message:', error);
+      console.error('[UnifiedMessaging] ❌ Error sending message:', error);
+      console.error('[UnifiedMessaging] Failed request details:', {
+        conversationId,
+        contentLength: content?.length || 0,
+        contentType,
+        hasAttachments: !!attachments?.length,
+        attachmentCount: attachments?.length || 0,
+        currentUserAddress: this.currentUserAddress,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined
+      });
 
       // Queue for retry
       this.queuePendingMessage({
@@ -569,6 +580,14 @@ class UnifiedMessagingService {
         replyToId,
         createdAt: new Date(),
         retryCount: 0
+      });
+
+      // Emit error event for UI to handle
+      this.emitEvent('message_sent', {
+        message: { ...optimisticMessage, deliveryStatus: 'failed' as any },
+        conversationId,
+        tempId,
+        error: error instanceof Error ? error.message : 'Failed to send message'
       });
 
       return optimisticMessage;
@@ -1483,11 +1502,11 @@ class UnifiedMessagingService {
       try {
         console.log('[UnifiedMessaging] 401 Unauthorized, refreshing token...');
         const refreshResult = await enhancedAuthService.refreshToken();
-        
+
         if (refreshResult.success) {
           console.log('[UnifiedMessaging] Token refreshed, retrying request...');
           authHeaders = await enhancedAuthService.getAuthHeaders();
-          
+
           response = await fetch(`${this.baseUrl}${endpoint}`, {
             ...options,
             headers: buildHeaders()
@@ -1504,7 +1523,7 @@ class UnifiedMessagingService {
   // Transform helpers
   private transformMessage(data: any): Message {
     const fromAddress = data.fromAddress || data.senderAddress || data.sender_address || data.sender || data.authorAddress || data.author;
-    
+
     if (!fromAddress && process.env.NODE_ENV === 'development') {
       console.warn('[UnifiedMessaging] TransformMessage: No sender address found in data:', data);
     }

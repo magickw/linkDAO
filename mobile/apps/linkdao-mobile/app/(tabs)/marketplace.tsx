@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     borderColor: '#3b82f6',
   },
   categoryText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
     color: '#6b7280',
   },
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     borderColor: '#3b82f6',
   },
   sortText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '500',
     color: '#6b7280',
   },
