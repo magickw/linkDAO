@@ -433,6 +433,7 @@ const CommunitiesPage: React.FC = () => {
           handle: post.handle || post.author || 'Unknown',
           verified: false,
         },
+        walletAddress: post.walletAddress, // Add this line
         communityId: post.communityId,
         upvotes: post.upvotes,
         downvotes: post.downvotes,

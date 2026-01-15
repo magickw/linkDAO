@@ -36,10 +36,10 @@ export default function FeedScreen() {
   const loadPosts = async (page: number = 1) => {
     try {
       setLoading(true);
-      const response = await postsService.getPosts({ page, limit: 20 });
+      const response = await postsService.getFeed(page, 20);
 
-      if (response.success && response.data) {
-        setPosts(response.data.posts || []);
+      if (response.posts) {
+        setPosts(response.posts);
       } else {
         setError('Failed to load posts');
       }

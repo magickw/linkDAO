@@ -14,7 +14,7 @@ import { authService } from '@linkdao/shared';
 export default function ProfileEditScreen() {
   const router = useRouter();
   const { user, setUser } = useAuthStore();
-  
+
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [avatar, setAvatar] = useState<string | null>(null);
@@ -156,7 +156,7 @@ export default function ProfileEditScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={label}>Location</Text>
+            <Text style={styles.label}>Location</Text>
             <View style={styles.inputWithIcon}>
               <Ionicons name="location-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
               <TextInput
@@ -248,17 +248,17 @@ export default function ProfileEditScreen() {
 
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Handle</Text>
-            <Text style={infoValue}>{user?.handle || 'N/A'}</Text>
+            <Text style={styles.infoValue}>{user?.handle || 'N/A'}</Text>
           </View>
 
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Email</Text>
-            <Text style={infoValue}>{user?.email || 'N/A'}</Text>
+            <Text style={styles.infoValue}>{user?.email || 'N/A'}</Text>
           </View>
 
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Member Since</Text>
-            <Text style={infoValue}>
+            <Text style={styles.infoValue}>
               {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
             </Text>
           </View>

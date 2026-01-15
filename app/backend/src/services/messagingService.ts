@@ -467,10 +467,10 @@ export class MessagingService {
           attachments: data.attachments
         });
 
-      const messageContent = sanitizedMessage.content;
+      const messageContent = sanitizedMessage.content || '';
 
       // Validate message size (10KB limit)
-      // Use Buffer.byteLength instead of Blob to ensure compatibility with all Node.js environments
+      // Use Buffer.byteLength instead of Buffer to ensure compatibility with all Node.js environments
       const contentSize = Buffer.byteLength(messageContent, 'utf8');
       if (contentSize > 10240) {
         return {
@@ -488,19 +488,27 @@ export class MessagingService {
           messageType: sanitizedMessage.messageType || 'text',
           encryptionMetadata: data.encryptionMetadata || null,
           replyToId: data.replyToId,
-          attachments: sanitizedMessage.attachments || null, // Drizzle handles jsonb objects/arrays directly
-          sentAt: new Date() // Use 'sentAt' (the Drizzle property name), not 'timestamp'
+          attachments: sanitizedMessage.attachments || [], // Default to empty array for JSONB
+          sentAt: new Date() 
         })
         .returning();
 
       // Update conversation last activity and last message
-      await db
-        .update(conversations)
-        .set({
-          lastActivity: new Date(),
-          lastMessageId: newMessage[0].id
-        })
-        .where(eq(conversations.id, conversationId));
+      // Wrap in try-catch to avoid failing the whole message send if conversation table 
+      // is missing some of the newer columns in production
+      try {
+        await db
+          .update(conversations)
+          .set({
+            lastActivity: new Date(),
+            lastMessageId: newMessage[0].id,
+            updatedAt: new Date()
+          })
+          .where(eq(conversations.id, conversationId));
+      } catch (updateError) {
+        safeLogger.warn(`Failed to update conversation metadata for ${conversationId}:`, updateError);
+        // Continue anyway as the message was successfully saved
+      }
 
       // Send notification to other participants
       // Safely handle participants parsing (might be string or object)

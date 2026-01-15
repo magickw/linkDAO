@@ -840,6 +840,7 @@ const EnhancedPostCard = React.memo(({
                     contentCid: post.contentCid,
                     content: post.content,
                     author: post.author,
+                    walletAddress: post.walletAddress, // Ensure walletAddress is passed
                     communityId: post.communityId,
                     communityName: post.communityName || 'general',
                     commentCount: post.comments,

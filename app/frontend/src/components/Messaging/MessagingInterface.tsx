@@ -20,6 +20,7 @@ import Web3SwipeGestureHandler from '@/components/Mobile/Web3SwipeGestureHandler
 import { motion, PanInfo } from 'framer-motion';
 import { UserProfile } from '../../models/UserProfile';
 import useWebSocket from '../../hooks/useWebSocket';
+import { useToast } from '@/context/ToastContext';
 
 
 interface ChatChannel {
@@ -134,6 +135,16 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   const { isMobile, triggerHapticFeedback, touchTargetClasses } = useMobileOptimization();
   const { resolveName, resolvedNames, isLoading } = useENSIntegration();
   const { isConnected: isSocketConnected } = useWebSocket({ walletAddress: address || '' });
+  const { addToast } = useToast();
+
+  // Add a safety check for the toast function
+  const safeAddToast = (message: string, type: 'success' | 'error' | 'info' | 'warning') => {
+    if (typeof addToast === 'function') {
+      return addToast(message, type);
+    } else {
+      console.log(`[Toast Fallback] ${type}: ${message}`);
+    }
+  };
 
   // Helper function to get the best display name for a participant
   const getParticipantDisplayName = (participantAddress: string): string => {
@@ -588,6 +599,8 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     try {
       setIsUploading(true);
       console.log('Uploading file:', file.name, file.type);
+
+      const formData = new FormData();
 
       // Add CSRF token
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');

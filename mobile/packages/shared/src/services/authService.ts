@@ -18,6 +18,12 @@ export interface AuthUser {
   tier: 'free' | 'basic' | 'premium' | 'enterprise';
   createdAt: string;
   lastLoginAt?: string;
+  bio?: string;
+  location?: string;
+  website?: string;
+  twitter?: string;
+  linkedin?: string;
+  github?: string;
 }
 
 export interface AuthResponse {
@@ -136,13 +142,13 @@ class AuthService {
         '/api/auth/nonce',
         { walletAddress: address }
       );
-      
+
       console.log('📡 Backend response:', JSON.stringify(response));
 
       // Handle double-wrapped response structure
       let nonce: string | undefined;
       let message: string | undefined;
-      
+
       if (response.data && response.data.data) {
         // Backend is returning { success: true, data: { success: true, data: { nonce, message } } }
         nonce = response.data.data.nonce;
@@ -201,7 +207,13 @@ class AuthService {
       updatedAt: userData?.updatedAt || new Date().toISOString(),
       chainId: userData?.chainId,
       preferences: userData?.preferences,
-      privacySettings: userData?.privacySettings
+      privacySettings: userData?.privacySettings,
+      bio: userData?.bio,
+      location: userData?.location,
+      website: userData?.website,
+      twitter: userData?.twitter,
+      linkedin: userData?.linkedin,
+      github: userData?.github,
     };
   }
 
