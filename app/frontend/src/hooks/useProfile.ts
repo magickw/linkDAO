@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { UserProfile, UpdateUserProfileInput } from '@/models/UserProfile';
+import { UserProfile, CreateUserProfileInput, UpdateUserProfileInput } from '@/models/UserProfile';
 import { ProfileService } from '@/services/profileService';
 import { optimizedProfileService } from '@/services/optimizedProfileService';
 
@@ -8,7 +8,9 @@ interface UseProfileReturn {
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
+  createProfile: (data: CreateUserProfileInput) => Promise<UserProfile>;
   updateProfile: (data: UpdateUserProfileInput) => Promise<void>;
+  saveProfile: (data: UpdateUserProfileInput, walletAddress: string) => Promise<void>;
 }
 
 export function useProfile(walletAddress?: string): UseProfileReturn {
@@ -92,6 +94,83 @@ export function useProfile(walletAddress?: string): UseProfileReturn {
     }
   }, [profile]);
 
+  const createProfile = useCallback(async (data: CreateUserProfileInput): Promise<UserProfile> => {
+    try {
+      setError(null);
+      const newProfile = await ProfileService.createProfile(data);
+      setProfile(newProfile);
+      return newProfile;
+    } catch (err) {
+      let errorMessage = 'Failed to create profile';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'object' && err !== null) {
+        if ('message' in err && typeof (err as any).message === 'string') {
+          errorMessage = (err as any).message;
+        } else if ('error' in err && typeof (err as any).error === 'string') {
+          errorMessage = (err as any).error;
+        } else {
+          try {
+            errorMessage = JSON.stringify(err, null, 2);
+          } catch {
+            errorMessage = 'Failed to create profile due to an unknown error';
+          }
+        }
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  }, []);
+
+  const saveProfile = useCallback(async (data: UpdateUserProfileInput, address: string): Promise<void> => {
+    try {
+      setError(null);
+      if (profile) {
+        // Profile exists, update it
+        const updatedProfile = await ProfileService.updateProfile(profile.id, data);
+        setProfile(updatedProfile);
+      } else {
+        // Profile doesn't exist, create it
+        const createData: CreateUserProfileInput = {
+          walletAddress: address,
+          handle: data.handle || address.slice(0, 10),
+          ens: data.ens,
+          avatarCid: data.avatarCid,
+          bannerCid: data.bannerCid,
+          bioCid: data.bioCid,
+          socialLinks: data.socialLinks,
+          website: data.website,
+          displayName: data.displayName,
+        };
+        const newProfile = await ProfileService.createProfile(createData);
+        setProfile(newProfile);
+      }
+    } catch (err) {
+      let errorMessage = 'Failed to save profile';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'object' && err !== null) {
+        if ('message' in err && typeof (err as any).message === 'string') {
+          errorMessage = (err as any).message;
+        } else if ('error' in err && typeof (err as any).error === 'string') {
+          errorMessage = (err as any).error;
+        } else {
+          try {
+            errorMessage = JSON.stringify(err, null, 2);
+          } catch {
+            errorMessage = 'Failed to save profile due to an unknown error';
+          }
+        }
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  }, [profile]);
+
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
@@ -101,6 +180,8 @@ export function useProfile(walletAddress?: string): UseProfileReturn {
     isLoading,
     error,
     refetch: fetchProfile,
-    updateProfile
+    createProfile,
+    updateProfile,
+    saveProfile
   };
 }

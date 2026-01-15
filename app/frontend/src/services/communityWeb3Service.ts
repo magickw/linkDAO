@@ -247,6 +247,12 @@ export class CommunityWeb3Service {
     message?: string;
   }): Promise<string> {
     try {
+      // Validate recipient address before anything else
+      if (!ethers.isAddress(input.recipientAddress)) {
+        console.error(`[Web3Service] Invalid recipient address: ${input.recipientAddress}`);
+        throw new Error(`Invalid recipient address: ${input.recipientAddress}. Expected a 0x wallet address.`);
+      }
+
       // Try to get signer with better error handling
       const signer = await getSigner();
 
@@ -254,27 +260,30 @@ export class CommunityWeb3Service {
 
       // Use environment configuration for contract addresses
       const { ENV_CONFIG } = await import('@/config/environment');
-      // const { getChainId } = await import('@wagmi/core'); // Removed to avoid connector errors
-      // const { config } = await import('@/lib/wagmi'); // Removed dependency on config for chain ID
 
       const TIP_ROUTER_ADDRESS = ENV_CONFIG.TIP_ROUTER_ADDRESS;
       const LDAO_TOKEN_ADDRESS = ENV_CONFIG.LDAO_TOKEN_ADDRESS;
 
       // Get current chain ID directly from the signer's provider
-      // This is more reliable than getChainId(config) which can crash if connectors are in a transitional state
       let chainId: number;
       try {
         if (signer.provider) {
           const network = await (signer.provider as any).getNetwork();
           chainId = Number(network.chainId);
           console.log('Detected chain ID from signer:', chainId);
+          
+          // Enforce Sepolia for development/test tokens
+          if (chainId !== 11155111) {
+            console.warn(`[Web3Service] Wallet is on chain ${chainId}, but this feature requires Sepolia (11155111)`);
+            throw new Error(`Please switch your wallet to the Sepolia Testnet. Currently connected to ${chainId === 1 ? 'Ethereum Mainnet' : 'another network'}.`);
+          }
         } else {
           console.warn('Signer has no provider, defaulting to Sepolia');
           chainId = 11155111;
         }
-      } catch (e) {
+      } catch (e: any) {
+        if (e.message.includes('switch your wallet')) throw e;
         console.warn('Failed to get chain ID from signer provider, defaulting to Sepolia:', e);
-        // Default to Sepolia (11155111) as fallback
         chainId = 11155111;
       }
 

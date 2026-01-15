@@ -199,7 +199,7 @@ export default function PostInteractionBar({
       // Use real blockchain tipping functionality
       const txHash = await communityWeb3Service.tipCommunityPost({
         postId: post.id,
-        recipientAddress: post.walletAddress || post.author,
+        recipientAddress: post.walletAddress || getUserAddress(post),
         amount: tipAmount,
         token: selectedToken,
         message: ''
@@ -433,7 +433,7 @@ export default function PostInteractionBar({
           {postType === 'community' && userMembership ? (
             <CommunityTipButton
               postId={post.id}
-              recipientAddress={post.walletAddress || post.author}
+              recipientAddress={post.walletAddress || getUserAddress(post)}
               communityId={post.communityId || ''}
               onTip={onTip}
             />

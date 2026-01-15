@@ -47,7 +47,7 @@ export default function Profile() {
   const targetUserAddress = typeof router.query.user === 'string' ? router.query.user : currentUserAddress;
 
   // Backend profile loading with error handling
-  const { profile: backendProfile, isLoading: isBackendProfileLoading, error: backendProfileError, refetch, updateProfile: updateBackendProfile } = useProfile(targetUserAddress);
+  const { profile: backendProfile, isLoading: isBackendProfileLoading, error: backendProfileError, refetch, updateProfile: updateBackendProfile, saveProfile: saveBackendProfile } = useProfile(targetUserAddress);
   const { data: followCount, isLoading: isFollowCountLoading } = useFollowCount(targetUserAddress);
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
   const { requests } = useVerification();
@@ -420,45 +420,40 @@ export default function Profile() {
       setIsUpdating(true);
       setUpdateError(null);
 
-      // Save to backend database
-      if (backendProfile) {
-        // Update existing profile
-        const updateData: UpdateUserProfileInput = {
-          handle: profile.handle,
-          displayName: profile.displayName,
-          ens: profile.ens,
-          avatarCid: profile.avatar,
-          bannerCid: profile.bannerCid,
-          bioCid: profile.bio,
-          socialLinks: profile.socialLinks,
-          website: profile.website,
-        };
-        await updateBackendProfile(updateData);
+      // Prepare update data - map frontend fields to backend fields
+      const updateData: UpdateUserProfileInput = {
+        handle: profile.handle,
+        displayName: profile.displayName,
+        ens: profile.ens,
+        avatarCid: profile.avatar,
+        bannerCid: profile.bannerCid,
+        bioCid: profile.bio,
+        socialLinks: profile.socialLinks,
+        website: profile.website,
+      };
 
-        // Update localStorage cache to persist changes across page refreshes
-        try {
-          const storedUserData = localStorage.getItem('linkdao_user_data');
-          if (storedUserData) {
-            const userData = JSON.parse(storedUserData);
-            const updatedUserData = {
-              ...userData,
-              handle: profile.handle,
-              ens: profile.ens,
-            };
-            localStorage.setItem('linkdao_user_data', JSON.stringify(updatedUserData));
-            console.log('✅ Updated localStorage cache with new profile data');
-          }
-        } catch (error) {
-          console.warn('Failed to update localStorage cache:', error);
-          // Non-critical error, continue with success flow
+      // Use saveBackendProfile which handles both create and update
+      await saveBackendProfile(updateData, currentUserAddress);
+
+      // Update localStorage cache to persist changes across page refreshes
+      try {
+        const storedUserData = localStorage.getItem('linkdao_user_data');
+        if (storedUserData) {
+          const userData = JSON.parse(storedUserData);
+          const updatedUserData = {
+            ...userData,
+            handle: profile.handle,
+            ens: profile.ens,
+          };
+          localStorage.setItem('linkdao_user_data', JSON.stringify(updatedUserData));
+          console.log('✅ Updated localStorage cache with new profile data');
         }
-      } else {
-        // Profile doesn't exist, need to create one first
-        addToast('Please create your profile first by filling out all required fields.', 'error');
-        return;
+      } catch (error) {
+        console.warn('Failed to update localStorage cache:', error);
+        // Non-critical error, continue with success flow
       }
 
-      addToast('Profile updated successfully!', 'success');
+      addToast(backendProfile ? 'Profile updated successfully!' : 'Profile created successfully!', 'success');
       setIsEditing(false);
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -471,8 +466,8 @@ export default function Profile() {
   };
 
   const handleSaveProfile = async () => {
-    if (!backendProfile) {
-      addToast('No profile to update', 'error');
+    if (!currentUserAddress) {
+      addToast('Please connect your wallet first', 'error');
       return;
     }
 
@@ -490,23 +485,22 @@ export default function Profile() {
       // Prepare update data - map frontend fields to backend fields
       const updateData = {
         handle: profile.handle,
-        displayName: profile.displayName, // This will be handled by the backend
+        displayName: profile.displayName,
         ens: profile.ens,
         bioCid: profile.bio,
         avatarCid: profile.avatar,
         bannerCid: profile.bannerCid,
         website: profile.website,
         socialLinks: profile.socialLinks,
-
       };
 
-      await updateBackendProfile(updateData);
+      // Use saveBackendProfile which handles both create and update
+      await saveBackendProfile(updateData, currentUserAddress);
       setIsEditing(false);
-      addToast('Profile updated successfully', 'success');
+      addToast(backendProfile ? 'Profile updated successfully' : 'Profile created successfully', 'success');
     } catch (error) {
-      console.error('Error updating profile:', error);
-      // Better error handling to avoid [object Object] display
-      let errorMessage = 'Failed to update profile';
+      console.error('Error saving profile:', error);
+      let errorMessage = 'Failed to save profile';
       if (error instanceof Error) {
         errorMessage = error.message;
       } else if (typeof error === 'object' && error !== null) {

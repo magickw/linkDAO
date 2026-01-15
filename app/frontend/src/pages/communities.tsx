@@ -425,15 +425,15 @@ const CommunitiesPage: React.FC = () => {
         id: post.id,
         title: post.title,
         content: post.content,
-        author: post.handle || post.author || 'Unknown',
+        author: post.walletAddress || post.author || 'Unknown',
         authorName: post.handle || post.author || 'Unknown',
-        authorId: post.authorId || post.author,
+        authorId: post.id, // UUID from post.id
         handle: post.handle || post.author || 'Unknown',
         authorProfile: post.authorProfile || {
           handle: post.handle || post.author || 'Unknown',
           verified: false,
         },
-        walletAddress: post.walletAddress, // Add this line
+        walletAddress: post.walletAddress, // Pass walletAddress explicitly
         communityId: post.communityId,
         upvotes: post.upvotes,
         downvotes: post.downvotes,
