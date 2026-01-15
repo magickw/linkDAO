@@ -2,6 +2,27 @@ import { ethers } from 'hardhat';
 import fs from 'fs';
 import path from 'path';
 
+// Network-specific configuration
+const CHAINLINK_PRICE_FEEDS: Record<string, string> = {
+  mainnet: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+  sepolia: "0x694AA1769357215DE4FAC081bf1f309aDC325306",
+  base: "0x71041dddad3595F745215C5883EF6d9Ca9fE661c",
+  baseSepolia: "0x4aDC67696bA383F43DD60A9e78F2C97Fbbfc7cb1",
+  polygon: "0xAB594600376Ec9fD91F8E885dADF0C63797bE933",
+  arbitrum: "0x639Fe6ab55C921f74e7adb1D18170r8fced7FD8Z", // Verify this
+  localhost: "", // Will use Mock
+  hardhat: "" // Will use Mock
+};
+
+const USDC_ADDRESSES: Record<string, string> = {
+  mainnet: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  sepolia: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", // Example
+  base: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  baseSepolia: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+  localhost: "", // Will use Mock
+  hardhat: "" // Will use Mock
+};
+
 interface DeploymentConfig {
   network: string;
   multiSigAddress?: string;
@@ -79,33 +100,99 @@ class DeploymentManager {
 
     // Deploy Counter for testing
     await this.deployContract('Counter', []);
+    
+    // Deploy MockV3Aggregator if on localhost/hardhat
+    if (this.config.network === 'localhost' || this.config.network === 'hardhat') {
+       // Check if we have a MockV3Aggregator artifact, if not, we might need to skip or use a placeholder
+       // For now, assuming we might not have it, we'll try to rely on external mocks or skip
+       console.log('⚠️  Deploying on local network. Ensure Price Feeds are mocked.');
+    }
   }
 
   private async deployCoreServiceContracts() {
     console.log('\n🔧 Phase 2: Core Service Contracts');
 
     const ldaoToken = this.deployedContracts.get('LDAOToken');
+    const mockToken = this.deployedContracts.get('MockERC20');
 
-    // Deploy Governance - constructor(address _governanceToken, address _reputationSystem, address _treasury, address _multiSigWallet)
-    // For now, we'll use placeholders and update after all contracts are deployed
-    // We'll need to deploy other contracts first and then update governance
-    console.log('⚠️  Governance contract needs all dependencies. Deploying with placeholders and updating later.');
-    
-    // Deploy other dependencies first, then governance, then update
+    // 1. Deploy ReputationSystem (needed for Governance)
     await this.deployContract('ReputationSystem', []);
-    
-    // For now, we'll skip Governance deployment in this phase and handle it separately
+    const reputationSystem = this.deployedContracts.get('ReputationSystem');
 
-    // Deploy ReputationSystem - constructor()
-    await this.deployContract('ReputationSystem', []);
-
-    // Deploy ProfileRegistry - constructor()
+    // 2. Deploy ProfileRegistry
     await this.deployContract('ProfileRegistry', []);
 
-    // Deploy SimpleProfileRegistry - constructor()
+    // 3. Deploy SimpleProfileRegistry
     await this.deployContract('SimpleProfileRegistry', []);
 
-    // Deploy PaymentRouter - constructor(uint256 _feeBasisPoints, address _feeCollector)
+    // 4. Setup MultiSig (Address)
+    // If we don't have a configured MultiSig, we can deploy a simple one or use deployer
+    let multiSigAddress = this.config.multiSigAddress;
+    if (!multiSigAddress) {
+      console.log('⚠️  No MultiSig configured. Deploying a new MultiSigWallet...');
+      // Deploy MultiSigWallet - constructor(address[] owners, uint256 required)
+      await this.deployContract('MultiSigWallet', [
+        [this.deployer.address], // Owners
+        1 // Required signatures
+      ]);
+      multiSigAddress = this.deployedContracts.get('MultiSigWallet')?.address;
+    }
+
+    // 5. Deploy Governance
+    // Governance needs Treasury, but Treasury needs Governance.
+    // We deploy Governance first with a TEMPORARY Treasury address (the deployer).
+    console.log('🔄 Deploying Governance with temporary Treasury address...');
+    await this.deployContract('Governance', [
+      ldaoToken?.address,
+      reputationSystem?.address,
+      this.deployer.address, // Temporary Treasury
+      multiSigAddress
+    ]);
+    const governance = this.deployedContracts.get('Governance');
+
+    // 6. Deploy LDAOTreasuryOptimized
+    // Needs: LDAOToken, USDC, MultiSig, Governance, PriceFeed
+    
+    // Determine USDC address
+    let usdcAddress = USDC_ADDRESSES[this.config.network];
+    if (!usdcAddress || usdcAddress === "") {
+        console.log('⚠️  Using MockERC20 as USDC');
+        usdcAddress = mockToken?.address || ethers.ZeroAddress;
+    }
+
+    // Determine Price Feed address
+    let priceFeedAddress = CHAINLINK_PRICE_FEEDS[this.config.network];
+    if (!priceFeedAddress || priceFeedAddress === "") {
+         console.log('⚠️  No Price Feed found. Using placeholders/mocks if available.');
+         // Ideally deploy a mock feed here if local
+         priceFeedAddress = ethers.ZeroAddress; // This will likely revert if used
+    }
+
+    console.log(`Using USDC: ${usdcAddress}`);
+    console.log(`Using Price Feed: ${priceFeedAddress}`);
+
+    await this.deployContract('LDAOTreasuryOptimized', [
+      ldaoToken?.address,
+      usdcAddress,
+      multiSigAddress,
+      governance?.address,
+      priceFeedAddress
+    ]);
+    const treasury = this.deployedContracts.get('LDAOTreasuryOptimized');
+
+    // 7. Update Governance with Real Treasury
+    console.log('🔗 Updating Governance with real Treasury address...');
+    const governanceContract = await ethers.getContractAt('Governance', governance?.address!);
+    
+    const tx = await governanceContract.updateSystemIntegrations(
+      reputationSystem?.address,
+      treasury?.address,
+      multiSigAddress
+    );
+    await tx.wait();
+    console.log('✅ Governance updated with real Treasury');
+
+    // 8. Deploy PaymentRouter
     await this.deployContract('PaymentRouter', [
       250, // 2.5% fee
       this.deployer.address // fee collector

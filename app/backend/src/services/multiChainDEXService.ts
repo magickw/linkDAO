@@ -59,6 +59,32 @@ export class MultiChainDEXService {
       usdcAddress: '0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8',
       ldaoAddress: process.env.LDAO_TOKEN_ADDRESS_ARBITRUM,
     });
+
+    // Base Mainnet
+    this.chainConfigs.set(8453, {
+      chainId: 8453,
+      name: 'Base',
+      rpcUrl: process.env.BASE_RPC_URL || 'https://mainnet.base.org',
+      quoterAddress: '0x3d4e44Eb1374240CE5F1B871ab261CD16335B76a', // Uniswap V3 QuoterV2
+      routerAddress: '0x2626664c2603336E57B271c5C0b26F421741e481', // Uniswap V3 SwapRouter02
+      factoryAddress: '0x33128a8fC17869897dcE68Ed026d694621f6FDfD', // Uniswap V3 Factory
+      wethAddress: '0x4200000000000000000000000000000000000006', // WETH on Base
+      usdcAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // USDC (Native)
+      ldaoAddress: process.env.LDAO_TOKEN_ADDRESS_BASE,
+    });
+
+    // Base Sepolia
+    this.chainConfigs.set(84532, {
+      chainId: 84532,
+      name: 'Base Sepolia',
+      rpcUrl: process.env.BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org',
+      quoterAddress: '0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3', // Uniswap V3 QuoterV2 (Check deployment)
+      routerAddress: '0x94Cc0AaC535CCDB3C01d6787D6413C739ae12bc4', // Uniswap V3 SwapRouter02 (Check deployment)
+      factoryAddress: '0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24', // Uniswap V3 Factory (Check deployment)
+      wethAddress: '0x4200000000000000000000000000000000000006', // WETH on Base Sepolia
+      usdcAddress: '0x036CbD53842c5426634e7929541eC2318f3dCF7e', // USDC on Base Sepolia
+      ldaoAddress: process.env.LDAO_TOKEN_ADDRESS_BASE_SEPOLIA,
+    });
   }
 
   /**
@@ -70,7 +96,8 @@ export class MultiChainDEXService {
         config.rpcUrl,
         config.chainId,
         config.quoterAddress,
-        config.routerAddress
+        config.routerAddress,
+        config.factoryAddress
       );
       this.uniswapServices.set(chainId, service);
     }
@@ -307,6 +334,8 @@ export class MultiChainDEXService {
       1: 1.0,    // Ethereum
       137: 0.3,  // Polygon (faster)
       42161: 0.5, // Arbitrum (faster)
+      8453: 0.3, // Base (fast)
+      84532: 0.3, // Base Sepolia (fast)
     };
 
     const sourceMultiplier = chainTimeMultipliers[sourceChain] || 1.0;

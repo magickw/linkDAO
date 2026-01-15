@@ -111,7 +111,8 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
             tokenInAddress: fromTokenAddress,
             tokenOutAddress: toTokenAddress,
             amountIn: parseFloat(fromAmount),
-            slippageTolerance: slippage
+            slippageTolerance: slippage,
+            chainId: selectedChainId
           });
 
           // Check if the response is successful

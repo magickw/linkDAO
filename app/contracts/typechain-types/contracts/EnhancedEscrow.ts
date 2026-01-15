@@ -65,7 +65,10 @@ export declare namespace EnhancedEscrow {
 export interface EnhancedEscrowInterface extends Interface {
   getFunction(
     nameOrSignature:
+      | "DEADLINE_GRACE_PERIOD"
+      | "MAX_DISPUTE_BOND_PERCENTAGE"
       | "MAX_PLATFORM_FEE"
+      | "MIN_DISPUTE_BOND"
       | "MIN_VOTING_POWER"
       | "REPUTATION_DECAY_PERIOD"
       | "VOTING_PERIOD"
@@ -74,38 +77,63 @@ export interface EnhancedEscrowInterface extends Interface {
       | "authorizeArbitrator"
       | "authorizedArbitrators"
       | "autoResolveDispute"
+      | "calculateDisputeBond"
       | "calculateWeightedScore"
       | "castHelpfulVote"
       | "castVote"
       | "chainId"
+      | "claimDeadlineRefund"
+      | "claimNFTDeadlineRefund"
       | "confirmDelivery"
+      | "confirmNFTDelivery"
       | "createEscrow"
       | "createEscrowWithSecurity"
+      | "createNFTEscrow"
+      | "depositNFT"
       | "detailedReputationScores"
+      | "disputeBondPercentage"
+      | "disputeBondRequired"
+      | "disputeBonds"
+      | "disputeInitiator"
       | "escrowChainId"
       | "escrows"
       | "executeEmergencyRefund"
+      | "executeNFTEmergencyRefund"
       | "getDetailedReputation"
+      | "getDisputeBondConfig"
       | "getEscrowChainId"
+      | "getNFTEscrowDetails"
       | "getReputationTier"
+      | "getTimeUntilDeadlineRefund"
       | "getTopSellers"
       | "getUserReviews"
       | "governance"
+      | "isEligibleForDeadlineRefund"
       | "ldaoToken"
       | "lockFunds"
+      | "lockFundsForNFT"
       | "nextEscrowId"
       | "nextReviewId"
+      | "onERC1155BatchReceived"
+      | "onERC1155Received"
+      | "onERC721Received"
       | "openDispute"
+      | "openNFTDispute"
       | "owner"
+      | "platformArbiter"
       | "platformFeePercentage"
       | "renounceOwnership"
       | "resolveDisputeByArbitrator"
+      | "resolveNFTDisputeByArbitrator"
       | "reviews"
       | "setArbitratorFee"
+      | "setDisputeBondConfig"
       | "setGovernance"
       | "setLDAOToken"
+      | "setPlatformArbiter"
       | "setPlatformFee"
       | "submitMarketplaceReview"
+      | "supportsInterface"
       | "suspendUser"
       | "transferOwnership"
       | "userEscrows"
@@ -115,13 +143,22 @@ export interface EnhancedEscrowInterface extends Interface {
   getEvent(
     nameOrSignatureOrTopic:
       | "ArbitratorAppointed"
+      | "DeadlineRefund"
       | "DeliveryConfirmed"
+      | "DisputeBondConfigUpdated"
+      | "DisputeBondDeposited"
+      | "DisputeBondForfeited"
+      | "DisputeBondRefunded"
       | "DisputeOpened"
       | "EmergencyRefund"
       | "EscrowCreated"
+      | "EscrowReadyForRelease"
       | "EscrowResolved"
       | "FundsLocked"
+      | "NFTDeposited"
+      | "NFTTransferred"
       | "OwnershipTransferred"
+      | "PlatformArbiterUpdated"
       | "ReputationUpdated"
       | "ReviewSubmitted"
       | "UserSuspended"
@@ -129,7 +166,19 @@ export interface EnhancedEscrowInterface extends Interface {
   ): EventFragment;
 
   encodeFunctionData(
+    functionFragment: "DEADLINE_GRACE_PERIOD",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "MAX_DISPUTE_BOND_PERCENTAGE",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "MAX_PLATFORM_FEE",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "MIN_DISPUTE_BOND",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -165,6 +214,10 @@ export interface EnhancedEscrowInterface extends Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "calculateDisputeBond",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "calculateWeightedScore",
     values: [AddressLike]
   ): string;
@@ -178,7 +231,19 @@ export interface EnhancedEscrowInterface extends Interface {
   ): string;
   encodeFunctionData(functionFragment: "chainId", values?: undefined): string;
   encodeFunctionData(
+    functionFragment: "claimDeadlineRefund",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "claimNFTDeadlineRefund",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "confirmDelivery",
+    values: [BigNumberish, string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "confirmNFTDelivery",
     values: [BigNumberish, string]
   ): string;
   encodeFunctionData(
@@ -207,8 +272,43 @@ export interface EnhancedEscrowInterface extends Interface {
     ]
   ): string;
   encodeFunctionData(
+    functionFragment: "createNFTEscrow",
+    values: [
+      BigNumberish,
+      AddressLike,
+      AddressLike,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      AddressLike,
+      BigNumberish,
+      BigNumberish
+    ]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "depositNFT",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "detailedReputationScores",
     values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "disputeBondPercentage",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "disputeBondRequired",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "disputeBonds",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "disputeInitiator",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "escrowChainId",
@@ -223,16 +323,32 @@ export interface EnhancedEscrowInterface extends Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "executeNFTEmergencyRefund",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "getDetailedReputation",
     values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getDisputeBondConfig",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "getEscrowChainId",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "getNFTEscrowDetails",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "getReputationTier",
     values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getTimeUntilDeadlineRefund",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "getTopSellers",
@@ -246,9 +362,17 @@ export interface EnhancedEscrowInterface extends Interface {
     functionFragment: "governance",
     values?: undefined
   ): string;
+  encodeFunctionData(
+    functionFragment: "isEligibleForDeadlineRefund",
+    values: [BigNumberish]
+  ): string;
   encodeFunctionData(functionFragment: "ldaoToken", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "lockFunds",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "lockFundsForNFT",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
@@ -260,10 +384,36 @@ export interface EnhancedEscrowInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "onERC1155BatchReceived",
+    values: [
+      AddressLike,
+      AddressLike,
+      BigNumberish[],
+      BigNumberish[],
+      BytesLike
+    ]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "onERC1155Received",
+    values: [AddressLike, AddressLike, BigNumberish, BigNumberish, BytesLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "onERC721Received",
+    values: [AddressLike, AddressLike, BigNumberish, BytesLike]
+  ): string;
+  encodeFunctionData(
     functionFragment: "openDispute",
     values: [BigNumberish]
   ): string;
+  encodeFunctionData(
+    functionFragment: "openNFTDispute",
+    values: [BigNumberish]
+  ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "platformArbiter",
+    values?: undefined
+  ): string;
   encodeFunctionData(
     functionFragment: "platformFeePercentage",
     values?: undefined
@@ -277,12 +427,20 @@ export interface EnhancedEscrowInterface extends Interface {
     values: [BigNumberish, boolean]
   ): string;
   encodeFunctionData(
+    functionFragment: "resolveNFTDisputeByArbitrator",
+    values: [BigNumberish, boolean]
+  ): string;
+  encodeFunctionData(
     functionFragment: "reviews",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "setArbitratorFee",
     values: [AddressLike, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setDisputeBondConfig",
+    values: [BigNumberish, boolean]
   ): string;
   encodeFunctionData(
     functionFragment: "setGovernance",
@@ -293,12 +451,20 @@ export interface EnhancedEscrowInterface extends Interface {
     values: [AddressLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "setPlatformArbiter",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(
     functionFragment: "setPlatformFee",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "submitMarketplaceReview",
     values: [BigNumberish, AddressLike, BigNumberish, string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "supportsInterface",
+    values: [BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "suspendUser",
@@ -318,7 +484,19 @@ export interface EnhancedEscrowInterface extends Interface {
   ): string;
 
   decodeFunctionResult(
+    functionFragment: "DEADLINE_GRACE_PERIOD",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "MAX_DISPUTE_BOND_PERCENTAGE",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "MAX_PLATFORM_FEE",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "MIN_DISPUTE_BOND",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -354,6 +532,10 @@ export interface EnhancedEscrowInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "calculateDisputeBond",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "calculateWeightedScore",
     data: BytesLike
   ): Result;
@@ -364,7 +546,19 @@ export interface EnhancedEscrowInterface extends Interface {
   decodeFunctionResult(functionFragment: "castVote", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "chainId", data: BytesLike): Result;
   decodeFunctionResult(
+    functionFragment: "claimDeadlineRefund",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "claimNFTDeadlineRefund",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "confirmDelivery",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "confirmNFTDelivery",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -376,7 +570,28 @@ export interface EnhancedEscrowInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "createNFTEscrow",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "depositNFT", data: BytesLike): Result;
+  decodeFunctionResult(
     functionFragment: "detailedReputationScores",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "disputeBondPercentage",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "disputeBondRequired",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "disputeBonds",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "disputeInitiator",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -389,7 +604,15 @@ export interface EnhancedEscrowInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "executeNFTEmergencyRefund",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "getDetailedReputation",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getDisputeBondConfig",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -397,7 +620,15 @@ export interface EnhancedEscrowInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "getNFTEscrowDetails",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "getReputationTier",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getTimeUntilDeadlineRefund",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -409,8 +640,16 @@ export interface EnhancedEscrowInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "governance", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "isEligibleForDeadlineRefund",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "ldaoToken", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "lockFunds", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "lockFundsForNFT",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "nextEscrowId",
     data: BytesLike
@@ -420,10 +659,30 @@ export interface EnhancedEscrowInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "onERC1155BatchReceived",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "onERC1155Received",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "onERC721Received",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "openDispute",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "openNFTDispute",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "platformArbiter",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "platformFeePercentage",
     data: BytesLike
@@ -436,9 +695,17 @@ export interface EnhancedEscrowInterface extends Interface {
     functionFragment: "resolveDisputeByArbitrator",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "resolveNFTDisputeByArbitrator",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "reviews", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "setArbitratorFee",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setDisputeBondConfig",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -450,11 +717,19 @@ export interface EnhancedEscrowInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "setPlatformArbiter",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "setPlatformFee",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
     functionFragment: "submitMarketplaceReview",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "supportsInterface",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -488,12 +763,119 @@ export namespace ArbitratorAppointedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
+export namespace DeadlineRefundEvent {
+  export type InputTuple = [
+    escrowId: BigNumberish,
+    buyer: AddressLike,
+    amount: BigNumberish,
+    reason: string
+  ];
+  export type OutputTuple = [
+    escrowId: bigint,
+    buyer: string,
+    amount: bigint,
+    reason: string
+  ];
+  export interface OutputObject {
+    escrowId: bigint;
+    buyer: string;
+    amount: bigint;
+    reason: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
 export namespace DeliveryConfirmedEvent {
   export type InputTuple = [escrowId: BigNumberish, deliveryInfo: string];
   export type OutputTuple = [escrowId: bigint, deliveryInfo: string];
   export interface OutputObject {
     escrowId: bigint;
     deliveryInfo: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace DisputeBondConfigUpdatedEvent {
+  export type InputTuple = [newPercentage: BigNumberish, required: boolean];
+  export type OutputTuple = [newPercentage: bigint, required: boolean];
+  export interface OutputObject {
+    newPercentage: bigint;
+    required: boolean;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace DisputeBondDepositedEvent {
+  export type InputTuple = [
+    escrowId: BigNumberish,
+    depositor: AddressLike,
+    amount: BigNumberish
+  ];
+  export type OutputTuple = [
+    escrowId: bigint,
+    depositor: string,
+    amount: bigint
+  ];
+  export interface OutputObject {
+    escrowId: bigint;
+    depositor: string;
+    amount: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace DisputeBondForfeitedEvent {
+  export type InputTuple = [
+    escrowId: BigNumberish,
+    loser: AddressLike,
+    amount: BigNumberish,
+    winner: AddressLike
+  ];
+  export type OutputTuple = [
+    escrowId: bigint,
+    loser: string,
+    amount: bigint,
+    winner: string
+  ];
+  export interface OutputObject {
+    escrowId: bigint;
+    loser: string;
+    amount: bigint;
+    winner: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace DisputeBondRefundedEvent {
+  export type InputTuple = [
+    escrowId: BigNumberish,
+    recipient: AddressLike,
+    amount: BigNumberish
+  ];
+  export type OutputTuple = [
+    escrowId: bigint,
+    recipient: string,
+    amount: bigint
+  ];
+  export interface OutputObject {
+    escrowId: bigint;
+    recipient: string;
+    amount: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -557,6 +939,18 @@ export namespace EscrowCreatedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
+export namespace EscrowReadyForReleaseEvent {
+  export type InputTuple = [escrowId: BigNumberish];
+  export type OutputTuple = [escrowId: bigint];
+  export interface OutputObject {
+    escrowId: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
 export namespace EscrowResolvedEvent {
   export type InputTuple = [
     escrowId: BigNumberish,
@@ -592,12 +986,75 @@ export namespace FundsLockedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
+export namespace NFTDepositedEvent {
+  export type InputTuple = [
+    escrowId: BigNumberish,
+    nftContract: AddressLike,
+    tokenId: BigNumberish,
+    standard: BigNumberish
+  ];
+  export type OutputTuple = [
+    escrowId: bigint,
+    nftContract: string,
+    tokenId: bigint,
+    standard: bigint
+  ];
+  export interface OutputObject {
+    escrowId: bigint;
+    nftContract: string;
+    tokenId: bigint;
+    standard: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace NFTTransferredEvent {
+  export type InputTuple = [
+    escrowId: BigNumberish,
+    to: AddressLike,
+    nftContract: AddressLike,
+    tokenId: BigNumberish
+  ];
+  export type OutputTuple = [
+    escrowId: bigint,
+    to: string,
+    nftContract: string,
+    tokenId: bigint
+  ];
+  export interface OutputObject {
+    escrowId: bigint;
+    to: string;
+    nftContract: string;
+    tokenId: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
 export namespace OwnershipTransferredEvent {
   export type InputTuple = [previousOwner: AddressLike, newOwner: AddressLike];
   export type OutputTuple = [previousOwner: string, newOwner: string];
   export interface OutputObject {
     previousOwner: string;
     newOwner: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace PlatformArbiterUpdatedEvent {
+  export type InputTuple = [oldArbiter: AddressLike, newArbiter: AddressLike];
+  export type OutputTuple = [oldArbiter: string, newArbiter: string];
+  export interface OutputObject {
+    oldArbiter: string;
+    newArbiter: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -734,7 +1191,13 @@ export interface EnhancedEscrow extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
+  DEADLINE_GRACE_PERIOD: TypedContractMethod<[], [bigint], "view">;
+
+  MAX_DISPUTE_BOND_PERCENTAGE: TypedContractMethod<[], [bigint], "view">;
+
   MAX_PLATFORM_FEE: TypedContractMethod<[], [bigint], "view">;
+
+  MIN_DISPUTE_BOND: TypedContractMethod<[], [bigint], "view">;
 
   MIN_VOTING_POWER: TypedContractMethod<[], [bigint], "view">;
 
@@ -768,6 +1231,12 @@ export interface EnhancedEscrow extends BaseContract {
     "nonpayable"
   >;
 
+  calculateDisputeBond: TypedContractMethod<
+    [escrowId: BigNumberish],
+    [bigint],
+    "view"
+  >;
+
   calculateWeightedScore: TypedContractMethod<
     [user: AddressLike],
     [bigint],
@@ -788,7 +1257,25 @@ export interface EnhancedEscrow extends BaseContract {
 
   chainId: TypedContractMethod<[], [bigint], "view">;
 
+  claimDeadlineRefund: TypedContractMethod<
+    [escrowId: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
+  claimNFTDeadlineRefund: TypedContractMethod<
+    [escrowId: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   confirmDelivery: TypedContractMethod<
+    [escrowId: BigNumberish, deliveryInfo: string],
+    [void],
+    "nonpayable"
+  >;
+
+  confirmNFTDelivery: TypedContractMethod<
     [escrowId: BigNumberish, deliveryInfo: string],
     [void],
     "nonpayable"
@@ -823,6 +1310,29 @@ export interface EnhancedEscrow extends BaseContract {
     "payable"
   >;
 
+  createNFTEscrow: TypedContractMethod<
+    [
+      listingId: BigNumberish,
+      seller: AddressLike,
+      tokenAddress: AddressLike,
+      amount: BigNumberish,
+      deliveryDeadline: BigNumberish,
+      resolutionMethod: BigNumberish,
+      nftStandard: BigNumberish,
+      nftContractAddress: AddressLike,
+      nftTokenId: BigNumberish,
+      nftAmount: BigNumberish
+    ],
+    [bigint],
+    "payable"
+  >;
+
+  depositNFT: TypedContractMethod<
+    [escrowId: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   detailedReputationScores: TypedContractMethod<
     [arg0: AddressLike],
     [
@@ -853,6 +1363,14 @@ export interface EnhancedEscrow extends BaseContract {
     "view"
   >;
 
+  disputeBondPercentage: TypedContractMethod<[], [bigint], "view">;
+
+  disputeBondRequired: TypedContractMethod<[], [boolean], "view">;
+
+  disputeBonds: TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
+
+  disputeInitiator: TypedContractMethod<[arg0: BigNumberish], [string], "view">;
+
   escrowChainId: TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
 
   escrows: TypedContractMethod<
@@ -872,6 +1390,11 @@ export interface EnhancedEscrow extends BaseContract {
         bigint,
         bigint,
         bigint,
+        bigint,
+        string,
+        bigint,
+        bigint,
+        boolean,
         bigint,
         bigint,
         bigint,
@@ -896,6 +1419,11 @@ export interface EnhancedEscrow extends BaseContract {
         resolvedAt: bigint;
         status: bigint;
         resolutionMethod: bigint;
+        nftStandard: bigint;
+        nftContractAddress: string;
+        nftTokenId: bigint;
+        nftAmount: bigint;
+        nftDeposited: boolean;
         votesForBuyer: bigint;
         votesForSeller: bigint;
         totalVotingPower: bigint;
@@ -917,9 +1445,27 @@ export interface EnhancedEscrow extends BaseContract {
     "nonpayable"
   >;
 
+  executeNFTEmergencyRefund: TypedContractMethod<
+    [escrowId: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   getDetailedReputation: TypedContractMethod<
     [user: AddressLike],
     [EnhancedEscrow.DetailedReputationScoreStructOutput],
+    "view"
+  >;
+
+  getDisputeBondConfig: TypedContractMethod<
+    [],
+    [
+      [bigint, bigint, boolean] & {
+        percentage: bigint;
+        minBond: bigint;
+        required: boolean;
+      }
+    ],
     "view"
   >;
 
@@ -929,7 +1475,27 @@ export interface EnhancedEscrow extends BaseContract {
     "view"
   >;
 
+  getNFTEscrowDetails: TypedContractMethod<
+    [escrowId: BigNumberish],
+    [
+      [bigint, string, bigint, bigint, boolean] & {
+        nftStandard: bigint;
+        nftContractAddress: string;
+        nftTokenId: bigint;
+        nftAmount: bigint;
+        nftDeposited: boolean;
+      }
+    ],
+    "view"
+  >;
+
   getReputationTier: TypedContractMethod<[user: AddressLike], [bigint], "view">;
+
+  getTimeUntilDeadlineRefund: TypedContractMethod<
+    [escrowId: BigNumberish],
+    [bigint],
+    "view"
+  >;
 
   getTopSellers: TypedContractMethod<
     [limit: BigNumberish],
@@ -941,15 +1507,59 @@ export interface EnhancedEscrow extends BaseContract {
 
   governance: TypedContractMethod<[], [string], "view">;
 
+  isEligibleForDeadlineRefund: TypedContractMethod<
+    [escrowId: BigNumberish],
+    [[boolean, string] & { eligible: boolean; reason: string }],
+    "view"
+  >;
+
   ldaoToken: TypedContractMethod<[], [string], "view">;
 
   lockFunds: TypedContractMethod<[escrowId: BigNumberish], [void], "payable">;
+
+  lockFundsForNFT: TypedContractMethod<
+    [escrowId: BigNumberish],
+    [void],
+    "payable"
+  >;
 
   nextEscrowId: TypedContractMethod<[], [bigint], "view">;
 
   nextReviewId: TypedContractMethod<[], [bigint], "view">;
 
-  openDispute: TypedContractMethod<
+  onERC1155BatchReceived: TypedContractMethod<
+    [
+      arg0: AddressLike,
+      arg1: AddressLike,
+      arg2: BigNumberish[],
+      arg3: BigNumberish[],
+      arg4: BytesLike
+    ],
+    [string],
+    "view"
+  >;
+
+  onERC1155Received: TypedContractMethod<
+    [
+      arg0: AddressLike,
+      arg1: AddressLike,
+      arg2: BigNumberish,
+      arg3: BigNumberish,
+      arg4: BytesLike
+    ],
+    [string],
+    "view"
+  >;
+
+  onERC721Received: TypedContractMethod<
+    [arg0: AddressLike, arg1: AddressLike, arg2: BigNumberish, arg3: BytesLike],
+    [string],
+    "view"
+  >;
+
+  openDispute: TypedContractMethod<[escrowId: BigNumberish], [void], "payable">;
+
+  openNFTDispute: TypedContractMethod<
     [escrowId: BigNumberish],
     [void],
     "nonpayable"
@@ -957,11 +1567,19 @@ export interface EnhancedEscrow extends BaseContract {
 
   owner: TypedContractMethod<[], [string], "view">;
 
+  platformArbiter: TypedContractMethod<[], [string], "view">;
+
   platformFeePercentage: TypedContractMethod<[], [bigint], "view">;
 
   renounceOwnership: TypedContractMethod<[], [void], "nonpayable">;
 
   resolveDisputeByArbitrator: TypedContractMethod<
+    [escrowId: BigNumberish, buyerWins: boolean],
+    [void],
+    "nonpayable"
+  >;
+
+  resolveNFTDisputeByArbitrator: TypedContractMethod<
     [escrowId: BigNumberish, buyerWins: boolean],
     [void],
     "nonpayable"
@@ -1001,6 +1619,12 @@ export interface EnhancedEscrow extends BaseContract {
     "nonpayable"
   >;
 
+  setDisputeBondConfig: TypedContractMethod<
+    [newPercentage: BigNumberish, required: boolean],
+    [void],
+    "nonpayable"
+  >;
+
   setGovernance: TypedContractMethod<
     [newGovernance: AddressLike],
     [void],
@@ -1009,6 +1633,12 @@ export interface EnhancedEscrow extends BaseContract {
 
   setLDAOToken: TypedContractMethod<
     [newToken: AddressLike],
+    [void],
+    "nonpayable"
+  >;
+
+  setPlatformArbiter: TypedContractMethod<
+    [newArbiter: AddressLike],
     [void],
     "nonpayable"
   >;
@@ -1028,6 +1658,12 @@ export interface EnhancedEscrow extends BaseContract {
     ],
     [bigint],
     "nonpayable"
+  >;
+
+  supportsInterface: TypedContractMethod<
+    [interfaceId: BytesLike],
+    [boolean],
+    "view"
   >;
 
   suspendUser: TypedContractMethod<
@@ -1059,7 +1695,16 @@ export interface EnhancedEscrow extends BaseContract {
   ): T;
 
   getFunction(
+    nameOrSignature: "DEADLINE_GRACE_PERIOD"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "MAX_DISPUTE_BOND_PERCENTAGE"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
     nameOrSignature: "MAX_PLATFORM_FEE"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "MIN_DISPUTE_BOND"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "MIN_VOTING_POWER"
@@ -1090,6 +1735,9 @@ export interface EnhancedEscrow extends BaseContract {
     nameOrSignature: "autoResolveDispute"
   ): TypedContractMethod<[escrowId: BigNumberish], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "calculateDisputeBond"
+  ): TypedContractMethod<[escrowId: BigNumberish], [bigint], "view">;
+  getFunction(
     nameOrSignature: "calculateWeightedScore"
   ): TypedContractMethod<[user: AddressLike], [bigint], "view">;
   getFunction(
@@ -1106,7 +1754,20 @@ export interface EnhancedEscrow extends BaseContract {
     nameOrSignature: "chainId"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
+    nameOrSignature: "claimDeadlineRefund"
+  ): TypedContractMethod<[escrowId: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "claimNFTDeadlineRefund"
+  ): TypedContractMethod<[escrowId: BigNumberish], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "confirmDelivery"
+  ): TypedContractMethod<
+    [escrowId: BigNumberish, deliveryInfo: string],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "confirmNFTDelivery"
   ): TypedContractMethod<
     [escrowId: BigNumberish, deliveryInfo: string],
     [void],
@@ -1144,6 +1805,27 @@ export interface EnhancedEscrow extends BaseContract {
     "payable"
   >;
   getFunction(
+    nameOrSignature: "createNFTEscrow"
+  ): TypedContractMethod<
+    [
+      listingId: BigNumberish,
+      seller: AddressLike,
+      tokenAddress: AddressLike,
+      amount: BigNumberish,
+      deliveryDeadline: BigNumberish,
+      resolutionMethod: BigNumberish,
+      nftStandard: BigNumberish,
+      nftContractAddress: AddressLike,
+      nftTokenId: BigNumberish,
+      nftAmount: BigNumberish
+    ],
+    [bigint],
+    "payable"
+  >;
+  getFunction(
+    nameOrSignature: "depositNFT"
+  ): TypedContractMethod<[escrowId: BigNumberish], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "detailedReputationScores"
   ): TypedContractMethod<
     [arg0: AddressLike],
@@ -1175,6 +1857,18 @@ export interface EnhancedEscrow extends BaseContract {
     "view"
   >;
   getFunction(
+    nameOrSignature: "disputeBondPercentage"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "disputeBondRequired"
+  ): TypedContractMethod<[], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "disputeBonds"
+  ): TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "disputeInitiator"
+  ): TypedContractMethod<[arg0: BigNumberish], [string], "view">;
+  getFunction(
     nameOrSignature: "escrowChainId"
   ): TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
   getFunction(
@@ -1196,6 +1890,11 @@ export interface EnhancedEscrow extends BaseContract {
         bigint,
         bigint,
         bigint,
+        bigint,
+        string,
+        bigint,
+        bigint,
+        boolean,
         bigint,
         bigint,
         bigint,
@@ -1220,6 +1919,11 @@ export interface EnhancedEscrow extends BaseContract {
         resolvedAt: bigint;
         status: bigint;
         resolutionMethod: bigint;
+        nftStandard: bigint;
+        nftContractAddress: string;
+        nftTokenId: bigint;
+        nftAmount: bigint;
+        nftDeposited: boolean;
         votesForBuyer: bigint;
         votesForSeller: bigint;
         totalVotingPower: bigint;
@@ -1238,6 +1942,9 @@ export interface EnhancedEscrow extends BaseContract {
     nameOrSignature: "executeEmergencyRefund"
   ): TypedContractMethod<[escrowId: BigNumberish], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "executeNFTEmergencyRefund"
+  ): TypedContractMethod<[escrowId: BigNumberish], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "getDetailedReputation"
   ): TypedContractMethod<
     [user: AddressLike],
@@ -1245,11 +1952,42 @@ export interface EnhancedEscrow extends BaseContract {
     "view"
   >;
   getFunction(
+    nameOrSignature: "getDisputeBondConfig"
+  ): TypedContractMethod<
+    [],
+    [
+      [bigint, bigint, boolean] & {
+        percentage: bigint;
+        minBond: bigint;
+        required: boolean;
+      }
+    ],
+    "view"
+  >;
+  getFunction(
     nameOrSignature: "getEscrowChainId"
   ): TypedContractMethod<[escrowId: BigNumberish], [bigint], "view">;
   getFunction(
+    nameOrSignature: "getNFTEscrowDetails"
+  ): TypedContractMethod<
+    [escrowId: BigNumberish],
+    [
+      [bigint, string, bigint, bigint, boolean] & {
+        nftStandard: bigint;
+        nftContractAddress: string;
+        nftTokenId: bigint;
+        nftAmount: bigint;
+        nftDeposited: boolean;
+      }
+    ],
+    "view"
+  >;
+  getFunction(
     nameOrSignature: "getReputationTier"
   ): TypedContractMethod<[user: AddressLike], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "getTimeUntilDeadlineRefund"
+  ): TypedContractMethod<[escrowId: BigNumberish], [bigint], "view">;
   getFunction(
     nameOrSignature: "getTopSellers"
   ): TypedContractMethod<
@@ -1264,10 +2002,20 @@ export interface EnhancedEscrow extends BaseContract {
     nameOrSignature: "governance"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
+    nameOrSignature: "isEligibleForDeadlineRefund"
+  ): TypedContractMethod<
+    [escrowId: BigNumberish],
+    [[boolean, string] & { eligible: boolean; reason: string }],
+    "view"
+  >;
+  getFunction(
     nameOrSignature: "ldaoToken"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "lockFunds"
+  ): TypedContractMethod<[escrowId: BigNumberish], [void], "payable">;
+  getFunction(
+    nameOrSignature: "lockFundsForNFT"
   ): TypedContractMethod<[escrowId: BigNumberish], [void], "payable">;
   getFunction(
     nameOrSignature: "nextEscrowId"
@@ -1276,10 +2024,49 @@ export interface EnhancedEscrow extends BaseContract {
     nameOrSignature: "nextReviewId"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
+    nameOrSignature: "onERC1155BatchReceived"
+  ): TypedContractMethod<
+    [
+      arg0: AddressLike,
+      arg1: AddressLike,
+      arg2: BigNumberish[],
+      arg3: BigNumberish[],
+      arg4: BytesLike
+    ],
+    [string],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "onERC1155Received"
+  ): TypedContractMethod<
+    [
+      arg0: AddressLike,
+      arg1: AddressLike,
+      arg2: BigNumberish,
+      arg3: BigNumberish,
+      arg4: BytesLike
+    ],
+    [string],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "onERC721Received"
+  ): TypedContractMethod<
+    [arg0: AddressLike, arg1: AddressLike, arg2: BigNumberish, arg3: BytesLike],
+    [string],
+    "view"
+  >;
+  getFunction(
     nameOrSignature: "openDispute"
+  ): TypedContractMethod<[escrowId: BigNumberish], [void], "payable">;
+  getFunction(
+    nameOrSignature: "openNFTDispute"
   ): TypedContractMethod<[escrowId: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "owner"
+  ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "platformArbiter"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "platformFeePercentage"
@@ -1289,6 +2076,13 @@ export interface EnhancedEscrow extends BaseContract {
   ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "resolveDisputeByArbitrator"
+  ): TypedContractMethod<
+    [escrowId: BigNumberish, buyerWins: boolean],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "resolveNFTDisputeByArbitrator"
   ): TypedContractMethod<
     [escrowId: BigNumberish, buyerWins: boolean],
     [void],
@@ -1331,11 +2125,21 @@ export interface EnhancedEscrow extends BaseContract {
     "nonpayable"
   >;
   getFunction(
+    nameOrSignature: "setDisputeBondConfig"
+  ): TypedContractMethod<
+    [newPercentage: BigNumberish, required: boolean],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "setGovernance"
   ): TypedContractMethod<[newGovernance: AddressLike], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "setLDAOToken"
   ): TypedContractMethod<[newToken: AddressLike], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "setPlatformArbiter"
+  ): TypedContractMethod<[newArbiter: AddressLike], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "setPlatformFee"
   ): TypedContractMethod<[newFee: BigNumberish], [void], "nonpayable">;
@@ -1351,6 +2155,9 @@ export interface EnhancedEscrow extends BaseContract {
     [bigint],
     "nonpayable"
   >;
+  getFunction(
+    nameOrSignature: "supportsInterface"
+  ): TypedContractMethod<[interfaceId: BytesLike], [boolean], "view">;
   getFunction(
     nameOrSignature: "suspendUser"
   ): TypedContractMethod<
@@ -1384,11 +2191,46 @@ export interface EnhancedEscrow extends BaseContract {
     ArbitratorAppointedEvent.OutputObject
   >;
   getEvent(
+    key: "DeadlineRefund"
+  ): TypedContractEvent<
+    DeadlineRefundEvent.InputTuple,
+    DeadlineRefundEvent.OutputTuple,
+    DeadlineRefundEvent.OutputObject
+  >;
+  getEvent(
     key: "DeliveryConfirmed"
   ): TypedContractEvent<
     DeliveryConfirmedEvent.InputTuple,
     DeliveryConfirmedEvent.OutputTuple,
     DeliveryConfirmedEvent.OutputObject
+  >;
+  getEvent(
+    key: "DisputeBondConfigUpdated"
+  ): TypedContractEvent<
+    DisputeBondConfigUpdatedEvent.InputTuple,
+    DisputeBondConfigUpdatedEvent.OutputTuple,
+    DisputeBondConfigUpdatedEvent.OutputObject
+  >;
+  getEvent(
+    key: "DisputeBondDeposited"
+  ): TypedContractEvent<
+    DisputeBondDepositedEvent.InputTuple,
+    DisputeBondDepositedEvent.OutputTuple,
+    DisputeBondDepositedEvent.OutputObject
+  >;
+  getEvent(
+    key: "DisputeBondForfeited"
+  ): TypedContractEvent<
+    DisputeBondForfeitedEvent.InputTuple,
+    DisputeBondForfeitedEvent.OutputTuple,
+    DisputeBondForfeitedEvent.OutputObject
+  >;
+  getEvent(
+    key: "DisputeBondRefunded"
+  ): TypedContractEvent<
+    DisputeBondRefundedEvent.InputTuple,
+    DisputeBondRefundedEvent.OutputTuple,
+    DisputeBondRefundedEvent.OutputObject
   >;
   getEvent(
     key: "DisputeOpened"
@@ -1412,6 +2254,13 @@ export interface EnhancedEscrow extends BaseContract {
     EscrowCreatedEvent.OutputObject
   >;
   getEvent(
+    key: "EscrowReadyForRelease"
+  ): TypedContractEvent<
+    EscrowReadyForReleaseEvent.InputTuple,
+    EscrowReadyForReleaseEvent.OutputTuple,
+    EscrowReadyForReleaseEvent.OutputObject
+  >;
+  getEvent(
     key: "EscrowResolved"
   ): TypedContractEvent<
     EscrowResolvedEvent.InputTuple,
@@ -1426,11 +2275,32 @@ export interface EnhancedEscrow extends BaseContract {
     FundsLockedEvent.OutputObject
   >;
   getEvent(
+    key: "NFTDeposited"
+  ): TypedContractEvent<
+    NFTDepositedEvent.InputTuple,
+    NFTDepositedEvent.OutputTuple,
+    NFTDepositedEvent.OutputObject
+  >;
+  getEvent(
+    key: "NFTTransferred"
+  ): TypedContractEvent<
+    NFTTransferredEvent.InputTuple,
+    NFTTransferredEvent.OutputTuple,
+    NFTTransferredEvent.OutputObject
+  >;
+  getEvent(
     key: "OwnershipTransferred"
   ): TypedContractEvent<
     OwnershipTransferredEvent.InputTuple,
     OwnershipTransferredEvent.OutputTuple,
     OwnershipTransferredEvent.OutputObject
+  >;
+  getEvent(
+    key: "PlatformArbiterUpdated"
+  ): TypedContractEvent<
+    PlatformArbiterUpdatedEvent.InputTuple,
+    PlatformArbiterUpdatedEvent.OutputTuple,
+    PlatformArbiterUpdatedEvent.OutputObject
   >;
   getEvent(
     key: "ReputationUpdated"
@@ -1473,6 +2343,17 @@ export interface EnhancedEscrow extends BaseContract {
       ArbitratorAppointedEvent.OutputObject
     >;
 
+    "DeadlineRefund(uint256,address,uint256,string)": TypedContractEvent<
+      DeadlineRefundEvent.InputTuple,
+      DeadlineRefundEvent.OutputTuple,
+      DeadlineRefundEvent.OutputObject
+    >;
+    DeadlineRefund: TypedContractEvent<
+      DeadlineRefundEvent.InputTuple,
+      DeadlineRefundEvent.OutputTuple,
+      DeadlineRefundEvent.OutputObject
+    >;
+
     "DeliveryConfirmed(uint256,string)": TypedContractEvent<
       DeliveryConfirmedEvent.InputTuple,
       DeliveryConfirmedEvent.OutputTuple,
@@ -1482,6 +2363,50 @@ export interface EnhancedEscrow extends BaseContract {
       DeliveryConfirmedEvent.InputTuple,
       DeliveryConfirmedEvent.OutputTuple,
       DeliveryConfirmedEvent.OutputObject
+    >;
+
+    "DisputeBondConfigUpdated(uint256,bool)": TypedContractEvent<
+      DisputeBondConfigUpdatedEvent.InputTuple,
+      DisputeBondConfigUpdatedEvent.OutputTuple,
+      DisputeBondConfigUpdatedEvent.OutputObject
+    >;
+    DisputeBondConfigUpdated: TypedContractEvent<
+      DisputeBondConfigUpdatedEvent.InputTuple,
+      DisputeBondConfigUpdatedEvent.OutputTuple,
+      DisputeBondConfigUpdatedEvent.OutputObject
+    >;
+
+    "DisputeBondDeposited(uint256,address,uint256)": TypedContractEvent<
+      DisputeBondDepositedEvent.InputTuple,
+      DisputeBondDepositedEvent.OutputTuple,
+      DisputeBondDepositedEvent.OutputObject
+    >;
+    DisputeBondDeposited: TypedContractEvent<
+      DisputeBondDepositedEvent.InputTuple,
+      DisputeBondDepositedEvent.OutputTuple,
+      DisputeBondDepositedEvent.OutputObject
+    >;
+
+    "DisputeBondForfeited(uint256,address,uint256,address)": TypedContractEvent<
+      DisputeBondForfeitedEvent.InputTuple,
+      DisputeBondForfeitedEvent.OutputTuple,
+      DisputeBondForfeitedEvent.OutputObject
+    >;
+    DisputeBondForfeited: TypedContractEvent<
+      DisputeBondForfeitedEvent.InputTuple,
+      DisputeBondForfeitedEvent.OutputTuple,
+      DisputeBondForfeitedEvent.OutputObject
+    >;
+
+    "DisputeBondRefunded(uint256,address,uint256)": TypedContractEvent<
+      DisputeBondRefundedEvent.InputTuple,
+      DisputeBondRefundedEvent.OutputTuple,
+      DisputeBondRefundedEvent.OutputObject
+    >;
+    DisputeBondRefunded: TypedContractEvent<
+      DisputeBondRefundedEvent.InputTuple,
+      DisputeBondRefundedEvent.OutputTuple,
+      DisputeBondRefundedEvent.OutputObject
     >;
 
     "DisputeOpened(uint256,uint8)": TypedContractEvent<
@@ -1517,6 +2442,17 @@ export interface EnhancedEscrow extends BaseContract {
       EscrowCreatedEvent.OutputObject
     >;
 
+    "EscrowReadyForRelease(uint256)": TypedContractEvent<
+      EscrowReadyForReleaseEvent.InputTuple,
+      EscrowReadyForReleaseEvent.OutputTuple,
+      EscrowReadyForReleaseEvent.OutputObject
+    >;
+    EscrowReadyForRelease: TypedContractEvent<
+      EscrowReadyForReleaseEvent.InputTuple,
+      EscrowReadyForReleaseEvent.OutputTuple,
+      EscrowReadyForReleaseEvent.OutputObject
+    >;
+
     "EscrowResolved(uint256,uint8,address)": TypedContractEvent<
       EscrowResolvedEvent.InputTuple,
       EscrowResolvedEvent.OutputTuple,
@@ -1539,6 +2475,28 @@ export interface EnhancedEscrow extends BaseContract {
       FundsLockedEvent.OutputObject
     >;
 
+    "NFTDeposited(uint256,address,uint256,uint8)": TypedContractEvent<
+      NFTDepositedEvent.InputTuple,
+      NFTDepositedEvent.OutputTuple,
+      NFTDepositedEvent.OutputObject
+    >;
+    NFTDeposited: TypedContractEvent<
+      NFTDepositedEvent.InputTuple,
+      NFTDepositedEvent.OutputTuple,
+      NFTDepositedEvent.OutputObject
+    >;
+
+    "NFTTransferred(uint256,address,address,uint256)": TypedContractEvent<
+      NFTTransferredEvent.InputTuple,
+      NFTTransferredEvent.OutputTuple,
+      NFTTransferredEvent.OutputObject
+    >;
+    NFTTransferred: TypedContractEvent<
+      NFTTransferredEvent.InputTuple,
+      NFTTransferredEvent.OutputTuple,
+      NFTTransferredEvent.OutputObject
+    >;
+
     "OwnershipTransferred(address,address)": TypedContractEvent<
       OwnershipTransferredEvent.InputTuple,
       OwnershipTransferredEvent.OutputTuple,
@@ -1548,6 +2506,17 @@ export interface EnhancedEscrow extends BaseContract {
       OwnershipTransferredEvent.InputTuple,
       OwnershipTransferredEvent.OutputTuple,
       OwnershipTransferredEvent.OutputObject
+    >;
+
+    "PlatformArbiterUpdated(address,address)": TypedContractEvent<
+      PlatformArbiterUpdatedEvent.InputTuple,
+      PlatformArbiterUpdatedEvent.OutputTuple,
+      PlatformArbiterUpdatedEvent.OutputObject
+    >;
+    PlatformArbiterUpdated: TypedContractEvent<
+      PlatformArbiterUpdatedEvent.InputTuple,
+      PlatformArbiterUpdatedEvent.OutputTuple,
+      PlatformArbiterUpdatedEvent.OutputObject
     >;
 
     "ReputationUpdated(address,uint256,uint8)": TypedContractEvent<

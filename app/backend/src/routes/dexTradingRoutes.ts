@@ -31,7 +31,11 @@ const swapQuoteValidation = [
   body('recipient')
     .optional()
     .isEthereumAddress()
-    .withMessage('Invalid recipient address')
+    .withMessage('Invalid recipient address'),
+  body('chainId')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Chain ID must be a valid integer')
 ];
 
 const tokenPriceValidation = [

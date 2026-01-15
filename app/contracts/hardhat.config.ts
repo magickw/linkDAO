@@ -29,6 +29,28 @@ const config: HardhatUserConfig = {
         },
       },
     ],
+    overrides: {
+      "contracts/EnhancedEscrow.sol": {
+        version: "0.8.20",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 1,
+          },
+          viaIR: true,
+        },
+      },
+      "contracts/LDAOTreasury.sol": {
+        version: "0.8.20",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 1,
+          },
+          viaIR: true,
+        },
+      },
+    },
   },
   networks: {
     hardhat: {

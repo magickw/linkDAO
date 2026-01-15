@@ -329,11 +329,11 @@ const styles = StyleSheet.create({
   },
   categoriesScroll: {
     paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   categoryButton: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderRadius: 20,
     backgroundColor: '#ffffff',
     borderWidth: 1,
@@ -354,11 +354,11 @@ const styles = StyleSheet.create({
   },
   sortScroll: {
     paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   sortButton: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 4,
     borderRadius: 16,
     backgroundColor: '#ffffff',
     borderWidth: 1,
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
   },
   resultsContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 4,
   },
   resultsText: {
     fontSize: 14,

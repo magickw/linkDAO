@@ -8,18 +8,41 @@ import { web3ErrorHandler } from '@/utils/web3ErrorHandling';
 import { uniswapRouterABI } from '@/lib/abi/UniswapRouterABI';
 import { sushiswapRouterABI } from '@/lib/abi/SushiSwapRouterABI';
 
-// DEX Router contract addresses (Ethereum mainnet)
-const UNISWAP_ROUTER_ADDRESS = '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D';
-const SUSHISWAP_ROUTER_ADDRESS = '0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F';
+// DEX Router contract addresses
+const UNISWAP_ROUTER_ADDRESSES: Record<number, string> = {
+  1: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', // Ethereum Mainnet
+  8453: '0x2626664c2603336E57B271c5C0b26F421741e481', // Base Mainnet (Uniswap V3)
+  84532: '0x94Cc0AaC535CCDB3C01d6787D6413C739ae12bc4', // Base Sepolia (Uniswap V3)
+};
 
-// Token addresses and decimals (Ethereum mainnet)
-const TOKEN_INFO: Record<string, { address: string; decimals: number }> = {
-  'ETH': { address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', decimals: 18 },
-  'WETH': { address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', decimals: 18 },
-  'USDC': { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6 },
-  'USDT': { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6 },
-  'DAI': { address: '0x6B175474E89094C44Da98b954EedeAC495271d0F', decimals: 18 },
-  'LDAO': { address: '0xc9F690B45e33ca909bB9ab97836091673232611B', decimals: 18 } // LDAO token address on Sepolia
+const SUSHISWAP_ROUTER_ADDRESSES: Record<number, string> = {
+  1: '0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F', // Ethereum Mainnet
+  // SushiSwap might not be on Base or addresses differ. Keeping mainnet for now.
+  // Add Base addresses if available/needed.
+};
+
+// Token addresses and decimals
+const TOKEN_INFO: Record<number, Record<string, { address: string; decimals: number }>> = {
+  1: { // Ethereum
+    'ETH': { address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', decimals: 18 },
+    'WETH': { address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', decimals: 18 },
+    'USDC': { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6 },
+    'USDT': { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6 },
+    'DAI': { address: '0x6B175474E89094C44Da98b954EedeAC495271d0F', decimals: 18 },
+    'LDAO': { address: '0xc9F690B45e33ca909bB9ab97836091673232611B', decimals: 18 }
+  },
+  8453: { // Base
+    'ETH': { address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', decimals: 18 },
+    'WETH': { address: '0x4200000000000000000000000000000000000006', decimals: 18 },
+    'USDC': { address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', decimals: 6 },
+    // Add LDAO address for Base when available
+  },
+  84532: { // Base Sepolia
+    'ETH': { address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', decimals: 18 },
+    'WETH': { address: '0x4200000000000000000000000000000000000006', decimals: 18 },
+    'USDC': { address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e', decimals: 6 },
+    // Add LDAO address for Base Sepolia when available
+  }
 };
 
 export interface DexSwapQuote {
@@ -66,12 +89,13 @@ export class DexService {
     fromToken: string,
     toToken: string,
     fromAmount: string,
-    slippage: number = 0.5
+    slippage: number = 0.5,
+    chainId: number = 1
   ): Promise<DexSwapQuote[]> {
     try {
       const [uniswapQuote, sushiswapQuote] = await Promise.allSettled([
-        this.getUniswapQuote(fromToken, toToken, fromAmount, slippage),
-        this.getSushiswapQuote(fromToken, toToken, fromAmount, slippage)
+        this.getUniswapQuote(fromToken, toToken, fromAmount, slippage, chainId),
+        this.getSushiswapQuote(fromToken, toToken, fromAmount, slippage, chainId)
       ]);
 
       const quotes: DexSwapQuote[] = [];
@@ -114,21 +138,29 @@ export class DexService {
     fromToken: string,
     toToken: string,
     fromAmount: string,
-    slippage: number
+    slippage: number,
+    chainId: number
   ): Promise<DexSwapQuote> {
     try {
       const provider = await getProvider();
       if (!provider) {
-        // Return mock data for development
         return this.getMockQuote('uniswap', fromToken, toToken, fromAmount, slippage);
       }
 
-      const fromTokenInfo = TOKEN_INFO[fromToken] || { address: fromToken, decimals: 18 };
-      const toTokenInfo = TOKEN_INFO[toToken] || { address: toToken, decimals: 18 };
+      const routerAddress = UNISWAP_ROUTER_ADDRESSES[chainId];
+      const chainTokens = TOKEN_INFO[chainId];
+
+      if (!routerAddress || !chainTokens) {
+        console.warn(`Uniswap not supported on chain ${chainId}`);
+        return this.getMockQuote('uniswap', fromToken, toToken, fromAmount, slippage);
+      }
+
+      const fromTokenInfo = chainTokens[fromToken] || { address: fromToken, decimals: 18 };
+      const toTokenInfo = chainTokens[toToken] || { address: toToken, decimals: 18 };
 
       // Create contract instance
       const uniswapRouter = new ethers.Contract(
-        UNISWAP_ROUTER_ADDRESS,
+        routerAddress,
         uniswapRouterABI,
         provider
       );
@@ -215,21 +247,29 @@ export class DexService {
     fromToken: string,
     toToken: string,
     fromAmount: string,
-    slippage: number
+    slippage: number,
+    chainId: number
   ): Promise<DexSwapQuote> {
     try {
       const provider = await getProvider();
       if (!provider) {
-        // Return mock data for development
         return this.getMockQuote('sushiswap', fromToken, toToken, fromAmount, slippage);
       }
 
-      const fromTokenInfo = TOKEN_INFO[fromToken] || { address: fromToken, decimals: 18 };
-      const toTokenInfo = TOKEN_INFO[toToken] || { address: toToken, decimals: 18 };
+      const routerAddress = SUSHISWAP_ROUTER_ADDRESSES[chainId];
+      const chainTokens = TOKEN_INFO[chainId];
+
+      if (!routerAddress || !chainTokens) {
+        // SushiSwap might not be on this chain
+        return this.getMockQuote('sushiswap', fromToken, toToken, fromAmount, slippage);
+      }
+
+      const fromTokenInfo = chainTokens[fromToken] || { address: fromToken, decimals: 18 };
+      const toTokenInfo = chainTokens[toToken] || { address: toToken, decimals: 18 };
 
       // Create contract instance
       const sushiswapRouter = new ethers.Contract(
-        SUSHISWAP_ROUTER_ADDRESS,
+        routerAddress,
         sushiswapRouterABI,
         provider
       );
@@ -359,7 +399,8 @@ export class DexService {
     toToken: string,
     fromAmount: string,
     minAmountOut: string,
-    deadline: number
+    deadline: number,
+    chainId: number = 1
   ): Promise<DexSwapTransaction> {
     try {
       const signer = await getSigner();
@@ -367,12 +408,19 @@ export class DexService {
         throw new Error('No wallet connected');
       }
 
-      const fromTokenInfo = TOKEN_INFO[fromToken] || { address: fromToken, decimals: 18 };
-      const toTokenInfo = TOKEN_INFO[toToken] || { address: toToken, decimals: 18 };
+      const routerAddress = UNISWAP_ROUTER_ADDRESSES[chainId];
+      const chainTokens = TOKEN_INFO[chainId];
+
+      if (!routerAddress || !chainTokens) {
+        throw new Error(`Uniswap not supported on chain ${chainId}`);
+      }
+
+      const fromTokenInfo = chainTokens[fromToken] || { address: fromToken, decimals: 18 };
+      const toTokenInfo = chainTokens[toToken] || { address: toToken, decimals: 18 };
 
       // Create contract instance
       const uniswapRouter = new ethers.Contract(
-        UNISWAP_ROUTER_ADDRESS,
+        routerAddress,
         uniswapRouterABI,
         signer
       );
@@ -432,7 +480,8 @@ export class DexService {
     toToken: string,
     fromAmount: string,
     minAmountOut: string,
-    deadline: number
+    deadline: number,
+    chainId: number = 1
   ): Promise<DexSwapTransaction> {
     try {
       const signer = await getSigner();
@@ -440,12 +489,19 @@ export class DexService {
         throw new Error('No wallet connected');
       }
 
-      const fromTokenInfo = TOKEN_INFO[fromToken] || { address: fromToken, decimals: 18 };
-      const toTokenInfo = TOKEN_INFO[toToken] || { address: toToken, decimals: 18 };
+      const routerAddress = SUSHISWAP_ROUTER_ADDRESSES[chainId];
+      const chainTokens = TOKEN_INFO[chainId];
+
+      if (!routerAddress || !chainTokens) {
+        throw new Error(`SushiSwap not supported on chain ${chainId}`);
+      }
+
+      const fromTokenInfo = chainTokens[fromToken] || { address: fromToken, decimals: 18 };
+      const toTokenInfo = chainTokens[toToken] || { address: toToken, decimals: 18 };
 
       // Create contract instance
       const sushiswapRouter = new ethers.Contract(
-        SUSHISWAP_ROUTER_ADDRESS,
+        routerAddress,
         sushiswapRouterABI,
         signer
       );
@@ -503,7 +559,8 @@ export class DexService {
   async approveToken(
     tokenSymbol: string,
     spenderAddress: string,
-    amount: string
+    amount: string,
+    chainId: number = 1
   ): Promise<{
     success: boolean;
     transactionHash?: string;
@@ -515,7 +572,12 @@ export class DexService {
         throw new Error('No wallet connected');
       }
 
-      const tokenInfo = TOKEN_INFO[tokenSymbol] || { address: tokenSymbol, decimals: 18 };
+      const chainTokens = TOKEN_INFO[chainId];
+      if (!chainTokens) {
+        throw new Error(`Chain ${chainId} not configured`);
+      }
+
+      const tokenInfo = chainTokens[tokenSymbol] || { address: tokenSymbol, decimals: 18 };
 
       // ERC20 ABI for approve function
       const erc20ABI = [
@@ -556,8 +618,9 @@ export class DexService {
   /**
    * Get token info by symbol
    */
-  getTokenInfo(tokenSymbol: string): { address: string; decimals: number } | null {
-    return TOKEN_INFO[tokenSymbol] || null;
+  getTokenInfo(tokenSymbol: string, chainId: number = 1): { address: string; decimals: number } | null {
+    const chainTokens = TOKEN_INFO[chainId];
+    return chainTokens?.[tokenSymbol] || null;
   }
 }
 

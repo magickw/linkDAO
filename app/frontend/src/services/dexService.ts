@@ -27,6 +27,7 @@ export interface SwapQuoteParams {
   amountIn: number;
   slippageTolerance?: number;
   recipient?: string;
+  chainId?: number;
 }
 
 export interface SwapQuoteResult {

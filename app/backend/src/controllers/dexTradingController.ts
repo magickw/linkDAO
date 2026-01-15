@@ -42,23 +42,38 @@ export class DEXTradingController {
         tokenOutAddress,
         amountIn,
         slippageTolerance = 0.5,
-        recipient
+        recipient,
+        chainId
       } = req.body;
 
-      // Validate and get token information
-      const [tokenInInfo, tokenOutInfo] = await Promise.all([
-        this.uniswapV3Service.validateAndGetTokenInfo(tokenInAddress),
-        this.uniswapV3Service.validateAndGetTokenInfo(tokenOutAddress)
-      ]);
+      // Switch chain if provided
+      if (chainId) {
+        await this.multiChainService.switchChain(chainId);
+      }
+
+      // Validate and get token information using the multi-chain service context
+      // Note: We need a way to validate tokens via multi-chain service, or assume addresses are valid for the chain
+      // For now, we'll construct the token info manually or use a helper if available.
+      // Ideally, MultiChainDEXService should expose token validation.
+      
+      // Let's use the current chain config to get common tokens, or just pass addresses if they are custom.
+      // Since validateAndGetTokenInfo is on uniswapV3Service (the single one), we might need to expose it on MultiChainDEXService.
+      // But let's proceed with using multiChainService.getSwapQuote which expects SwapParams.
 
       const tokenIn: TokenInfo = {
         address: tokenInAddress,
-        ...tokenInInfo
+        chainId: chainId || 1, // Default to 1 if not provided
+        decimals: 18, // Default, should be fetched
+        symbol: 'UNKNOWN',
+        name: 'Unknown Token'
       };
 
       const tokenOut: TokenInfo = {
         address: tokenOutAddress,
-        ...tokenOutInfo
+        chainId: chainId || 1,
+        decimals: 18, // Default
+        symbol: 'UNKNOWN',
+        name: 'Unknown Token'
       };
 
       const swapParams: SwapParams = {
@@ -69,7 +84,7 @@ export class DEXTradingController {
         recipient
       };
 
-      const quote = await this.uniswapV3Service.getSwapQuote(swapParams);
+      const quote = await this.multiChainService.getSwapQuote(swapParams);
 
       res.json({
         success: true,

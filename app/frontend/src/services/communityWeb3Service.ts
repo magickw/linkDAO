@@ -476,10 +476,8 @@ export class CommunityWeb3Service {
       };
       console.log('Transaction Data:', JSON.stringify(debugData, null, 2));
 
-      // Common transaction overrides for robustness
-      const txOverrides = {
-        // Add a fallback gas limit if estimation fails
-      };
+      // Send tip (with or without comment)
+      let tx;
 
       try {
         if (input.message && input.message.trim()) {
@@ -489,8 +487,7 @@ export class CommunityWeb3Service {
             input.recipientAddress,
             amountInUnits,
             paymentMethod,
-            input.message.trim(),
-            txOverrides
+            input.message.trim()
           );
         } else {
           console.log(`Tipping ${input.amount} ${input.token} to ${input.recipientAddress}`);
@@ -498,15 +495,19 @@ export class CommunityWeb3Service {
             postIdBytes32,
             input.recipientAddress,
             amountInUnits,
-            paymentMethod,
-            txOverrides
+            paymentMethod
           );
         }
+
+        // Verify transaction has data before waiting
+        if (!tx.data || tx.data === '0x' || tx.data === '') {
+          throw new Error('Transaction encoding failed - empty data field');
+        }
+
+        console.log('Transaction sent with data:', tx.data.slice(0, 10) + '...');
       } catch (estimateError: any) {
         // If gas estimation fails, try sending with a fixed gas limit as a last resort
         console.warn('Gas estimation failed, attempting with fixed gas limit:', estimateError.message);
-
-        const fallbackOverrides = { ...txOverrides, gasLimit: 400000 }; // Slightly higher for safety
 
         if (input.message && input.message.trim()) {
           tx = await tipRouterContract.tipWithComment(
@@ -515,7 +516,7 @@ export class CommunityWeb3Service {
             amountInUnits,
             paymentMethod,
             input.message.trim(),
-            fallbackOverrides
+            { gasLimit: 400000 }
           );
         } else {
           tx = await tipRouterContract.tip(
@@ -523,9 +524,16 @@ export class CommunityWeb3Service {
             input.recipientAddress,
             amountInUnits,
             paymentMethod,
-            fallbackOverrides
+            { gasLimit: 400000 }
           );
         }
+
+        // Verify transaction has data
+        if (!tx.data || tx.data === '0x' || tx.data === '') {
+          throw new Error('Transaction encoding failed - empty data field');
+        }
+
+        console.log('Transaction sent with fixed gas and data:', tx.data.slice(0, 10) + '...');
       }
 
       // Wait for transaction confirmation

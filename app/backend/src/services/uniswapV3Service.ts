@@ -32,24 +32,27 @@ const ERC20_ABI = [
 ];
 
 // Uniswap V3 Factory address (same across networks)
-const UNISWAP_V3_FACTORY = '0x1F98431c8aD98523631AE4a59f267346ea31F984';
+// const UNISWAP_V3_FACTORY = '0x1F98431c8aD98523631AE4a59f267346ea31F984';
 
 export class UniswapV3Service implements IUniswapV3Service {
   private provider: ethers.JsonRpcProvider;
   private chainId: number;
   private quoterAddress: string;
   private routerAddress: string;
+  private factoryAddress: string;
 
   constructor(
     rpcUrl: string,
     chainId: number = 11155111,
     quoterAddress: string = '0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3', // Sepolia Quoter V2
-    routerAddress: string = '0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E'  // Sepolia SwapRouter02
+    routerAddress: string = '0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E', // Sepolia SwapRouter02
+    factoryAddress: string = '0x0227628f3F023bb0B980b67D528571c95c6DaC1c'  // Sepolia Factory
   ) {
     this.provider = new ethers.JsonRpcProvider(rpcUrl);
     this.chainId = chainId;
     this.quoterAddress = quoterAddress;
     this.routerAddress = routerAddress;
+    this.factoryAddress = factoryAddress;
 
     safeLogger.info('UniswapV3Service initialized with direct SDK integration (ethers v6 compatible)');
   }
@@ -293,7 +296,7 @@ export class UniswapV3Service implements IUniswapV3Service {
 
       // Compute pool address deterministically
       const poolAddress = computePoolAddress({
-        factoryAddress: UNISWAP_V3_FACTORY,
+        factoryAddress: this.factoryAddress,
         tokenA: new Token(this.chainId, token0, 18), // decimals don't matter for address computation
         tokenB: new Token(this.chainId, token1, 18),
         fee: fee as FeeAmount

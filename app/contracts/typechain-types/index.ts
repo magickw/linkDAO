@@ -56,6 +56,8 @@ export type { ERC2981 } from "./@openzeppelin/contracts/token/common/ERC2981";
 export { ERC2981__factory } from "./factories/@openzeppelin/contracts/token/common/ERC2981__factory";
 export type { IERC1155 } from "./@openzeppelin/contracts/token/ERC1155/IERC1155";
 export { IERC1155__factory } from "./factories/@openzeppelin/contracts/token/ERC1155/IERC1155__factory";
+export type { IERC1155Receiver } from "./@openzeppelin/contracts/token/ERC1155/IERC1155Receiver";
+export { IERC1155Receiver__factory } from "./factories/@openzeppelin/contracts/token/ERC1155/IERC1155Receiver__factory";
 export type { ERC20 } from "./@openzeppelin/contracts/token/ERC20/ERC20";
 export { ERC20__factory } from "./factories/@openzeppelin/contracts/token/ERC20/ERC20__factory";
 export type { ERC20Permit } from "./@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit";

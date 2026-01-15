@@ -2,3 +2,4 @@
 /* tslint:disable */
 /* eslint-disable */
 export { IERC1155__factory } from "./IERC1155__factory";
+export { IERC1155Receiver__factory } from "./IERC1155Receiver__factory";

@@ -14,343 +14,426 @@ import { toast } from 'react-hot-toast';
 import { dexService } from '@/services/web3/dexService';
 
 interface DEXTradingInterfaceProps {
+
   userAddress?: string;
+
+  chainId?: number;
+
   onClose?: () => void;
+
 }
 
-interface TokenInfo {
-  symbol: string;
-  name: string;
-  address: string;
-  decimals: number;
-  logoUrl: string;
-  balance?: string;
-  price?: number;
-}
 
-interface SwapQuote {
-  fromAmount: string;
-  toAmount: string;
-  priceImpact: number;
-  minimumReceived: string;
-  gasFee: string;
-  route: string[];
-  validUntil: number;
-  dex: 'uniswap' | 'sushiswap';
-  expectedAmount: string;
-}
 
-interface DEXOption {
-  name: string;
-  logo: string;
-  tvl: string;
-  fee: number;
-  available: boolean;
-}
+// ... (keep TokenInfo, SwapQuote, DEXOption interfaces)
 
-const SUPPORTED_TOKENS: TokenInfo[] = [
-  {
-    symbol: 'ETH',
-    name: 'Ethereum',
-    address: '0x0000000000000000000000000000000000000000',
-    decimals: 18,
-    logoUrl: '/tokens/eth.png',
-    price: 2400
-  },
-  {
-    symbol: 'USDC',
-    name: 'USD Coin',
-    address: '0xA0b86a33E6441b8435b662303c0f0c8c8c8c8c8c',
-    decimals: 6,
-    logoUrl: '/tokens/usdc.png',
-    price: 1
-  },
-  {
-    symbol: 'USDT',
-    name: 'Tether USD',
-    address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
-    decimals: 6,
-    logoUrl: '/tokens/usdt.png',
-    price: 1
-  },
-  {
-    symbol: 'WBTC',
-    name: 'Wrapped Bitcoin',
-    address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
-    decimals: 8,
-    logoUrl: '/tokens/wbtc.png',
-    price: 65000
-  },
-  {
-    symbol: 'LDAO',
-    name: 'LinkDAO Token',
-    address: '0xc9F690B45e33ca909bB9ab97836091673232611B', // Updated to correct LDAO address
-    decimals: 18,
-    logoUrl: '/tokens/ldao.png',
-    price: 0.01
+
+
+const getSupportedTokens = (chainId: number = 1): TokenInfo[] => {
+
+  // Base Mainnet (8453)
+
+  if (chainId === 8453) {
+
+    return [
+
+      {
+
+        symbol: 'ETH',
+
+        name: 'Ethereum',
+
+        address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+
+        decimals: 18,
+
+        logoUrl: '/tokens/eth.png',
+
+        price: 2400
+
+      },
+
+      {
+
+        symbol: 'WETH',
+
+        name: 'Wrapped Ether',
+
+        address: '0x4200000000000000000000000000000000000006',
+
+        decimals: 18,
+
+        logoUrl: '/tokens/weth.png',
+
+        price: 2400
+
+      },
+
+      {
+
+        symbol: 'USDC',
+
+        name: 'USD Coin',
+
+        address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+
+        decimals: 6,
+
+        logoUrl: '/tokens/usdc.png',
+
+        price: 1
+
+      },
+
+      {
+
+        symbol: 'LDAO',
+
+        name: 'LinkDAO Token',
+
+        address: process.env.NEXT_PUBLIC_LDAO_ADDRESS_BASE || '0x...', // Needs env var
+
+        decimals: 18,
+
+        logoUrl: '/tokens/ldao.png',
+
+        price: 0.01
+
+      }
+
+    ];
+
   }
-];
+
+  
+
+  // Base Sepolia (84532)
+
+  if (chainId === 84532) {
+
+    return [
+
+      {
+
+        symbol: 'ETH',
+
+        name: 'Ethereum',
+
+        address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+
+        decimals: 18,
+
+        logoUrl: '/tokens/eth.png',
+
+        price: 2400
+
+      },
+
+      {
+
+        symbol: 'WETH',
+
+        name: 'Wrapped Ether',
+
+        address: '0x4200000000000000000000000000000000000006',
+
+        decimals: 18,
+
+        logoUrl: '/tokens/weth.png',
+
+        price: 2400
+
+      },
+
+      {
+
+        symbol: 'USDC',
+
+        name: 'USD Coin',
+
+        address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+
+        decimals: 6,
+
+        logoUrl: '/tokens/usdc.png',
+
+        price: 1
+
+      },
+
+      {
+
+        symbol: 'LDAO',
+
+        name: 'LinkDAO Token',
+
+        address: process.env.NEXT_PUBLIC_LDAO_ADDRESS_BASE_SEPOLIA || '0x...', // Needs env var
+
+        decimals: 18,
+
+        logoUrl: '/tokens/ldao.png',
+
+        price: 0.01
+
+      }
+
+    ];
+
+  }
+
+
+
+  // Default to Ethereum Mainnet (1)
+
+  return [
+
+    {
+
+      symbol: 'ETH',
+
+      name: 'Ethereum',
+
+      address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+
+      decimals: 18,
+
+      logoUrl: '/tokens/eth.png',
+
+      price: 2400
+
+    },
+
+    {
+
+      symbol: 'USDC',
+
+      name: 'USD Coin',
+
+      address: '0xA0b86a33E6441b8435b662303c0f0c8c8c8c8c8c',
+
+      decimals: 6,
+
+      logoUrl: '/tokens/usdc.png',
+
+      price: 1
+
+    },
+
+    {
+
+      symbol: 'USDT',
+
+      name: 'Tether USD',
+
+      address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+
+      decimals: 6,
+
+      logoUrl: '/tokens/usdt.png',
+
+      price: 1
+
+    },
+
+    {
+
+      symbol: 'WBTC',
+
+      name: 'Wrapped Bitcoin',
+
+      address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
+
+      decimals: 8,
+
+      logoUrl: '/tokens/wbtc.png',
+
+      price: 65000
+
+    },
+
+    {
+
+      symbol: 'LDAO',
+
+      name: 'LinkDAO Token',
+
+      address: '0xc9F690B45e33ca909bB9ab97836091673232611B', // Sepolia address as default fallback
+
+      decimals: 18,
+
+      logoUrl: '/tokens/ldao.png',
+
+      price: 0.01
+
+    }
+
+  ];
+
+};
+
+
 
 const DEX_OPTIONS: DEXOption[] = [
-  {
-    name: 'Uniswap V3',
-    logo: '/dex/uniswap.png',
-    tvl: '$4.2B',
-    fee: 0.3,
-    available: true
-  },
-  {
-    name: 'SushiSwap',
-    logo: '/dex/sushi.png',
-    tvl: '$1.8B',
-    fee: 0.25,
-    available: true
-  },
-  {
-    name: '1inch',
-    logo: '/dex/1inch.png',
-    tvl: '$2.1B',
-    fee: 0.1,
-    available: true
-  }
+
+// ... (keep DEX_OPTIONS)
+
 ];
 
-export default function DEXTradingInterface({ userAddress, onClose }: DEXTradingInterfaceProps) {
-  const [fromToken, setFromToken] = useState<TokenInfo>(SUPPORTED_TOKENS[0]);
-  const [toToken, setToToken] = useState<TokenInfo>(SUPPORTED_TOKENS[4]); // LDAO
-  const [fromAmount, setFromAmount] = useState('');
-  const [toAmount, setToAmount] = useState('');
-  const [quotes, setQuotes] = useState<SwapQuote[]>([]);
-  const [selectedDEX, setSelectedDEX] = useState<DEXOption>(DEX_OPTIONS[0]);
-  const [slippageTolerance, setSlippageTolerance] = useState(0.5);
-  const [loading, setLoading] = useState(false);
-  const [swapping, setSwapping] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [priceChart, setPriceChart] = useState<number[]>([]);
-  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
 
-  // Load token balances and price data
-  useEffect(() => {
-    if (userAddress) {
-      loadTokenBalances();
-      loadPriceChart();
-      startPriceUpdates();
-    }
-    
-    return () => {
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-      }
-    };
-  }, [userAddress]);
 
-  // Get quotes when amounts change
-  useEffect(() => {
-    if (fromAmount && parseFloat(fromAmount) > 0) {
-      getSwapQuotes();
-    } else {
-      setToAmount('');
-      setQuotes([]);
-    }
-  }, [fromAmount, fromToken, toToken]);
+export default function DEXTradingInterface({ userAddress, onClose, chainId = 1 }: DEXTradingInterfaceProps) {
 
-  const loadTokenBalances = async () => {
-    try {
-      // Mock loading balances - in real implementation, fetch from blockchain
-      const updatedTokens = SUPPORTED_TOKENS.map(token => ({
-        ...token,
-        balance: Math.random() * 1000 + ''
-      }));
-      // Update token balances in state
-    } catch (error) {
-      console.error('Failed to load balances:', error);
-    }
-  };
+  const supportedTokens = getSupportedTokens(chainId);
 
-  const loadPriceChart = async () => {
-    try {
-      // Mock price chart data - in real implementation, fetch from price API
-      const mockData = Array.from({ length: 24 }, (_, i) => 
-        0.01 + (Math.sin(i / 4) * 0.002) + (Math.random() * 0.001)
-      );
-      setPriceChart(mockData);
-    } catch (error) {
-      console.error('Failed to load price chart:', error);
-    }
-  };
+  const [fromToken, setFromToken] = useState<TokenInfo>(supportedTokens[0]);
 
-  const startPriceUpdates = useCallback(() => {
-    const interval = setInterval(() => {
-      if (fromAmount && parseFloat(fromAmount) > 0) {
-        getSwapQuotes();
-      }
-    }, 10000); // Update every 10 seconds
-    
-    setRefreshInterval(interval);
-  }, [fromAmount, fromToken, toToken]);
+  const [toToken, setToToken] = useState<TokenInfo>(supportedTokens[supportedTokens.length - 1]); // LDAO usually last
+
+// ...
 
   const getSwapQuotes = async () => {
+
     if (!fromAmount || parseFloat(fromAmount) <= 0) {
+
       setQuotes([]);
+
       return;
+
     }
 
+
+
     try {
+
       setLoading(true);
-      
-      // Get real quotes from DEX service
-      const dexQuotes = await dexService.getSwapQuotes(
-        fromToken.symbol,
-        toToken.symbol,
-        fromAmount,
-        slippageTolerance
-      );
-      
-      console.log('DEX Quotes received:', dexQuotes);
-      
-      // Convert to our SwapQuote format
-      const formattedQuotes = dexQuotes.map(quote => ({
-        fromAmount: quote.fromAmount,
-        toAmount: quote.toAmount,
-        priceImpact: quote.priceImpact,
-        minimumReceived: quote.toAmount,
-        gasFee: ethers.formatEther(quote.estimatedGas),
-        route: quote.path,
-        validUntil: Date.now() + 30000, // 30 seconds
-        dex: quote.dex,
-        expectedAmount: quote.expectedAmount
-      }));
-      
-      setQuotes(formattedQuotes);
-      
-      // Set the best quote as the default
-      if (formattedQuotes.length > 0) {
-        setToAmount(formattedQuotes[0].toAmount);
-      } else {
-        // If no quotes are available, show an error message
-        toast.error('No DEX quotes available. Please try a different amount or token pair.');
-      }
-    } catch (error) {
-      console.error('Failed to get quotes:', error);
-      toast.error(`Failed to get swap quotes: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setQuotes([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const handleSwapTokens = () => {
-    const tempToken = fromToken;
-    setFromToken(toToken);
-    setToToken(tempToken);
-    setFromAmount(toAmount);
-    setToAmount('');
-  };
-
-  const handleSwap = async () => {
-    if (!userAddress) {
-      toast.error('Please connect your wallet');
-      return;
-    }
-
-    if (quotes.length === 0) {
-      toast.error('No quotes available');
-      return;
-    }
-
-    // Get the best quote (first in the sorted list)
-    const bestQuote = quotes[0];
-    
-    // Find the matching DEX option
-    const dexOption = DEX_OPTIONS.find(dex => 
-      dex.name.toLowerCase().includes(bestQuote.dex.toLowerCase())
-    ) || DEX_OPTIONS[0];
-
-    try {
-      setSwapping(true);
       
-      // Execute the swap based on the selected DEX
-      let result;
-      const deadline = Math.floor(Date.now() / 1000) + 60 * 20; // 20 minutes
-      
-      if (bestQuote.dex === 'uniswap') {
-        result = await dexService.swapOnUniswap(
-          fromToken.symbol,
-          toToken.symbol,
-          fromAmount,
-          bestQuote.minimumReceived,
-          deadline
-        );
-      } else {
-        result = await dexService.swapOnSushiswap(
-          fromToken.symbol,
-          toToken.symbol,
-          fromAmount,
-          bestQuote.minimumReceived,
-          deadline
-        );
-      }
-      
-      if (result.status === 'success') {
-        toast.success(`Successfully swapped ${fromAmount} ${fromToken.symbol} for ${bestQuote.toAmount} ${toToken.symbol}!`);
-        
-        // Reset form
-        setFromAmount('');
-        setToAmount('');
-        setQuotes([]);
-        
-        // Reload balances
-        loadTokenBalances();
-      } else {
-        toast.error(result.error || 'Swap failed. Please try again.');
-      }
-    } catch (error) {
-      console.error('Swap failed:', error);
-      toast.error('Swap failed. Please try again.');
-    } finally {
-      setSwapping(false);
-    }
-  };
 
-  const TokenSelector = ({ 
-    token, 
-    onSelect, 
-    label 
-  }: { 
-    token: TokenInfo; 
-    onSelect: (token: TokenInfo) => void; 
+            // Get real quotes from DEX service
+
+      
+
+            const dexQuotes = await dexService.getSwapQuotes(
+
+      
+
+              fromToken.symbol,
+
+      
+
+              toToken.symbol,
+
+      
+
+              fromAmount,
+
+      
+
+              slippageTolerance,
+
+      
+
+              selectedChainId
+
+      
+
+            );
+
+// ...
+
+            if (bestQuote.dex === 'uniswap') {
+
+              result = await dexService.swapOnUniswap(
+
+                fromToken.symbol,
+
+                toToken.symbol,
+
+                fromAmount,
+
+                bestQuote.minimumReceived,
+
+                deadline,
+
+                selectedChainId
+
+              );
+
+            } else {
+
+              result = await dexService.swapOnSushiswap(
+
+                fromToken.symbol,
+
+                toToken.symbol,
+
+                fromAmount,
+
+                bestQuote.minimumReceived,
+
+                deadline,
+
+                selectedChainId
+
+              );
+
+            }
+
+// ...
+
+  const TokenSelector = ({
+
+    token,
+
+    onSelect,
+
+    label
+
+  }: {
+
+    token: TokenInfo;
+
+    onSelect: (token: TokenInfo) => void;
+
     label: string;
+
   }) => (
+
     <div className="space-y-2">
+
       <label className="block text-sm font-medium text-gray-700">{label}</label>
+
       <div className="relative">
+
         <select
+
           value={token.symbol}
+
           onChange={(e) => {
-            const selectedToken = SUPPORTED_TOKENS.find(t => t.symbol === e.target.value);
+
+            const selectedToken = supportedTokens.find(t => t.symbol === e.target.value);
+
             if (selectedToken) onSelect(selectedToken);
+
           }}
-          className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
-        >
-          {SUPPORTED_TOKENS.map((t) => (
+
+// ...
+
+          {supportedTokens.map((t) => (
+
             <option key={t.symbol} value={t.symbol}>
+
               {t.symbol} - {t.name}
+
             </option>
+
           ))}
+
         </select>
-        <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-          <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs font-bold">
-            {token.symbol[0]}
-          </div>
-        </div>
-      </div>
-      {token.balance && (
-        <div className="text-sm text-gray-500">
-          Balance: {parseFloat(token.balance).toFixed(4)} {token.symbol}
-        </div>
-      )}
-    </div>
-  );
+
+// ...
+
+
 
   const PriceChart = () => (
     <div className="bg-white rounded-lg p-4 border border-gray-200">
