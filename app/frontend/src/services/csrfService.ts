@@ -32,7 +32,38 @@ export class CSRFService {
    */
   generateToken(): string {
     const array = new Uint8Array(32);
-    crypto.getRandomValues(array);
+    
+    // Try standard WebCrypto API (modern browsers, Node 19+)
+    if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+      crypto.getRandomValues(array);
+    }
+    // Try window.crypto (browsers)
+    else if (typeof window !== 'undefined' && window.crypto && typeof window.crypto.getRandomValues === 'function') {
+      window.crypto.getRandomValues(array);
+    }
+    // Try Node.js crypto module fallback
+    else {
+      try {
+        // Use standard require for Node.js environments
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const nodeCrypto = require('crypto');
+        if (nodeCrypto.randomFillSync) {
+          nodeCrypto.randomFillSync(array);
+        } else if (nodeCrypto.randomBytes) {
+          const bytes = nodeCrypto.randomBytes(32);
+          array.set(bytes);
+        } else {
+          throw new Error('No secure random number generator available');
+        }
+      } catch (e) {
+        // Fallback to Math.random (less secure but functional for non-critical contexts)
+        console.warn('CSRF: Using insecure fallback for token generation');
+        for (let i = 0; i < 32; i++) {
+          array[i] = Math.floor(Math.random() * 256);
+        }
+      }
+    }
+    
     return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
   }
 

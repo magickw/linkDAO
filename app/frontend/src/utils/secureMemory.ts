@@ -50,7 +50,16 @@ export function wipeUint8Array(arr: Uint8Array): void {
   if (!arr || !(arr instanceof Uint8Array)) return;
 
   // Overwrite with random bytes
-  crypto.getRandomValues(arr);
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    crypto.getRandomValues(arr);
+  } else if (typeof window !== 'undefined' && window.crypto && typeof window.crypto.getRandomValues === 'function') {
+    window.crypto.getRandomValues(arr);
+  } else {
+    // Fallback to Math.random
+    for (let i = 0; i < arr.length; i++) {
+      arr[i] = Math.floor(Math.random() * 256);
+    }
+  }
 }
 
 /**

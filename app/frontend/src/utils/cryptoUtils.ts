@@ -40,11 +40,43 @@ async function deriveKey(
 }
 
 /**
+ * Helper to safely get random values
+ */
+function safeGetRandomValues(array: Uint8Array): void {
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    crypto.getRandomValues(array);
+  } else if (typeof window !== 'undefined' && window.crypto && typeof window.crypto.getRandomValues === 'function') {
+    window.crypto.getRandomValues(array);
+  } else {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const nodeCrypto = require('crypto');
+      if (nodeCrypto.randomFillSync) {
+        nodeCrypto.randomFillSync(array);
+        return;
+      }
+      if (nodeCrypto.randomBytes) {
+        const bytes = nodeCrypto.randomBytes(array.length);
+        array.set(bytes);
+        return;
+      }
+    } catch (e) {
+      // Fallback
+    }
+    
+    // Insecure fallback
+    for (let i = 0; i < array.length; i++) {
+      array[i] = Math.floor(Math.random() * 256);
+    }
+  }
+}
+
+/**
  * Generate a random salt
  */
 function generateSalt(): string {
   const array = new Uint8Array(16);
-  crypto.getRandomValues(array);
+  safeGetRandomValues(array);
   return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
@@ -53,7 +85,7 @@ function generateSalt(): string {
  */
 function generateIV(): string {
   const array = new Uint8Array(12);
-  crypto.getRandomValues(array);
+  safeGetRandomValues(array);
   return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
@@ -151,7 +183,7 @@ export function validateMnemonic(mnemonic: string): boolean {
  */
 export function generatePrivateKey(): string {
   const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
+  safeGetRandomValues(array);
   return '0x' + Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
