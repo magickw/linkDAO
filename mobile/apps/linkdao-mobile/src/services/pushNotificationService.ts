@@ -85,7 +85,18 @@ class PushNotificationService {
     Notifications.addNotificationResponseReceivedListener((response) => {
       console.log('Notification response received:', response);
       const data = response.notification.request.content.data;
-      // Handle navigation or other actions based on notification data
+      
+      // Handle deep linking based on notification data
+      if (data.url) {
+        const { router } = require('expo-router');
+        router.push(data.url);
+      } else if (data.type === 'message' && data.conversationId) {
+        const { router } = require('expo-router');
+        router.push(`/messages/${data.conversationId}`);
+      } else if (data.type === 'community' && data.communityId) {
+        const { router } = require('expo-router');
+        router.push(`/community/${data.communityId}`);
+      }
     });
 
     return () => {
@@ -275,17 +286,31 @@ class PushNotificationService {
   }
 
   private async sendTokenToBackend(token: string): Promise<void> {
-    // In production, send token to your backend API
-    console.log('Sending push token to backend:', token);
-    // Example:
-    // await api.post('/notifications/register', { token });
+    try {
+      const { apiClient } = await import('./apiClient');
+      await apiClient.post('/api/notifications/register', {
+        token,
+        platform: Platform.OS,
+        deviceInfo: {
+          model: Device.modelName,
+          osVersion: Device.osVersion,
+          deviceName: Device.deviceName,
+        }
+      });
+      console.log('✅ Push token registered on backend');
+    } catch (error) {
+      console.error('❌ Failed to register push token on backend:', error);
+    }
   }
 
   private async removeTokenFromBackend(token: string): Promise<void> {
-    // In production, remove token from your backend API
-    console.log('Removing push token from backend:', token);
-    // Example:
-    // await api.post('/notifications/unregister', { token });
+    try {
+      const { apiClient } = await import('./apiClient');
+      await apiClient.post('/api/notifications/unregister', { token });
+      console.log('✅ Push token removed from backend');
+    } catch (error) {
+      console.error('❌ Failed to remove push token from backend:', error);
+    }
   }
 }
 

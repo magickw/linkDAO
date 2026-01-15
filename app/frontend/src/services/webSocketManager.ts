@@ -196,16 +196,40 @@ class WebSocketManager {
       this.liveChatConnection.connect();
     }
   }
+
+  // Update live chat authentication and reconnect
+  updateLiveChatAuth(token: string): void {
+    if (this.liveChatConnection) {
+      // Disconnect the old connection
+      this.liveChatConnection.disconnect();
+
+      // Update the auth token
+      this.liveChatConnection.auth = { token };
+
+      // Reconnect with the new token
+      this.liveChatConnection.connect();
+      console.log('Live chat WebSocket reconnected with new auth token');
+    }
+  }
 }
 
 // Export singleton instance
 export const webSocketManager = WebSocketManager.getInstance();
 
+// Helper function to get auth token from storage
+const getAuthToken = (): string => {
+  return localStorage.getItem('linkdao_access_token') ||
+    localStorage.getItem('token') ||
+    localStorage.getItem('authToken') ||
+    localStorage.getItem('auth_token') || '';
+};
+
 // Helper function to initialize WebSocketManager with default config
 export const initializeWebSocketManager = async (walletAddress: string): Promise<WebSocketManager> => {
   const backendUrl = ENV_CONFIG.BACKEND_URL || 'http://localhost:10000';
   const wsUrl = backendUrl.replace(/^http/, 'ws');
-  
+  const authToken = getAuthToken();
+
   const config: WebSocketConfig = {
     primary: {
       url: wsUrl,
@@ -215,7 +239,12 @@ export const initializeWebSocketManager = async (walletAddress: string): Promise
       reconnectDelay: 1000
     },
     liveChat: {
-      url: `${wsUrl}/chat/user`
+      url: `${wsUrl}/chat/user`,
+      options: {
+        auth: {
+          token: authToken
+        }
+      }
     }
   };
 

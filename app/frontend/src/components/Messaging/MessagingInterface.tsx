@@ -22,6 +22,18 @@ import { UserProfile } from '../../models/UserProfile';
 import useWebSocket from '../../hooks/useWebSocket';
 import { useToast } from '@/context/ToastContext';
 
+// Helper function to get the backend URL
+const getBackendUrl = (): string => {
+  let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname === 'www.linkdao.io' || hostname === 'linkdao.io' || hostname === 'app.linkdao.io') {
+      backendUrl = 'https://api.linkdao.io';
+    }
+  }
+  return backendUrl;
+};
+
 
 interface ChatChannel {
   id: string;
@@ -611,7 +623,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       formData.append('file', file);
 
       // Use the unified upload endpoint
-      const response = await fetch('/api/messaging/attachments', {
+      const response = await fetch(`${getBackendUrl()}/api/messaging/attachments`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('linkdao_access_token')}`

@@ -342,7 +342,9 @@ export class DataDeletionService {
             .where(sql`${conversations.participants} ? ${walletAddress}`);
 
           for (const conv of userConversations) {
-            const participants = JSON.parse(conv.participants as string || '[]');
+            const participants = Array.isArray(conv.participants)
+              ? conv.participants as string[]
+              : JSON.parse(conv.participants as string || '[]');
             const updatedParticipants = participants.filter((p: string) => p !== walletAddress);
 
             if (updatedParticipants.length === 0) {

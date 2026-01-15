@@ -4,6 +4,18 @@ import { QuickReplyPanel } from './QuickReplyPanel';
 import { VoiceMessageRecorder } from './VoiceMessageRecorder';
 import { Mic } from 'lucide-react';
 
+// Helper function to get the backend URL
+const getBackendUrl = (): string => {
+  let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname === 'www.linkdao.io' || hostname === 'linkdao.io' || hostname === 'app.linkdao.io') {
+      backendUrl = 'https://api.linkdao.io';
+    }
+  }
+  return backendUrl;
+};
+
 interface Attachment {
   id: string;
   type: string;
@@ -148,7 +160,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       formData.append('file', file);
 
       // Upload file to messaging attachments endpoint
-      const response = await fetch('/api/messaging/attachments', {
+      const response = await fetch(`${getBackendUrl()}/api/messaging/attachments`, {
         method: 'POST',
         body: formData,
         credentials: 'include',
@@ -187,7 +199,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       const formData = new FormData();
       formData.append('file', attachmentPreview.file);
 
-      const response = await fetch('/api/messaging/attachments', {
+      const response = await fetch(`${getBackendUrl()}/api/messaging/attachments`, {
         method: 'POST',
         body: formData,
         credentials: 'include',

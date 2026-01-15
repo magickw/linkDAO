@@ -26,4 +26,14 @@ config.resolver.alias = {
   crypto: 'react-native-crypto',
 };
 
+// 5. Add extraNodeModules to handle node: prefixed modules
+config.resolver.extraNodeModules = {
+  crypto: require.resolve('react-native-crypto'),
+  stream: require.resolve('readable-stream'),
+  http: require.resolve('react-native-http'),
+  https: require.resolve('react-native-https'),
+  net: require.resolve('react-native-tcp'),
+  tls: require.resolve('react-native-tls'),
+};
+
 module.exports = config;

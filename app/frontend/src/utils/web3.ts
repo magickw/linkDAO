@@ -331,7 +331,7 @@ export async function getProvider() {
         'https://rpc.ankr.com/eth_sepolia',
         'https://1rpc.io/sepolia'
       ];
-      
+
       const network = ethers.Network.from(11155111);
       // Try the first working fallback RPC
       const provider = new ethers.JsonRpcProvider(fallbackRpcs[0], network, {
@@ -339,7 +339,7 @@ export async function getProvider() {
         polling: false,
         batchMaxCount: 1 // Disable batching for fallback to improve reliability
       });
-      
+
       cachedProvider = provider;
       providerCreationAttempts = 0;
       return provider;
@@ -859,4 +859,61 @@ export function resetProviderCache(): void {
  */
 export function getLastProviderError(): Error | null {
   return lastProviderError;
+}
+
+/**
+ * Switch the wallet to a specific network
+ * If the network is not added, try to add it (currently supports Sepolia)
+ */
+export async function switchNetwork(chainId: number): Promise<void> {
+  // Use getProvider to get the correct provider instance, possibly wrapped
+  const provider = await getProvider();
+
+  if (!provider) {
+    throw new Error('No provider available to switch network');
+  }
+
+  const chainIdHex = `0x${chainId.toString(16)}`;
+
+  try {
+    // We need to use 'send' to interact with the provider's JSON-RPC method directly
+    // Using 'any' cast because the Provider interface in ethers v6 abstracts this slightly differently depending on subclass
+    // But BrowserProvider/JsonRpcProvider usually supports send.
+    await (provider as any).send('wallet_switchEthereumChain', [{ chainId: chainIdHex }]);
+  } catch (switchError: any) {
+    // This error code indicates that the chain has not been added to MetaMask.
+    // 4902 is the standard EIP-1193 error code for "Unrecognized chain ID"
+    // Also handle possible wrapped error structures or internal JSON-RPC error formats
+    const errorCode = switchError.code || switchError.data?.originalError?.code || switchError.data?.code;
+
+    if (errorCode === 4902 || switchError.message?.includes('Unrecognized chain ID') || switchError.message?.includes('check your network configuration')) {
+      // Sepolia Config
+      if (chainId === 11155111) {
+        try {
+          await (provider as any).send('wallet_addEthereumChain', [{
+            chainId: chainIdHex,
+            chainName: 'Sepolia',
+            nativeCurrency: {
+              name: 'Sepolia Ether',
+              symbol: 'SEP',
+              decimals: 18
+            },
+            rpcUrls: ['https://rpc.sepolia.org', 'https://ethereum-sepolia-rpc.publicnode.com'],
+            blockExplorerUrls: ['https://sepolia.etherscan.io']
+          }]);
+
+          // After adding, we might need to request switch again or it handles it automatically.
+          // Usually wallet_addEthereumChain prompts to switch.
+        } catch (addError) {
+          console.error('Failed to add Sepolia network:', addError);
+          throw new Error('Failed to add Sepolia network to your wallet. Please add it manually.');
+        }
+      } else {
+        throw new Error(`Chain ID ${chainId} is not configured for automatic addition.`);
+      }
+    } else {
+      console.error('Failed to switch network:', switchError);
+      throw switchError;
+    }
+  }
 }

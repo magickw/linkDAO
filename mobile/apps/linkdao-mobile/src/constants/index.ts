@@ -5,3 +5,4 @@
 
 export { ENV } from './environment';
 export type { EnvConfig } from './environment';
+export { THEME } from './theme';

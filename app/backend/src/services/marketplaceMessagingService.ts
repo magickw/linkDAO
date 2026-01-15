@@ -162,7 +162,9 @@ export class MarketplaceMessagingService {
         .where(eq(conversations.id, conversationId));
 
       // Send WebSocket notification
-      const participants = JSON.parse(conversation.participants as string);
+      const participants = Array.isArray(conversation.participants)
+        ? conversation.participants as string[]
+        : JSON.parse(conversation.participants as string);
       participants.forEach((participant: string) => {
         this.webSocketService.sendToUser(participant, 'new_message', {
           conversationId,

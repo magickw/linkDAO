@@ -15,7 +15,8 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { tippingService } from '../services';
+import { tippingService, walletService } from '../services';
+import { ethers } from 'ethers';
 
 interface TipButtonProps {
     recipientId: string;
@@ -48,6 +49,22 @@ export default function TipButton({
 
         try {
             setSending(true);
+
+            // 1. Send transaction on-chain
+            if (!walletService.isConnected()) {
+                throw new Error('Wallet not connected');
+            }
+
+            // For now, simulate sending ETH/LDAO tip directly to recipient
+            // In production, you would call the TipRouter contract
+            const txHash = await walletService.sendTransaction({
+                to: recipientId, // This should be the wallet address
+                value: ethers.parseEther(tipAmount.toString()).toString(),
+            });
+
+            console.log('✅ Tip transaction sent:', txHash);
+
+            // 2. Record tip in backend
             const result = await tippingService.sendTip({
                 recipientId,
                 amount: tipAmount,
@@ -57,17 +74,17 @@ export default function TipButton({
             });
 
             if (result.success) {
-                Alert.alert('Success', `Sent ${tipAmount} LDAO tip!`);
+                Alert.alert('Success', `Sent ${tipAmount} LDAO tip!\nTransaction: ${txHash.slice(0, 10)}...`);
                 setShowModal(false);
                 setAmount('');
                 setMessage('');
                 onTipSent?.();
             } else {
-                Alert.alert('Error', result.error || 'Failed to send tip');
+                Alert.alert('Partially Successful', 'Transaction sent but failed to record in history.');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error sending tip:', error);
-            Alert.alert('Error', 'Failed to send tip');
+            Alert.alert('Error', error.message || 'Failed to send tip');
         } finally {
             setSending(false);
         }

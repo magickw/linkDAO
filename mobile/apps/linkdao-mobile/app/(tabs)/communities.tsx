@@ -11,6 +11,7 @@ import { router } from 'expo-router';
 import { useCommunitiesStore } from '../../src/store';
 import { communitiesService } from '../../src/services';
 import CreateCommunityModal from '../../src/components/CreateCommunityModal';
+import { CrossChainBridge } from '../../src/components/CrossChainBridge';
 
 interface Community {
   id: string;
@@ -48,6 +49,7 @@ export default function CommunitiesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showBridge, setShowBridge] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'discover' | 'my-communities'>('discover');
   const [hasUnread, setHasUnread] = useState(true);
 
@@ -123,6 +125,12 @@ export default function CommunitiesScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Communities</Text>
         <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerActionButton}
+            onPress={() => setShowBridge(true)}
+          >
+            <Ionicons name="git-network-outline" size={24} color="#3b82f6" />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.notificationButton}
             onPress={() => setShowNotifications(true)}
@@ -311,6 +319,26 @@ export default function CommunitiesScreen() {
         }}
       />
 
+      {/* Cross-Chain Bridge Modal */}
+      <Modal
+        visible={showBridge}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowBridge(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { paddingBottom: 20 }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Cross-Chain Bridge</Text>
+              <TouchableOpacity onPress={() => setShowBridge(false)}>
+                <Ionicons name="close" size={24} color="#1f2937" />
+              </TouchableOpacity>
+            </View>
+            <CrossChainBridge />
+          </View>
+        </View>
+      </Modal>
+
       {/* Notifications Modal */}
       <Modal
         visible={showNotifications}
@@ -386,7 +414,11 @@ const styles = StyleSheet.create({
   },
   headerActions: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
+  },
+  headerActionButton: {
+    padding: 4,
   },
   notificationButton: {
     position: 'relative',

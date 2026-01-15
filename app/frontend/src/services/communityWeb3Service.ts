@@ -271,11 +271,35 @@ export class CommunityWeb3Service {
           const network = await (signer.provider as any).getNetwork();
           chainId = Number(network.chainId);
           console.log('Detected chain ID from signer:', chainId);
-          
+
           // Enforce Sepolia for development/test tokens
           if (chainId !== 11155111) {
-            console.warn(`[Web3Service] Wallet is on chain ${chainId}, but this feature requires Sepolia (11155111)`);
-            throw new Error(`Please switch your wallet to the Sepolia Testnet. Currently connected to ${chainId === 1 ? 'Ethereum Mainnet' : 'another network'}.`);
+            console.warn(`[Web3Service] Wallet is on chain ${chainId}, but this feature requires Sepolia (11155111). Attempting to switch...`);
+
+            try {
+              // Dynamically import switchNetwork to avoid circular dependencies if any
+              const { switchNetwork } = await import('@/utils/web3');
+              await switchNetwork(11155111);
+
+              // Verify switch? Or just proceed and let the next calls fail if it didn't work.
+              // Usually existing signer might be invalidated after network switch in some libraries,
+              // but with ethers v6 and BrowserProvider it relies on the underlying provider which updates.
+              // Let's re-verify chainId just to be safe or re-get signer.
+              const updatedNetwork = await (signer.provider as any).getNetwork();
+              const updatedChainId = Number(updatedNetwork.chainId);
+
+              if (updatedChainId !== 11155111) {
+                // Double check in case the provider hasn't updated yet (race condition)
+                // But if switchNetwork threw no error, user likely approved/cancelled.
+                // If cancelled, switchNetwork throws.
+                // If approved, we should be good.
+                console.warn(`[Web3Service] Network switch success logic reached, but provider still reports ${updatedChainId}. Continuing hopefuly...`);
+              }
+
+            } catch (switchError: any) {
+              console.error('Network switch failed:', switchError);
+              throw new Error(`Please switch your wallet to the Sepolia Testnet. Currently connected to ${chainId === 1 ? 'Ethereum Mainnet' : 'another network'}.`);
+            }
           }
         } else {
           console.warn('Signer has no provider, defaulting to Sepolia');
@@ -283,6 +307,7 @@ export class CommunityWeb3Service {
         }
       } catch (e: any) {
         if (e.message.includes('switch your wallet')) throw e;
+        // If getting network fails, we might proceed but risk failure later.
         console.warn('Failed to get chain ID from signer provider, defaulting to Sepolia:', e);
         chainId = 11155111;
       }
@@ -373,7 +398,7 @@ export class CommunityWeb3Service {
       // Solidity bytes32 is left-aligned, so padding should be at the end.
       let postIdBytes32;
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      
+
       if (uuidRegex.test(input.postId)) {
         // Remove hyphens and ensure lowercase
         const cleanHex = input.postId.replace(/-/g, '').toLowerCase();
@@ -398,7 +423,7 @@ export class CommunityWeb3Service {
 
       // Send tip (with or without comment)
       let tx;
-      
+
       // Common transaction overrides for robustness
       const txOverrides = {
         // Add a fallback gas limit if estimation fails
@@ -428,9 +453,9 @@ export class CommunityWeb3Service {
       } catch (estimateError: any) {
         // If gas estimation fails, try sending with a fixed gas limit as a last resort
         console.warn('Gas estimation failed, attempting with fixed gas limit:', estimateError.message);
-        
+
         const fallbackOverrides = { ...txOverrides, gasLimit: 400000 }; // Slightly higher for safety
-        
+
         if (input.message && input.message.trim()) {
           tx = await tipRouterContract.tipWithComment(
             postIdBytes32,

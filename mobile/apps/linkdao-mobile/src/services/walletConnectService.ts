@@ -7,6 +7,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Linking, Platform } from 'react-native';
 import { ethers } from 'ethers';
+import { MetaMaskSDK } from '@metamask/sdk-react-native';
+import * as BackgroundTimer from 'react-native-background-timer';
 
 const STORAGE_KEY = 'wallet_connection';
 
@@ -23,13 +25,31 @@ class WalletService {
   private _isConnected: boolean = false;
   private activeConnection: WalletConnection | null = null;
   private currentProvider: WalletProvider | null = null;
+  private ethereum: any = null;
+  private sdk: MetaMaskSDK | null = null;
 
   /**
    * Initialize wallet service
    */
   async initialize() {
     try {
-      // No SDK initialization needed - we'll use ethers.js directly
+      // Initialize MetaMask SDK
+      this.sdk = new MetaMaskSDK({
+        openDefaultInpage: false,
+        dappMetadata: {
+          name: 'LinkDAO Mobile',
+          url: 'https://linkdao.io',
+        },
+        // Enable communication between the SDK and MetaMask
+        communicationServerUrl: 'https://metamask-sdk-socket.metafi.codefi.network/',
+        checkInstallationImmediately: false,
+        i18nOptions: {
+          enabled: true,
+        },
+      });
+
+      this.ethereum = this.sdk.getProvider();
+      
       console.log('✅ Wallet service initialized');
       
       await this.restoreConnection();
@@ -91,37 +111,36 @@ class WalletService {
     }
   }
 
-  /**
-     * Connect to MetaMask Mobile
-     */
-    private async connectMetaMask(): Promise<string> {
-      try {
-        console.log('🦊 Connecting to MetaMask...');
+      /**
+       * Connect to MetaMask Mobile
+       */
+      private async connectMetaMask(): Promise<string> {
+        try {
+          if (!this.ethereum) {
+            throw new Error('MetaMask SDK not initialized');
+          }
   
-        // For React Native, we need to use deep linking to MetaMask
-        // This is a simplified version - in production, you would use the MetaMask SDK
-        // or implement proper deep linking with callback handling
-        
-        // For now, we'll use a mock connection that simulates the flow
-        // In a real implementation, you would:
-        // 1. Generate a connection request
-        // 2. Deep link to MetaMask with the request
-        // 3. Handle the callback with the wallet address
-        
-        // Simulate wallet connection for development
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Generate a mock Ethereum address for testing
-        const mockAddress = '0x' + Math.random().toString(16).substr(2, 40);
-        console.log('📱 MetaMask connection simulated (development mode):', mockAddress);
-        
-        return mockAddress;
-      } catch (error) {
-        console.error('❌ Failed to connect to MetaMask:', error);
-        throw error;
-      }
-    }
-  /**
+          console.log('🦊 Connecting to MetaMask via SDK...');
+    
+          // Request accounts from MetaMask
+          const accounts = await this.ethereum.request({
+            method: 'eth_requestAccounts',
+            params: [],
+          });
+  
+          if (!accounts || accounts.length === 0) {
+            throw new Error('No accounts returned from MetaMask');
+          }
+  
+          const address = accounts[0];
+          console.log('📱 MetaMask connected via SDK:', address);
+          
+          return address;
+        } catch (error) {
+          console.error('❌ Failed to connect to MetaMask:', error);
+          throw error;
+        }
+      }  /**
    * Connect via WalletConnect (Reown AppKit)
    * Note: Disabled due to Node.js module compatibility issues in React Native
    */
@@ -190,23 +209,60 @@ class WalletService {
    */
   async signMessage(message: string, address: string): Promise<string> {
     try {
-      if (!this._isConnected || !this.activeConnection || this.activeConnection.address !== address) {
+      if (!this._isConnected || !this.activeConnection || this.activeConnection.address.toLowerCase() !== address.toLowerCase()) {
         throw new Error('Wallet not connected or address mismatch');
       }
 
       console.log('🔐 Signing message with', this.activeConnection.provider, ':', message);
-      console.log('🔐 Message type:', typeof message);
-      console.log('🔐 Message length:', message?.length);
 
-      // For development, use ethers.js to sign the message
-      // In production, this would interact with the actual wallet
+      if (this.activeConnection.provider === 'metamask' && this.ethereum) {
+        // Use MetaMask SDK provider to sign
+        const signature = await this.ethereum.request({
+          method: 'personal_sign',
+          params: [message, address],
+        });
+        
+        console.log('✅ Message signed via MetaMask SDK');
+        return signature;
+      }
+
+      // For other providers or as a fallback in development
+      console.warn('⚠️ No real signer for current provider, using fallback (development mode)');
       const wallet = ethers.Wallet.createRandom();
       const signature = await wallet.signMessage(message);
       
-      console.log('✅ Message signed (development mode)');
+      console.log('✅ Message signed (fallback mode)');
       return signature;
     } catch (error) {
       console.error('❌ Failed to sign message:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send a transaction with the connected wallet
+   */
+  async sendTransaction(tx: ethers.TransactionRequest): Promise<string> {
+    try {
+      if (!this._isConnected || !this.activeConnection || !this.ethereum) {
+        throw new Error('Wallet not connected');
+      }
+
+      console.log('💸 Sending transaction to:', tx.to);
+
+      if (this.activeConnection.provider === 'metamask') {
+        const hash = await this.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [tx],
+        });
+        
+        console.log('✅ Transaction sent via MetaMask SDK:', hash);
+        return hash;
+      }
+
+      throw new Error('Transaction sending not supported for this provider');
+    } catch (error) {
+      console.error('❌ Failed to send transaction:', error);
       throw error;
     }
   }

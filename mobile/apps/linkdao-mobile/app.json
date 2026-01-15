@@ -3,14 +3,20 @@
         "name": "LinkDAO",
         "slug": "linkdao-mobile",
         "scheme": "linkdao",
-        "version": "1.0.0",
+        "version": "1.0.1",
         "orientation": "portrait",
         "icon": "./assets/icon.png",
         "userInterfaceStyle": "automatic",
+        "runtimeVersion": {
+            "policy": "appVersion"
+        },
+        "updates": {
+            "url": "https://u.expo.dev/d051afaee33392cccc42e141b9f7697b"
+        },
         "splash": {
             "image": "./assets/splash.png",
             "resizeMode": "contain",
-            "backgroundColor": "#ffffff"
+            "backgroundColor": "#3b82f6"
         },
         "assetBundlePatterns": [
             "**/*"

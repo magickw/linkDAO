@@ -1100,8 +1100,10 @@ export class MessagingService {
         };
       }
 
-      // Parse participants from JSON
-      const participants = JSON.parse(conversation.participants as string);
+      // participants is already parsed by Drizzle ORM (JSONB type)
+      const participants = Array.isArray(conversation.participants)
+        ? conversation.participants as string[]
+        : JSON.parse(conversation.participants as string);
 
       return {
         success: true,
@@ -1201,7 +1203,9 @@ export class MessagingService {
         .returning();
 
       // Update conversation participants list
-      const currentParticipants = JSON.parse(conv.participants as string);
+      const currentParticipants = Array.isArray(conv.participants)
+        ? conv.participants as string[]
+        : JSON.parse(conv.participants as string);
       if (!currentParticipants.includes(newParticipantAddress.toLowerCase())) {
         currentParticipants.push(newParticipantAddress.toLowerCase());
         await db
@@ -1301,7 +1305,9 @@ export class MessagingService {
         );
 
       // Update conversation participants list
-      const currentParticipants = JSON.parse(conv.participants as string);
+      const currentParticipants = Array.isArray(conv.participants)
+        ? conv.participants as string[]
+        : JSON.parse(conv.participants as string);
       const updatedParticipants = currentParticipants.filter(
         (p: string) => p.toLowerCase() !== participantAddress.toLowerCase()
       );
@@ -1748,7 +1754,9 @@ export class MessagingService {
         }
       } else {
         // For direct conversations, any participant can pin
-        const participants = JSON.parse(conversation[0].participants as string);
+        const participants = Array.isArray(conversation[0].participants)
+          ? conversation[0].participants as string[]
+          : JSON.parse(conversation[0].participants as string);
         if (!participants.includes(userAddress.toLowerCase())) {
           return { success: false, message: 'Not a member of this conversation' };
         }

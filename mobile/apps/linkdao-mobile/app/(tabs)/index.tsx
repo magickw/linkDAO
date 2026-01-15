@@ -10,6 +10,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { usePostsStore, useAuthStore } from '../../src/store';
 import { postsService } from '../../src/services';
+import { InteractivePostCard } from '../../src/components/InteractivePostCard';
+import { THEME } from '../../src/constants/theme';
 
 export default function FeedScreen() {
   // Store state
@@ -180,41 +182,13 @@ export default function FeedScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Recent Posts</Text>
             {posts.map((post) => (
-              <View key={post.id} style={styles.postCard}>
-                <View style={styles.postHeader}>
-                  <View style={[styles.avatar, post.authorAvatar && { backgroundColor: 'transparent' }]} />
-                  <View style={styles.postHeaderInfo}>
-                    <Text style={styles.authorName}>{post.authorName}</Text>
-                    <Text style={styles.postTime}>{formatTime(post.createdAt)}</Text>
-                  </View>
-                </View>
-
-                <Text style={styles.postContent}>{post.content}</Text>
-
-                <View style={styles.postActions}>
-                  <TouchableOpacity
-                    style={styles.actionItem}
-                    onPress={() => handleLike(post.id)}
-                  >
-                    <Ionicons
-                      name={post.isLiked ? 'heart' : 'heart-outline'}
-                      size={20}
-                      color={post.isLiked ? '#ef4444' : '#6b7280'}
-                    />
-                    <Text style={styles.actionCount}>{post.likes}</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={styles.actionItem}>
-                    <Ionicons name="chatbubble-outline" size={20} color="#6b7280" />
-                    <Text style={styles.actionCount}>{post.comments}</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={styles.actionItem}>
-                    <Ionicons name="share-outline" size={20} color="#6b7280" />
-                    <Text style={styles.actionCount}>{post.shares}</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+              <InteractivePostCard
+                key={post.id}
+                post={post}
+                onLike={handleLike}
+                onComment={(id) => router.push(`/post/${id}`)}
+                onShare={(id) => Alert.alert('Share', 'Share functionality coming soon')}
+              />
             ))}
           </View>
         )}
@@ -242,21 +216,22 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: THEME.colors.background.light,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
+    padding: THEME.spacing.md,
+    backgroundColor: THEME.colors.background.cardLight,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
+    fontWeight: '800',
+    color: THEME.colors.text.primary,
+    letterSpacing: -0.5,
   },
   headerActions: {
     flexDirection: 'row',
@@ -264,10 +239,12 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: 8,
+    borderRadius: THEME.borderRadius.md,
+    backgroundColor: '#f3f4f6',
   },
   quickActions: {
     flexDirection: 'row',
-    padding: 16,
+    padding: THEME.spacing.md,
     gap: 12,
   },
   actionButton: {
@@ -277,77 +254,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 12,
     backgroundColor: '#eff6ff',
-    borderRadius: 8,
+    borderRadius: THEME.borderRadius.lg,
     gap: 8,
+    borderWidth: 1,
+    borderColor: '#dbeafe',
   },
   actionText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#3b82f6',
+    fontWeight: '700',
+    color: THEME.colors.primary,
   },
   section: {
-    padding: 16,
+    padding: THEME.spacing.md,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 12,
-  },
-  postCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  postHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#e5e7eb',
-    marginRight: 12,
-  },
-  postHeaderInfo: {
-    flex: 1,
-  },
-  authorName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
-  },
-  postTime: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 2,
-  },
-  postContent: {
-    fontSize: 15,
-    color: '#374151',
-    lineHeight: 22,
-    marginBottom: 12,
-  },
-  postActions: {
-    flexDirection: 'row',
-    gap: 24,
-  },
-  actionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  actionCount: {
-    fontSize: 14,
-    color: '#6b7280',
+    fontWeight: '700',
+    color: THEME.colors.text.primary,
+    marginBottom: THEME.spacing.md,
   },
   centerContainer: {
     alignItems: 'center',
@@ -356,18 +280,18 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#6b7280',
+    color: THEME.colors.text.secondary,
     marginTop: 12,
   },
   emptyText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#6b7280',
+    fontWeight: '700',
+    color: THEME.colors.text.primary,
     marginTop: 16,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: THEME.colors.text.muted,
     marginTop: 8,
   },
   endOfFeedContainer: {
@@ -376,6 +300,6 @@ const styles = StyleSheet.create({
   },
   endOfFeedText: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: THEME.colors.text.muted,
   },
 });

@@ -1,0 +1,246 @@
+/**
+ * Post Card Component
+ * Enhanced post display with Bento Grid and Glassmorphism styles
+ */
+
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { THEME } from '../constants/theme';
+import { Post } from '../store/postsStore';
+import TipButton from './TipButton';
+
+interface PostCardProps {
+  post: Post;
+  onLike: (id: string) => void;
+  onComment?: (id: string) => void;
+  onShare?: (id: string) => void;
+  onPress?: (id: string) => void;
+}
+
+export const PostCard: React.FC<PostCardProps> = ({
+  post,
+  onLike,
+  onComment,
+  onShare,
+  onPress,
+}) => {
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+
+    if (hours < 1) return 'Just now';
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  return (
+    <TouchableOpacity 
+      activeOpacity={0.9}
+      style={styles.container}
+      onPress={() => onPress?.(post.id)}
+    >
+      {/* Glassmorphism Background effect */}
+      <View style={styles.glassBackground} />
+      
+      <View style={styles.cardContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.authorInfo}>
+            <View style={styles.avatarContainer}>
+              {post.authorAvatar ? (
+                <Image source={{ uri: post.authorAvatar }} style={styles.avatar} />
+              ) : (
+                <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                  <Text style={styles.avatarText}>{post.authorName.charAt(0)}</Text>
+                </View>
+              )}
+            </View>
+            <View>
+              <Text style={styles.authorName}>{post.authorName}</Text>
+              <Text style={styles.handle}>@{post.authorHandle || post.authorId.slice(0, 8)}</Text>
+            </View>
+          </View>
+          <Text style={styles.time}>{formatTime(post.createdAt)}</Text>
+        </View>
+
+        {/* Content */}
+        <Text style={styles.content} numberOfLines={5}>
+          {post.content}
+        </Text>
+
+        {/* Media / Bento Element (Placeholder for Bento Grid style) */}
+        {post.attachments && post.attachments.length > 0 && (
+          <View style={styles.mediaContainer}>
+            <Image 
+              source={{ uri: post.attachments[0].url }} 
+              style={styles.mediaImage}
+              resizeMode="cover"
+            />
+          </View>
+        )}
+
+        {/* Interaction Bar */}
+        <View style={styles.footer}>
+          <View style={styles.actions}>
+            <TouchableOpacity 
+              style={styles.actionItem} 
+              onPress={() => onLike(post.id)}
+            >
+              <Ionicons 
+                name={post.isLiked ? "heart" : "heart-outline"} 
+                size={20} 
+                color={post.isLiked ? THEME.colors.error : THEME.colors.text.secondary} 
+              />
+              <Text style={[styles.actionCount, post.isLiked && { color: THEME.colors.error }]}>
+                {post.likes}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.actionItem}
+              onPress={() => onComment?.(post.id)}
+            >
+              <Ionicons name="chatbubble-outline" size={18} color={THEME.colors.text.secondary} />
+              <Text style={styles.actionCount}>{post.comments}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.actionItem}
+              onPress={() => onShare?.(post.id)}
+            >
+              <Ionicons name="share-outline" size={18} color={THEME.colors.text.secondary} />
+            </TouchableOpacity>
+          </View>
+
+          <TipButton 
+            recipientId={post.authorId}
+            contentType="post"
+            contentId={post.id}
+            compact
+          />
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    marginBottom: THEME.spacing.md,
+    borderRadius: THEME.borderRadius.xl,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  glassBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    ...Platform.select({
+      ios: {
+        // Blur effect would be added here with Expo BlurView
+      }
+    })
+  },
+  cardContent: {
+    padding: THEME.spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    borderRadius: THEME.borderRadius.xl,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: THEME.spacing.sm,
+  },
+  authorInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarContainer: {
+    marginRight: THEME.spacing.sm,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: THEME.borderRadius.full,
+  },
+  avatarPlaceholder: {
+    backgroundColor: THEME.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    color: THEME.colors.text.white,
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  authorName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.colors.text.primary,
+  },
+  handle: {
+    fontSize: 13,
+    color: THEME.colors.text.secondary,
+  },
+  time: {
+    fontSize: 12,
+    color: THEME.colors.text.muted,
+  },
+  content: {
+    fontSize: 15,
+    color: THEME.colors.text.primary,
+    lineHeight: 22,
+    marginBottom: THEME.spacing.md,
+  },
+  mediaContainer: {
+    width: '100%',
+    height: 200,
+    borderRadius: THEME.borderRadius.lg,
+    overflow: 'hidden',
+    marginBottom: THEME.spacing.md,
+    backgroundColor: '#f3f4f6',
+  },
+  mediaImage: {
+    width: '100%',
+    height: '100%',
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: THEME.spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: THEME.spacing.lg,
+  },
+  actionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  actionCount: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.colors.text.secondary,
+  },
+});

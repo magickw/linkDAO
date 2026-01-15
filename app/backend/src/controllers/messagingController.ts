@@ -232,7 +232,8 @@ export class MessagingController {
 
         if (conversationDetails) {
           // Parse participants and notify each one
-          const participants = JSON.parse(conversationDetails.participants as string);
+          // participants is already parsed by Drizzle ORM (JSONB type)
+          const participants = conversationDetails.participants as string[];
 
           // Send to conversation room for all participants
           wsService.sendToConversation(id, 'new_message', {
@@ -302,8 +303,8 @@ export class MessagingController {
       // Emit WebSocket event for read receipts
       const wsService = getWebSocketService();
       if (wsService && conversationDetails) {
-        // Parse participants and notify them that messages were read
-        const participants = JSON.parse(conversationDetails.participants as string);
+        // participants is already parsed by Drizzle ORM (JSONB type)
+        const participants = conversationDetails.participants as string[];
 
         // Send read receipt to conversation room
         wsService.sendToConversation(id, 'message_read', {
