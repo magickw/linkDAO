@@ -315,7 +315,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       // Perform on-chain tipping using communityWeb3Service
       const txHash = await communityWeb3Service.tipCommunityPost({
         postId: post.id,
-        recipientAddress: getUserAddress(post),
+        recipientAddress: post.walletAddress || getUserAddress(post),
         amount: amount,
         token: token || 'LDAO',
         message: message || ''

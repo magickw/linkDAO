@@ -3,7 +3,7 @@
  * Comments with reactions, threading, and rich interactions
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -15,6 +15,7 @@ import {
     Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { webSocketService } from '../services/webSocketService';
 
 interface Comment {
     id: string;
@@ -53,11 +54,28 @@ export default function EnhancedComments({
     onReact,
     onTip,
 }: EnhancedCommentsProps) {
+    const [localComments, setLocalComments] = useState(comments);
     const [commentText, setCommentText] = useState('');
     const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
     const [showReactions, setShowReactions] = useState<string | null>(null);
     const [showTipModal, setShowTipModal] = useState<Comment | null>(null);
     const [tipAmount, setTipAmount] = useState('');
+
+    // Subscribe to real-time comment updates
+    useEffect(() => {
+        const unsubscribe = webSocketService.on('new_comment', (data: any) => {
+            if (data.postId === postId) {
+                setLocalComments(prev => [...prev, data.comment]);
+            }
+        });
+
+        return () => unsubscribe();
+    }, [postId]);
+
+    // Update local state when props change
+    useEffect(() => {
+        setLocalComments(comments);
+    }, [comments]);
 
     const reactions = [
         { type: 'like', icon: 'thumbs-up', color: '#007AFF' },
@@ -223,7 +241,7 @@ export default function EnhancedComments({
         <View style={styles.container}>
             {/* Comments List */}
             <FlatList
-                data={comments.filter(c => !c.parentId)}
+                data={localComments.filter(c => !c.parentId)}
                 renderItem={renderComment}
                 keyExtractor={(item) => item.id}
                 ListEmptyComponent={

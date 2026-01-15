@@ -433,7 +433,7 @@ export default function PostInteractionBar({
           {postType === 'community' && userMembership ? (
             <CommunityTipButton
               postId={post.id}
-              recipientAddress={post.author}
+              recipientAddress={post.walletAddress || post.author}
               communityId={post.communityId || ''}
               onTip={onTip}
             />

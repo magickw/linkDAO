@@ -3,7 +3,7 @@
  * Content moderation, reports, and community safety tools
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -13,10 +13,12 @@ import {
     Alert,
     Modal,
     TextInput,
+    ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { communitiesService } from '../services';
 
 interface Report {
     id: string;
@@ -33,6 +35,13 @@ interface Report {
     };
 }
 
+interface BannedUser {
+    id: string;
+    username: string;
+    reason: string;
+    bannedAt: string;
+}
+
 interface ModerationToolsScreenProps {
     communityId: string;
     communityName: string;
@@ -46,43 +55,39 @@ export default function ModerationToolsScreen({
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
     const [showActionModal, setShowActionModal] = useState(false);
     const [actionNote, setActionNote] = useState('');
+    const [reports, setReports] = useState<Report[]>([]);
+    const [bannedUsers, setBannedUsers] = useState<BannedUser[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
-    // Mock data - replace with actual API call
-    const [reports, setReports] = useState<Report[]>([
-        {
-            id: '1',
-            type: 'post',
-            contentId: 'post-123',
-            reportedBy: 'user-456',
-            reason: 'Spam',
-            description: 'This post contains promotional content',
-            status: 'pending',
-            createdAt: '2024-01-15T10:30:00Z',
-            content: {
-                text: 'Check out this amazing product...',
-                author: 'spammer123',
-            },
-        },
-        {
-            id: '2',
-            type: 'comment',
-            contentId: 'comment-789',
-            reportedBy: 'user-101',
-            reason: 'Harassment',
-            description: 'Offensive language directed at another user',
-            status: 'reviewing',
-            createdAt: '2024-01-14T15:45:00Z',
-            content: {
-                text: 'You are completely wrong about...',
-                author: 'angry_user',
-            },
-        },
-    ]);
+    // Fetch data on mount
+    useEffect(() => {
+        fetchData();
+    }, [communityId, selectedTab]);
 
-    const [bannedUsers, setBannedUsers] = useState([
-        { id: '1', username: 'spammer123', reason: 'Repeated spam', bannedAt: '2024-01-10' },
-        { id: '2', username: 'troll_account', reason: 'Harassment', bannedAt: '2024-01-08' },
-    ]);
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            if (selectedTab === 'reports') {
+                const data = await communitiesService.getModerationQueue(communityId);
+                setReports(data);
+            } else if (selectedTab === 'banned') {
+                const data = await communitiesService.getBannedUsers(communityId);
+                setBannedUsers(data);
+            }
+        } catch (error) {
+            console.error('Error fetching moderation data:', error);
+            Alert.alert('Error', 'Failed to load moderation data');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    const handleRefresh = () => {
+        setRefreshing(true);
+        fetchData();
+    };
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -119,35 +124,48 @@ export default function ModerationToolsScreen({
         setShowActionModal(true);
     };
 
-    const executeAction = (action: 'approve' | 'remove' | 'ban' | 'dismiss') => {
+    const executeAction = async (action: 'approve' | 'remove' | 'ban' | 'dismiss') => {
         if (!selectedReport) return;
 
-        let message = '';
-        switch (action) {
-            case 'approve':
-                message = 'Content approved and report dismissed';
-                break;
-            case 'remove':
-                message = 'Content removed successfully';
-                break;
-            case 'ban':
-                message = 'User banned from community';
-                break;
-            case 'dismiss':
-                message = 'Report dismissed';
-                break;
+        try {
+            const result = await communitiesService.moderateContent(
+                communityId,
+                action,
+                selectedReport.type,
+                selectedReport.contentId,
+                actionNote
+            );
+
+            if (result.success) {
+                let message = '';
+                switch (action) {
+                    case 'approve':
+                        message = 'Content approved and report dismissed';
+                        break;
+                    case 'remove':
+                        message = 'Content removed successfully';
+                        break;
+                    case 'ban':
+                        message = 'User banned from community';
+                        break;
+                    case 'dismiss':
+                        message = 'Report dismissed';
+                        break;
+                }
+
+                setShowActionModal(false);
+                setSelectedReport(null);
+                setActionNote('');
+                Alert.alert('Success', message);
+
+                // Refresh data
+                fetchData();
+            } else {
+                Alert.alert('Error', result.error || 'Failed to execute action');
+            }
+        } catch (error) {
+            Alert.alert('Error', 'Failed to execute moderation action');
         }
-
-        setReports(reports.map(r =>
-            r.id === selectedReport.id
-                ? { ...r, status: action === 'dismiss' ? 'dismissed' : 'resolved' }
-                : r
-        ));
-
-        setShowActionModal(false);
-        setSelectedReport(null);
-        setActionNote('');
-        Alert.alert('Success', message);
     };
 
     const renderReport = ({ item }: { item: Report }) => (
@@ -206,7 +224,7 @@ export default function ModerationToolsScreen({
         </View>
     );
 
-    const renderBannedUser = ({ item }: { item: any }) => (
+    const renderBannedUser = ({ item }: { item: BannedUser }) => (
         <View style={styles.bannedCard}>
             <View style={styles.bannedHeader}>
                 <View style={styles.bannedAvatar}>
@@ -227,9 +245,18 @@ export default function ModerationToolsScreen({
                                 { text: 'Cancel', style: 'cancel' },
                                 {
                                     text: 'Unban',
-                                    onPress: () => {
-                                        setBannedUsers(bannedUsers.filter(u => u.id !== item.id));
-                                        Alert.alert('Success', 'User unbanned');
+                                    onPress: async () => {
+                                        try {
+                                            const result = await communitiesService.unbanUser(communityId, item.id);
+                                            if (result.success) {
+                                                setBannedUsers(bannedUsers.filter(u => u.id !== item.id));
+                                                Alert.alert('Success', 'User unbanned');
+                                            } else {
+                                                Alert.alert('Error', result.error || 'Failed to unban user');
+                                            }
+                                        } catch (error) {
+                                            Alert.alert('Error', 'Failed to unban user');
+                                        }
                                     },
                                 },
                             ]
@@ -295,35 +322,53 @@ export default function ModerationToolsScreen({
 
             {/* Content */}
             {selectedTab === 'reports' && (
-                <FlatList
-                    data={reports}
-                    renderItem={renderReport}
-                    keyExtractor={(item) => item.id}
-                    contentContainerStyle={styles.listContainer}
-                    ListEmptyComponent={
-                        <View style={styles.emptyState}>
-                            <Ionicons name="checkmark-circle" size={64} color="#34C759" />
-                            <Text style={styles.emptyTitle}>All Clear!</Text>
-                            <Text style={styles.emptyText}>No pending reports</Text>
-                        </View>
-                    }
-                />
+                loading ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#007AFF" />
+                        <Text style={styles.loadingText}>Loading reports...</Text>
+                    </View>
+                ) : (
+                    <FlatList
+                        data={reports}
+                        renderItem={renderReport}
+                        keyExtractor={(item) => item.id}
+                        contentContainerStyle={styles.listContainer}
+                        refreshing={refreshing}
+                        onRefresh={handleRefresh}
+                        ListEmptyComponent={
+                            <View style={styles.emptyState}>
+                                <Ionicons name="checkmark-circle" size={64} color="#34C759" />
+                                <Text style={styles.emptyTitle}>All Clear!</Text>
+                                <Text style={styles.emptyText}>No pending reports</Text>
+                            </View>
+                        }
+                    />
+                )
             )}
 
             {selectedTab === 'banned' && (
-                <FlatList
-                    data={bannedUsers}
-                    renderItem={renderBannedUser}
-                    keyExtractor={(item) => item.id}
-                    contentContainerStyle={styles.listContainer}
-                    ListEmptyComponent={
-                        <View style={styles.emptyState}>
-                            <Ionicons name="people" size={64} color="#8E8E93" />
-                            <Text style={styles.emptyTitle}>No Banned Users</Text>
-                            <Text style={styles.emptyText}>All members are in good standing</Text>
-                        </View>
-                    }
-                />
+                loading ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#007AFF" />
+                        <Text style={styles.loadingText}>Loading banned users...</Text>
+                    </View>
+                ) : (
+                    <FlatList
+                        data={bannedUsers}
+                        renderItem={renderBannedUser}
+                        keyExtractor={(item) => item.id}
+                        contentContainerStyle={styles.listContainer}
+                        refreshing={refreshing}
+                        onRefresh={handleRefresh}
+                        ListEmptyComponent={
+                            <View style={styles.emptyState}>
+                                <Ionicons name="people" size={64} color="#8E8E93" />
+                                <Text style={styles.emptyTitle}>No Banned Users</Text>
+                                <Text style={styles.emptyText}>All members are in good standing</Text>
+                            </View>
+                        }
+                    />
+                )
             )}
 
             {selectedTab === 'automod' && (
@@ -724,5 +769,16 @@ const styles = StyleSheet.create({
         color: '#000',
         minHeight: 80,
         textAlignVertical: 'top',
+    },
+    loadingContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 40,
+    },
+    loadingText: {
+        fontSize: 16,
+        color: '#8E8E93',
+        marginTop: 16,
     },
 });

@@ -1,9 +1,4 @@
-/**
- * Member Management Screen
- * Manage community members, roles, and permissions
- */
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -13,10 +8,12 @@ import {
     TextInput,
     Alert,
     Modal,
+    ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { communitiesService } from '../services';
 
 interface Member {
     id: string;
@@ -42,37 +39,33 @@ export default function MemberManagementScreen({
     const [selectedRole, setSelectedRole] = useState<string>('all');
     const [showRoleModal, setShowRoleModal] = useState(false);
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+    const [members, setMembers] = useState<Member[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
-    // Mock data - replace with actual API call
-    const [members, setMembers] = useState<Member[]>([
-        {
-            id: '1',
-            displayName: 'Alice Johnson',
-            username: 'alice',
-            role: 'admin',
-            joinedAt: '2024-01-15',
-            postsCount: 156,
-            isOnline: true,
-        },
-        {
-            id: '2',
-            displayName: 'Bob Smith',
-            username: 'bob',
-            role: 'moderator',
-            joinedAt: '2024-02-20',
-            postsCount: 89,
-            isOnline: false,
-        },
-        {
-            id: '3',
-            displayName: 'Carol White',
-            username: 'carol',
-            role: 'member',
-            joinedAt: '2024-03-10',
-            postsCount: 42,
-            isOnline: true,
-        },
-    ]);
+    // Fetch members on mount
+    useEffect(() => {
+        fetchMembers();
+    }, [communityId]);
+
+    const fetchMembers = async () => {
+        try {
+            setLoading(true);
+            const data = await communitiesService.getMembers(communityId);
+            setMembers(data);
+        } catch (error) {
+            console.error('Error fetching members:', error);
+            Alert.alert('Error', 'Failed to load members');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    const handleRefresh = () => {
+        setRefreshing(true);
+        fetchMembers();
+    };
 
     const filteredMembers = members.filter((member) => {
         const matchesSearch =
@@ -122,26 +115,49 @@ export default function MemberManagementScreen({
                 {
                     text: 'Remove',
                     style: 'destructive',
-                    onPress: () => {
-                        setMembers(members.filter((m) => m.id !== member.id));
-                        Alert.alert('Success', 'Member removed successfully');
+                    onPress: async () => {
+                        try {
+                            const result = await communitiesService.removeMember(communityId, member.id);
+                            if (result.success) {
+                                setMembers(members.filter((m) => m.id !== member.id));
+                                Alert.alert('Success', 'Member removed successfully');
+                            } else {
+                                Alert.alert('Error', result.error || 'Failed to remove member');
+                            }
+                        } catch (error) {
+                            Alert.alert('Error', 'Failed to remove member');
+                        }
                     },
                 },
             ]
         );
     };
 
-    const updateMemberRole = (newRole: 'admin' | 'moderator' | 'member') => {
+    const updateMemberRole = async (newRole: 'admin' | 'moderator' | 'member') => {
         if (!selectedMember) return;
 
-        setMembers(
-            members.map((m) =>
-                m.id === selectedMember.id ? { ...m, role: newRole } : m
-            )
-        );
-        setShowRoleModal(false);
-        setSelectedMember(null);
-        Alert.alert('Success', 'Member role updated successfully');
+        try {
+            const result = await communitiesService.updateMemberRole(
+                communityId,
+                selectedMember.id,
+                newRole
+            );
+
+            if (result.success) {
+                setMembers(
+                    members.map((m) =>
+                        m.id === selectedMember.id ? { ...m, role: newRole } : m
+                    )
+                );
+                setShowRoleModal(false);
+                setSelectedMember(null);
+                Alert.alert('Success', 'Member role updated successfully');
+            } else {
+                Alert.alert('Error', result.error || 'Failed to update role');
+            }
+        } catch (error) {
+            Alert.alert('Error', 'Failed to update member role');
+        }
     };
 
     const renderMember = ({ item }: { item: Member }) => (
@@ -254,13 +270,31 @@ export default function MemberManagementScreen({
             </View>
 
             {/* Members List */}
-            <FlatList
-                data={filteredMembers}
-                renderItem={renderMember}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.listContainer}
-                showsVerticalScrollIndicator={false}
-            />
+            {loading ? (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#007AFF" />
+                    <Text style={styles.loadingText}>Loading members...</Text>
+                </View>
+            ) : (
+                <FlatList
+                    data={filteredMembers}
+                    renderItem={renderMember}
+                    keyExtractor={(item) => item.id}
+                    contentContainerStyle={styles.listContainer}
+                    showsVerticalScrollIndicator={false}
+                    refreshing={refreshing}
+                    onRefresh={handleRefresh}
+                    ListEmptyComponent={
+                        <View style={styles.emptyState}>
+                            <Ionicons name="people-outline" size={64} color="#C7C7CC" />
+                            <Text style={styles.emptyTitle}>No Members Found</Text>
+                            <Text style={styles.emptyText}>
+                                {searchQuery ? 'Try a different search' : 'This community has no members yet'}
+                            </Text>
+                        </View>
+                    }
+                />
+            )}
 
             {/* Role Change Modal */}
             <Modal
@@ -573,5 +607,33 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: '#8E8E93',
         marginTop: 2,
+    },
+    loadingContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 40,
+    },
+    loadingText: {
+        fontSize: 16,
+        color: '#8E8E93',
+        marginTop: 16,
+    },
+    emptyState: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 60,
+    },
+    emptyTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#000',
+        marginTop: 16,
+    },
+    emptyText: {
+        fontSize: 14,
+        color: '#8E8E93',
+        marginTop: 8,
+        textAlign: 'center',
     },
 });

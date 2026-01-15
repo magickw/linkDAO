@@ -52,10 +52,15 @@ class TippingService {
     /**
      * Get tip history for the current user
      */
-    async getTipHistory(type: 'sent' | 'received' = 'sent'): Promise<TipHistory[]> {
+    async getTipHistory(type: 'sent' | 'received' = 'sent', walletAddress: string): Promise<TipHistory[]> {
         try {
-            const response = await apiClient.get(`/api/tips/history?type=${type}`);
-            return response.data;
+            const endpoint = type === 'sent' ? '/api/tips/sent' : '/api/tips/received';
+            const response = await apiClient.post(endpoint, {
+                address: walletAddress,
+                limit: 50,
+                offset: 0
+            });
+            return response.data.tips || [];
         } catch (error) {
             console.error('Error fetching tip history:', error);
             return [];
@@ -63,12 +68,12 @@ class TippingService {
     }
 
     /**
-     * Get tips for a specific content item
+     * Get tips for a specific content item (post)
      */
-    async getContentTips(contentType: string, contentId: string): Promise<TipHistory[]> {
+    async getContentTips(postId: string): Promise<TipHistory[]> {
         try {
-            const response = await apiClient.get(`/api/tips/${contentType}/${contentId}`);
-            return response.data;
+            const response = await apiClient.get(`/api/tips/posts/${postId}/tips`);
+            return response.data || [];
         } catch (error) {
             console.error('Error fetching content tips:', error);
             return [];
@@ -76,12 +81,17 @@ class TippingService {
     }
 
     /**
-     * Get user's tip balance
+     * Get user's tip balance and earnings
      */
-    async getTipBalance(): Promise<{ balance: number; earned: number; spent: number }> {
+    async getTipBalance(userId: string): Promise<{ balance: number; earned: number; spent: number }> {
         try {
-            const response = await apiClient.get('/api/tips/balance');
-            return response.data;
+            const response = await apiClient.get(`/api/tips/users/${userId}/earnings`);
+            const data = response.data;
+            return {
+                balance: parseFloat(data.totalEarned || '0') - parseFloat(data.totalGiven || '0'),
+                earned: parseFloat(data.totalEarned || '0'),
+                spent: parseFloat(data.totalGiven || '0'),
+            };
         } catch (error) {
             console.error('Error fetching tip balance:', error);
             return { balance: 0, earned: 0, spent: 0 };

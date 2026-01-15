@@ -3,7 +3,7 @@
  * Quick reactions for posts with visual feedback
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -13,9 +13,10 @@ import {
     Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { webSocketService } from '../services/webSocketService';
 
 export interface Reaction {
-    type: 'like' | 'love' | 'laugh' | 'wow' | 'sad' | 'angry';
+    type: 'fire' | 'rocket' | 'diamond';
     count: number;
 }
 
@@ -34,22 +35,50 @@ export default function PostReactions({
     onReact,
     compact = false,
 }: PostReactionsProps) {
+    const [localReactions, setLocalReactions] = useState(reactions);
+    const [localUserReaction, setLocalUserReaction] = useState(userReaction);
     const [showPicker, setShowPicker] = useState(false);
     const [animating, setAnimating] = useState(false);
     const scaleAnim = useState(new Animated.Value(1))[0];
 
+    // Subscribe to real-time reaction updates
+    useEffect(() => {
+        const unsubscribe = webSocketService.on('reaction:update', (data: any) => {
+            if (data.postId === postId) {
+                setLocalReactions(data.reactions);
+                // Update user reaction if it's for current user
+                if (data.userReaction !== undefined) {
+                    setLocalUserReaction(data.userReaction);
+                }
+            }
+        });
+
+        return () => unsubscribe();
+    }, [postId]);
+
+    // Update local state when props change
+    useEffect(() => {
+        setLocalReactions(reactions);
+    }, [reactions]);
+
+    useEffect(() => {
+        setLocalUserReaction(userReaction);
+    }, [userReaction]);
+
+    // Aligned with backend: 🔥 Fire, 🚀 Rocket, 💎 Diamond
     const reactionConfig = [
-        { type: 'like', icon: 'thumbs-up', color: '#007AFF', label: 'Like' },
-        { type: 'love', icon: 'heart', color: '#FF3B30', label: 'Love' },
-        { type: 'laugh', icon: 'happy', color: '#FFD60A', label: 'Haha' },
-        { type: 'wow', icon: 'flame', color: '#FF9500', label: 'Wow' },
-        { type: 'sad', icon: 'sad', color: '#5856D6', label: 'Sad' },
-        { type: 'angry', icon: 'warning', color: '#FF3B30', label: 'Angry' },
+        { type: 'fire', icon: 'flame', emoji: '🔥', color: '#FF6B35', label: 'Fire' },
+        { type: 'rocket', icon: 'rocket', emoji: '🚀', color: '#4ECDC4', label: 'Rocket' },
+        { type: 'diamond', icon: 'diamond', emoji: '💎', color: '#95E1D3', label: 'Diamond' },
     ];
 
-    const totalReactions = reactions.reduce((sum, r) => sum + r.count, 0);
+    const totalReactions = localReactions.reduce((sum, r) => sum + r.count, 0);
 
     const handleReaction = async (reactionType: string) => {
+        // Optimistic update
+        const newUserReaction = localUserReaction === reactionType ? undefined : reactionType;
+        setLocalUserReaction(newUserReaction);
+
         setShowPicker(false);
         setAnimating(true);
 
@@ -75,18 +104,18 @@ export default function PostReactions({
     };
 
     const handleQuickReact = async () => {
-        if (userReaction) {
+        if (localUserReaction) {
             // Remove reaction
-            await handleReaction(userReaction);
+            await handleReaction(localUserReaction);
         } else {
-            // Quick like
-            await handleReaction('like');
+            // Quick fire reaction
+            await handleReaction('fire');
         }
     };
 
     const getUserReactionConfig = () => {
-        if (!userReaction) return null;
-        return reactionConfig.find(r => r.type === userReaction);
+        if (!localUserReaction) return null;
+        return reactionConfig.find(r => r.type === localUserReaction);
     };
 
     const currentReaction = getUserReactionConfig();

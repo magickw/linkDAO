@@ -8,7 +8,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   MessageCircle, Search, Send, User, Plus, Hash, Lock,
   ThumbsUp, Heart, Zap, Rocket, Globe, Users, X, ChevronDown, ChevronRight,
-  Image, Link as LinkIcon, Wallet, Vote, Calendar, Tag, Settings, ArrowLeftRight,
+  Image, Link as LinkIcon, Loader2, Wallet, Vote, Calendar, Tag, Settings, ArrowLeftRight,
   Phone, Video, Shield, ArrowLeft, Wifi, WifiOff
 } from 'lucide-react';
 import { useAccount } from 'wagmi';
@@ -589,7 +589,12 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       setIsUploading(true);
       console.log('Uploading file:', file.name, file.type);
 
-      const formData = new FormData();
+      // Add CSRF token
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+      if (csrfToken) {
+        formData.append('_csrf', csrfToken);
+      }
+
       formData.append('file', file);
 
       // Use the unified upload endpoint
@@ -623,7 +628,6 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       console.error('File upload error:', error);
       safeAddToast('Failed to upload file. Please try again.', 'error');
     } finally {
-      setIsTipping(false);
     }
   };
 
