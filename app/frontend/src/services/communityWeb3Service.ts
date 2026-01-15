@@ -254,7 +254,7 @@ export class CommunityWeb3Service {
       }
 
       // Try to get signer with better error handling
-      const signer = await getSigner();
+      let signer = await getSigner();
 
       if (!signer) throw new Error('No signer available. Please ensure your wallet is connected.');
 
@@ -281,19 +281,46 @@ export class CommunityWeb3Service {
               const { switchNetwork } = await import('@/utils/web3');
               await switchNetwork(11155111);
 
-              // Verify switch? Or just proceed and let the next calls fail if it didn't work.
-              // Usually existing signer might be invalidated after network switch in some libraries,
-              // but with ethers v6 and BrowserProvider it relies on the underlying provider which updates.
-              // Let's re-verify chainId just to be safe or re-get signer.
-              const updatedNetwork = await (signer.provider as any).getNetwork();
-              const updatedChainId = Number(updatedNetwork.chainId);
+              // Poll for network change
+              const maxRetries = 10; // Wait up to 5 seconds (500ms * 10)
+              let retries = 0;
+              let isCorrectNetwork = false;
 
-              if (updatedChainId !== 11155111) {
-                // Double check in case the provider hasn't updated yet (race condition)
-                // But if switchNetwork threw no error, user likely approved/cancelled.
-                // If cancelled, switchNetwork throws.
-                // If approved, we should be good.
-                console.warn(`[Web3Service] Network switch success logic reached, but provider still reports ${updatedChainId}. Continuing hopefuly...`);
+              while (retries < maxRetries) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Re-check network
+                // We specifically access the property again to ensure we get fresh data
+                try {
+                  const freshNetwork = await (signer.provider as any).getNetwork();
+                  const freshChainId = Number(freshNetwork.chainId);
+                  console.log(`[Web3Service] Network check retry ${retries + 1}/${maxRetries}: ${freshChainId}`);
+
+                  if (freshChainId === 11155111) {
+                    isCorrectNetwork = true;
+                    break;
+                  }
+                } catch (e) {
+                  console.warn('Error checking network during retry:', e);
+                }
+
+                retries++;
+              }
+
+              // CRITICAL: Re-fetch signer after network switch. 
+              // The old signer might be bound to the old network provider state.
+              if (isCorrectNetwork) {
+                console.log('[Web3Service] Network switched successfully. Re-fetching signer...');
+                const { getSigner } = await import('@/utils/web3');
+
+                // Re-fetch signer to ensure it's bound to the new network
+                const newSigner = await getSigner();
+                if (!newSigner) throw new Error('Failed to get signer after network switch');
+
+                signer = newSigner;
+                chainId = 11155111; // We confirmed it in the loop
+              } else {
+                throw new Error(`Network switch timed out. Please manually switch your wallet to Sepolia Testnet and try again.`);
               }
 
             } catch (switchError: any) {

@@ -690,7 +690,11 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     setShowAttachmentModal(false);
   };
 
-  const parseMentions = (content: string): JSX.Element => {
+  const parseMentions = (content: string | undefined): JSX.Element => {
+    // Guard against undefined content
+    if (!content) {
+      return <></>;
+    }
     // Simple regex to find @mentions (addresses or usernames)
     const mentionRegex = /(@[\w\d]+\.eth|@0x[a-fA-F0-9]{40}|@\w+)/g;
     const parts = content.split(mentionRegex);
@@ -720,8 +724,8 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     );
   };
 
-  const checkForMentions = (content: string): boolean => {
-    if (!address) return false;
+  const checkForMentions = (content: string | undefined): boolean => {
+    if (!address || !content) return false;
 
     const mentionPatterns = [
       `@${address.slice(0, 6)}...${address.slice(-4)}`,

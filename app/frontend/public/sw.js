@@ -350,12 +350,7 @@ self.addEventListener('fetch', (event) => {
   // Skip Socket.IO requests - let them go directly to the server
   // Socket.IO needs to handle its own transport mechanism (websocket/polling)
   if (url.pathname.startsWith('/socket.io/')) {
-    event.respondWith(fetch(request).catch(error => {
-      console.warn('Socket.IO request failed (expected during reconnection):', error.message);
-      // Return empty response to prevent FetchEvent error - Socket.IO handles its own fallback
-      return new Response('', { status: 503, statusText: 'Service Unavailable' });
-    }));
-    return; // Don't intercept - let Socket.IO handle it
+    return; // Don't intercept - let the browser handle it natively
   }
 
   // Skip non-GET requests

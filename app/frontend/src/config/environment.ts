@@ -1,17 +1,20 @@
 // Centralized environment configuration
+const isLocalhost = typeof window !== 'undefined' && 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
 export const ENV_CONFIG = {
   // Backend API URL - defaults to localhost:10000 for development
-  // Backend API URL - Force localhost in development unless explicitly overridden
-  BACKEND_URL: (process.env.NODE_ENV === 'development' && !process.env.NEXT_PUBLIC_FORCE_REMOTE)
+  // Backend API URL - Force localhost in development or when running on localhost
+  BACKEND_URL: ((process.env.NODE_ENV === 'development' || isLocalhost) && !process.env.NEXT_PUBLIC_FORCE_REMOTE)
     ? 'http://localhost:10000'
     : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'),
 
-  API_URL: (process.env.NODE_ENV === 'development' && !process.env.NEXT_PUBLIC_FORCE_REMOTE)
+  API_URL: ((process.env.NODE_ENV === 'development' || isLocalhost) && !process.env.NEXT_PUBLIC_FORCE_REMOTE)
     ? 'http://localhost:10000'
     : (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'),
 
   // WebSocket URL - derived from backend URL (Socket.IO will append /socket.io/)
-  WS_URL: (process.env.NODE_ENV === 'development' && !process.env.NEXT_PUBLIC_FORCE_REMOTE)
+  WS_URL: ((process.env.NODE_ENV === 'development' || isLocalhost) && !process.env.NEXT_PUBLIC_FORCE_REMOTE)
     ? 'ws://localhost:10000'
     : (process.env.NEXT_PUBLIC_WS_URL ||
       (process.env.NEXT_PUBLIC_BACKEND_URL

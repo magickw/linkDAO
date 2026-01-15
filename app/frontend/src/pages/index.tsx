@@ -13,7 +13,6 @@ import { Status } from '@/models/Status';
 import Link from 'next/link';
 import { Send, Vote, TrendingUp, Users, MessageCircle, RefreshCw, Award, Video, Mail, Shield, Zap } from 'lucide-react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import SupportWidget from '@/components/SupportWidget';
 import { newsletterService } from '@/services/newsletterService';
 import { usePostModalManager } from '@/hooks/usePostModalManager';
 import PostModal from '@/components/PostModal';
@@ -83,7 +82,6 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [hasNewPosts, setHasNewPosts] = useState(false);
   const [feedRefreshKey, setFeedRefreshKey] = useState(0);
-  const [isSupportWidgetOpen, setIsSupportWidgetOpen] = useState(false);
   const [isWalletSheetOpen, setIsWalletSheetOpen] = useState(false);
   const mainContentRef = useRef<HTMLDivElement>(null);
   const isMounted = useRef(true);
@@ -1243,9 +1241,6 @@ export default function Home() {
             isLoading={isCreatingPost}
           />
         </Suspense>
-
-        {/* Support Widget - Floating */}
-        <SupportWidget isOpen={isSupportWidgetOpen} onClose={() => setIsSupportWidgetOpen(false)} />
 
         {/* Wallet Sheet Modal */}
         <Suspense fallback={null}>

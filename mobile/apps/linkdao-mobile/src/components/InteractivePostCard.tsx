@@ -8,8 +8,7 @@ import Animated, {
   useAnimatedStyle, 
   useSharedValue, 
   withSpring,
-  withTiming,
-  interpolate
+  withTiming
 } from 'react-native-reanimated';
 import { PostCard } from './PostCard';
 import { Post } from '../store/postsStore';

@@ -14,7 +14,7 @@
             "url": "https://u.expo.dev/d051afaee33392cccc42e141b9f7697b"
         },
         "splash": {
-            "image": "./assets/splash.png",
+            "image": "./assets/splash-icon.png",
             "resizeMode": "contain",
             "backgroundColor": "#3b82f6"
         },
