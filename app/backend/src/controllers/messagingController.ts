@@ -257,9 +257,16 @@ export class MessagingController {
       res.status(201).json(apiResponse.success(message.data || message, 'Message sent successfully'));
     } catch (error) {
       safeLogger.error('Error sending message:', error);
-      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
-        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      if (error instanceof Error) {
+        safeLogger.error('Error message:', error.message);
+        safeLogger.error('Error stack:', error.stack);
+        if (error.message.includes('Messaging service temporarily unavailable')) {
+          res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+        } else {
+          res.status(500).json(apiResponse.error(error.message || 'Failed to send message'));
+        }
       } else {
+        safeLogger.error('Unknown error type:', JSON.stringify(error));
         res.status(500).json(apiResponse.error('Failed to send message'));
       }
     }

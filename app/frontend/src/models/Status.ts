@@ -116,7 +116,8 @@ export function convertBackendStatusToStatus(backendPost: any): Status {
 
   return {
     id: backendPost.id?.toString() || '',
-    author: backendPost.walletAddress || backendPost.authorId || '',
+    author: backendPost.authorId || backendPost.walletAddress || '',
+    walletAddress: backendPost.walletAddress || '', // Ensure walletAddress is explicitly provided
     parentId: backendPost.parentId ? backendPost.parentId.toString() : null,
     title: backendPost.title || '', // Optional for statuses
     content: content, // Use parsed content

@@ -674,8 +674,27 @@ const CommunitiesPage: React.FC = () => {
     if (isMobile) triggerHapticFeedback('light');
   };
 
-  const handleTip = async (postId: string, amount?: number) => {
+  const handleTip = async (postId: string, amount: string, token: string = 'LDAO') => {
     if (isMobile) triggerHapticFeedback('success');
+    
+    try {
+      const post = posts.find(p => p.id === postId);
+      if (!post) throw new Error('Post not found');
+
+      const recipientAddress = post.walletAddress || post.authorId || post.author;
+      
+      const { communityWeb3Service } = await import('../services/communityWeb3Service');
+      const txHash = await communityWeb3Service.tipCommunityPost({
+        postId,
+        recipientAddress,
+        amount,
+        token
+      });
+
+      console.log('Successfully tipped from CommunitiesPage:', txHash);
+    } catch (error: any) {
+      console.error('Tipping error in CommunitiesPage:', error);
+    }
   };
 
   const handleStake = (postId: string) => {
@@ -1091,7 +1110,7 @@ const CommunitiesPage: React.FC = () => {
                               await handleTokenReaction(postId, reactionType, amount);
                             }}
                             onTip={async (postId, amount, token) => {
-                              await handleTip(postId, parseFloat(amount));
+                              await handleTip(postId, amount, token);
                             }}
                             onComment={() => handleComment(postId)}
                             onOpenPost={(post, communitySlug) => handleOpenPost(post, communitySlug)}
