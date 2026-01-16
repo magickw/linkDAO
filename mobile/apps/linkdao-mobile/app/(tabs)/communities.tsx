@@ -121,7 +121,7 @@ export default function CommunitiesScreen() {
   const displayedCommunities = selectedTab === 'my-communities' ? myCommunities : discoverCommunities;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Communities</Text>
         <View style={styles.headerActions}>
@@ -147,49 +147,48 @@ export default function CommunitiesScreen() {
         </View>
       </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search communities..."
-          placeholderTextColor="#9ca3af"
-          value={searchQuery}
-          onChangeText={handleSearch}
-        />
-      </View>
-
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'discover' && styles.tabActive]}
-          onPress={() => setSelectedTab('discover')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'discover' && styles.tabTextActive]}>
-            Discover
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'my-communities' && styles.tabActive]}
-          onPress={() => setSelectedTab('my-communities')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'my-communities' && styles.tabTextActive]}>
-            My Communities
-          </Text>
-          {myCommunities.length > 0 && (
-            <View style={styles.tabBadge}>
-              <Text style={styles.tabBadgeText}>{myCommunities.length}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
-
       <ScrollView
         style={styles.content}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />
         }
       >
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search communities..."
+            placeholderTextColor="#9ca3af"
+            value={searchQuery}
+            onChangeText={handleSearch}
+          />
+        </View>
+
+        {/* Tabs */}
+        <View style={styles.tabsContainer}>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === 'discover' && styles.tabActive]}
+            onPress={() => setSelectedTab('discover')}
+          >
+            <Text style={[styles.tabText, selectedTab === 'discover' && styles.tabTextActive]}>
+              Discover
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === 'my-communities' && styles.tabActive]}
+            onPress={() => setSelectedTab('my-communities')}
+          >
+            <Text style={[styles.tabText, selectedTab === 'my-communities' && styles.tabTextActive]}>
+              My Communities
+            </Text>
+            {myCommunities.length > 0 && (
+              <View style={styles.tabBadge}>
+                <Text style={styles.tabBadgeText}>{myCommunities.length}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
         {/* Loading State */}
         {loading && communities.length === 0 && (
           <View style={styles.centerContainer}>

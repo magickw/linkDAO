@@ -12,8 +12,8 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { governanceService, Proposal } from '../../src/services/governanceService';
@@ -53,7 +53,7 @@ export default function GovernanceTabScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Governance</Text>
         <TouchableOpacity onPress={() => router.push('/governance/index')}>
