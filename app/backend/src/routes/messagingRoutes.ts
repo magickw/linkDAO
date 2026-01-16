@@ -31,7 +31,7 @@ router.get('/conversations',
 );
 
 // Start new conversation
-router.post('/conversations', csrfProtection, 
+router.post('/conversations', csrfProtection,
   validateRequest({
     body: {
       participantAddress: { type: 'string', required: true },
@@ -70,13 +70,13 @@ router.get('/conversations/:id/messages',
 );
 
 // Send message
-router.post('/conversations/:id/messages', csrfProtection, 
+router.post('/conversations/:id/messages', csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
     },
     body: {
-      content: { type: 'string', required: true, minLength: 1, maxLength: 2000 },
+      content: { type: 'string', optional: true, maxLength: 2000 },
       contentType: { type: 'string', optional: true, enum: ['text', 'image', 'file', 'post_share'] },
       replyToId: { type: 'string', optional: true },
       attachments: { type: 'array', optional: true },
@@ -87,7 +87,7 @@ router.post('/conversations/:id/messages', csrfProtection,
 );
 
 // Mark conversation as read
-router.put('/conversations/:id/read', csrfProtection, 
+router.put('/conversations/:id/read', csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -97,7 +97,7 @@ router.put('/conversations/:id/read', csrfProtection,
 );
 
 // Delete conversation
-router.delete('/conversations/:id', csrfProtection, 
+router.delete('/conversations/:id', csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -107,7 +107,7 @@ router.delete('/conversations/:id', csrfProtection,
 );
 
 // Archive conversation
-router.put('/conversations/:id/archive', csrfProtection, 
+router.put('/conversations/:id/archive', csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -117,7 +117,7 @@ router.put('/conversations/:id/archive', csrfProtection,
 );
 
 // Unarchive conversation
-router.put('/conversations/:id/unarchive', csrfProtection, 
+router.put('/conversations/:id/unarchive', csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -127,7 +127,7 @@ router.put('/conversations/:id/unarchive', csrfProtection,
 );
 
 // Encrypt message content
-router.post('/messages/:id/encrypt', csrfProtection, 
+router.post('/messages/:id/encrypt', csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -141,7 +141,7 @@ router.post('/messages/:id/encrypt', csrfProtection,
 );
 
 // Decrypt message content
-router.post('/messages/:id/decrypt', csrfProtection, 
+router.post('/messages/:id/decrypt', csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -155,7 +155,7 @@ router.post('/messages/:id/decrypt', csrfProtection,
 );
 
 // Update message delivery status
-router.put('/messages/:id/status', csrfProtection, 
+router.put('/messages/:id/status', csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -168,7 +168,7 @@ router.put('/messages/:id/status', csrfProtection,
 );
 
 // Delete message
-router.delete('/messages/:id', csrfProtection, 
+router.delete('/messages/:id', csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -201,7 +201,7 @@ router.get('/messages/:id/thread',
 );
 
 // Block user
-router.post('/block', csrfProtection, 
+router.post('/block', csrfProtection,
   validateRequest({
     body: {
       userAddress: { type: 'string', required: true },
@@ -212,7 +212,7 @@ router.post('/block', csrfProtection,
 );
 
 // Unblock user
-router.delete('/block/:userAddress', csrfProtection, 
+router.delete('/block/:userAddress', csrfProtection,
   validateRequest({
     params: {
       userAddress: { type: 'string', required: true }
@@ -227,7 +227,7 @@ router.get('/blocked',
 );
 
 // Report conversation or message
-router.post('/report', csrfProtection, 
+router.post('/report', csrfProtection,
   validateRequest({
     body: {
       targetType: { type: 'string', required: true, enum: ['conversation', 'message'] },

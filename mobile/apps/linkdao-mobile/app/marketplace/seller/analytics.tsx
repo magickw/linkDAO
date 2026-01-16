@@ -16,8 +16,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { sellerAnalyticsService, SellerMetrics, TopProduct } from '../../src/services/sellerAnalyticsService';
-import { THEME } from '../../src/constants/theme';
+import { sellerAnalyticsService, SellerMetrics, TopProduct } from '../../../src/services/sellerAnalyticsService';
+import { THEME } from '../../../src/constants/theme';
 
 type Timeframe = 'day' | 'week' | 'month';
 

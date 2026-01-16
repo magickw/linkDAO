@@ -17,8 +17,8 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { supportService, SupportTicket, TicketMessage } from '../../src/services/supportService';
-import { THEME } from '../src/constants/theme';
+import { supportService, SupportTicket, TicketMessage } from '../../../src/services/supportService';
+import { THEME } from '../../../src/constants/theme';
 
 export default function TicketDetailPage() {
   const { id } = useLocalSearchParams<{ id: string }>();

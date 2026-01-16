@@ -18,8 +18,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { supportService, FAQ, SupportTicket } from '../src/services/supportService';
-import { THEME } from '../src/constants/theme';
+import { supportService, FAQ, SupportTicket } from '../../src/services/supportService';
+import { THEME } from '../../src/constants/theme';
 
 type SupportTab = 'tickets' | 'faq' | 'chat';
 

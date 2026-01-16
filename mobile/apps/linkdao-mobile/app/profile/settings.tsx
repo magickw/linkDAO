@@ -315,11 +315,12 @@ export default function SettingsScreen() {
       icon: 'person-outline',
       items: [
         {
-          id: 'edit-profile',
-          title: 'Edit Profile',
-          description: 'Update your profile information',
-          type: 'navigation',
-          onPress: () => router.push('/profile/edit'),
+          id: 'logout',
+          title: 'Logout',
+          description: 'Sign out of your account',
+          type: 'action',
+          onPress: handleLogout,
+          destructive: true,
         },
         {
           id: 'delete-account',
@@ -327,14 +328,6 @@ export default function SettingsScreen() {
           description: 'Permanently delete your account',
           type: 'action',
           onPress: handleDeleteAccount,
-          destructive: true,
-        },
-        {
-          id: 'logout',
-          title: 'Logout',
-          description: 'Sign out of your account',
-          type: 'action',
-          onPress: handleLogout,
           destructive: true,
         },
       ],
@@ -514,8 +507,21 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 50,
   },
+  settingsButton: {
+    padding: 8,
+  },
   content: {
     flex: 1,
+  },
+  profileSection: {
+    backgroundColor: '#f9fafb',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
   },
   userInfo: {
     flexDirection: 'row',
@@ -543,6 +549,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
   },
+  userAddress: {
+    fontSize: 12,
+    color: '#9ca3af',
+    marginTop: 2,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
   editProfileButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -550,6 +562,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
+  },
+  quickStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    textTransform: 'uppercase',
+  },
+  statDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#e5e7eb',
   },
   editProfileText: {
     fontSize: 14,

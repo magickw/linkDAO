@@ -7,7 +7,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Linking, Platform } from 'react-native';
 import { ethers } from 'ethers';
-import { MetaMaskSDK } from '@metamask/sdk-react-native';
 import * as BackgroundTimer from 'react-native-background-timer';
 
 const STORAGE_KEY = 'wallet_connection';
@@ -26,29 +25,43 @@ class WalletService {
   private activeConnection: WalletConnection | null = null;
   private currentProvider: WalletProvider | null = null;
   private ethereum: any = null;
-  private sdk: MetaMaskSDK | null = null;
+  private sdk: any = null;
+  private metamaskSDKAvailable: boolean = false;
 
   /**
    * Initialize wallet service
    */
   async initialize() {
     try {
-      // Initialize MetaMask SDK
-      this.sdk = new MetaMaskSDK({
-        openDefaultInpage: false,
-        dappMetadata: {
-          name: 'LinkDAO Mobile',
-          url: 'https://linkdao.io',
-        },
-        // Enable communication between the SDK and MetaMask
-        communicationServerUrl: 'https://metamask-sdk-socket.metafi.codefi.network/',
-        checkInstallationImmediately: false,
-        i18nOptions: {
-          enabled: true,
-        },
-      });
-
-      this.ethereum = this.sdk.getProvider();
+      // Try to initialize MetaMask SDK
+      try {
+        const { MetaMaskSDK } = await import('@metamask/sdk-react-native');
+        
+        if (MetaMaskSDK && typeof MetaMaskSDK === 'function') {
+          this.metamaskSDKAvailable = true;
+          this.sdk = new MetaMaskSDK({
+            openDefaultInpage: false,
+            dappMetadata: {
+              name: 'LinkDAO Mobile',
+              url: 'https://linkdao.io',
+            },
+            // Enable communication between the SDK and MetaMask
+            communicationServerUrl: 'https://metamask-sdk-socket.metafi.codefi.network/',
+            checkInstallationImmediately: false,
+            i18nOptions: {
+              enabled: true,
+            },
+          });
+          this.ethereum = this.sdk.getProvider();
+          console.log('✅ MetaMask SDK initialized');
+        } else {
+          console.warn('⚠️ MetaMask SDK not available, using fallback');
+          this.metamaskSDKAvailable = false;
+        }
+      } catch (sdkError) {
+        console.warn('⚠️ Failed to import MetaMask SDK:', sdkError);
+        this.metamaskSDKAvailable = false;
+      }
       
       console.log('✅ Wallet service initialized');
       

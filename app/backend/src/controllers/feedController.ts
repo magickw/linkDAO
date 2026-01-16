@@ -98,7 +98,7 @@ export class FeedController {
 
         if (userAddress) {
           try {
-            const { onboardingService } = await import('../services/onboardingService');
+            const { onboardingService } = await import('../services/onboardingService.js');
             const userPreferences = await onboardingService.getUserPreferences(userAddress);
             if (userPreferences && !userPreferences.skipOnboarding) {
               preferredCategories = userPreferences.preferredCategories || [];
@@ -360,7 +360,7 @@ export class FeedController {
       res.json(apiResponse.success(tip, 'Tip sent successfully'));
     } catch (error) {
       safeLogger.error('Error sending tip:', error);
-      res.status(500).json(apiResponse.error('Failed to send tip'));
+      res.status(500).json(apiResponse.error(`Failed to send tip: ${error instanceof Error ? error.message : String(error)}`));
     }
   }
 

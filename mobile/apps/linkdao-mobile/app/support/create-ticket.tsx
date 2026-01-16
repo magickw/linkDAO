@@ -16,9 +16,9 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { supportService } from '../src/services/supportService';
-import { useAuthStore } from '../src/store/authStore';
-import { THEME } from '../src/constants/theme';
+import { supportService } from '../../src/services/supportService';
+import { useAuthStore } from '../../src/store/authStore';
+import { THEME } from '../../src/constants/theme';
 
 type TicketPriority = 'low' | 'medium' | 'high' | 'urgent';
 type TicketCategory = 'general' | 'technical' | 'account' | 'payment' | 'marketplace' | 'other';

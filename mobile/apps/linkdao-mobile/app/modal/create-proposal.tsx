@@ -17,9 +17,9 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { governanceService } from '../src/services/governanceService';
-import { useAuthStore } from '../src/store/authStore';
-import { THEME } from '../src/constants/theme';
+import { governanceService } from '../../src/services/governanceService';
+import { useAuthStore } from '../../src/store/authStore';
+import { THEME } from '../../src/constants/theme';
 
 type ProposalCategory = 'protocol' | 'treasury' | 'community' | 'charity' | 'other';
 

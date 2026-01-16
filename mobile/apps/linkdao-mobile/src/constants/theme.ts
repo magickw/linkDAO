@@ -71,3 +71,11 @@ export const THEME = {
     }
   }
 };
+
+export const SETTINGS = {
+  colors: {
+    gray: '#9ca3af',
+    lightGray: '#e5e7eb',
+    darkGray: '#6b7280',
+  }
+};

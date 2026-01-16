@@ -192,12 +192,18 @@ export class MessagingController {
 
       const { id } = req.params;
       const {
-        content,
+        content = '', // Default to empty string
         contentType = 'text',
         replyToId,
         attachments = [],
         encryptionMetadata
       } = req.body;
+
+      // Validate that message has some content (text, attachments, or encrypted data)
+      if ((!content || content.trim() === '') && (!attachments || attachments.length === 0) && !encryptionMetadata) {
+        res.status(400).json(apiResponse.error('Message must contain text or attachments', 400));
+        return;
+      }
 
       // Validate message content length (max 10KB)
       if (content && content.length > 10240) {
@@ -208,7 +214,7 @@ export class MessagingController {
       const message = await messagingService.sendMessage({
         conversationId: id,
         fromAddress: userAddress,
-        content,
+        content: content || '', // Ensure it is a string for the service
         encryptedContent: encryptionMetadata ? content : undefined,
         contentType,
         replyToId,
@@ -267,8 +273,8 @@ export class MessagingController {
           res.status(500).json(apiResponse.error(error.message || 'Failed to send message'));
         }
       } else {
-        safeLogger.error('Unknown error type:', JSON.stringify(error));
-        res.status(500).json(apiResponse.error('Failed to send message'));
+        safeLogger.error('Unknown error type in sendMessage:', error);
+        res.status(500).json(apiResponse.error('Failed to send message: Unknown internal error'));
       }
     }
   }

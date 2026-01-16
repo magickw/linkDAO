@@ -99,7 +99,10 @@ export class TipController {
       });
     } catch (error) {
       safeLogger.error('Error creating tip:', error);
-      return res.status(500).json({ error: 'Internal server error' });
+      return res.status(500).json({
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : String(error)
+      });
     }
   }
 
