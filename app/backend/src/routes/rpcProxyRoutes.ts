@@ -31,15 +31,31 @@ router.all('/', async (req: Request, res: Response) => {
         // Log the proxy request (optional, can be noisy)
         // safeLogger.info('Proxying RPC request', { target, method: req.method });
 
+        // Prepare headers
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': 'LinkDAO-RPC-Proxy/1.0'
+        };
+
+        // Forward Origin and Referer headers so Alchemy allowlists work
+        if (req.headers.origin) {
+            headers['Origin'] = req.headers.origin as string;
+        } else if (req.headers.referer) {
+            // Fallback for some clients
+            try {
+                const url = new URL(req.headers.referer as string);
+                headers['Origin'] = url.origin;
+            } catch (e) {
+                // Ignore invalid referer
+            }
+        }
+
         const response = await axios({
             method: req.method,
             url: target,
             data: req.body,
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'User-Agent': 'LinkDAO-RPC-Proxy/1.0'
-            },
+            headers,
             timeout: 20000, // 20s timeout for RPC operations
             validateStatus: () => true // Forward all status codes
         });
