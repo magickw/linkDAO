@@ -71,29 +71,6 @@ export default function HomeLeftSidebar({ className = '' }: HomeLeftSidebarProps
                     </div>
                 </div>
 
-                {/* Quick Stats Dashboard */}
-                {profile && (
-                    <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden p-4">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Quick Stats</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center transition-transform hover:scale-105">
-                                <div className="text-xl font-bold text-gray-900 dark:text-white">{(profile as any).postCount || 0}</div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">Posts</div>
-                            </div>
-                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center transition-transform hover:scale-105">
-                                <div className="text-xl font-bold text-gray-900 dark:text-white">{(profile as any).commentCount || 0}</div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">Comments</div>
-                            </div>
-                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center col-span-2 transition-transform hover:scale-105">
-                                <div className="text-xl font-bold text-primary-600 dark:text-primary-400">
-                                    {((profile as any).totalEarned || 0).toLocaleString()} <span className="text-xs font-normal text-gray-500">LDAO</span>
-                                </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">Total Earned</div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
                 {/* Quick Navigation */}
                 {address && (
                     <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">

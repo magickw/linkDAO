@@ -17,7 +17,7 @@ if (typeof self !== 'undefined' && self.location && self.location.hostname === '
 }
 
 // Service Worker Version - increment to force update
-const SW_VERSION = '2.0.3';
+const SW_VERSION = '2.0.4';
 
 const CACHE_NAME = 'linkdao-v1';
 const STATIC_CACHE = 'static-v1';
@@ -770,12 +770,19 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
         }
     }
 
-    const networkResponse = await fetch(fetchRequest, {
+    const isCoinGeckoRequest = url.hostname.includes('api.coingecko.com');
+
+    const fetchOptions = {
       signal: controller.signal,
       mode: 'cors', // Explicitly set mode to cors
-      credentials: 'include', // Include credentials if available
       cache: 'no-store' // Don't cache responses at the fetch level, we handle caching separately
-    });
+    };
+
+    if (!isCoinGeckoRequest) {
+      fetchOptions.credentials = 'include';
+    }
+
+    const networkResponse = await fetch(fetchRequest, fetchOptions);
 
     clearTimeout(timeoutId);
 
@@ -2209,7 +2216,7 @@ async function syncReactions() {
 // IndexedDB helpers for offline data and action queue
 async function openDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('OfflineData', 2);
+    const request = indexedDB.open('OfflineData', 3);
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
@@ -2242,6 +2249,10 @@ async function openDB() {
 async function getAuthToken() {
   try {
     const db = await openDB();
+    if (!db.objectStoreNames.contains('authTokens')) {
+      console.error('Error getting auth token: authTokens object store not found.');
+      return null;
+    }
     const transaction = db.transaction(['authTokens'], 'readonly');
     const store = transaction.objectStore('authTokens');
     const tokenRecord = await store.get('current');

@@ -722,16 +722,81 @@ const EnhancedPostCard = React.memo(({
 
               {/* Media */}
               {post.media && post.media.length > 0 && (
-                <div className="mb-4 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 flex justify-center cursor-zoom-in" onClick={() => window.open(post.media[0], '_blank')}>
-                  <OptimizedImage
-                    src={post.media[0]}
-                    alt="Post media"
-                    width={800}
-                    height={600}
-                    className="max-h-[500px] w-auto object-contain"
-                    lazy={true}
-                    quality={90}
-                  />
+                <div className="mb-4 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
+                  {post.media.length === 1 ? (
+                    <div className="flex justify-center cursor-zoom-in" onClick={() => window.open(post.media[0], '_blank')}>
+                      <OptimizedImage
+                        src={post.media[0]}
+                        alt="Post media"
+                        width={800}
+                        height={600}
+                        className="max-h-[500px] w-auto object-contain"
+                        lazy={true}
+                        quality={90}
+                      />
+                    </div>
+                  ) : post.media.length === 2 ? (
+                    <div className="grid grid-cols-2 gap-1">
+                      {post.media.slice(0, 2).map((media, index) => (
+                        <div key={index} className="aspect-square cursor-zoom-in" onClick={() => window.open(media, '_blank')}>
+                          <OptimizedImage
+                            src={media}
+                            alt={`Post media ${index + 1}`}
+                            width={400}
+                            height={400}
+                            className="w-full h-full object-cover"
+                            lazy={true}
+                            quality={90}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : post.media.length === 3 ? (
+                    <div className="grid grid-cols-2 gap-1">
+                      <div className="aspect-square cursor-zoom-in" onClick={() => window.open(post.media[0], '_blank')}>
+                        <OptimizedImage
+                          src={post.media[0]}
+                          alt="Post media 1"
+                          width={400}
+                          height={400}
+                          className="w-full h-full object-cover"
+                          lazy={true}
+                          quality={90}
+                        />
+                      </div>
+                      <div className="grid grid-rows-2 gap-1">
+                        {post.media.slice(1, 3).map((media, index) => (
+                          <div key={index + 1} className="aspect-square cursor-zoom-in" onClick={() => window.open(media, '_blank')}>
+                            <OptimizedImage
+                              src={media}
+                              alt={`Post media ${index + 2}`}
+                              width={400}
+                              height={400}
+                              className="w-full h-full object-cover"
+                              lazy={true}
+                              quality={90}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-1">
+                      {post.media.slice(0, 4).map((media, index) => (
+                        <div key={index} className="aspect-square cursor-zoom-in" onClick={() => window.open(media, '_blank')}>
+                          <OptimizedImage
+                            src={media}
+                            alt={`Post media ${index + 1}`}
+                            width={400}
+                            height={400}
+                            className="w-full h-full object-cover"
+                            lazy={true}
+                            quality={90}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
