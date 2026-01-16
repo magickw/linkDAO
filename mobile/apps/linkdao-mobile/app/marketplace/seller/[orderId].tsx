@@ -740,7 +740,7 @@ const styles = StyleSheet.create({
   },
   currentStatus: {
     fontWeight: '600',
-    color: getStatusColor('pending'),
+    color: '#f59e0b',
   },
   errorContainer: {
     flex: 1,
@@ -773,7 +773,7 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: '#ffffff',
     borderTopLeftRadius: 20,
-    borderTopRightRadius: 20',
+    borderTopRightRadius: 20,
     maxHeight: '80%',
   },
   modalHeader: {
