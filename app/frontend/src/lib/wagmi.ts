@@ -1,6 +1,6 @@
 import { createConfig, http, createStorage } from 'wagmi'
 import { base, baseSepolia, mainnet, polygon, arbitrum, sepolia } from 'wagmi/chains'
-import { injected, metaMask, walletConnect, coinbaseWallet } from 'wagmi/connectors'
+import { injected, metaMask, coinbaseWallet } from 'wagmi/connectors'
 import './devConfig' // Import development configuration
 
 // Create persistent storage for wallet state
@@ -79,23 +79,6 @@ export const config = createConfig({
       appName: 'LinkDAO Marketplace',
       appLogoUrl: 'https://linkdao.io/icon.png',
       preference: 'smartWalletOnly', // Use Smart Wallet for Base
-    }),
-    walletConnect({
-      projectId,
-      metadata: {
-        name: 'LinkDAO Marketplace',
-        description: 'Decentralized Web3 Marketplace',
-        url: getFrontendUrl(),
-        icons: ['https://linkdao.io/icon.png'],
-      },
-      showQrModal: true,
-      // Disable remote config fetching to prevent network errors
-      disableProviderPing: true,
-      // Disable analytics and other network requests
-      qrModalOptions: {
-        themeMode: 'system',
-        defaultNetwork: 'base',
-      },
     }),
     injected(),
   ],

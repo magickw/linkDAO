@@ -167,6 +167,8 @@
   "overrides": {
     "playwright": "npm:empty-npm-package@1.0.0",
     "playwright-core": "npm:empty-npm-package@1.0.0",
-    "@playwright/test": "npm:empty-npm-package@1.0.0"
+    "@playwright/test": "npm:empty-npm-package@1.0.0",
+    "ox": "0.11.3",
+    "@noble/hashes": "1.5.0"
   }
 }

@@ -4,18 +4,18 @@ const path = require('path');
 
 const nextConfig = {
   reactStrictMode: true,
-  
+
   eslint: { ignoreDuringBuilds: true },
-  
+
   typescript: {
     ignoreBuildErrors: true,
   },
-  
+
   // Enable Fast Refresh
   experimental: {
     // esmExternals: false, // Removed to enable Fast Refresh
   },
-  
+
   webpack: (config, { dev }) => {
     if (dev) {
       // Enable file watching for proper hot reloads
@@ -23,7 +23,7 @@ const nextConfig = {
         poll: 1000,
         aggregateTimeout: 200,
       };
-      
+
       // Enable Fast Refresh by removing disable flag
       // config.plugins.push(
       //   new webpack.DefinePlugin({
@@ -33,7 +33,7 @@ const nextConfig = {
     }
     return config;
   },
-  
+
   outputFileTracingRoot: require("path").join(__dirname),
 
   // Exclude playwright from output file tracing
@@ -70,10 +70,19 @@ const nextConfig = {
   },
 
   webpack: (config, { isServer, dev, webpack }) => {
+    // Add parent node_modules to module resolution paths
+    config.resolve.modules = [
+      path.resolve(__dirname, 'node_modules'),
+      path.resolve(__dirname, '../node_modules'),
+      'node_modules'
+    ];
+
     // Configure path aliases
     config.resolve.alias = {
       ...config.resolve.alias,
       '@': path.resolve(__dirname, 'src'),
+      // Force zod/mini to resolve to the nested version in porto
+      'zod/mini': path.resolve(__dirname, '../node_modules/porto/node_modules/zod/mini/index.js'),
     };
 
     // Handle node: protocol imports - convert to regular node module imports
@@ -97,11 +106,10 @@ const nextConfig = {
       stream: require.resolve('stream-browserify'),
       buffer: require.resolve('buffer'),
     };
-    
+
     // Add polyfill for crypto
     config.plugins.push(
       new webpack.ProvidePlugin({
-        crypto: 'crypto-browserify',
         Buffer: ['buffer', 'Buffer'],
       })
     );
@@ -122,7 +130,7 @@ const nextConfig = {
             ...(rule.exclude || []),
             /node_modules/
           ];
-          
+
           // Add optimization options for babel-loader
           if (rule.use.options) {
             rule.use.options.cacheDirectory = true;
@@ -136,7 +144,7 @@ const nextConfig = {
                 ...(useRule.exclude || []),
                 /node_modules/
               ];
-              
+
               // Add optimization options for babel-loader
               if (useRule.options) {
                 useRule.options.cacheDirectory = true;
@@ -147,7 +155,7 @@ const nextConfig = {
         }
       }
     });
-    
+
     // Add specific rule for generated files with optimized settings
     config.module.rules.push({
       test: /[\/](generated)[\/].*\.tsx?$/,
@@ -197,7 +205,7 @@ const nextConfig = {
     if (dev) {
       // Reduce logging noise
       config.stats = 'errors-warnings';
-      
+
       // Optimize for faster rebuilds
       config.optimization = {
         ...config.optimization,
@@ -225,13 +233,13 @@ const nextConfig = {
           }
         }
       };
-      
+
       // Disable performance hints in development
       config.performance = {
         ...config.performance,
         hints: false,
       };
-      
+
       // Optimize watch options for development
       config.watchOptions = {
         ...config.watchOptions,
@@ -302,7 +310,7 @@ const nextConfig = {
 
   // Add trailing slash for SEO consistency
   trailingSlash: false,
-  
+
   // Additional development optimizations
   experimental: {
     // Migrate from deprecated turbo to turbopack
@@ -312,7 +320,7 @@ const nextConfig = {
     // Enable Turbopack for faster builds (Next.js 13.1+)
     // externalResolver: true,  // Removed due to deprecation warning
   },
-  
+
   // Optimize for development
   // swcMinify: false, // Disable SWC minification in development for faster builds (Removed due to deprecation warning)
   poweredByHeader: false // Remove powered by header for security

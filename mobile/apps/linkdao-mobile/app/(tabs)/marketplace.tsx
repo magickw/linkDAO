@@ -200,17 +200,26 @@ export default function MarketplaceScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Marketplace</Text>
-        <TouchableOpacity
-          style={styles.cartButton}
-          onPress={() => router.push('/marketplace/cart')}
-        >
-          <Ionicons name="cart-outline" size={24} color="#1f2937" />
-          {cartCount > 0 && (
-            <View style={styles.cartBadge}>
-              <Text style={styles.cartBadgeText}>{cartCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.becomeSellerButton}
+            onPress={() => router.push('/marketplace/seller/onboarding')}
+          >
+            <Ionicons name="storefront-outline" size={20} color="#3b82f6" />
+            <Text style={styles.becomeSellerButtonText}>Become Seller</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.cartButton}
+            onPress={() => router.push('/marketplace/cart')}
+          >
+            <Ionicons name="cart-outline" size={24} color="#1f2937" />
+            {cartCount > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{cartCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Search Bar */}
@@ -446,6 +455,27 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#1f2937',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  becomeSellerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#eff6ff',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#3b82f6',
+    gap: 4,
+  },
+  becomeSellerButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#3b82f6',
   },
   cartButton: {
     position: 'relative',

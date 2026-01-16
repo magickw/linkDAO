@@ -109,7 +109,19 @@ class EnhancedAuthService {
       this.sessionKey = localStorage.getItem(this.STORAGE_KEYS.SESSION_KEY);
       if (!this.sessionKey) {
         // Generate random session key
-        this.sessionKey = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+        const array = new Uint8Array(32);
+        if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+          crypto.getRandomValues(array);
+        } else if (typeof window !== 'undefined' && window.crypto && typeof window.crypto.getRandomValues === 'function') {
+          window.crypto.getRandomValues(array);
+        } else {
+          // Fallback to Math.random
+          for (let i = 0; i < array.length; i++) {
+            array[i] = Math.floor(Math.random() * 256);
+          }
+        }
+        
+        this.sessionKey = Array.from(array)
           .map(b => b.toString(16).padStart(2, '0')).join('');
         localStorage.setItem(this.STORAGE_KEYS.SESSION_KEY, this.sessionKey);
       }

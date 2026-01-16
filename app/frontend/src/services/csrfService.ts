@@ -32,7 +32,7 @@ export class CSRFService {
    */
   generateToken(): string {
     const array = new Uint8Array(32);
-    
+
     // Try standard WebCrypto API (modern browsers, Node 19+)
     if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
       crypto.getRandomValues(array);
@@ -63,7 +63,7 @@ export class CSRFService {
         }
       }
     }
-    
+
     return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
   }
 
@@ -261,7 +261,9 @@ export class CSRFService {
         this.refreshToken();
       }
     } catch (error) {
-      console.error('Failed to load CSRF token:', error);
+      console.warn('Failed to load CSRF token, resetting:', error);
+      // Clean up corrupted token
+      localStorage.removeItem('csrf_token');
       // Generate new token on error
       this.refreshToken();
     }

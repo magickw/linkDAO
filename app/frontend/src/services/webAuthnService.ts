@@ -544,7 +544,16 @@ export class WebAuthnService {
    */
   private generateChallenge(): ArrayBuffer {
     const array = new Uint8Array(32);
-    crypto.getRandomValues(array);
+    if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+      crypto.getRandomValues(array);
+    } else if (typeof window !== 'undefined' && window.crypto && typeof window.crypto.getRandomValues === 'function') {
+      window.crypto.getRandomValues(array);
+    } else {
+      // Fallback
+      for (let i = 0; i < array.length; i++) {
+        array[i] = Math.floor(Math.random() * 256);
+      }
+    }
     return array.buffer;
   }
 

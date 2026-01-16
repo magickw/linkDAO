@@ -122,7 +122,15 @@ export class MessageEncryptionService {
       );
 
       // Generate IV for AES-GCM
-      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const iv = new Uint8Array(12);
+      if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+        crypto.getRandomValues(iv);
+      } else {
+        // Fallback for non-browser environments
+        for (let i = 0; i < iv.length; i++) {
+          iv[i] = Math.floor(Math.random() * 256);
+        }
+      }
 
       // Encrypt message content with symmetric key
       const encodedContent = new TextEncoder().encode(content);
@@ -584,8 +592,17 @@ export class MessageEncryptionService {
    */
   private async encryptWithPassphrase(data: string, passphrase: string): Promise<any> {
     const encoder = new TextEncoder();
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const salt = new Uint8Array(16);
+    const iv = new Uint8Array(12);
+    
+    if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+      crypto.getRandomValues(salt);
+      crypto.getRandomValues(iv);
+    } else {
+      // Fallback
+      for (let i = 0; i < salt.length; i++) salt[i] = Math.floor(Math.random() * 256);
+      for (let i = 0; i < iv.length; i++) iv[i] = Math.floor(Math.random() * 256);
+    }
     
     // Derive key from passphrase
     const keyMaterial = await crypto.subtle.importKey(

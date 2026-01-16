@@ -1,13 +1,7 @@
 import React, { useState, useRef, useId } from 'react';
 import { Button } from '@/design-system/components/Button';
 import { cn } from '../../lib/utils';
-import {
-  UserGroupIcon,
-  EyeIcon,
-  PhotoIcon,
-  CheckIcon,
-  XMarkIcon
-} from '@heroicons/react/24/outline';
+import { Users, Eye, Image, Check, X } from 'lucide-react';
 import { useAccessibility } from '@/components/Accessibility/AccessibilityProvider';
 import { useToast } from '@/context/ToastContext';
 
@@ -162,7 +156,7 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
               aria-describedby={bannerUploadId}
               aria-label={isUploading ? 'Uploading banner image' : 'Change community banner image'}
             >
-              <PhotoIcon className="w-4 h-4 mr-2" aria-hidden="true" />
+              <Image className="w-4 h-4 mr-2" aria-hidden="true" />
               {isUploading ? 'Uploading...' : 'Change Banner'}
             </Button>
             <input
@@ -198,7 +192,7 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
-                    <UserGroupIcon className="w-8 h-8 sm:w-10 sm:h-10" aria-hidden="true" />
+                    <Users className="w-8 h-8 sm:w-10 sm:h-10" aria-hidden="true" />
                   </div>
                 )}
               </div>
@@ -223,7 +217,7 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
                 aria-label="Community statistics"
               >
                 <div className="flex items-center gap-1">
-                  <UserGroupIcon className="w-4 h-4" aria-hidden="true" />
+                  <Users className="w-4 h-4" aria-hidden="true" />
                   <span aria-label={`${community.memberCount} total members`}>
                     {formatMemberCount(community.memberCount)} members
                   </span>
@@ -248,7 +242,7 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
             {isCreator ? (
               // Show creator badge instead of join button
               <div className="flex items-center gap-2 px-4 py-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg border border-yellow-300 dark:border-yellow-700">
-                <CheckIcon className="w-5 h-5" />
+                <Check className="w-5 h-5" />
                 <span className="font-medium">Creator</span>
               </div>
             ) : (
@@ -289,12 +283,12 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
                   </div>
                 ) : isJoined ? (
                   <div className="flex items-center gap-2">
-                    <CheckIcon className="w-4 h-4" aria-hidden="true" />
+                    <Check className="w-4 h-4" aria-hidden="true" />
                     <span>Joined</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <UserGroupIcon className="w-4 h-4" aria-hidden="true" />
+                    <Users className="w-4 h-4" aria-hidden="true" />
                     <span>Join</span>
                   </div>
                 )}
