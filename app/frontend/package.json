@@ -108,6 +108,7 @@
     "react-window": "^1.8.10",
     "react-window-infinite-loader": "^2.0.0",
     "recharts": "^3.4.1",
+    "redux": "^5.0.1",
     "remark-gfm": "^4.0.1",
     "sanitize-html": "^2.17.0",
     "socket.io": "^4.8.1",
