@@ -94,6 +94,7 @@ class CartService {
   private isSyncing = false;
   private lastSyncTime = 0;
   private syncCooldown = 5000; // 5 seconds cooldown between syncs
+  private pendingDeletions: Set<string> = new Set(); // Track items pending deletion to preventing ghosting
 
   private constructor() {
     // Check for authentication on initialization
@@ -492,6 +493,9 @@ class CartService {
 
   // Remove item from cart
   async removeItem(itemId: string): Promise<void> {
+    // Add to pending deletions to prevent it from reappearing during sync
+    this.pendingDeletions.add(itemId);
+
     const currentState = await this.getCartState();
     const newItems = currentState.items.filter(item => item.id !== itemId);
 
@@ -508,6 +512,7 @@ class CartService {
     if (this.isAuthenticated) {
       try {
         // Find the item to get its cartItemId for backend operations
+        // We look in current state because it's already removed from newState
         const item = currentState.items.find(item => item.id === itemId);
         if (item?.cartItemId) {
           await this.removeItemFromBackend(item.cartItemId);
@@ -517,7 +522,15 @@ class CartService {
         }
       } catch (error) {
         console.warn('Failed to remove item from backend cart:', error);
+      } finally {
+        // We keep it in pendingDeletions for a short while longer to ensure any in-flight syncs
+        // filter it out, but eventually clear it to avoid memory leaks
+        setTimeout(() => {
+          this.pendingDeletions.delete(itemId);
+        }, 5000);
       }
+    } else {
+      this.pendingDeletions.delete(itemId);
     }
   }
 
@@ -1004,7 +1017,10 @@ class CartService {
     // We iterate through backend items and merge local data only if the item matches.
     // Local items that are NOT in the backend are considered stale/ghosts and are discarded.
 
-    return backendItems.map(backendItem => {
+    // First filter out any backend items that are currently pending deletion
+    const validBackendItems = backendItems.filter(item => !this.pendingDeletions.has(item.id));
+
+    return validBackendItems.map(backendItem => {
       const localItem = localItems.find(i => i.id === backendItem.id);
 
       if (localItem) {
@@ -1028,7 +1044,7 @@ class CartService {
   private transformBackendCartToState(backendCart: any): CartState {
     const ethPrice = 2400; // Rough ETH price for conversion
 
-    const items: CartItem[] = backendCart.items?.map((item: any) => {
+    const items: CartItem[] = (backendCart.items?.map((item: any) => {
       // Get the product data - could be nested under 'product' or at item level
       const product = item.product || item;
 
@@ -1070,8 +1086,11 @@ class CartService {
         fiatValue = priceAmount.toFixed(2);
       }
 
+      // Extract ID to check pending deletion
+      const id = item.productId || product.id || item.id;
+
       return {
-        id: item.productId || product.id || item.id,
+        id,
         cartItemId: item.id, // Store the actual cart item ID for backend operations
         title: product.title || item.title || 'Unknown Product',
         description: product.description || item.description || '',
@@ -1111,7 +1130,7 @@ class CartService {
         appliedPromoCodeId: item.appliedPromoCodeId,
         appliedDiscount: item.appliedDiscount,
       };
-    }) || [];
+    }) || []).filter((item: CartItem) => !this.pendingDeletions.has(item.id)); // Filter out pending deletions
 
     return {
       items,

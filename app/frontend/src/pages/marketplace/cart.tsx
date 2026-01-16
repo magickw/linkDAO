@@ -273,7 +273,8 @@ const CartPage: React.FC = () => {
   const handleSaveForLater = async (itemId: string) => {
     try {
       await savedForLaterService.saveCartItemForLater(itemId);
-      // Cart will auto-refresh via subscription
+      // Remove from local cart immediately to update UI and state
+      cartService.removeItem(itemId);
     } catch (error) {
       console.error('Failed to save item for later:', error);
     }
