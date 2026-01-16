@@ -363,7 +363,7 @@ export class WalletService {
         break;
       case 11155111: // Sepolia Testnet
         chain = sepolia;
-        rpcUrl = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL || 'https://rpc2.sepolia.org';
+        rpcUrl = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
         break;
       case 137: // Polygon
         chain = polygon;

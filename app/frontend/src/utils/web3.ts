@@ -329,26 +329,50 @@ export async function getProvider() {
 
     // Last-resort: use a simple JsonRpcProvider with staticNetwork
     console.log('Using fallback provider');
-    try {
-      const fallbackRpcs = [
-        'https://ethereum-sepolia-rpc.publicnode.com',
-        'https://rpc.ankr.com/eth_sepolia',
-        'https://1rpc.io/sepolia'
-      ];
+    const fallbackRpcs = [
+      'https://ethereum-sepolia-rpc.publicnode.com',
+      'https://rpc.sepolia.org',
+      'https://rpc2.sepolia.org',
+      'https://1rpc.io/sepolia',
+      'https://rpc.ankr.com/eth_sepolia'
+    ];
 
-      const network = ethers.Network.from(11155111);
-      // Try the first working fallback RPC
+    const network = ethers.Network.from(11155111);
+    
+    for (const rpc of fallbackRpcs) {
+      try {
+        console.log(`Trying fallback RPC: ${rpc}`);
+        const provider = new ethers.JsonRpcProvider(rpc, network, {
+          staticNetwork: true,
+          polling: false,
+          batchMaxCount: 1
+        });
+        
+        // Lightweight check to ensure provider works
+        await provider.getBlockNumber();
+        
+        console.log(`Connected to fallback RPC: ${rpc}`);
+        cachedProvider = provider;
+        providerCreationAttempts = 0;
+        return provider;
+      } catch (err) {
+        console.warn(`Fallback RPC ${rpc} failed:`, err);
+        continue;
+      }
+    }
+    
+    // If all fallbacks fail, return the first one as last hope (it will likely fail but keep existing behavior)
+    try {
       const provider = new ethers.JsonRpcProvider(fallbackRpcs[0], network, {
         staticNetwork: true,
         polling: false,
-        batchMaxCount: 1 // Disable batching for fallback to improve reliability
+        batchMaxCount: 1 
       });
-
       cachedProvider = provider;
       providerCreationAttempts = 0;
       return provider;
     } catch (fallbackError) {
-      console.warn('Fallback provider creation failed:', fallbackError);
+      console.warn('Final fallback provider creation failed:', fallbackError);
       lastProviderError = fallbackError instanceof Error ? fallbackError : new Error('Unknown error');
       return null;
     }
