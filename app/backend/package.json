@@ -163,6 +163,7 @@
     "socket.io": "^4.8.1",
     "speakeasy": "^2.0.0",
     "stripe": "^14.21.0",
+    "svix": "^1.45.0",
     "ts-node": "^10.9.2",
     "twilio": "^5.10.7",
     "typescript": "^5.9.3",
