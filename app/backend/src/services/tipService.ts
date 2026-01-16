@@ -33,6 +33,38 @@ export class TipService {
     txHash?: string
   ) {
     try {
+      // Check if it's a regular post or a status
+      const postResult = await db.select().from(schema.posts).where(eq(schema.posts.id, postId)).limit(1);
+      
+      if (postResult.length > 0) {
+        const result = await db.insert(schema.tips).values({
+          postId,
+          fromUserId,
+          toUserId,
+          amount,
+          token,
+          message,
+          txHash
+        }).returning();
+        return result[0];
+      }
+
+      const statusResult = await db.select().from(schema.statuses).where(eq(schema.statuses.id, postId)).limit(1);
+      if (statusResult.length > 0) {
+        const result = await db.insert(schema.statusTips).values({
+          statusId: postId,
+          fromUserId,
+          toUserId,
+          amount,
+          token,
+          message,
+          txHash
+        }).returning();
+        // Normalize result to match tip shape (statusId -> postId)
+        return { ...result[0], postId: result[0].statusId };
+      }
+
+      // Default fallback
       const result = await db.insert(schema.tips).values({
         postId,
         fromUserId,
@@ -55,7 +87,8 @@ export class TipService {
    */
   async getTipsForPost(postId: string) {
     try {
-      const tips = await db.select({
+      // Try posts table
+      const regularTips = await db.select({
         id: schema.tips.id,
         amount: schema.tips.amount,
         token: schema.tips.token,
@@ -69,10 +102,29 @@ export class TipService {
       })
         .from(schema.tips)
         .leftJoin(schema.users, eq(schema.tips.fromUserId, schema.users.id))
-        .where(eq(schema.tips.postId, postId))
-        .orderBy(desc(schema.tips.createdAt));
+        .where(eq(schema.tips.postId, postId));
 
-      return tips;
+      // Try status_tips table
+      const statusTipsData = await db.select({
+        id: schema.statusTips.id,
+        amount: schema.statusTips.amount,
+        token: schema.statusTips.token,
+        message: schema.statusTips.message,
+        timestamp: schema.statusTips.createdAt,
+        txHash: schema.statusTips.txHash,
+        tipperWallet: schema.users.walletAddress,
+        tipperName: schema.users.displayName,
+        tipperHandle: schema.users.handle,
+        fromUserId: schema.statusTips.fromUserId
+      })
+        .from(schema.statusTips)
+        .leftJoin(schema.users, eq(schema.statusTips.fromUserId, schema.users.id))
+        .where(eq(schema.statusTips.statusId, postId));
+
+      const allTips = [...regularTips, ...statusTipsData];
+      allTips.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+
+      return allTips;
     } catch (error) {
       safeLogger.error('Error getting tips for post:', error);
       throw error;
@@ -84,12 +136,18 @@ export class TipService {
    */
   async getTotalTipsReceived(userId: string) {
     try {
-      const result = await db.select({ total: schema.tips.amount })
+      const regularResult = await db.select({ total: schema.tips.amount })
         .from(schema.tips)
         .where(eq(schema.tips.toUserId, userId));
 
+      const statusResult = await db.select({ total: schema.statusTips.amount })
+        .from(schema.statusTips)
+        .where(eq(schema.statusTips.toUserId, userId));
+
+      const all = [...regularResult, ...statusResult];
+
       // Sum up all the tips
-      return result.reduce((sum, tip) => {
+      return all.reduce((sum, tip) => {
         return sum + parseFloat(tip.total);
       }, 0);
     } catch (error) {
@@ -103,12 +161,18 @@ export class TipService {
    */
   async getTotalTipsSent(userId: string) {
     try {
-      const result = await db.select({ total: schema.tips.amount })
+      const regularResult = await db.select({ total: schema.tips.amount })
         .from(schema.tips)
         .where(eq(schema.tips.fromUserId, userId));
 
+      const statusResult = await db.select({ total: schema.statusTips.amount })
+        .from(schema.statusTips)
+        .where(eq(schema.statusTips.fromUserId, userId));
+
+      const all = [...regularResult, ...statusResult];
+
       // Sum up all the tips
-      return result.reduce((sum, tip) => {
+      return all.reduce((sum, tip) => {
         return sum + parseFloat(tip.total);
       }, 0);
     } catch (error) {
@@ -122,12 +186,24 @@ export class TipService {
    */
   async getReceivedTips(userId: string, limit: number = 50, offset: number = 0) {
     try {
-      return await db.select()
+      const regular = await db.select()
         .from(schema.tips)
-        .where(eq(schema.tips.toUserId, userId))
-        .limit(limit)
-        .offset(offset)
-        .orderBy(desc(schema.tips.createdAt));
+        .where(eq(schema.tips.toUserId, userId));
+
+      const statuses = await db.select()
+        .from(schema.statusTips)
+        .where(eq(schema.statusTips.toUserId, userId));
+
+      // Map statusTips to match tips shape for union
+      const mappedStatuses = statuses.map(s => ({
+        ...s,
+        postId: s.statusId
+      }));
+
+      const all = [...regular, ...mappedStatuses];
+      all.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+      return all.slice(offset, offset + limit);
     } catch (error) {
       safeLogger.error('Error getting received tips:', error);
       throw error;
@@ -139,12 +215,24 @@ export class TipService {
    */
   async getSentTips(userId: string, limit: number = 50, offset: number = 0) {
     try {
-      return await db.select()
+      const regular = await db.select()
         .from(schema.tips)
-        .where(eq(schema.tips.fromUserId, userId))
-        .limit(limit)
-        .offset(offset)
-        .orderBy(desc(schema.tips.createdAt));
+        .where(eq(schema.tips.fromUserId, userId));
+
+      const statuses = await db.select()
+        .from(schema.statusTips)
+        .where(eq(schema.statusTips.fromUserId, userId));
+
+      // Map statusTips to match tips shape for union
+      const mappedStatuses = statuses.map(s => ({
+        ...s,
+        postId: s.statusId
+      }));
+
+      const all = [...regular, ...mappedStatuses];
+      all.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+      return all.slice(offset, offset + limit);
     } catch (error) {
       safeLogger.error('Error getting sent tips:', error);
       throw error;
