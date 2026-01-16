@@ -284,12 +284,18 @@ export async function getProvider() {
           }
           console.log('Creating JsonRpcProvider with RPC:', envRpc, 'Chain ID:', chainId);
 
+          // Wrap the RPC URL in our backend proxy to avoid CORS issues
+          const proxiedRpc = `/api/proxy?target=${encodeURIComponent(envRpc)}`;
+
           // Correct way to initialize JsonRpcProvider in ethers v6 with static network
           const network = ethers.Network.from(chainId);
-          const provider = new ethers.JsonRpcProvider(envRpc, network, {
+          const provider = new ethers.JsonRpcProvider(proxiedRpc, network, {
             staticNetwork: true,
             polling: false
           });
+
+          // Verify connection before returning
+          await provider.getBlockNumber();
 
           cachedProvider = provider;
           providerCreationAttempts = 0;
