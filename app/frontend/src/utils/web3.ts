@@ -318,10 +318,17 @@ export async function getProvider() {
           polling: false
         });
 
-        // Don't wait for network detection - just return the provider
-        cachedProvider = provider;
-        providerCreationAttempts = 0;
-        return provider;
+        try {
+          // Verify connection before returning
+          await provider.getBlockNumber();
+          
+          cachedProvider = provider;
+          providerCreationAttempts = 0;
+          return provider;
+        } catch (err) {
+          console.warn(`Primary RPC URL ${rpcUrl} failed verification:`, err);
+          // Fall through to fallback logic
+        }
       }
     } catch (e) {
       console.warn('Error getting provider:', e);
