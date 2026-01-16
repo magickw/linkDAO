@@ -259,9 +259,9 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
         if (profile) {
           // Priority: avatarCid > profileCid
           if (profile.avatarCid) {
-            participantAvatar = `https://ipfs.io/ipfs/${profile.avatarCid}`;
+            participantAvatar = profile.avatarCid.startsWith('http') ? profile.avatarCid : `https://ipfs.io/ipfs/${profile.avatarCid}`;
           } else if (profile.profileCid) {
-            participantAvatar = `https://ipfs.io/ipfs/${profile.profileCid}`;
+            participantAvatar = profile.profileCid.startsWith('http') ? profile.profileCid : `https://ipfs.io/ipfs/${profile.profileCid}`;
           }
         }
       }
@@ -1327,9 +1327,9 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                 if (senderProfile.avatar) {
                   senderAvatarUrl = senderProfile.avatar;
                 } else if (senderProfile.avatarCid) {
-                  senderAvatarUrl = `https://ipfs.io/ipfs/${senderProfile.avatarCid}`;
+                  senderAvatarUrl = senderProfile.avatarCid.startsWith('http') ? senderProfile.avatarCid : `https://ipfs.io/ipfs/${senderProfile.avatarCid}`;
                 } else if (senderProfile.profileCid) {
-                  senderAvatarUrl = `https://ipfs.io/ipfs/${senderProfile.profileCid}`;
+                  senderAvatarUrl = senderProfile.profileCid.startsWith('http') ? senderProfile.profileCid : `https://ipfs.io/ipfs/${senderProfile.profileCid}`;
                 }
               }
 

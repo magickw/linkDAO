@@ -277,7 +277,11 @@ export async function getProvider() {
 
       if (envRpc) {
         try {
-          const chainId = envChainId ? parseInt(envChainId, 10) : 11155111;
+          let chainId = envChainId ? parseInt(envChainId, 10) : 11155111;
+          if (isNaN(chainId) || chainId <= 0) {
+            console.warn('Invalid Chain ID from env, falling back to Sepolia (11155111)');
+            chainId = 11155111;
+          }
           console.log('Creating JsonRpcProvider with RPC:', envRpc, 'Chain ID:', chainId);
 
           // Correct way to initialize JsonRpcProvider in ethers v6 with static network
@@ -298,7 +302,7 @@ export async function getProvider() {
 
       // Fallback to configured chain RPC
       // Default to Sepolia (11155111) if not specified, as most dev/staging happens there
-      const chainId = envChainId ? parseInt(envChainId, 10) : 11155111;
+      const chainId = (envChainId && !isNaN(parseInt(envChainId, 10))) ? parseInt(envChainId, 10) : 11155111;
       let rpcUrl = getChainRpcUrl(chainId);
 
       if (!rpcUrl) {

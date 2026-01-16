@@ -22,7 +22,7 @@ process.on('uncaughtException', (error) => {
   process.stdout.write('\n=== UNCAUGHT EXCEPTION (RAW OUTPUT) ===\n');
   process.stdout.write(JSON.stringify(errorDetails, null, 2));
   process.stdout.write('\n=====================================\n\n');
-  process.exit(1);
+  // process.exit(1); // CRITICAL: Disabled to prevent container restart loops and allow diagnosis of production crashes
 });
 
 process.on('unhandledRejection', (reason, promise) => {

@@ -32,7 +32,12 @@ export const ultimateCorsMiddleware = (req: Request, res: Response, next: NextFu
   if (requestOrigin) {
     if (allowedOrigins.includes(requestOrigin)) {
       singleOrigin = requestOrigin;
-    } else if (requestOrigin.includes('vercel.app') && requestOrigin.includes('linkdao')) {
+    } else if (
+      requestOrigin.includes('vercel.app') &&
+      requestOrigin.includes('linkdao') &&
+      !requestOrigin.includes('\r') &&
+      !requestOrigin.includes('\n')
+    ) {
       singleOrigin = requestOrigin;
     }
   }
@@ -60,7 +65,7 @@ export const ultimateCorsMiddleware = (req: Request, res: Response, next: NextFu
   const originalWriteHead = res.writeHead.bind(res);
 
   // Override writeHead to force CORS headers
-  res.writeHead = function(statusCode: number, statusMessage?: any, headers?: any): any {
+  res.writeHead = function (statusCode: number, statusMessage?: any, headers?: any): any {
     let finalHeaders: any = {};
 
     // Handle overloaded signatures

@@ -12,6 +12,17 @@ export { offlineManager } from './offlineManager';
 export { marketplaceService } from './marketplaceService';
 export { paymentService } from './paymentService';
 export { socialMediaService } from './socialMediaService';
+export { governanceService } from './governanceService';
+export { adminService } from './adminService';
+export { supportService } from './supportService';
+export { aiRecommendationService } from './aiRecommendationService';
+export { sellerAnalyticsService } from './sellerAnalyticsService';
+export { stakingService } from './stakingService';
+export { userAnalyticsService } from './userAnalyticsService';
+export { nftService } from './nftService';
+export { reputationService } from './reputationService';
+export { documentationService } from './documentationService';
+export { blogService } from './blogService';
 
 export {
   isBiometricAvailable,

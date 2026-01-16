@@ -479,6 +479,7 @@ export class CommunityWeb3Service {
         token: tokenAddress,
         router: TIP_ROUTER_ADDRESS
       };
+
       console.log('Transaction Data:', JSON.stringify(debugData, null, 2));
 
       try {

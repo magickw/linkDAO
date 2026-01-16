@@ -76,9 +76,9 @@
       "deploymentTx": "0xd3046bad18d8fab3a4409d3314c9edcae78f903d9e4f39f12fbe3b373bca9a28"
     },
     "TipRouter": {
-      "address": "0x755Fe81411c86019fff6033E0567A4D93b57281b",
+      "address": "0x150FDC2308481142491Ca596897aBf8C04Ab762b",
       "owner": "0xEe034b53D4cCb101b2a4faec27708be507197350",
-      "deploymentTx": "0xa4c6fac1a4cf19311b710d6e9daf92b414069a70902af753dba16f32306dc11c"
+      "deploymentTx": "0xec8bd57a3ac70d3eac877501a91d3dff997fb500c148e047616e08e85303dcd6"
     },
     "FollowModule": {
       "address": "0x624Fe32F9b61c612ADD2b2Ef505bb99e4A7f6439",
