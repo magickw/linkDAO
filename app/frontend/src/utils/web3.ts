@@ -287,7 +287,7 @@ export async function getProvider() {
           // Correct way to initialize JsonRpcProvider in ethers v6 with static network
           const network = ethers.Network.from(chainId);
           const provider = new ethers.JsonRpcProvider(envRpc, network, {
-            staticNetwork: network,
+            staticNetwork: true,
             polling: false
           });
 
@@ -314,7 +314,7 @@ export async function getProvider() {
         // Correct way to initialize JsonRpcProvider in ethers v6 with static network
         const network = ethers.Network.from(chainId);
         const provider = new ethers.JsonRpcProvider(rpcUrl, network, {
-          staticNetwork: network,
+          staticNetwork: true,
           polling: false
         });
 
@@ -339,7 +339,7 @@ export async function getProvider() {
       const network = ethers.Network.from(11155111);
       // Try the first working fallback RPC
       const provider = new ethers.JsonRpcProvider(fallbackRpcs[0], network, {
-        staticNetwork: network,
+        staticNetwork: true,
         polling: false,
         batchMaxCount: 1 // Disable batching for fallback to improve reliability
       });
