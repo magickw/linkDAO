@@ -129,8 +129,8 @@ class WalletService {
        */
       private async connectMetaMask(): Promise<string> {
         try {
-          if (!this.ethereum) {
-            throw new Error('MetaMask SDK not initialized');
+          if (!this.metamaskSDKAvailable || !this.ethereum) {
+            throw new Error('MetaMask SDK not available. Please install MetaMask mobile app or use a different wallet provider.');
           }
   
           console.log('🦊 Connecting to MetaMask via SDK...');

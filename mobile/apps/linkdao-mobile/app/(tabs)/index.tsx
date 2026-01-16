@@ -132,25 +132,6 @@ export default function FeedScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Feed</Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={() => router.push('/search')}
-            >
-              <Ionicons name="search" size={24} color="#1f2937" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={handleClearStorage}
-            >
-              <Ionicons name="trash-outline" size={24} color="#ef4444" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <TouchableOpacity

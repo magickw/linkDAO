@@ -8,10 +8,10 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Pl
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useAuthStore, useSettingsStore } from '../../src/store';
+import { useAuthStore, useSettingsStore } from '../src/store';
 import { authService } from '@linkdao/shared';
-import { isBiometricAvailable, getBiometricConfig, enableBiometrics, disableBiometrics, getBiometryTypeName } from '../../src/services';
-import { offlineManager } from '../../src/services';
+import { isBiometricAvailable, getBiometricConfig, enableBiometrics, disableBiometrics, getBiometryTypeName } from '../src/services';
+import { offlineManager } from '../src/services';
 
 export default function SettingsScreen() {
   const router = useRouter();

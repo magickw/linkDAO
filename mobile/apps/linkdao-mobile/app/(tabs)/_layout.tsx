@@ -1,13 +1,26 @@
 /**
  * Tab Navigation Layout
- * Main navigation with bottom tabs for Feed, Communities, Marketplace, Messages, and Profile
+ * Main navigation with bottom tabs for Feed, Communities, Marketplace, Messages, and Governance
  */
 
 import { useEffect } from 'react';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
+import { View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useWebSocket } from '../../src/hooks/useWebSocket';
 import { usePostsStore } from '../../src/store';
+
+function SettingsButton() {
+  const router = useRouter();
+  return (
+    <TouchableOpacity
+      style={{ marginRight: 16 }}
+      onPress={() => router.push('/settings')}
+    >
+      <Ionicons name="settings" size={24} color="#6b7280" />
+    </TouchableOpacity>
+  );
+}
 
 export default function TabLayout() {
   const { isConnected, on, off } = useWebSocket();
@@ -50,7 +63,20 @@ export default function TabLayout() {
           paddingBottom: 12,
           paddingTop: 12,
         },
-        headerShown: false,
+        headerShown: true,
+        headerStyle: {
+          backgroundColor: '#ffffff',
+          elevation: 0,
+          shadowOpacity: 0,
+          borderBottomWidth: 1,
+          borderBottomColor: '#e5e7eb',
+        },
+        headerTitleStyle: {
+          fontSize: 18,
+          fontWeight: '600',
+          color: '#1f2937',
+        },
+        headerRight: () => <SettingsButton />,
       }}
     >
       <Tabs.Screen
