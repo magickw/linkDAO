@@ -134,7 +134,7 @@ export const inputValidation = async (req: SecurityRequest, res: Response, next:
     ];
 
     // Filter out safe fields that shouldn't be validated (IPFS CIDs, IDs, etc.)
-    const safeFields = ['media', 'mediaCids', 'ipfsHash', 'cid', 'id', 'userId', 'authorId', 'communityId', 'parentId', 'replyToId', 'content', 'contentCid'];
+    const safeFields = ['media', 'mediaCids', 'ipfsHash', 'cid', 'id', 'userId', 'authorId', 'communityId', 'parentId', 'replyToId', 'content', 'contentCid', 'conversationId'];
 
     // Create a filtered copy of request data excluding safe fields
     const filterSafeFields = (obj: any): any => {

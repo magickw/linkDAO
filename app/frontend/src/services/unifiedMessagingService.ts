@@ -438,7 +438,15 @@ class UnifiedMessagingService {
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch messages: ${response.statusText}`);
+        // Try to get error details from response body
+        let errorDetails = response.statusText;
+        try {
+          const errorData = await response.json();
+          errorDetails = errorData.error || errorData.message || errorDetails;
+        } catch (e) {
+          // If response is not JSON, use statusText
+        }
+        throw new Error(`Failed to fetch messages: ${response.status} ${errorDetails}`);
       }
 
       const responseData = await response.json();
@@ -539,7 +547,15 @@ class UnifiedMessagingService {
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to send message: ${response.statusText}`);
+        // Try to get error details from response body
+        let errorDetails = response.statusText;
+        try {
+          const errorData = await response.json();
+          errorDetails = errorData.error || errorData.message || errorDetails;
+        } catch (e) {
+          // If response is not JSON, use statusText
+        }
+        throw new Error(`Failed to send message: ${response.status} ${errorDetails}`);
       }
 
       const data = await response.json();

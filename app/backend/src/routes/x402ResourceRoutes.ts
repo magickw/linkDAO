@@ -41,10 +41,22 @@ router.get('/protected', (req, res) => {
  * When accessed with valid payment signature, it finalizes the order.
  */
 router.post('/checkout', async (req, res, next) => {
+    // Add explicit logging to diagnose route access
+    safeLogger.info('x402 checkout route accessed', {
+        method: req.method,
+        path: req.path,
+        headers: Object.keys(req.headers),
+        hasBody: !!req.body
+    });
+
     const { orderId, amount } = req.body;
 
     if (!orderId) {
-        return res.status(400).json({ success: false, message: 'Order ID is required' });
+        safeLogger.warn('x402 checkout called without orderId');
+        return res.status(400).json({
+            success: false,
+            message: 'Order ID is required'
+        });
     }
 
     try {
@@ -81,15 +93,15 @@ router.post('/checkout', async (req, res, next) => {
 
         // TODO: Verify the signature using the resourceServer
         // For now, we'll just log it and proceed
-        safeLogger.info('Payment signature received:', { 
-            orderId, 
-            signature: paymentSignature.substring(0, 20) + '...' 
+        safeLogger.info('Payment signature received:', {
+            orderId,
+            signature: paymentSignature.substring(0, 20) + '...'
         });
 
         // Update Order Status Logic here
         // await orderService.updateStatus(orderId, 'PAID');
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             data: {
                 orderId,
@@ -101,8 +113,20 @@ router.post('/checkout', async (req, res, next) => {
 
     } catch (error) {
         safeLogger.error('Error in x402 checkout:', error);
-        res.status(500).json({ success: false, message: 'Internal Server Error' });
+        return res.status(500).json({
+            success: false,
+            message: 'Internal Server Error',
+            error: error instanceof Error ? error.message : 'Unknown error'
+        });
     }
+});
+
+// Log route registration for debugging
+safeLogger.info('x402 Resource Routes registered:', {
+    routes: [
+        'GET /api/x402/protected',
+        'POST /api/x402/checkout'
+    ]
 });
 
 export default router;

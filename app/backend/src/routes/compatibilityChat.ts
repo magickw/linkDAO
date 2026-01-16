@@ -239,6 +239,21 @@ router.get('/api/messaging/conversations/:conversationId/messages', authMiddlewa
   const before = req.query.before as string;
   const after = req.query.after as string;
 
+  // Debug logging to investigate 400 error
+  console.log('[compatibilityChat] GET messages - Request params:', {
+    conversationId,
+    conversationIdType: typeof conversationId,
+    params: req.params,
+    query: req.query,
+    url: req.url,
+    originalUrl: req.originalUrl
+  });
+
+  if (!conversationId) {
+    console.error('[compatibilityChat] GET messages - conversationId is undefined or empty');
+    return res.status(400).json({ error: 'valid conversation_id required' });
+  }
+
   if (hasDb) {
     try {
       let query = db.select({
@@ -336,12 +351,22 @@ router.get('/api/chat/history/:conversationId', authMiddleware, async (req: Requ
 router.post('/api/messaging/conversations/:conversationId/messages', csrfProtection, authMiddleware, async (req: Request, res: Response) => {
   const { conversationId } = req.params;
   const { content, contentType, deliveryStatus } = req.body || {};
-  
+
+  // Debug logging to investigate 400 error
+  console.log('[compatibilityChat] POST message - Request params:', {
+    conversationId,
+    conversationIdType: typeof conversationId,
+    params: req.params,
+    bodyKeys: Object.keys(req.body || {}),
+    url: req.url,
+    originalUrl: req.originalUrl
+  });
+
   // Use provided senderAddress/fromAddress or fallback to authenticated user
   // Prefer senderAddress to match DB schema
   const userAddress = (req as any).user?.address || (req as any).userId;
   let fromAddress = req.body?.senderAddress || req.body?.fromAddress || userAddress;
-  
+
   // Normalize address to lowercase
   if (fromAddress && typeof fromAddress === 'string') {
     fromAddress = fromAddress.toLowerCase();
@@ -350,6 +375,7 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
   safeLogger.info('[compatibilityChat] Creating message', { conversationId, fromAddress, contentLength: content?.length });
 
   if (!conversationId) {
+    console.error('[compatibilityChat] POST message - conversationId is undefined or empty');
     return res.status(400).json({ error: 'valid conversation_id required' });
   }
   if (!fromAddress || !content) {

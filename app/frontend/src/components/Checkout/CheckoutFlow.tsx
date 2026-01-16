@@ -515,24 +515,68 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       let result;
 
       if (isCrypto) {
-        // ... (existing code)
         // x402 Protocol Flow
         // 1. Create Checkout Session to get Order ID and finalize totals
-        // Use apiService (Wrapper) instead of checkoutService (Unified)
+        console.log('🔄 Creating checkout session...');
         const session = await apiService.createCheckoutSession(cartState.items, address);
+        console.log('✅ Checkout session created:', session);
 
         // 2. Pay via x402 Protocol (Signature Handshake)
-        // This will prompt signature and retry if 402 is returned
-        const x402Response = await fetchWithAuth('/api/x402/checkout', {
+        console.log('🔐 Initiating x402 payment for order:', session.orderId);
+
+        const requestBody = {
+          orderId: session.orderId,
+          amount: session.totals.total
+        };
+
+        console.log('📤 Sending x402 checkout request:', {
+          url: '/api/x402/checkout',
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            orderId: session.orderId,
-            amount: session.totals.total
-          })
+          body: requestBody
         });
 
-        const paymentData = await x402Response.json();
+        let x402Response;
+        try {
+          x402Response = await fetchWithAuth('/api/x402/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+          });
+
+          console.log('📥 x402 response received:', {
+            status: x402Response.status,
+            statusText: x402Response.statusText,
+            ok: x402Response.ok
+          });
+
+          // Handle non-OK responses
+          if (!x402Response.ok) {
+            const errorText = await x402Response.text();
+            console.error('❌ x402 checkout failed:', {
+              status: x402Response.status,
+              statusText: x402Response.statusText,
+              body: errorText
+            });
+
+            throw new Error(
+              `x402 checkout failed (${x402Response.status}): ${errorText || x402Response.statusText}`
+            );
+          }
+        } catch (fetchError) {
+          console.error('❌ x402 fetch error:', fetchError);
+          throw new Error(
+            `Failed to connect to x402 checkout endpoint: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`
+          );
+        }
+
+        let paymentData;
+        try {
+          paymentData = await x402Response.json();
+          console.log('✅ x402 payment data:', paymentData);
+        } catch (parseError) {
+          console.error('❌ Failed to parse x402 response:', parseError);
+          throw new Error('Invalid response from x402 checkout endpoint');
+        }
 
         if (!paymentData.success) {
           throw new Error(paymentData.message || 'x402 Payment Failed');
@@ -543,7 +587,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
           orderId: session.orderId,
           status: 'completed',
           paymentPath: 'crypto',
-          transactionId: paymentData.data.paymentVerified ? 'x402-signed' : 'pending' // Simplified
+          transactionId: paymentData.data.paymentVerified ? 'x402-signed' : 'pending'
         };
       } else {
         // Legacy Fiat Flow

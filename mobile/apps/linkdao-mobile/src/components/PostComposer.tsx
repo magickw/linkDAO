@@ -259,7 +259,12 @@ export function PostComposer({
                         multiline
                         maxLength={MAX_CHARACTERS + 50}
                         onFocus={() => setIsFocused(true)}
-                        onBlur={() => !content && !imageUri && setIsFocused(false)}
+                        onBlur={() => {
+                            // Only blur if content is empty, otherwise keep focused
+                            if (!content.trim()) {
+                                setIsFocused(false);
+                            }
+                        }}
                         editable={!isSubmitting}
                     />
                 </View>
@@ -321,8 +326,8 @@ export function PostComposer({
                 </View>
             )}
 
-            {/* Actions Bar */}
-            {(isFocused || content || imageUri) && (
+            {/* Actions Bar - Always show when focused */}
+            {isFocused && (
                 <View style={styles.actionsBar}>
                     <View style={styles.leftActions}>
                         {/* Emoji Button */}
@@ -478,11 +483,11 @@ export function PostComposer({
 const styles = StyleSheet.create({
     container: {
         backgroundColor: '#ffffff',
-        borderRadius: 12,
+        borderRadius: 0,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e5e7eb',
         padding: 12,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
+        marginBottom: 0,
     },
     containerFocused: {
         borderColor: '#3b82f6',

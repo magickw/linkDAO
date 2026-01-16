@@ -262,9 +262,9 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100 dark:border-gray-700 flex flex-col max-h-[85vh]">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Swap Tokens</h2>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -282,7 +282,7 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 overflow-y-auto custom-scrollbar">
           {/* Network Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

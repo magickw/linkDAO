@@ -55,7 +55,7 @@ const QuickActions = React.memo(function QuickActions({
   // Calculate per-chain portfolio values from token balances
   const chainBreakdown = useMemo(() => {
     if (!displayWalletData?.balances) return new Map<number, number>();
-    
+
     const breakdown = new Map<number, number>();
     displayWalletData.balances.forEach(token => {
       if (token.chainBreakdown) {
@@ -356,8 +356,52 @@ const QuickActions = React.memo(function QuickActions({
         </div>
       </div>
 
+      {/* Top Assets Snippet */}
+      {displayWalletData.balances && displayWalletData.balances.length > 0 && (
+        <div className="mt-4 px-4 pb-2">
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Top Assets</p>
+          <div className="space-y-2">
+            {displayWalletData.balances
+              .sort((a, b) => (b.valueUSD || 0) - (a.valueUSD || 0))
+              .slice(0, 3)
+              .map((token, idx) => (
+                <div key={`${token.symbol}-${idx}`} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {/* Token Icon Placeholder or Image */}
+                    <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                      {token.symbol[0]}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{token.symbol}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                        {token.balance.toFixed(4)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {formatCurrency(token.valueUSD || 0)}
+                    </p>
+                    {token.chains && token.chains.length > 1 && (
+                      <div className="flex justify-end gap-1 mt-0.5">
+                        {token.chains.map(cid => (
+                          <span
+                            key={cid}
+                            className={`w-1.5 h-1.5 rounded-full ${CHAIN_INFO[cid]?.bgColor.replace('bg-', 'bg-') || 'bg-gray-400'}`}
+                            title={CHAIN_INFO[cid]?.name}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
       {/* Quick Actions */}
-      <div className="p-4">
+      <div className="p-4 pt-2">
         <div className="grid grid-cols-2 gap-2">
           {quickActions.map((action, index) => (
             <button

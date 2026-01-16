@@ -272,14 +272,15 @@ export class CommunityWeb3Service {
           chainId = Number(network.chainId);
           console.log('Detected chain ID from signer:', chainId);
 
-          // Enforce Sepolia for development/test tokens
-          if (chainId !== 11155111) {
-            console.warn(`[Web3Service] Wallet is on chain ${chainId}, but this feature requires Sepolia (11155111). Attempting to switch...`);
+          // Enforce Base Sepolia for USDC/USDT tipping (where testnet tokens are available)
+          const requiredChainId = 84532; // Base Sepolia
+          if (chainId !== requiredChainId) {
+            console.warn(`[Web3Service] Wallet is on chain ${chainId}, but this feature requires Base Sepolia (${requiredChainId}). Attempting to switch...`);
 
             try {
               // Dynamically import switchNetwork to avoid circular dependencies if any
               const { switchNetwork } = await import('@/utils/web3');
-              await switchNetwork(11155111);
+              await switchNetwork(requiredChainId);
 
               // Poll for network change
               const maxRetries = 10; // Wait up to 5 seconds (500ms * 10)
@@ -296,7 +297,7 @@ export class CommunityWeb3Service {
                   const freshChainId = Number(freshNetwork.chainId);
                   console.log(`[Web3Service] Network check retry ${retries + 1}/${maxRetries}: ${freshChainId}`);
 
-                  if (freshChainId === 11155111) {
+                  if (freshChainId === requiredChainId) {
                     isCorrectNetwork = true;
                     break;
                   }
@@ -318,19 +319,19 @@ export class CommunityWeb3Service {
                 if (!newSigner) throw new Error('Failed to get signer after network switch');
 
                 signer = newSigner;
-                chainId = 11155111; // We confirmed it in the loop
+                chainId = requiredChainId; // We confirmed it in the loop
               } else {
-                throw new Error(`Network switch timed out. Please manually switch your wallet to Sepolia Testnet and try again.`);
+                throw new Error(`Network switch timed out. Please manually switch your wallet to Base Sepolia Testnet and try again.`);
               }
 
             } catch (switchError: any) {
               console.error('Network switch failed:', switchError);
-              throw new Error(`Please switch your wallet to the Sepolia Testnet. Currently connected to ${chainId === 1 ? 'Ethereum Mainnet' : 'another network'}.`);
+              throw new Error(`Please switch your wallet to the Base Sepolia Testnet. Currently connected to ${chainId === 1 ? 'Ethereum Mainnet' : chainId === 11155111 ? 'Ethereum Sepolia' : 'another network'}.`);
             }
           }
         } else {
-          console.warn('Signer has no provider, defaulting to Sepolia');
-          chainId = 11155111;
+          console.warn('Signer has no provider, defaulting to Base Sepolia');
+          chainId = 84532;
         }
       } catch (e: any) {
         if (e.message.includes('switch your wallet')) throw e;
@@ -350,8 +351,12 @@ export class CommunityWeb3Service {
         // Get USDC address from environment or use chain-specific addresses
         tokenAddress = process.env.NEXT_PUBLIC_USDC_ADDRESS || '';
         if (!tokenAddress) {
-          // Fallback to known Sepolia USDC address
-          if (chainId === 11155111) {
+          // Fallback to known Base Sepolia USDC address
+          if (chainId === 84532) {
+            // Base Sepolia USDC address
+            tokenAddress = '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
+          } else if (chainId === 11155111) {
+            // Ethereum Sepolia USDC address (fallback)
             tokenAddress = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
           } else {
             throw new Error('USDC address not configured for this network');
@@ -361,8 +366,12 @@ export class CommunityWeb3Service {
       } else if (input.token === 'USDT') {
         tokenAddress = process.env.NEXT_PUBLIC_USDT_TOKEN_ADDRESS || '';
         if (!tokenAddress) {
-          // Fallback to known Sepolia USDT address
-          if (chainId === 11155111) {
+          // Fallback to known Base Sepolia USDT address
+          if (chainId === 84532) {
+            // Base Sepolia USDT address (if available)
+            tokenAddress = '0x0000000000000000000000000000000000000000'; // TODO: Update with actual Base Sepolia USDT
+          } else if (chainId === 11155111) {
+            // Ethereum Sepolia USDT address
             tokenAddress = '0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0';
           } else {
             throw new Error('USDT address not configured for this network');
@@ -393,39 +402,70 @@ export class CommunityWeb3Service {
         'function decimals() view returns (uint8)'
       ];
 
-      // Create contract instances
+      // Create contract instances with the signer (which should now be on the correct network)
       const tipRouterContract = new ethers.Contract(TIP_ROUTER_ADDRESS, TIP_ROUTER_ABI, signer);
       const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
 
+      // Verify we're using the correct token contract
+      console.log(`[Balance Check] Token contract address: ${tokenAddress}`);
+      console.log(`[Balance Check] Token: ${input.token}`);
+      console.log(`[Balance Check] Chain ID: ${chainId}`);
+
       // Convert amount to proper units based on token decimals
       const amountInUnits = ethers.parseUnits(input.amount, tokenDecimals);
+      console.log(`[Balance Check] Amount requested: ${input.amount} ${input.token} (${amountInUnits.toString()} units)`);
 
       // Check user's token balance
       const userAddress = await signer.getAddress();
-      const balance = await tokenContract.balanceOf(userAddress);
+      console.log(`[Balance Check] Checking balance for address: ${userAddress}`);
+
+      // Get balance with error handling
+      let balance;
+      try {
+        balance = await tokenContract.balanceOf(userAddress);
+        console.log(`[Balance Check] Raw balance: ${balance.toString()} units`);
+        console.log(`[Balance Check] Formatted balance: ${ethers.formatUnits(balance, tokenDecimals)} ${input.token}`);
+      } catch (balanceError) {
+        console.error(`[Balance Check] Failed to fetch balance:`, balanceError);
+        throw new Error(`Failed to check ${input.token} balance. Please ensure you're on the correct network (Sepolia).`);
+      }
 
       if (balance < amountInUnits) {
         const formattedBalance = ethers.formatUnits(balance, tokenDecimals);
+        console.error(`[Balance Check] Insufficient balance: have ${formattedBalance} ${input.token}, need ${input.amount} ${input.token}`);
         throw new Error(`Insufficient ${input.token} balance. You have ${formattedBalance} ${input.token} but need ${input.amount} ${input.token}`);
       }
 
-      // Check current allowance
-      const currentAllowance = await tokenContract.allowance(userAddress, TIP_ROUTER_ADDRESS);
+      console.log(`[Balance Check] ✅ Sufficient balance confirmed`);
 
-      // IMPORTANT: The TipRouter contract will transfer the FULL amount from the user
-      // (it splits it into creator portion + fee portion internally)
-      // So we need to approve the full amountInUnits, not just the net amount
-      // The user's input amount already represents the gross amount they want to tip
-      if (currentAllowance < amountInUnits) {
-        console.log(`Approving TipRouter to spend ${input.amount} ${input.token} (full amount including fee)...`);
-        const approveTx = await tokenContract.approve(TIP_ROUTER_ADDRESS, amountInUnits);
-        await approveTx.wait();
-        console.log('Approval confirmed');
-      } else {
-        console.log(`Sufficient allowance already exists: ${ethers.formatUnits(currentAllowance, tokenDecimals)} ${input.token}`);
+      console.log(`[Balance Check] ✅ Sufficient balance confirmed`);
+
+      // Determine if we should use TipRouter or Direct Transfer based on network
+      const useTipRouter = chainId === 11155111; // Only use TipRouter on Ethereum Sepolia
+
+      if (!useTipRouter && chainId === 84532) {
+        console.log('[Web3Service] Using Direct Transfer fallback for Base Sepolia (TipRouter not deployed)');
       }
 
-      // Convert postId to bytes32 correctly
+      // Check current allowance only if using TipRouter
+      if (useTipRouter) {
+        const currentAllowance = await tokenContract.allowance(userAddress, TIP_ROUTER_ADDRESS);
+
+        // IMPORTANT: The TipRouter contract will transfer the FULL amount from the user
+        // (it splits it into creator portion + fee portion internally)
+        // So we need to approve the full amountInUnits, not just the net amount
+        // The user's input amount already represents the gross amount they want to tip
+        if (currentAllowance < amountInUnits) {
+          console.log(`Approving TipRouter to spend ${input.amount} ${input.token} (full amount including fee)...`);
+          const approveTx = await tokenContract.approve(TIP_ROUTER_ADDRESS, amountInUnits);
+          await approveTx.wait();
+          console.log('Approval confirmed');
+        } else {
+          console.log(`Sufficient allowance already exists: ${ethers.formatUnits(currentAllowance, tokenDecimals)} ${input.token}`);
+        }
+      }
+
+      // Convert postId to bytes32 correctly (needed for TipRouter or backend logging)
       // If it's a UUID, we need to strip hyphens and pad it to the RIGHT.
       // Solidity bytes32 is left-aligned, so padding should be at the end.
       let postIdBytes32;
@@ -459,6 +499,7 @@ export class CommunityWeb3Service {
       // Debug Logs for Revert Analysis
       console.log('--- Debugging Tip Transaction ---');
       console.log('User Address:', userAddress);
+      console.log('Mode:', useTipRouter ? 'TipRouter Contract' : 'Direct Transfer');
       console.log('LDAO Token Address (ENV):', LDAO_TOKEN_ADDRESS);
       console.log('Tip Router Address (ENV):', TIP_ROUTER_ADDRESS);
       console.log('Token Address Used:', tokenAddress);
@@ -468,8 +509,6 @@ export class CommunityWeb3Service {
       console.log('Amount (Original):', input.amount);
       console.log('Amount (Units):', amountInUnits.toString());
       console.log('Payment Method:', paymentMethod);
-      console.log('User Balance LDAO:', ethers.formatUnits(balance, tokenDecimals));
-      console.log('Current Allowance:', ethers.formatUnits(currentAllowance, tokenDecimals));
 
       const debugData = {
         postId: postIdBytes32,
@@ -477,28 +516,44 @@ export class CommunityWeb3Service {
         amount: amountInUnits.toString(),
         paymentMethod,
         token: tokenAddress,
-        router: TIP_ROUTER_ADDRESS
+        router: TIP_ROUTER_ADDRESS,
+        mode: useTipRouter ? 'contract' : 'direct'
       };
 
       console.log('Transaction Data:', JSON.stringify(debugData, null, 2));
 
       try {
-        if (input.message && input.message.trim()) {
-          console.log(`Tipping ${input.amount} ${input.token} with comment to ${input.recipientAddress}`);
-          tx = await tipRouterContract.tipWithComment(
-            postIdBytes32,
-            input.recipientAddress,
-            amountInUnits,
-            paymentMethod,
-            input.message.trim()
-          );
+        if (useTipRouter) {
+          // Standard TipRouter flow (Ethereum Sepolia)
+          if (input.message && input.message.trim()) {
+            console.log(`Tipping ${input.amount} ${input.token} with comment to ${input.recipientAddress}`);
+            tx = await tipRouterContract.tipWithComment(
+              postIdBytes32,
+              input.recipientAddress,
+              amountInUnits,
+              paymentMethod,
+              input.message.trim()
+            );
+          } else {
+            console.log(`Tipping ${input.amount} ${input.token} to ${input.recipientAddress}`);
+            tx = await tipRouterContract.tip(
+              postIdBytes32,
+              input.recipientAddress,
+              amountInUnits,
+              paymentMethod
+            );
+          }
         } else {
-          console.log(`Tipping ${input.amount} ${input.token} to ${input.recipientAddress}`);
-          tx = await tipRouterContract.tip(
-            postIdBytes32,
+          // Direct Transfer fallback (Base Sepolia)
+          // We transfer tokens directly from user to recipient
+          console.log(`[Direct] Transferring ${input.amount} ${input.token} directly to ${input.recipientAddress}`);
+
+          // Connect token contract for transfer (needs signer)
+          const transferContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
+
+          tx = await transferContract.transfer(
             input.recipientAddress,
-            amountInUnits,
-            paymentMethod
+            amountInUnits
           );
         }
 
@@ -527,22 +582,32 @@ export class CommunityWeb3Service {
 
           // Try again with a fixed gas limit
           try {
-            if (input.message && input.message.trim()) {
-              tx = await tipRouterContract.tipWithComment(
-                postIdBytes32,
-                input.recipientAddress,
-                amountInUnits,
-                paymentMethod,
-                input.message.trim(),
-                { gasLimit: 400000 }
-              );
+            if (useTipRouter) {
+              if (input.message && input.message.trim()) {
+                tx = await tipRouterContract.tipWithComment(
+                  postIdBytes32,
+                  input.recipientAddress,
+                  amountInUnits,
+                  paymentMethod,
+                  input.message.trim(),
+                  { gasLimit: 400000 }
+                );
+              } else {
+                tx = await tipRouterContract.tip(
+                  postIdBytes32,
+                  input.recipientAddress,
+                  amountInUnits,
+                  paymentMethod,
+                  { gasLimit: 400000 }
+                );
+              }
             } else {
-              tx = await tipRouterContract.tip(
-                postIdBytes32,
+              // Direct transfer retry
+              const transferContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
+              tx = await transferContract.transfer(
                 input.recipientAddress,
                 amountInUnits,
-                paymentMethod,
-                { gasLimit: 400000 }
+                { gasLimit: 100000 }
               );
             }
 
@@ -595,7 +660,9 @@ export class CommunityWeb3Service {
               amount: input.amount,
               message: input.message,
               token: input.token,
-              transactionHash: receipt.hash
+              transactionHash: receipt.hash,
+              networkName: useTipRouter ? 'sepolia' : 'base-sepolia',
+              chainId: chainId
             })
           });
           console.log('Tip recorded to backend');

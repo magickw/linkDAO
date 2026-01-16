@@ -509,8 +509,9 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   composerContainer: {
-    paddingHorizontal: THEME.spacing.md,
-    paddingTop: THEME.spacing.md,
+    backgroundColor: '#ffffff',
+    paddingTop: 0,
+    marginTop: 0,
   },
   actionButton: {
     flex: 1,
@@ -637,6 +638,6 @@ const styles = StyleSheet.create({
   },
   emptyListContent: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
 });
