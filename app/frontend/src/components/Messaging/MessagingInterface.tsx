@@ -9,7 +9,7 @@ import {
   MessageCircle, Search, Send, User, Plus, Hash, Lock,
   ThumbsUp, Heart, Zap, Rocket, Globe, Users, X, ChevronDown, ChevronRight,
   Image, Link as LinkIcon, Loader2, Wallet, Vote, Calendar, Tag, Settings, ArrowLeftRight,
-  Phone, Video, Shield, ArrowLeft, Wifi, WifiOff
+  Phone, Video, Shield, ArrowLeft, Wifi, WifiOff, Trash2, Copy, Quote
 } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import CrossChainBridge from './CrossChainBridge';
@@ -21,6 +21,7 @@ import { motion, PanInfo } from 'framer-motion';
 import { UserProfile } from '../../models/UserProfile';
 import useWebSocket from '../../hooks/useWebSocket';
 import { useToast } from '@/context/ToastContext';
+import { unifiedMessagingService } from '@/services/unifiedMessagingService';
 
 // Helper function to get the backend URL
 const getBackendUrl = (): string => {
@@ -188,7 +189,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Add state for DM conversations (backed by chat history hook)
-  const { conversations: hookConversations, messages: hookMessages, loadMessages, sendMessage } = useChatHistory();
+  const { conversations: hookConversations, messages: hookMessages, loadMessages, sendMessage, deleteMessage, hideMessage } = useChatHistory();
   const [dmConversations, setDmConversations] = useState<DirectMessageConversation[]>([]);
 
   // Channels will be loaded from backend - no mock data
@@ -381,16 +382,42 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
     // If viewing a DM, use hook sendMessage to persist
     if (isViewingDM && selectedDM) {
-      sendMessage({ conversationId: selectedDM, fromAddress: address, content: newMessage.trim(), messageType: 'text' } as any).catch(err => {
+      sendMessage({ 
+        conversationId: selectedDM, 
+        fromAddress: address, 
+        content: newMessage.trim(), 
+        messageType: 'text',
+        replyToId: replyingTo?.messageId
+      } as any).catch(err => {
         console.warn('Failed to send DM via hook', err);
         // Do NOT manually add to local state here - the hook handles optimistic updates
         // and we don't want duplicates if the hook retries or when network recovers
       });
+    } else if (selectedChannel) {
+      // Handle channel message - persist to backend
+      sendMessage({ 
+        conversationId: selectedChannel, 
+        fromAddress: address, 
+        content: newMessage.trim(), 
+        messageType: 'text',
+        replyToId: replyingTo?.messageId
+      } as any).catch(err => {
+        console.warn('Failed to send channel message via hook', err);
+      });
     } else {
+      // Fallback for UI testing if no channel selected (shouldn't happen with disabled button)
+      const message: ChannelMessage = {
+        id: `msg_${Date.now()}`,
+        fromAddress: address,
+        content: newMessage.trim(),
+        timestamp: new Date(),
+        parentId: replyingTo?.messageId
+      };
       setMessages(prev => [...prev, message]);
     }
 
     setNewMessage('');
+    setReplyingTo(null);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -492,6 +519,44 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       }
       return msg;
     }));
+  };
+
+  const quoteMessage = (content: string) => {
+    setNewMessage(prev => {
+      const prefix = prev ? prev + '\n' : '';
+      return prefix + `> ${content}\n\n`;
+    });
+  };
+
+  const copyMessage = (content: string) => {
+    if (!content) return;
+    navigator.clipboard.writeText(content)
+      .then(() => safeAddToast('Message copied to clipboard', 'success'))
+      .catch(() => safeAddToast('Failed to copy message', 'error'));
+  };
+
+  const handleRetractMessage = async (messageId: string) => {
+    if (!window.confirm('Are you sure you want to retract this message? It will be removed for everyone.')) return;
+    
+    try {
+      if (isViewingDM && selectedDM) {
+        await deleteMessage(messageId, selectedDM);
+      } else if (selectedChannel) {
+        await deleteMessage(messageId, selectedChannel);
+      }
+      // Optimistic update handled in hook or backend response
+      safeAddToast('Message retracted', 'success');
+    } catch (error: any) {
+      console.error('Failed to retract message:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to retract message';
+      safeAddToast(errorMessage, 'error');
+    }
+  };
+
+  const handleLocalDelete = (messageId: string) => {
+    if (!window.confirm('Delete this message from your history? It will still be visible to others.')) return;
+    hideMessage(messageId);
+    safeAddToast('Message deleted from your history', 'success');
   };
 
   const toggleCategory = (categoryId: string) => {
@@ -626,29 +691,8 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       setIsUploading(true);
       console.log('Uploading file:', file.name, file.type);
 
-      const formData = new FormData();
-
-      // Add CSRF token
-      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-      if (csrfToken) {
-        formData.append('_csrf', csrfToken);
-      }
-
-      formData.append('file', file);
-
-      // Use the unified upload endpoint
-      const response = await fetch(`${getBackendUrl()}/api/messaging/attachments`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('linkdao_access_token')}`
-        },
-        body: formData
-      });
-
-      if (!response.ok) throw new Error('Upload failed');
-
-      const result = await response.json();
-      const attachment = result.data;
+      // Use the unified upload service
+      const attachment = await unifiedMessagingService.uploadAttachment(file);
 
       // Send the message immediately with the attachment
       if (isViewingDM && selectedDM) {
@@ -659,16 +703,14 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
           contentType: file.type.startsWith('image/') ? 'image' : 'file',
           attachments: [attachment]
         } as any);
-      } else if (address) {
-        // Handle channel message
-        const message: ChannelMessage = {
-          id: `msg_${Date.now()}`,
+      } else if (selectedChannel) {
+        await sendMessage({
+          conversationId: selectedChannel,
           fromAddress: address,
-          content: '', // Empty content - let attachment component handle display
-          timestamp: new Date(),
+          content: '',
+          contentType: file.type.startsWith('image/') ? 'image' : 'file',
           attachments: [attachment]
-        };
-        setMessages(prev => [...prev, message]);
+        } as any);
       }
 
       setShowAttachmentModal(false);
@@ -677,6 +719,10 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       console.error('File upload error:', error);
       safeAddToast('Failed to upload file. Please try again.', 'error');
     } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -1284,23 +1330,22 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-800">
-          {/* Reply banner */}
-          {replyingTo && (
-            <div className="bg-blue-100 dark:bg-blue-900/30 border-l-4 border-blue-500 p-2 mb-2 rounded flex items-center justify-between">
-              <div className="text-sm text-gray-900 dark:text-white">
-                Replying to <span className="font-semibold">{replyingTo.username}</span>
-              </div>
-              <button
-                onClick={() => setReplyingTo(null)}
-                className={`${touchTargetClasses} text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white`}
-              >
-                <X size={16} />
-              </button>
-            </div>
-          )}
+          <div className="space-y-4 pb-2">
+            {/* Sort messages chronological (oldest to newest) for display */}
+            {[...messages].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map((message, index, sortedMessages) => {
+              // Date header logic
+              const messageDate = new Date(message.timestamp);
+              const prevMessageDate = index > 0 ? new Date(sortedMessages[index - 1].timestamp) : null;
+              
+              const showDateHeader = index === 0 || 
+                (prevMessageDate && messageDate.toDateString() !== prevMessageDate.toDateString());
+              
+              // Timestamp display logic (show date if > 24h old)
+              const isOlderThanDay = (Date.now() - messageDate.getTime()) > 24 * 60 * 60 * 1000;
+              const timestampDisplay = isOlderThanDay 
+                ? messageDate.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : messageDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
-          <div className="space-y-4">
-            {messages.map(message => {
               // Resolve sender profile for avatar and name
               let senderProfile: UserProfile | undefined;
               let senderAvatarUrl: string | null = null;
@@ -1308,9 +1353,6 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
               if (message.fromAddress === address) {
                 senderDisplayName = 'You';
-                // For "You", we rely on the parent or context to have the current user's profile if we wanted to show it,
-                // but usually "You" is sufficient or we could fetch it if needed. 
-                // For now, let's try to look it up if getParticipantProfile allows looking up self
                 if (getParticipantProfile) {
                   senderProfile = getParticipantProfile(message.fromAddress);
                 }
@@ -1323,7 +1365,6 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                 else if (senderProfile.handle) senderDisplayName = senderProfile.handle;
                 else if (senderProfile.ens) senderDisplayName = senderProfile.ens;
 
-                // Priority: direct avatar URL > avatarCid > profileCid
                 if (senderProfile.avatar) {
                   senderAvatarUrl = senderProfile.avatar;
                 } else if (senderProfile.avatarCid) {
@@ -1334,54 +1375,61 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
               }
 
               return (
-                <Web3SwipeGestureHandler
-                  key={message.id}
-                  postId={message.id}
-                  onUpvote={() => addReaction(message.id, '👍')}
-                  onSave={() => console.log('Save message:', message.id)}
-                  onTip={() => console.log('Tip message:', message.id)}
-                  onStake={() => console.log('Stake on message:', message.id)}
-                  walletConnected={isConnected}
-                  userBalance={0}
-                  className=""
-                >
-                  <div
-                    className="hover:bg-gray-100 dark:hover:bg-gray-750 p-2 rounded"
-                    id={`message-${message.id}`}
+                <React.Fragment key={message.id}>
+                  {showDateHeader && (
+                    <div className="flex justify-center my-6">
+                      <span className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium px-3 py-1 rounded-full shadow-sm">
+                        {messageDate.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
+                  )}
+                  <Web3SwipeGestureHandler
+                    key={message.id}
+                    postId={message.id}
+                    onUpvote={() => addReaction(message.id, '👍')}
+                    onSave={() => console.log('Save message:', message.id)}
+                    onTip={() => console.log('Tip message:', message.id)}
+                    onStake={() => console.log('Stake on message:', message.id)}
+                    walletConnected={isConnected}
+                    userBalance={0}
+                    className=""
                   >
-                    <div className="flex">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center mr-3 flex-shrink-0 overflow-hidden">
-                        {senderAvatarUrl ? (
-                          <img
-                            src={senderAvatarUrl}
-                            alt={senderDisplayName}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              e.currentTarget.parentElement?.classList.remove('overflow-hidden');
-                              e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'justify-center');
-                              const icon = document.createElement('div');
-                              icon.innerHTML = DOMPurify.sanitize('<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>');
-                              e.currentTarget.parentElement?.appendChild(icon.firstChild!);
-                            }}
-                          />
-                        ) : (
-                          <User size={20} className="text-white" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-baseline">
-                          <span className="font-semibold text-gray-900 dark:text-white mr-2">
-                            {senderDisplayName}
-                          </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                          {/* Encryption indicator for DM messages */}
-                          {isViewingDM && message.isEncrypted && (
-                            <Lock size={12} className="ml-1 text-green-500 dark:text-green-400" />
+                    <div
+                      className="hover:bg-gray-100 dark:hover:bg-gray-800/50 p-2 rounded transition-colors group"
+                      id={`message-${message.id}`}
+                    >
+                      <div className="flex">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center mr-3 flex-shrink-0 overflow-hidden shadow-sm">
+                          {senderAvatarUrl ? (
+                            <img
+                              src={senderAvatarUrl}
+                              alt={senderDisplayName}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.parentElement?.classList.remove('overflow-hidden');
+                                e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'justify-center');
+                                const icon = document.createElement('div');
+                                icon.innerHTML = DOMPurify.sanitize('<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>');
+                                e.currentTarget.parentElement?.appendChild(icon.firstChild!);
+                              }}
+                            />
+                          ) : (
+                            <User size={20} className="text-white" />
                           )}
                         </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-baseline mb-0.5">
+                            <span className="font-semibold text-gray-900 dark:text-white mr-2 hover:underline cursor-pointer">
+                              {senderDisplayName}
+                            </span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
+                              {timestampDisplay}
+                            </span>
+                            {isViewingDM && message.isEncrypted && (
+                              <Lock size={12} className="ml-1 text-green-500 dark:text-green-400" title="End-to-end encrypted" />
+                            )}
+                          </div>
                         {/* Only show content if it exists */}
                         {message.content && message.content.trim() && (
                           <p className="text-gray-700 dark:text-gray-200">{parseMentions(message.content)}</p>
@@ -1567,13 +1615,32 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                         )}
 
                         {/* Message actions */}
-                        <div className="flex mt-1 space-x-3 text-xs text-gray-500 dark:text-gray-400">
+                        <div className="flex mt-1 space-x-3 text-xs text-gray-500 dark:text-gray-400 items-center">
                           <button
                             className={`hover:text-gray-900 dark:hover:text-white ${touchTargetClasses}`}
                             onClick={() => replyToMessage(message.id, message.fromAddress === address ? 'You' : message.fromAddress.slice(0, 6) + '...' + message.fromAddress.slice(-4))}
                           >
                             Reply
                           </button>
+                          
+                          <button 
+                             className={`hover:text-gray-900 dark:hover:text-white flex items-center ${touchTargetClasses}`}
+                             onClick={() => quoteMessage(message.content)}
+                             title="Quote"
+                          >
+                             <Quote size={12} className="mr-1" />
+                             <span className="hidden sm:inline">Quote</span>
+                          </button>
+
+                          <button 
+                             className={`hover:text-gray-900 dark:hover:text-white flex items-center ${touchTargetClasses}`}
+                             onClick={() => copyMessage(message.content)}
+                             title="Copy"
+                          >
+                             <Copy size={12} className="mr-1" />
+                             <span className="hidden sm:inline">Copy</span>
+                          </button>
+
                           {message.threadReplies && message.threadReplies.length > 0 && (
                             <button
                               className={`hover:text-gray-900 dark:hover:text-white flex items-center ${touchTargetClasses}`}
@@ -1585,11 +1652,34 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                               </span>
                             </button>
                           )}
+                          
+                          {/* Retract (Sender only, time-limited) */}
+                          {message.fromAddress === address && (Date.now() - new Date(message.timestamp).getTime() < 15 * 60 * 1000) && (
+                            <button
+                               className={`hover:text-orange-600 dark:hover:text-orange-400 flex items-center ${touchTargetClasses}`}
+                               onClick={() => handleRetractMessage(message.id)}
+                               title="Retract (Unsend)"
+                            >
+                               <Trash2 size={12} className="mr-1" />
+                               <span className="hidden sm:inline">Retract</span>
+                            </button>
+                          )}
+
+                          {/* Delete (Local only) */}
+                          <button
+                             className={`hover:text-red-600 dark:hover:text-red-400 flex items-center ${touchTargetClasses}`}
+                             onClick={() => handleLocalDelete(message.id)}
+                             title="Delete for me"
+                          >
+                             <Trash2 size={12} className="mr-1" />
+                             <span className="hidden sm:inline">Delete</span>
+                          </button>
                         </div>
                       </div>
                     </div>
                   </div>
                 </Web3SwipeGestureHandler>
+                </React.Fragment>
               );
             })}
             <div ref={messagesEndRef} />
@@ -1835,7 +1925,21 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
         )}
 
         {/* Message Input */}
-        <div className="border-t border-gray-200 dark:border-gray-700 p-4 relative">
+        <div className="border-t border-gray-200 dark:border-gray-700 p-4 relative bg-white dark:bg-gray-900">
+          {/* Reply banner - Moved here for better visibility */}
+          {replyingTo && (
+            <div className="bg-blue-100 dark:bg-blue-900/30 border-l-4 border-blue-500 p-2 mb-2 rounded flex items-center justify-between">
+              <div className="text-sm text-gray-900 dark:text-white">
+                Replying to <span className="font-semibold">{replyingTo.username}</span>
+              </div>
+              <button
+                onClick={() => setReplyingTo(null)}
+                className={`${touchTargetClasses} text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white`}
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
           <div className="flex items-end">
             <textarea
               value={newMessage}

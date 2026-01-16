@@ -3806,6 +3806,7 @@ export const chatMessages = pgTable("chat_messages", {
   editedAt: timestamp("edited_at"),
   deletedAt: timestamp("deleted_at"),
   // Phase 5 additions
+  hiddenBy: jsonb("hidden_by").default("[]"), // Array of user addresses who hid/deleted this message locally
   deliveryStatus: varchar("delivery_status", { length: 16 }).default("sent"),
   replyCount: integer("reply_count").default(0),
   originalContent: text("original_content"),

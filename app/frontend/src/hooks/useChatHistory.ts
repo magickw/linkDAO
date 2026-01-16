@@ -21,12 +21,14 @@ interface UseChatHistoryReturn {
   addReaction: (messageId: string, emoji: string) => Promise<void>;
   removeReaction: (messageId: string, emoji: string) => Promise<void>;
   deleteMessage: (messageId: string, conversationId: string) => Promise<void>;
+  hideMessage: (messageId: string) => void;
 }
 
 export const useChatHistory = (): UseChatHistoryReturn => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [hiddenMessageIds, setHiddenMessageIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -35,6 +37,37 @@ export const useChatHistory = (): UseChatHistoryReturn => {
   const [isOnline, setIsOnline] = useState(true);
   const [messageReactions, setMessageReactions] = useState<Map<string, MessageReaction[]>>(new Map());
   const conversationLimit = 20;
+
+  // Initialize hidden messages from localStorage
+  useEffect(() => {
+    if (!user?.address) {
+        setHiddenMessageIds(new Set());
+        return;
+    }
+    const stored = localStorage.getItem(`hidden_messages_${user.address}`);
+    if (stored) {
+      try {
+        setHiddenMessageIds(new Set(JSON.parse(stored)));
+      } catch (e) {
+        console.error('Failed to parse hidden messages', e);
+      }
+    }
+  }, [user?.address]);
+
+  const hideMessage = useCallback((messageId: string) => {
+    if (!user?.address) return;
+    setHiddenMessageIds(prev => {
+        const newSet = new Set(prev);
+        newSet.add(messageId);
+        localStorage.setItem(`hidden_messages_${user.address}`, JSON.stringify(Array.from(newSet)));
+        return newSet;
+    });
+  }, [user?.address]);
+
+  // Derived visible messages
+  const visibleMessages = useMemo(() => {
+    return messages.filter(m => !hiddenMessageIds.has(m.id));
+  }, [messages, hiddenMessageIds]);
 
   // React Query for conversations with better error handling
   const {
@@ -353,14 +386,17 @@ export const useChatHistory = (): UseChatHistoryReturn => {
   const deleteMessage = useCallback(async (messageId: string, conversationId: string) => {
     try {
       await unifiedMessagingService.deleteMessage(messageId, conversationId);
+      // Backend handles soft delete (retraction). We can remove it locally or mark it.
+      // For now, remove it locally to reflect the change immediately.
       setMessages(prev => prev.filter(msg => msg.id !== messageId));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete message');
+      throw err; // Re-throw to let UI handle the error (e.g., time limit exceeded)
     }
   }, []);
 
   return {
-    messages,
+    messages: visibleMessages,
     conversations,
     loading,
     conversationsLoading: isConversationsLoading,
@@ -375,6 +411,7 @@ export const useChatHistory = (): UseChatHistoryReturn => {
     markAsRead,
     addReaction,
     removeReaction,
-    deleteMessage
+    deleteMessage,
+    hideMessage
   };
 };

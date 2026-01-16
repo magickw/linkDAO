@@ -26,6 +26,7 @@ export interface Post {
   updatedAt?: string;
   communityId?: string;
   communityName?: string;
+  isStatus?: boolean; // Indicates if this is a status post vs community post
 }
 
 interface PostsState {
@@ -55,24 +56,24 @@ export const usePostsStore = create<PostsState>((set, get) => ({
   currentPage: 1,
 
   setPosts: (posts) => set({ posts }),
-  
+
   addPost: (post) => set((state) => ({ posts: [post, ...state.posts] })),
-  
+
   updatePost: (id, updates) => set((state) => ({
     posts: state.posts.map((post) =>
       post.id === id ? { ...post, ...updates } : post
     ),
   })),
-  
+
   deletePost: (id) => set((state) => ({
     posts: state.posts.filter((post) => post.id !== id),
   })),
-  
+
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
   setHasMore: (hasMore) => set({ hasMore }),
   setCurrentPage: (page) => set({ currentPage: page }),
-  
+
   reset: () => set({
     posts: [],
     loading: false,

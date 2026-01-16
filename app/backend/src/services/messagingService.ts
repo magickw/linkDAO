@@ -371,7 +371,10 @@ export class MessagingService {
       // MEMORY OPTIMIZATION: Enforce maximum limit
       const actualLimit = Math.min(limit, MAX_MESSAGES_PER_QUERY);
 
-      let whereConditions = [eq(chatMessages.conversationId, conversationId)];
+      let whereConditions = [
+        eq(chatMessages.conversationId, conversationId),
+        isNull(chatMessages.deletedAt)
+      ];
 
       // Add pagination filters
       if (before && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(before)) {
@@ -864,7 +867,7 @@ export class MessagingService {
     }
   }
 
-  // Delete message
+  // Delete message (Retract)
   async deleteMessage(data: { messageId: string; userAddress: string }) {
     const { messageId, userAddress } = data;
 
@@ -890,6 +893,18 @@ export class MessagingService {
         };
       }
 
+      // Enforce 15-minute retraction window
+      const sentAt = message[0].sentAt;
+      if (sentAt) {
+        const retractWindowMs = 15 * 60 * 1000; // 15 minutes
+        if (Date.now() - sentAt.getTime() > retractWindowMs) {
+          return {
+            success: false,
+            message: 'Message is too old to retract (limit 15 minutes). You can only delete it from your local history.'
+          };
+        }
+      }
+
       // Soft delete by setting deletedAt timestamp
       await db
         .update(chatMessages)
@@ -898,7 +913,7 @@ export class MessagingService {
 
       return {
         success: true,
-        data: null
+        data: { conversationId: message[0].conversationId }
       };
     } catch (error) {
       safeLogger.error('Error deleting message:', error);

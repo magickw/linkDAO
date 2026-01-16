@@ -926,6 +926,39 @@ class UnifiedMessagingService {
     });
   }
 
+  /**
+   * Upload an attachment (file/image)
+   */
+  async uploadAttachment(file: File): Promise<MessageAttachment> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      // Add CSRF token if available in DOM
+      if (typeof document !== 'undefined') {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (csrfToken) {
+          formData.append('_csrf', csrfToken);
+        }
+      }
+
+      const response = await this.makeRequest('/api/messaging/attachments', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to upload attachment: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.data;
+    } catch (error) {
+      console.error('[UnifiedMessaging] Error uploading attachment:', error);
+      throw error;
+    }
+  }
+
   // ==================== EVENT SYSTEM ====================
 
   /**

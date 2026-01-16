@@ -563,6 +563,16 @@ export class MessagingController {
         return;
       }
 
+      // Emit WebSocket event for real-time delete update
+      const wsService = getWebSocketService();
+      if (wsService && (result as any).data?.conversationId) {
+        wsService.sendToConversation((result as any).data.conversationId, 'message_deleted', {
+          messageId: id,
+          conversationId: (result as any).data.conversationId,
+          deletedBy: userAddress
+        });
+      }
+
       res.json(apiResponse.success(null, 'Message deleted successfully'));
     } catch (error) {
       safeLogger.error('Error deleting message:', error);

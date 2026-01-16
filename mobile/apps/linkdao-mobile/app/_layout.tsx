@@ -91,12 +91,16 @@ export default function RootLayout() {
   useEffect(() => {
     if (!isReady) return;
 
-    const inAuthGroup = segments[0] === '(tabs)';
+    const inAuthGroup = segments[0] === 'auth';
+    const inTabsGroup = segments[0] === '(tabs)';
 
     // Navigate only after root layout is ready
-    if (!isAuthenticated && inAuthGroup) {
+    // Redirect to auth if not authenticated and trying to access tabs
+    if (!isAuthenticated && inTabsGroup) {
       router.replace('/auth');
-    } else if (isAuthenticated && !inAuthGroup) {
+    }
+    // Redirect to tabs if authenticated and on auth screen
+    else if (isAuthenticated && inAuthGroup) {
       router.replace('/(tabs)');
     }
   }, [isAuthenticated, isReady, segments]);
@@ -121,6 +125,7 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="auth" options={{ headerShown: false }} />
+            <Stack.Screen name="settings" options={{ headerShown: false }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
           </Stack>
         </SafeAreaProvider>

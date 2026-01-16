@@ -3,14 +3,18 @@
  * Main feed showing posts from communities and users
  */
 
-import { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from 'react-native';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePostsStore, useAuthStore } from '../../src/store';
 import { postsService } from '../../src/services';
 import { InteractivePostCard } from '../../src/components/InteractivePostCard';
+import { PostComposer } from '../../src/components/PostComposer';
+import { FeedSkeleton } from '../../src/components/FeedSkeleton';
+import { useWebSocket } from '../../src/hooks/useWebSocket';
 import { THEME } from '../../src/constants/theme';
 
 export default function FeedScreen() {
@@ -24,30 +28,86 @@ export default function FeedScreen() {
   const setError = usePostsStore((state) => state.setError);
   const updatePost = usePostsStore((state) => state.updatePost);
   const clearStorage = useAuthStore((state) => state.clearStorage);
+  const user = useAuthStore((state) => state.user);
 
   // Local state
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  // Removed feed type selection - only showing statuses from following
+  const [sortBy, setSortBy] = useState<'recent' | 'likes'>('recent');
+  const [hasNewPosts, setHasNewPosts] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Load posts on mount
+  // WebSocket for real-time updates
+  const webSocket = useWebSocket();
+  const wsSubscribedRef = useRef(false);
+
+  // Load saved preferences on mount
   useEffect(() => {
-    loadPosts();
+    loadPreferences();
   }, []);
 
-  // Load posts from API
-  const loadPosts = async (page: number = 1) => {
+  // Save preferences when they change
+  useEffect(() => {
+    savePreferences();
+  }, [sortBy]);
+
+  const loadPreferences = async () => {
+    try {
+      const savedSort = await AsyncStorage.getItem('feed_sort');
+
+      if (savedSort && (savedSort === 'recent' || savedSort === 'likes')) {
+        setSortBy(savedSort as any);
+      }
+    } catch (error) {
+      console.error('Error loading preferences:', error);
+    }
+  };
+
+  const savePreferences = async () => {
+    try {
+      await AsyncStorage.setItem('feed_sort', sortBy);
+    } catch (error) {
+      console.error('Error saving preferences:', error);
+    }
+  };
+
+  // Load posts on mount and when sort changes
+  useEffect(() => {
+    loadPosts(1, sortBy);
+  }, [sortBy]);
+
+  // Load statuses from API with retry logic
+  const loadPosts = async (page: number = 1, sort = sortBy, isRetry = false) => {
     try {
       setLoading(true);
+
       const response = await postsService.getFeed(page, 20);
 
       if (response.posts) {
-        setPosts(response.posts);
+        // Filter to show ONLY statuses
+        const statusOnly = response.posts.filter(post => post.isStatus === true);
+        setPosts(statusOnly);
+        setRetryCount(0); // Reset retry count on success
       } else {
-        setError('Failed to load posts');
+        throw new Error('No posts in response');
       }
     } catch (error) {
-      console.error('Error loading posts:', error);
-      setError('Failed to load posts');
+      console.error('Error loading statuses:', error);
+
+      // Exponential backoff retry
+      if (retryCount < 3 && !isRetry) {
+        const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+        console.log(`Retrying in ${delay}ms... (attempt ${retryCount + 1}/3)`);
+
+        setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+          loadPosts(page, sort, true);
+        }, delay);
+      } else {
+        setError('Failed to load statuses. Please try again.');
+        setRetryCount(0);
+      }
     } finally {
       setLoading(false);
     }
@@ -56,8 +116,45 @@ export default function FeedScreen() {
   // Pull to refresh
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    setHasNewPosts(false); // Clear new posts banner
     await loadPosts(1);
     setRefreshing(false);
+  }, []);
+
+  // Subscribe to WebSocket feed updates
+  useEffect(() => {
+    if (!webSocket.isConnected || wsSubscribedRef.current) {
+      return;
+    }
+
+    // Subscribe to feed updates
+    webSocket.joinRoom('feed');
+    wsSubscribedRef.current = true;
+
+    // Listen for new posts
+    const handleNewPost = (data: any) => {
+      console.log('New post received:', data);
+      // Only show banner if it's not the current user's post
+      if (data.author !== user?.address) {
+        setHasNewPosts(true);
+      }
+    };
+
+    webSocket.on('new_post', handleNewPost);
+    webSocket.on('feed_update', handleNewPost);
+
+    return () => {
+      webSocket.off('new_post', handleNewPost);
+      webSocket.off('feed_update', handleNewPost);
+      webSocket.leaveRoom('feed');
+      wsSubscribedRef.current = false;
+    };
+  }, [webSocket.isConnected, user?.address]);
+
+  // Handle refresh from new posts banner
+  const handleRefreshFeed = useCallback(() => {
+    setHasNewPosts(false);
+    loadPosts(1);
   }, []);
 
   // Handle like action
@@ -84,6 +181,43 @@ export default function FeedScreen() {
           likes: post.isLiked ? post.likes + 1 : post.likes - 1,
         });
       }
+    }
+  };
+
+  // Handle post creation
+  const handleCreatePost = async (postData: any) => {
+    if (!user) {
+      Alert.alert('Authentication Required', 'Please log in to create a post');
+      return;
+    }
+
+    try {
+      // Convert attachments format if needed
+      const apiData: any = {
+        content: postData.content,
+        tags: postData.tags,
+        location: postData.location,
+        shareToSocialMedia: postData.shareToSocialMedia,
+      };
+
+      // Convert image attachments to the API format
+      if (postData.attachments && postData.attachments.length > 0) {
+        apiData.attachments = postData.attachments.map((att: any) => ({
+          type: att.type,
+          url: att.url,
+        }));
+      }
+
+      const newPost = await postsService.createPost(apiData);
+
+      if (newPost) {
+        // Add new post to the top of the feed
+        setPosts([newPost, ...(posts || [])]);
+        Alert.alert('Success', 'Status posted successfully!');
+      }
+    } catch (error) {
+      console.error('Error creating post:', error);
+      throw error; // Re-throw to let PostComposer handle the error
     }
   };
 
@@ -125,71 +259,144 @@ export default function FeedScreen() {
   const isEmpty = !loading && (!posts || posts.length === 0);
   const showLoading = loading && (!posts || posts.length === 0);
 
+  // Load more posts for pagination
+  const loadMorePosts = async () => {
+    if (loadingMore || !hasMore || loading) return;
+
+    setLoadingMore(true);
+    try {
+      const nextPage = currentPage + 1;
+      const response = await postsService.getFeed(nextPage, 20);
+
+      if (response.posts && response.posts.length > 0) {
+        // Append new posts to existing ones
+        setPosts([...(posts || []), ...response.posts]);
+        usePostsStore.setState({
+          currentPage: nextPage,
+          hasMore: response.hasMore !== false
+        });
+      } else {
+        usePostsStore.setState({ hasMore: false });
+      }
+    } catch (error) {
+      console.error('Error loading more posts:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  // Render footer for FlatList
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+
+    return (
+      <View style={styles.loadingMoreContainer}>
+        <ActivityIndicator size="small" color="#3b82f6" />
+        <Text style={styles.loadingMoreText}>Loading more posts...</Text>
+      </View>
+    );
+  };
+
+  // Render empty component with status-specific message
+  const renderEmpty = () => {
+    if (loading) return null;
+
+    return (
+      <View style={styles.emptyContainer}>
+        <View style={styles.emptyIconContainer}>
+          <Ionicons name="people-outline" size={64} color="#9ca3af" />
+        </View>
+        <Text style={styles.emptyTitle}>No statuses yet</Text>
+        <Text style={styles.emptySubtitle}>
+          Follow users to see their statuses in your feed
+        </Text>
+      </View>
+    );
+  };
+
+  // Render post item
+  const renderPost = useCallback(({ item }: { item: any }) => (
+    <InteractivePostCard
+      post={item}
+      onLike={handleLike}
+      onComment={(id) => router.push(`/post/${id}`)}
+      onShare={(id) => Alert.alert('Share', 'Share functionality coming soon')}
+    />
+  ), [handleLike]);
+
+  // Key extractor for FlatList
+  const keyExtractor = useCallback((item: any) => item.id, []);
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      {/* New Posts Available Banner */}
+      {hasNewPosts && (
+        <View style={styles.newPostsBanner}>
+          <TouchableOpacity
+            style={styles.newPostsButton}
+            onPress={handleRefreshFeed}
+          >
+            <Ionicons name="arrow-up" size={16} color="#ffffff" />
+            <Text style={styles.newPostsText}>New posts available</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <FlatList
+        data={posts || []}
+        renderItem={renderPost}
+        keyExtractor={keyExtractor}
+        ListHeaderComponent={() => (
+          <>
+            {/* Post Composer */}
+            <View style={styles.composerContainer}>
+              <PostComposer
+                onSubmit={handleCreatePost}
+                userName={user?.displayName || `${user?.address?.slice(0, 6)}...${user?.address?.slice(-4)}`}
+                placeholder="What's on your mind?"
+              />
+            </View>
+
+            {/* Sort Button */}
+            <View style={styles.sortContainer}>
+              <TouchableOpacity
+                style={styles.sortButton}
+                onPress={() => {
+                  // Toggle between recent and most liked
+                  setSortBy(sortBy === 'recent' ? 'likes' : 'recent');
+                }}
+              >
+                <Ionicons name="funnel-outline" size={16} color="#6b7280" />
+                <Text style={styles.sortButtonText}>
+                  {sortBy === 'recent' ? 'Recent' : 'Most Liked'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Loading State */}
+            {showLoading && <FeedSkeleton />}
+
+            {/* Section Title */}
+            {hasPosts && (
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Your Feed</Text>
+              </View>
+            )}
+          </>
+        )}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={renderEmpty}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-      >
-        {/* Quick Actions */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => router.push('/communities')}
-          >
-            <Ionicons name="people" size={20} color="#3b82f6" />
-            <Text style={styles.actionText}>Communities</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => router.push('/create-post')}
-          >
-            <Ionicons name="create" size={20} color="#3b82f6" />
-            <Text style={styles.actionText}>Create Post</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Loading State */}
-        {showLoading && (
-          <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color="#3b82f6" />
-            <Text style={styles.loadingText}>Loading posts...</Text>
-          </View>
-        )}
-
-        {/* Feed Posts */}
-        {hasPosts && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Recent Posts</Text>
-            {posts.map((post) => (
-              <InteractivePostCard
-                key={post.id}
-                post={post}
-                onLike={handleLike}
-                onComment={(id) => router.push(`/post/${id}`)}
-                onShare={(id) => Alert.alert('Share', 'Share functionality coming soon')}
-              />
-            ))}
-          </View>
-        )}
-
-        {/* End of Feed */}
-        {!hasMore && hasPosts && (
-          <View style={styles.endOfFeedContainer}>
-            <Text style={styles.endOfFeedText}>You're all caught up!</Text>
-          </View>
-        )}
-
-        {/* Empty State */}
-        {isEmpty && (
-          <View style={styles.centerContainer}>
-            <Ionicons name="document-text-outline" size={64} color="#9ca3af" />
-            <Text style={styles.emptyText}>No posts yet</Text>
-            <Text style={styles.emptySubtext}>Check back later for updates</Text>
-          </View>
-        )}
-      </ScrollView>
+        onEndReached={loadMorePosts}
+        onEndReachedThreshold={0.5}
+        contentContainerStyle={hasPosts ? undefined : styles.emptyListContent}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        initialNumToRender={5}
+      />
     </SafeAreaView>
   );
 }
@@ -197,21 +404,48 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background.light,
+    backgroundColor: THEME.colors.background,
+  },
+  newPostsBanner: {
+    position: 'absolute',
+    top: 16,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    alignItems: 'center',
+  },
+  newPostsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  newPostsText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: THEME.spacing.md,
-    backgroundColor: THEME.colors.background.cardLight,
+    backgroundColor: THEME.colors.white,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: THEME.colors.text.primary,
+    color: THEME.colors.text,
     letterSpacing: -0.5,
   },
   headerActions: {
@@ -225,8 +459,58 @@ const styles = StyleSheet.create({
   },
   quickActions: {
     flexDirection: 'row',
-    padding: THEME.spacing.md,
+    paddingHorizontal: THEME.spacing.md,
+    paddingBottom: THEME.spacing.md,
     gap: 12,
+  },
+  feedTabsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: THEME.spacing.md,
+    paddingVertical: THEME.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
+  },
+  feedTabs: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  feedTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f3f4f6',
+  },
+  feedTabActive: {
+    backgroundColor: '#3b82f6',
+  },
+  feedTabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  feedTabTextActive: {
+    color: '#ffffff',
+  },
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#f3f4f6',
+  },
+  sortButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  composerContainer: {
+    paddingHorizontal: THEME.spacing.md,
+    paddingTop: THEME.spacing.md,
   },
   actionButton: {
     flex: 1,
@@ -246,12 +530,26 @@ const styles = StyleSheet.create({
     color: THEME.colors.primary,
   },
   section: {
-    padding: THEME.spacing.md,
+    paddingHorizontal: THEME.spacing.md,
+  },
+  sortContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: THEME.spacing.md,
+    paddingVertical: THEME.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
+  },
+  sectionHeader: {
+    paddingHorizontal: THEME.spacing.md,
+    paddingTop: THEME.spacing.md,
+    paddingBottom: THEME.spacing.sm,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: THEME.colors.text.primary,
+    color: THEME.colors.text,
     marginBottom: THEME.spacing.md,
   },
   centerContainer: {
@@ -261,26 +559,84 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: THEME.colors.text.secondary,
+    color: THEME.colors.gray,
     marginTop: 12,
   },
   emptyText: {
     fontSize: 18,
     fontWeight: '700',
-    color: THEME.colors.text.primary,
+    color: THEME.colors.text,
     marginTop: 16,
   },
   emptySubtext: {
     fontSize: 14,
-    color: THEME.colors.text.muted,
+    color: THEME.colors.gray,
     marginTop: 8,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 32,
+  },
+  emptyIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: THEME.colors.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: THEME.colors.gray,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  emptyActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+  },
+  emptyActionText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   endOfFeedContainer: {
     alignItems: 'center',
     padding: 24,
+    marginTop: 16,
   },
   endOfFeedText: {
     fontSize: 14,
-    color: THEME.colors.text.muted,
+    color: THEME.colors.gray,
+  },
+  loadingMoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    gap: 8,
+  },
+  loadingMoreText: {
+    fontSize: 14,
+    color: THEME.colors.gray,
+  },
+  emptyListContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
 });
