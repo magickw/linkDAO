@@ -16,23 +16,7 @@ const nextConfig = {
     // esmExternals: false, // Removed to enable Fast Refresh
   },
 
-  webpack: (config, { dev }) => {
-    if (dev) {
-      // Enable file watching for proper hot reloads
-      config.watchOptions = {
-        poll: 1000,
-        aggregateTimeout: 200,
-      };
 
-      // Enable Fast Refresh by removing disable flag
-      // config.plugins.push(
-      //   new webpack.DefinePlugin({
-      //     'process.env.__NEXT_DISABLE_FAST_REFRESH': JSON.stringify(true),
-      //   })
-      // );
-    }
-    return config;
-  },
 
   outputFileTracingRoot: require("path").join(__dirname),
 
@@ -70,6 +54,13 @@ const nextConfig = {
   },
 
   webpack: (config, { isServer, dev, webpack }) => {
+    if (dev) {
+      config.watchOptions = {
+        poll: 1000,
+        aggregateTimeout: 200,
+      };
+    }
+
     // Add parent node_modules to module resolution paths
     config.resolve.modules = [
       path.resolve(__dirname, 'node_modules'),
@@ -81,8 +72,22 @@ const nextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       '@': path.resolve(__dirname, 'src'),
-      // Force zod/mini to resolve to the nested version in porto
-      'zod/mini': path.resolve(__dirname, '../node_modules/porto/node_modules/zod/mini/index.js'),
+      // Dynamic resolution for zod/mini (required by porto)
+      'zod/mini': (() => {
+        try {
+          const { createRequire } = require('module');
+          try {
+            const portoPath = require.resolve('porto');
+            const requireFromPorto = createRequire(portoPath);
+            return requireFromPorto.resolve('zod/mini');
+          } catch {
+            // Fallback if porto resolution fails
+            return path.resolve(__dirname, '../node_modules/porto/node_modules/zod/mini/index.js');
+          }
+        } catch (e) {
+          return path.resolve(__dirname, '../node_modules/porto/node_modules/zod/mini/index.js');
+        }
+      })(),
     };
 
     // Handle node: protocol imports - convert to regular node module imports
