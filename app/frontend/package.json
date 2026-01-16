@@ -7,7 +7,6 @@
     "prebuild": "rm -rf node_modules/playwright node_modules/playwright-core node_modules/@playwright",
     "build": "NODE_OPTIONS=--max-old-space-size=8192 next build",
     "postbuild": "next-sitemap",
-    "postinstall": "patch-package",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",

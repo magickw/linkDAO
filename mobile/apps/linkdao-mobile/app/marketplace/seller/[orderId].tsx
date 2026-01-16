@@ -280,8 +280,6 @@ export default function OrderDetailScreen() {
                 <Text style={styles.itemTotal}>Total: ${item.quantity * parseFloat(item.price)}</Text>
               </View>
             </View>
-            <Text style={styles.itemTotal}>${item.quantity * parseFloat(item.price)}</Text>
-            </View>
           ))}
           <View style={styles.orderTotalSection}>
             <Text style={styles.orderTotalLabel}>Order Total</Text>

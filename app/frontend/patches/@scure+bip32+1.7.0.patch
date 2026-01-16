@@ -1,7 +1,7 @@
 diff --git a/node_modules/@scure/bip32/lib/esm/index.js b/node_modules/@scure/bip32/lib/esm/index.js
 index 7247d4e..1234567 100644
---- a/node_modules/@scure/bip32/lib/esm/index.js
-+++ b/node_modules/@scure/bip32/lib/esm/index.js
+--- a/lib/esm/index.js
++++ b/lib/esm/index.js
 @@ -3,7 +3,7 @@
  import { ripemd160 } from '@noble/hashes/ripemd160';
  import { sha256 } from '@noble/hashes/sha256';
