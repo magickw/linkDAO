@@ -889,6 +889,7 @@ import ensValidationRoutes from './routes/ensValidationRoutes';
 import marketplaceListingsRoutes from './routes/marketplaceListingsRoutes';
 // Import IPFS proxy routes
 import ipfsProxyRoutes from './routes/ipfsProxyRoutes';
+import rpcProxyRoutes from './routes/rpcProxyRoutes';
 // Import marketplace routes
 import marketplaceRoutes from './routes/marketplaceRoutes';
 // Import cart routes
@@ -1210,6 +1211,9 @@ app.use('/api/marketplace/seller/returns', returnRoutes);
 
 // IPFS proxy routes (for serving IPFS content without CORS issues)
 app.use('/api', ipfsProxyRoutes);
+
+// Generic RPC proxy routes (for avoiding CORS issues with blockchain nodes)
+app.use('/api/proxy', rpcProxyRoutes);
 
 // x402 payment routes (using separate path to avoid conflict with x402ResourceRoutes)
 app.use('/api/x402-payments', x402PaymentRoutes);

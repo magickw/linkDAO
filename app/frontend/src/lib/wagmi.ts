@@ -34,15 +34,12 @@ const getFrontendUrl = () => {
   return 'https://linkdao.io'
 }
 
-// For production deployment, use the backend as a proxy for RPC requests to avoid CORS issues
+// Use the backend as a proxy for RPC requests to avoid CORS issues and protect RPC keys
 const getRpcUrl = (chainId: number) => {
-  // In production, route through our backend to avoid CORS issues
-  if (process.env.NODE_ENV === 'production') {
-    return `/api/proxy?target=${encodeURIComponent(getChainRpcUrl(chainId))}`;
-  }
-
-  // In development, use direct URLs
-  return getChainRpcUrl(chainId);
+  const targetUrl = getChainRpcUrl(chainId);
+  // Always route through our backend proxy for consistent behavior across environments
+  // and to avoid CORS issues with providers like Alchemy
+  return `/api/proxy?target=${encodeURIComponent(targetUrl)}`;
 };
 
 export const getChainRpcUrl = (chainId: number) => {

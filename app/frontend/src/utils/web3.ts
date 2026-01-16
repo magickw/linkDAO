@@ -311,9 +311,12 @@ export async function getProvider() {
       }
 
       if (rpcUrl) {
+        // Wrap the RPC URL in our backend proxy to avoid CORS issues
+        const proxiedRpcUrl = `/api/proxy?target=${encodeURIComponent(rpcUrl)}`;
+        
         // Correct way to initialize JsonRpcProvider in ethers v6 with static network
         const network = ethers.Network.from(chainId);
-        const provider = new ethers.JsonRpcProvider(rpcUrl, network, {
+        const provider = new ethers.JsonRpcProvider(proxiedRpcUrl, network, {
           staticNetwork: true,
           polling: false
         });
@@ -326,7 +329,7 @@ export async function getProvider() {
           providerCreationAttempts = 0;
           return provider;
         } catch (err) {
-          console.warn(`Primary RPC URL ${rpcUrl} failed verification:`, err);
+          console.warn(`Primary RPC URL ${rpcUrl} (via proxy) failed verification:`, err);
           // Fall through to fallback logic
         }
       }
@@ -349,7 +352,8 @@ export async function getProvider() {
     for (const rpc of fallbackRpcs) {
       try {
         console.log(`Trying fallback RPC: ${rpc}`);
-        const provider = new ethers.JsonRpcProvider(rpc, network, {
+        const proxiedRpc = `/api/proxy?target=${encodeURIComponent(rpc)}`;
+        const provider = new ethers.JsonRpcProvider(proxiedRpc, network, {
           staticNetwork: true,
           polling: false,
           batchMaxCount: 1
@@ -358,12 +362,12 @@ export async function getProvider() {
         // Lightweight check to ensure provider works
         await provider.getBlockNumber();
         
-        console.log(`Connected to fallback RPC: ${rpc}`);
+        console.log(`Connected to fallback RPC: ${rpc} (via proxy)`);
         cachedProvider = provider;
         providerCreationAttempts = 0;
         return provider;
       } catch (err) {
-        console.warn(`Fallback RPC ${rpc} failed:`, err);
+        console.warn(`Fallback RPC ${rpc} (via proxy) failed:`, err);
         continue;
       }
     }
