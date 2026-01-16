@@ -1424,43 +1424,71 @@ export class FeedService {
 
   // Send tip to post author
   async sendTip(data: TipData) {
-    const { postId, fromAddress, amount, tokenType, message } = data;
+    let { postId, fromAddress, amount, tokenType, message } = data;
 
     try {
+      // Normalize postId if it's bytes32
+      if (postId && postId.startsWith('0x') && postId.length > 34) {
+        try {
+          const hex = postId.substring(2);
+          const uuidHex = hex.substring(0, 32);
+          postId = `${uuidHex.substring(0, 8)}-${uuidHex.substring(8, 12)}-${uuidHex.substring(12, 16)}-${uuidHex.substring(16, 20)}-${uuidHex.substring(20)}`;
+        } catch (e) {
+          // ignore
+        }
+      }
+
       // FIXED: Use transaction to prevent connection leaks
       const normalizedAddress = fromAddress.toLowerCase();
 
-      const [fromUser, post] = await db.transaction(async (tx) => {
-        const userResult = await tx.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
-        if (userResult.length === 0) {
-          throw new Error('From user not found');
-        }
+      const fromUser = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
+      if (fromUser.length === 0) {
+        throw new Error('From user not found');
+      }
 
-        const postResult = await tx.select().from(posts).where(eq(posts.id, postId)).limit(1);
-        if (postResult.length === 0) {
-          throw new Error('Post not found');
-        }
+      // Check if it's a regular post
+      const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
+      if (post.length > 0) {
+        const tip = await db
+          .insert(tips)
+          .values({
+            postId: postId,
+            fromUserId: fromUser[0].id,
+            toUserId: post[0].authorId,
+            token: tokenType,
+            amount: amount.toString(),
+            message,
+            createdAt: new Date()
+          })
+          .returning();
 
-        return [userResult, postResult];
-      });
+        // Update post engagement score
+        await this.updateEngagementScore(postId);
+        return tip[0];
+      }
 
-      const tip = await db
-        .insert(tips)
-        .values({
-          postId: postId,
-          fromUserId: fromUser[0].id,
-          toUserId: post[0].authorId,
-          token: tokenType,
-          amount: amount.toString(),
-          message,
-          createdAt: new Date()
-        })
-        .returning();
+      // Check if it's a status
+      const status = await db.select().from(statuses).where(eq(statuses.id, postId)).limit(1);
+      if (status.length > 0) {
+        const tip = await db
+          .insert(statusTips)
+          .values({
+            statusId: postId,
+            fromUserId: fromUser[0].id,
+            toUserId: status[0].authorId,
+            token: tokenType,
+            amount: amount.toString(),
+            message,
+            createdAt: new Date()
+          })
+          .returning();
+        
+        // Update engagement score (assuming common method or separate handling needed)
+        await this.updateEngagementScore(postId);
+        return tip[0];
+      }
 
-      // Update post engagement score
-      await this.updateEngagementScore(postId);
-
-      return tip[0];
+      throw new Error('Post not found');
     } catch (error) {
       safeLogger.error('Error sending tip:', error);
       throw new Error('Failed to send tip');

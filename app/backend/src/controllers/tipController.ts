@@ -7,6 +7,23 @@ import { ethers } from 'ethers';
 
 const tipService = new TipService();
 
+// Helper to convert bytes32 (if present) to UUID
+const normalizePostId = (postId: string): string => {
+  if (postId && postId.startsWith('0x') && postId.length > 34) { // 0x + 32 chars = 34
+    try {
+      // Remove 0x
+      const hex = postId.substring(2);
+      // Take first 32 chars (16 bytes) which form the UUID
+      const uuidHex = hex.substring(0, 32);
+      // Format as UUID: 8-4-4-4-12
+      return `${uuidHex.substring(0, 8)}-${uuidHex.substring(8, 12)}-${uuidHex.substring(12, 16)}-${uuidHex.substring(16, 20)}-${uuidHex.substring(20)}`;
+    } catch (e) {
+      return postId; // Fallback to original if parsing fails
+    }
+  }
+  return postId;
+};
+
 export class TipController {
   /**
    * Create a new tip
@@ -14,8 +31,10 @@ export class TipController {
   async createTip(req: Request, res: Response): Promise<Response> {
     try {
       safeLogger.info('Creating tip request:', { body: req.body, user: req.user });
-      const { postId, creatorAddress, amount, message, transactionHash, token, currency } = req.body;
+      const { postId: rawPostId, creatorAddress, amount, message, transactionHash, token, currency } = req.body;
       const { walletAddress: fromAddress } = req.user as { walletAddress: string };
+
+      const postId = normalizePostId(rawPostId);
 
       // Validate input
       if (!postId || !creatorAddress || !amount) {
