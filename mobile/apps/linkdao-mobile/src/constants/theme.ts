@@ -12,33 +12,26 @@ export const THEME = {
     error: '#ef4444',
     warning: '#f59e0b',
     info: '#3b82f6',
-    
+
+    // Common colors
+    white: '#ffffff',
+    gray: '#9ca3af',
+    border: '#e5e7eb',
+
     // Gradients
     gradients: {
       primary: ['#3b82f6', '#8b5cf6'],
       glass: ['rgba(255, 255, 255, 0.8)', 'rgba(255, 255, 255, 0.4)'],
       glassDark: ['rgba(31, 41, 55, 0.8)', 'rgba(31, 41, 55, 0.4)'],
     },
-    
+
     // Backgrounds
-    background: {
-      light: '#f9fafb',
-      dark: '#111827',
-      cardLight: '#ffffff',
-      darkCard: '#1f2937',
-    },
-    
+    background: '#f9fafb',
+
     // Text
-    text: {
-      primary: '#111827',
-      secondary: '#4b5563',
-      muted: '#9ca3af',
-      white: '#ffffff',
-      darkPrimary: '#f9fafb',
-      darkSecondary: '#d1d5db',
-    }
+    text: '#111827',
   },
-  
+
   spacing: {
     xs: 4,
     sm: 8,
@@ -46,7 +39,7 @@ export const THEME = {
     lg: 24,
     xl: 32,
   },
-  
+
   borderRadius: {
     sm: 4,
     md: 8,
@@ -55,7 +48,7 @@ export const THEME = {
     '2xl': 24,
     full: 9999,
   },
-  
+
   glass: {
     light: {
       backgroundColor: 'rgba(255, 255, 255, 0.7)',

@@ -7,6 +7,7 @@ export { useAuthStore } from './authStore';
 export { usePostsStore } from './postsStore';
 export { useCommunitiesStore } from './communitiesStore';
 export { useMessagesStore } from './messagesStore';
+export { useSettingsStore } from './settingsStore';
 export { cartStore } from './cartStore';
 
 export type { Post } from './postsStore';

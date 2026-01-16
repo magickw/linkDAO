@@ -16,16 +16,17 @@ import { offlineManager } from '../src/services';
 export default function SettingsScreen() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  
-  const settingsStore = useSettingsStore();
-  const notificationsEnabled = settingsStore((state) => state.notificationsEnabled);
-  const darkMode = settingsStore((state) => state.darkMode);
-  const autoPlayVideos = settingsStore((state) => state.autoPlayVideos);
-  const saveDataUsage = settingsStore((state) => state.saveDataUsage);
-  const setNotificationsEnabled = settingsStore((state) => state.setNotificationsEnabled);
-  const setDarkMode = settingsStore((state) => state.setDarkMode);
-  const setAutoPlayVideos = settingsStore((state) => state.setAutoPlayVideos);
-  const setSaveDataUsage = settingsStore((state) => state.setSaveDataUsage);
+
+  const {
+    notificationsEnabled,
+    darkMode,
+    autoPlayVideos,
+    saveDataUsage,
+    setNotificationsEnabled,
+    setDarkMode,
+    setAutoPlayVideos,
+    setSaveDataUsage
+  } = useSettingsStore();
 
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricType, setBiometricType] = useState<string | null>(null);

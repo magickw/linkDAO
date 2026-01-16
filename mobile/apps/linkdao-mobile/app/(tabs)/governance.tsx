@@ -32,7 +32,7 @@ export default function GovernanceTabScreen() {
       setLoading(true);
       const proposals = await governanceService.getActiveProposals();
       setActiveProposals(proposals.slice(0, 3));
-      
+
       // Get user voting power (mock for now)
       setUserVotingPower(1500);
     } catch (error) {
@@ -109,7 +109,7 @@ export default function GovernanceTabScreen() {
             onPress={() => router.push('/staking/index')}
           >
             <Ionicons name="wallet" size={28} color={THEME.colors.warning} />
-            <Text style={actionTitle}>Stake</Text>
+            <Text style={styles.actionTitle}>Stake</Text>
             <Text style={styles.actionDescription}>Earn rewards</Text>
           </TouchableOpacity>
         </View>
