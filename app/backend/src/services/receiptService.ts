@@ -1,300 +1,79 @@
 import { DatabaseService } from './databaseService';
 import { safeLogger } from '../utils/safeLogger';
-import { ethers } from 'ethers';
-import {
-  PaymentReceipt,
-  LDAOPurchaseReceipt,
-  MarketplaceReceipt,
-  ReceiptType,
-  ReceiptStatus
-} from '../types/receipt';
+import { v4 as uuidv4 } from 'uuid';
+
+const databaseService = new DatabaseService();
 
 export interface ReceiptData {
-  id: string;
-  orderId?: string;
-  transactionId?: string;
-  purchaseType: 'marketplace' | 'ldao_token';
-  buyerAddress: string;
+  orderId: string;
+  buyerId: string;
+  sellerId: string;
   amount: string;
   currency: string;
+  taxAmount: string;
+  platformFee: string;
+  processingFee: string;
   paymentMethod: string;
-  transactionHash?: string;
-  status: ReceiptStatus;
-  items?: Array<{
-    id: string;
-    name: string;
-    quantity: number;
-    unitPrice: string;
-    totalPrice: string;
-  }>;
-  fees?: {
-    processing: string;
-    platform: string;
-    gas?: string;
-    total: string;
-  };
-  sellerAddress?: string;
-  sellerName?: string;
-  createdAt: Date;
-  completedAt?: Date;
-  metadata?: any;
+  items: any[];
+  shippingAddress?: any;
 }
 
 export class ReceiptService {
-  private databaseService: DatabaseService;
-  private provider: ethers.JsonRpcProvider;
-
-  constructor() {
-    this.databaseService = new DatabaseService();
-    this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com');
-  }
-
   /**
-   * Generate a marketplace purchase receipt
+   * Generate and store a receipt for a completed checkout
    */
-  async generateMarketplaceReceipt(receiptData: Omit<ReceiptData, 'id' | 'purchaseType'>): Promise<MarketplaceReceipt> {
+  async generateReceipt(data: ReceiptData): Promise<any> {
     try {
-      const receiptId = `mkt_rcpt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-      const marketplaceReceipt: MarketplaceReceipt = {
-        id: receiptId,
-        type: ReceiptType.MARKETPLACE,
-        orderId: receiptData.orderId,
-        transactionId: receiptData.transactionId,
-        buyerAddress: receiptData.buyerAddress,
-        amount: receiptData.amount,
-        currency: receiptData.currency,
-        paymentMethod: receiptData.paymentMethod,
-        transactionHash: receiptData.transactionHash,
-        status: receiptData.status,
-        items: receiptData.items || [],
-        fees: receiptData.fees,
-        sellerAddress: receiptData.sellerAddress,
-        sellerName: receiptData.sellerName,
-        createdAt: receiptData.createdAt,
-        completedAt: receiptData.completedAt,
-        metadata: receiptData.metadata,
-        receiptNumber: this.generateReceiptNumber('MKT'),
-        downloadUrl: await this.generateReceiptDownloadUrl(receiptId, 'marketplace')
-      };
-
-      // Store receipt in database
-      await this.storeReceipt(marketplaceReceipt);
-
-      safeLogger.info(`🧾 Marketplace receipt ${marketplaceReceipt.receiptNumber} generated for order ${receiptData.orderId}`);
-      return marketplaceReceipt;
-
-    } catch (error) {
-      safeLogger.error('Error generating marketplace receipt:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Generate an LDAO token purchase receipt
-   */
-  async generateLDAOPurchaseReceipt(receiptData: Omit<ReceiptData, 'id' | 'purchaseType' | 'items' | 'sellerAddress' | 'sellerName'>): Promise<LDAOPurchaseReceipt> {
-    try {
-      const receiptId = `ldao_rcpt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-      const ldaoReceipt: LDAOPurchaseReceipt = {
-        id: receiptId,
-        type: ReceiptType.LDAO_TOKEN,
-        transactionId: receiptData.transactionId,
-        buyerAddress: receiptData.buyerAddress,
-        amount: receiptData.amount,
-        currency: receiptData.currency,
-        paymentMethod: receiptData.paymentMethod,
-        transactionHash: receiptData.transactionHash,
-        status: receiptData.status,
-        fees: receiptData.fees,
-        createdAt: receiptData.createdAt,
-        completedAt: receiptData.completedAt,
-        metadata: receiptData.metadata,
-        receiptNumber: this.generateReceiptNumber('LDAO'),
-        tokensPurchased: receiptData.metadata?.tokensPurchased || '0',
-        pricePerToken: receiptData.metadata?.pricePerToken || '0',
-        downloadUrl: await this.generateReceiptDownloadUrl(receiptId, 'ldao_token')
-      };
-
-      // Store receipt in database
-      await this.storeReceipt(ldaoReceipt);
-
-      safeLogger.info(`🧾 LDAO receipt ${ldaoReceipt.receiptNumber} generated for transaction ${receiptData.transactionId}`);
-      return ldaoReceipt;
-
-    } catch (error) {
-      safeLogger.error('Error generating LDAO purchase receipt:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get receipt by ID
-   */
-  async getReceiptById(receiptId: string): Promise<PaymentReceipt | null> {
-    try {
-      const dbReceipt = await this.databaseService.getReceiptById(receiptId);
-      if (!dbReceipt) return null;
-
-      return this.formatReceipt(dbReceipt);
-    } catch (error) {
-      safeLogger.error('Error getting receipt by ID:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get receipts by user address
-   */
-  async getReceiptsByUser(userAddress: string, limit: number = 50, offset: number = 0): Promise<PaymentReceipt[]> {
-    try {
-      const dbReceipts = await this.databaseService.getReceiptsByUser(userAddress, limit, offset);
-      return dbReceipts.map(receipt => this.formatReceipt(receipt));
-    } catch (error) {
-      safeLogger.error('Error getting receipts by user:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get receipts by order ID
-   */
-  async getReceiptsByOrderId(orderId: string): Promise<MarketplaceReceipt[]> {
-    try {
-      const dbReceipts = await this.databaseService.getReceiptsByOrderId(orderId);
-      return dbReceipts
-        .map(receipt => this.formatReceipt(receipt))
-        .filter(receipt => receipt.type === ReceiptType.MARKETPLACE) as MarketplaceReceipt[];
-    } catch (error) {
-      safeLogger.error('Error getting receipts by order ID:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update receipt status
-   */
-  async updateReceiptStatus(receiptId: string, status: ReceiptStatus, metadata?: any): Promise<boolean> {
-    try {
-      const success = await this.databaseService.updateReceiptStatus(receiptId, status, metadata);
-
-      if (success) {
-        safeLogger.info(`✅ Receipt ${receiptId} status updated to ${status}`);
-      }
-
-      return success;
-    } catch (error) {
-      safeLogger.error('Error updating receipt status:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Generate receipt PDF (placeholder - would integrate with PDF generation service)
-   */
-  async generateReceiptPDF(receiptId: string): Promise<string> {
-    try {
-      const receipt = await this.getReceiptById(receiptId);
-      if (!receipt) {
-        throw new Error('Receipt not found');
-      }
-
-      // In a real implementation, this would generate a PDF and return a download URL
-      // For now, we'll return a mock URL
-      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      return `${baseUrl}/api/receipts/${receiptId}/pdf`;
-    } catch (error) {
-      safeLogger.error('Error generating receipt PDF:', error);
-      throw error;
-    }
-  }
-
-  // Private helper methods
-
-  private generateReceiptNumber(prefix: string): string {
-    const timestamp = Date.now().toString().slice(-6);
-    const random = Math.random().toString(36).substr(2, 4).toUpperCase();
-    return `${prefix}-${timestamp}-${random}`;
-  }
-
-  private async generateReceiptDownloadUrl(receiptId: string, type: string): Promise<string> {
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    return `${baseUrl}/receipts/${type}/${receiptId}`;
-  }
-
-  private async storeReceipt(receipt: PaymentReceipt): Promise<void> {
-    try {
-      const orderId = 'orderId' in receipt ? receipt.orderId : undefined;
-
-      // Map to new order_receipts schema
-      const dbReceipt = {
-        id: receipt.id,
-        orderId: orderId,
-        receiptNumber: receipt.receiptNumber,
+      const receiptNumber = `RCP-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+      
+      const receiptRecord = {
+        id: uuidv4(),
+        orderId: data.orderId,
+        receiptNumber,
         buyerInfo: {
-          walletAddress: receipt.buyerAddress,
-          // Add other buyer info if available in metadata
-          ...((receipt.metadata as any)?.buyerInfo || {})
+          buyerId: data.buyerId,
+          shippingAddress: data.shippingAddress
         },
-        items: 'items' in receipt ? receipt.items : [],
+        items: data.items,
         pricing: {
-          amount: receipt.amount,
-          currency: receipt.currency,
-          fees: receipt.fees
+          subtotal: (parseFloat(data.amount) - parseFloat(data.taxAmount) - parseFloat(data.platformFee) - parseFloat(data.processingFee)).toString(),
+          tax: data.taxAmount,
+          platformFee: data.platformFee,
+          processingFee: data.processingFee,
+          total: data.amount,
+          currency: data.currency
         },
         paymentDetails: {
-          method: receipt.paymentMethod,
-          transactionId: receipt.transactionId,
-          transactionHash: receipt.transactionHash,
-          status: receipt.status
+          method: data.paymentMethod,
+          timestamp: new Date()
         },
-        pdfUrl: receipt.downloadUrl,
-        emailSentAt: null, // Initial creation, email not sent yet
-        createdAt: receipt.createdAt
+        createdAt: new Date()
       };
 
-      await this.databaseService.createReceipt(dbReceipt);
+      // Store in database
+      const savedReceipt = await databaseService.createReceipt(receiptRecord);
+      
+      safeLogger.info(`Receipt generated: ${receiptNumber} for order ${data.orderId}`);
+      
+      return savedReceipt;
     } catch (error) {
-      safeLogger.error('Error storing receipt:', error);
+      safeLogger.error('Error generating receipt:', error);
       throw error;
     }
   }
 
-  private formatReceipt(dbReceipt: any): PaymentReceipt {
-    const baseReceipt = {
-      id: dbReceipt.id,
-      type: dbReceipt.type as ReceiptType,
-      transactionId: dbReceipt.transactionId,
-      buyerAddress: dbReceipt.buyerAddress,
-      amount: dbReceipt.amount,
-      currency: dbReceipt.currency,
-      paymentMethod: dbReceipt.paymentMethod,
-      transactionHash: dbReceipt.transactionHash,
-      status: dbReceipt.status as ReceiptStatus,
-      receiptNumber: dbReceipt.receiptNumber,
-      downloadUrl: dbReceipt.downloadUrl,
-      createdAt: dbReceipt.createdAt,
-      completedAt: dbReceipt.completedAt,
-      metadata: dbReceipt.metadata ? JSON.parse(dbReceipt.metadata) : undefined
-    };
-
-    if (dbReceipt.type === ReceiptType.MARKETPLACE) {
-      return {
-        ...baseReceipt,
-        orderId: dbReceipt.orderId,
-        items: dbReceipt.items ? JSON.parse(dbReceipt.items) : [],
-        fees: dbReceipt.fees ? JSON.parse(dbReceipt.fees) : undefined,
-        sellerAddress: dbReceipt.sellerAddress,
-        sellerName: dbReceipt.sellerName
-      } as MarketplaceReceipt;
-    } else {
-      return {
-        ...baseReceipt,
-        fees: dbReceipt.fees ? JSON.parse(dbReceipt.fees) : undefined,
-        tokensPurchased: dbReceipt.metadata ? JSON.parse(dbReceipt.metadata)?.tokensPurchased : '0',
-        pricePerToken: dbReceipt.metadata ? JSON.parse(dbReceipt.metadata)?.pricePerToken : '0'
-      } as LDAOPurchaseReceipt;
+  /**
+   * Get a receipt by order ID
+   */
+  async getReceiptByOrderId(orderId: string): Promise<any> {
+    try {
+      const receipts = await databaseService.getReceiptsByOrderId(orderId);
+      return receipts[0] || null;
+    } catch (error) {
+      safeLogger.error('Error fetching receipt:', error);
+      return null;
     }
   }
 }
+
+export const receiptService = new ReceiptService();

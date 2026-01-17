@@ -19,6 +19,7 @@ export function AdminOrderDashboard() {
     });
 
     useEffect(() => {
+        console.log('[AdminOrderDashboard] Component mounted, loading initial data');
         loadMetrics();
         loadDelayedOrdersCount();
         
@@ -26,6 +27,7 @@ export function AdminOrderDashboard() {
         let refreshInterval: NodeJS.Timeout;
         if (autoRefresh) {
             refreshInterval = setInterval(() => {
+                console.log('[AdminOrderDashboard] Auto-refreshing data');
                 loadMetrics();
                 loadDelayedOrdersCount();
             }, 30000);
@@ -38,13 +40,15 @@ export function AdminOrderDashboard() {
 
     const loadMetrics = async () => {
         try {
+            console.log('[AdminOrderDashboard] Loading order metrics...');
             setLoading(true);
             const data = await adminService.getOrderMetrics();
+            console.log('[AdminOrderDashboard] Order metrics loaded:', data);
             setMetrics(data);
             setLastUpdated(new Date());
             calculatePerformanceMetrics();
         } catch (error) {
-            console.error('Failed to load order metrics:', error);
+            console.error('[AdminOrderDashboard] Failed to load order metrics:', error);
         } finally {
             setLoading(false);
         }
@@ -52,10 +56,12 @@ export function AdminOrderDashboard() {
 
     const loadDelayedOrdersCount = async () => {
         try {
+            console.log('[AdminOrderDashboard] Loading delayed orders count...');
             const delayedOrders = await adminService.getDelayedOrders();
+            console.log('[AdminOrderDashboard] Delayed orders loaded:', delayedOrders.length);
             setDelayedOrdersCount(delayedOrders.length);
         } catch (error) {
-            console.error('Failed to load delayed orders count:', error);
+            console.error('[AdminOrderDashboard] Failed to load delayed orders count:', error);
         }
     };
 

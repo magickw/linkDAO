@@ -456,9 +456,24 @@ export class MessagingService {
         };
       }
 
-      // TODO: Implement rate limiting
-      // Check if user has sent > 100 messages in last minute
-      // Use Redis or in-memory cache for tracking
+      // Rate limiting: Check if user has sent > 100 messages in last minute
+      const rateLimitKey = `message_rate:${fromAddress}`;
+      const rateLimitResult = await cacheService.checkRateLimit(rateLimitKey, 100, 60);
+      
+      if (!rateLimitResult.allowed) {
+        safeLogger.warn(`Rate limit exceeded for user ${fromAddress}`, {
+          limit: 100,
+          window: '60s',
+          remaining: rateLimitResult.remaining,
+          resetTime: rateLimitResult.resetTime
+        });
+        
+        return {
+          success: false,
+          message: 'Rate limit exceeded. Please wait before sending more messages.',
+          retryAfter: Math.ceil((rateLimitResult.resetTime.getTime() - Date.now()) / 1000)
+        };
+      }
 
       // Sanitize message content to prevent XSS attacks
       // Note: Encrypted content should NOT be sanitized as it would break decryption

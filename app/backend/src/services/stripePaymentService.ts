@@ -84,6 +84,60 @@ export class StripePaymentService implements IPaymentProcessor {
     }
   }
 
+  /**
+   * Create a payment intent for marketplace transactions (Stripe Connect)
+   */
+  public async createMarketplacePaymentIntent(params: {
+    amount: number;
+    currency: string;
+    transferGroup: string;
+    description?: string;
+    metadata?: Record<string, string>;
+    sellerAccountId?: string;
+    platformFee?: number;
+    captureMethod?: 'manual' | 'automatic';
+  }): Promise<{
+    paymentIntentId: string;
+    clientSecret: string | null;
+    status: string;
+  }> {
+    try {
+      const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
+        amount: params.amount,
+        currency: params.currency,
+        payment_method_types: ['card'],
+        transfer_group: params.transferGroup,
+        capture_method: params.captureMethod || 'manual',
+        metadata: params.metadata,
+        description: params.description
+      };
+
+      // Add transfer data if seller has a Connect account
+      if (params.sellerAccountId) {
+        // Calculate transfer amount (total - platform fee)
+        const transferAmount = params.platformFee 
+          ? params.amount - params.platformFee 
+          : params.amount;
+
+        paymentIntentParams.transfer_data = {
+          destination: params.sellerAccountId,
+          amount: Math.max(0, transferAmount),
+        };
+      }
+
+      const paymentIntent = await this.stripe.paymentIntents.create(paymentIntentParams);
+
+      return {
+        paymentIntentId: paymentIntent.id,
+        clientSecret: paymentIntent.client_secret,
+        status: paymentIntent.status
+      };
+    } catch (error) {
+      safeLogger.error('Stripe marketplace payment intent creation error:', error);
+      throw error;
+    }
+  }
+
   public async confirmPayment(paymentIntentId: string): Promise<PurchaseResult> {
     try {
       const paymentIntent = await this.stripe.paymentIntents.retrieve(paymentIntentId);
@@ -244,22 +298,120 @@ export class StripePaymentService implements IPaymentProcessor {
     }
   }
 
-  public async processRefund(paymentIntentId: string, amount?: number): Promise<{ success: boolean; refundId?: string; error?: string }> {
+  public async processRefund(paymentIntentId: string, amount?: number, reason?: string, metadata?: Record<string, string>): Promise<{ success: boolean; refundId?: string; error?: string; amount?: number; currency?: string }> {
     try {
-      const refund = await this.stripe.refunds.create({
+      const refundParams: Stripe.RefundCreateParams = {
         payment_intent: paymentIntentId,
-        amount: amount ? Math.round(amount * 100) : undefined, // Convert to cents
-      });
+        reason: (reason as Stripe.RefundCreateParams.Reason) || 'requested_by_customer',
+      };
+
+      if (amount) {
+        refundParams.amount = Math.round(amount * 100);
+      }
+
+      if (metadata) {
+        refundParams.metadata = metadata;
+      }
+
+      const refund = await this.stripe.refunds.create(refundParams);
 
       return {
         success: true,
         refundId: refund.id,
+        amount: refund.amount / 100,
+        currency: refund.currency.toUpperCase()
       };
     } catch (error) {
       safeLogger.error('Stripe refund processing error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Refund processing failed',
+      };
+    }
+  }
+
+  public async capturePayment(paymentIntentId: string): Promise<{ success: boolean; amount?: number; currency?: string; transferId?: string; error?: string }> {
+    try {
+      const paymentIntent = await this.stripe.paymentIntents.retrieve(paymentIntentId);
+
+      if (paymentIntent.status !== 'requires_capture') {
+        throw new Error(`Payment intent ${paymentIntentId} is not in capturable state: ${paymentIntent.status}`);
+      }
+
+      const capturedIntent = await this.stripe.paymentIntents.capture(paymentIntentId);
+      
+      let transferId: string | undefined;
+      // Handle transfer if present in transfer_data
+      if (capturedIntent.transfer_data?.destination) {
+        // Note: Automatic transfers handle this, but if manual transfer is needed logic would go here
+        // For now we just return success
+      }
+
+      return {
+        success: true,
+        amount: capturedIntent.amount / 100,
+        currency: capturedIntent.currency.toUpperCase(),
+        transferId
+      };
+    } catch (error) {
+      safeLogger.error('Stripe capture error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Capture failed'
+      };
+    }
+  }
+
+  public async cancelPayment(paymentIntentId: string, reason?: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const paymentIntent = await this.stripe.paymentIntents.retrieve(paymentIntentId);
+
+      // Check cancellable states
+      const cancellableStates = ['requires_payment_method', 'requires_capture', 'requires_confirmation', 'requires_action'];
+      
+      if (!cancellableStates.includes(paymentIntent.status)) {
+        throw new Error(`Payment intent ${paymentIntentId} cannot be cancelled in state: ${paymentIntent.status}`);
+      }
+
+      await this.stripe.paymentIntents.cancel(paymentIntentId, {
+        cancellation_reason: 'requested_by_customer'
+      });
+
+      return { success: true };
+    } catch (error) {
+      safeLogger.error('Stripe cancellation error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Cancellation failed'
+      };
+    }
+  }
+
+  public async createTransfer(params: {
+    amount: number;
+    currency: string;
+    destination: string;
+    transferGroup?: string;
+    metadata?: Record<string, string>;
+  }): Promise<{ success: boolean; transferId?: string; error?: string }> {
+    try {
+      const transfer = await this.stripe.transfers.create({
+        amount: params.amount,
+        currency: params.currency,
+        destination: params.destination,
+        transfer_group: params.transferGroup,
+        metadata: params.metadata
+      });
+
+      return {
+        success: true,
+        transferId: transfer.id
+      };
+    } catch (error) {
+      safeLogger.error('Stripe transfer error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Transfer failed'
       };
     }
   }

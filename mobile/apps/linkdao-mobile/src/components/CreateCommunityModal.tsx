@@ -48,13 +48,13 @@ export default function CreateCommunityModal({ visible, onClose }: CreateCommuni
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: [ImagePicker.MediaType.Images],
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
             aspect: [1, 1],
             quality: 0.8,
         });
 
-        if (!result.canceled) {
+        if (!result.canceled && result.assets && result.assets[0]) {
             setAvatar(result.assets[0].uri);
         }
     };
@@ -67,13 +67,13 @@ export default function CreateCommunityModal({ visible, onClose }: CreateCommuni
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: [ImagePicker.MediaType.Images],
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
             aspect: [16, 9],
             quality: 0.8,
         });
 
-        if (!result.canceled) {
+        if (!result.canceled && result.assets && result.assets[0]) {
             setBanner(result.assets[0].uri);
         }
     };

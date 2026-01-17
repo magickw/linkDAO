@@ -187,18 +187,22 @@ class AdminService {
   // Order Management
   async getOrderMetrics(): Promise<AdminOrderMetrics> {
     try {
+      console.log('[adminService] Fetching order metrics from:', `${this.baseUrl}/api/admin/orders/metrics`);
       const response = await fetch(`${this.baseUrl}/api/admin/orders/metrics`, {
         headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch order metrics: ${response.status}`);
+        const errorText = await response.text();
+        console.error('[adminService] getOrderMetrics failed:', response.status, errorText);
+        throw new Error(`Failed to fetch order metrics: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('[adminService] Order metrics response:', result);
       return result.data || result;
     } catch (error) {
-      console.error('Error in getOrderMetrics:', error);
+      console.error('[adminService] Error in getOrderMetrics:', error);
       throw error;
     }
   }
@@ -212,36 +216,44 @@ class AdminService {
         });
       }
 
+      console.log('[adminService] Fetching orders with filters:', filters);
       const response = await fetch(`${this.baseUrl}/api/admin/orders?${params}`, {
         headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch orders: ${response.status}`);
+        const errorText = await response.text();
+        console.error('[adminService] getOrders failed:', response.status, errorText);
+        throw new Error(`Failed to fetch orders: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('[adminService] Orders response:', result);
       return result.data || { orders: [], total: 0, page: 1, totalPages: 0 };
     } catch (error) {
-      console.error('Error in getOrders:', error);
+      console.error('[adminService] Error in getOrders:', error);
       return { orders: [], total: 0, page: 1, totalPages: 0 };
     }
   }
 
   async getDelayedOrders(): Promise<any[]> {
     try {
+      console.log('[adminService] Fetching delayed orders');
       const response = await fetch(`${this.baseUrl}/api/admin/orders/delayed`, {
         headers: await this.getHeaders(),
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch delayed orders: ${response.status}`);
+        const errorText = await response.text();
+        console.error('[adminService] getDelayedOrders failed:', response.status, errorText);
+        throw new Error(`Failed to fetch delayed orders: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('[adminService] Delayed orders response:', result);
       return result.data || [];
     } catch (error) {
-      console.error('Error in getDelayedOrders:', error);
+      console.error('[adminService] Error in getDelayedOrders:', error);
       return [];
     }
   }

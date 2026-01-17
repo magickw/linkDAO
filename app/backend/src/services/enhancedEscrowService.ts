@@ -322,7 +322,7 @@ export class EnhancedEscrowService {
     amount: string,
     escrowDurationDays: number = 7,
     disputeResolutionMethod: number = 0 // 0 = AUTOMATIC, 1 = COMMUNITY_VOTING, 2 = ARBITRATOR
-  ): Promise<string> {
+  ): Promise<{ escrowId: string; transactionData?: any }> {
     return this._createEscrow(
       listingId,
       buyerAddress,
@@ -348,7 +348,7 @@ export class EnhancedEscrowService {
     requiresMultiSig: boolean = false,
     multiSigThreshold: number = 1,
     timeLockDurationHours: number = 0
-  ): Promise<string> {
+  ): Promise<{ escrowId: string; transactionData?: any }> {
     return this._createEscrow(
       listingId,
       buyerAddress,
@@ -374,7 +374,7 @@ export class EnhancedEscrowService {
     requiresMultiSig: boolean = false,
     multiSigThreshold: number = 1,
     timeLockDurationSeconds: number = 0
-  ): Promise<string> {
+  ): Promise<{ escrowId: string; transactionData?: any }> {
     try {
       // Validate escrow creation
       const validation = await this.validateEscrowCreation({
@@ -421,17 +421,16 @@ export class EnhancedEscrowService {
       // Calculate delivery deadline
       const deliveryDeadline = Math.floor(Date.now() / 1000) + (escrowDurationDays * 24 * 60 * 60);
 
-      // Prepare smart contract transaction
+      // Prepare smart contract transaction data
       const contractInterface = this.enhancedEscrowContract.interface;
       let encodedData;
       
       if (requiresMultiSig || timeLockDurationSeconds > 0) {
-        // Use the new createEscrowWithSecurity function
         encodedData = contractInterface.encodeFunctionData('createEscrowWithSecurity', [
           listingId,
           sellerAddress,
           tokenAddress,
-          ethers.parseUnits(amount, 18), // Assuming 18 decimals
+          ethers.parseUnits(amount, 18),
           deliveryDeadline,
           disputeResolutionMethod,
           requiresMultiSig,
@@ -439,40 +438,19 @@ export class EnhancedEscrowService {
           timeLockDurationSeconds
         ]);
       } else {
-        // Use the standard createEscrow function
         encodedData = contractInterface.encodeFunctionData('createEscrow', [
           listingId,
           sellerAddress,
           tokenAddress,
-          ethers.parseUnits(amount, 18), // Assuming 18 decimals
+          ethers.parseUnits(amount, 18),
           deliveryDeadline,
           disputeResolutionMethod
         ]);
       }
 
-      // Get gas estimate and fees
-      const gasEstimate = await this.estimateEscrowCreationGas({
-        listingId,
-        buyerAddress,
-        sellerAddress,
-        tokenAddress,
-        amount
-      });
-
-      const feeData = await this.provider.getFeeData();
-      
-      // Log transaction details for frontend to execute
-      safeLogger.info(`Enhanced escrow transaction prepared:`);
-      safeLogger.info(`Contract: ${this.enhancedEscrowContract.target}`);
-      safeLogger.info(`Data: ${encodedData}`);
-      safeLogger.info(`Gas estimate: ${gasEstimate}`);
-      safeLogger.info(`Max fee per gas: ${feeData.maxFeePerGas?.toString()}`);
-      safeLogger.info(`Max priority fee: ${feeData.maxPriorityFeePerGas?.toString()}`);
-
-      // Store transaction details in database for tracking
-      // Since the escrow table doesn't have these fields, we'll use the existing fields
+      // Update database with pending status
       await databaseService.updateEscrow(escrowId, {
-        buyerApproved: true // Indicate that the buyer has approved the transaction
+        buyerApproved: false // Wait for blockchain confirmation
       });
 
       // Send notifications
@@ -481,7 +459,14 @@ export class EnhancedEscrowService {
         notificationService.sendOrderNotification(sellerAddress, 'ESCROW_CREATED', escrowId)
       ]);
 
-      return escrowId;
+      return {
+        escrowId,
+        transactionData: {
+          to: this.enhancedEscrowContract.target,
+          data: encodedData,
+          value: tokenAddress === '0x0000000000000000000000000000000000000000' ? ethers.parseUnits(amount, 18).toString() : '0'
+        }
+      };
     } catch (error) {
       safeLogger.error('Error creating enhanced escrow:', error);
       throw error;

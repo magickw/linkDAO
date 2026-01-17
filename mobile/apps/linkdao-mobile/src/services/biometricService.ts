@@ -46,9 +46,15 @@ export async function isBiometricAvailable(): Promise<{
  */
 export async function getBiometricConfig(): Promise<BiometricConfig | null> {
   try {
-    // Check if Keychain is available
-    if (!Keychain || typeof Keychain.getGenericPassword !== 'function') {
-      console.warn('Keychain is not available');
+    // Check if Keychain module is available
+    if (!Keychain) {
+      console.warn('Keychain module is not available');
+      return null;
+    }
+
+    // Check if getGenericPassword method exists
+    if (typeof Keychain.getGenericPassword !== 'function') {
+      console.warn('Keychain.getGenericPassword is not available');
       return null;
     }
 
@@ -95,12 +101,21 @@ export async function enableBiometrics(): Promise<BiometricAuthResult> {
         lastUsed: new Date().toISOString(),
       };
 
-      // Check if Keychain is available
-      if (!Keychain || typeof Keychain.setGenericPassword !== 'function') {
-        console.warn('Keychain is not available');
+      // Check if Keychain module is available
+      if (!Keychain) {
+        console.warn('Keychain module is not available');
         return {
           success: false,
           error: 'Keychain is not available on this platform',
+        };
+      }
+
+      // Check if setGenericPassword method exists
+      if (typeof Keychain.setGenericPassword !== 'function') {
+        console.warn('Keychain.setGenericPassword is not available');
+        return {
+          success: false,
+          error: 'Keychain.setGenericPassword is not available on this platform',
         };
       }
 
@@ -137,9 +152,15 @@ export async function enableBiometrics(): Promise<BiometricAuthResult> {
  */
 export async function disableBiometrics(): Promise<boolean> {
   try {
-    // Check if Keychain is available
-    if (!Keychain || typeof Keychain.resetGenericPassword !== 'function') {
-      console.warn('Keychain is not available');
+    // Check if Keychain module is available
+    if (!Keychain) {
+      console.warn('Keychain module is not available');
+      return false;
+    }
+
+    // Check if resetGenericPassword method exists
+    if (typeof Keychain.resetGenericPassword !== 'function') {
+      console.warn('Keychain.resetGenericPassword is not available');
       return false;
     }
 

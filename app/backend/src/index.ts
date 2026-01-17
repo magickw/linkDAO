@@ -1016,7 +1016,11 @@ app.use('/api/email', emailRoutes);
 // import returnRoutes from './routes/returnRoutes';
 // app.use('/api/returns', returnRoutes);
 
-// Marketplace verification routes
+// Import enhanced escrow routes
+import enhancedEscrowRoutes from './routes/enhancedEscrowRoutes';
+app.use('/api/enhanced-escrow', enhancedEscrowRoutes);
+
+// Import marketplace verification routes
 app.use('/api/marketplace/verification', marketplaceVerificationRoutes);
 
 // Link safety routes

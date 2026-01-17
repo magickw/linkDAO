@@ -325,7 +325,7 @@ export function EnhancedAdminDashboard() {
     { id: 'returns', label: 'Return Monitoring', icon: Package, permission: 'marketplace.seller_view', category: 'business' },
     { id: 'receipts', label: 'Receipts', icon: Receipt, permission: 'system.audit', category: 'finance' },
     { id: 'charity-verification', label: 'Charity Verification', icon: Heart, permission: 'governance.verify', category: 'governance' },
-    { id: 'orders', label: 'Orders', icon: Package, permission: 'marketplace.seller_view', category: 'business' },
+    { id: 'orders', label: 'Orders', icon: Package, permission: 'admin.orders', category: 'business' },
   ].filter(tab => !tab.permission || hasPermission(tab.permission));
 
   const filteredTabs = showFavoritesOnly
@@ -799,7 +799,7 @@ export function EnhancedAdminDashboard() {
               <SellerPerformance />
             )}
 
-            {activeTab === 'orders' && hasPermission('marketplace.seller_view') && (
+            {activeTab === 'orders' && hasPermission('admin.orders') && (
               <AdminOrderDashboard />
             )}
 

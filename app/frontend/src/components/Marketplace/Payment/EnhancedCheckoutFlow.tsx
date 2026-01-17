@@ -66,8 +66,12 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
   const shippingCost = cartItems
     .filter(item => !item.isDigital)
     .reduce((sum, item) => sum + parseFloat(item.shippingCost || '0'), 0);
-  const escrowFee = subtotal * 0.01; // 1% escrow fee
-  const total = subtotal + shippingCost + escrowFee;
+  
+  // Fee Calculation: Buyer pays Subtotal + Shipping + Tax + Processing. Platform fee is charged to seller.
+  // Note: Backend calculates precise tax based on address, here we estimate
+  const estimatedTax = (subtotal + shippingCost) * 0.08; // 8% Estimated Tax
+  const processingFee = (subtotal + shippingCost + estimatedTax) * 0.029 + 0.001; // Estimate 2.9% + small flat fee
+  const total = subtotal + shippingCost + estimatedTax + processingFee;
 
   const hasPhysicalItems = cartItems.some(item => !item.isDigital);
 
@@ -556,8 +560,12 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
             </div>
           )}
           <div className="flex justify-between">
-            <span className="text-white/70">Escrow Fee (1%):</span>
-            <span className="text-white">{escrowFee.toFixed(4)} ETH</span>
+            <span className="text-white/70">Processing Fee:</span>
+            <span className="text-white">{processingFee.toFixed(4)} ETH</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-white/70">Est. Tax (8%):</span>
+            <span className="text-white">{estimatedTax.toFixed(4)} ETH</span>
           </div>
           <div className="border-t border-white/20 pt-2 flex justify-between font-medium">
             <span className="text-white">Total:</span>

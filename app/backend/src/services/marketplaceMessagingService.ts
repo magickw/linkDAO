@@ -14,7 +14,7 @@ import {
   users
 } from '../db/schema';
 import { eq, and, desc, sql, inArray, lt } from 'drizzle-orm';
-import { WebSocketService } from './webSocketService';
+import { getWebSocketService } from './webSocketService';
 import {
   sanitizeMessage,
   sanitizeMessageTemplate,
@@ -30,15 +30,13 @@ const CACHE_TTL = 600; // 10 minutes
 const CLEANUP_INTERVAL = 15 * 60 * 1000; // 15 minutes
 
 export class MarketplaceMessagingService {
-  private webSocketService: any; // Mock implementation
+  private webSocketService: any;
   private lastCleanup: number = Date.now();
   private activeOrderConversations: Map<string, number> = new Map();
 
   constructor() {
-    // Mock implementation - WebSocketService requires HttpServer parameter
-    this.webSocketService = {
-      sendToUser: async () => {}
-    };
+    // Get the singleton WebSocketService instance
+    this.webSocketService = getWebSocketService();
     
     // MEMORY OPTIMIZATION: Start periodic cleanup
     this.startPeriodicCleanup();

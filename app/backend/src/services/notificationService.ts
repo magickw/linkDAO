@@ -472,29 +472,53 @@ export class NotificationService {
     userAddress: string,
     title: string,
     message: string,
-    actionUrl?: string
+    actionUrl?: string,
+    receiptData?: any
   ): Promise<void> {
     try {
       // Get user email from profile
       const userProfile = await databaseService.getUserByAddress(userAddress);
       if (!userProfile?.email) {
-        safeLogger.info(`No email found for user ${userAddress}`);
+        safeLogger.info(`No email found for user ${userAddress}, skipping email notification`);
         return;
       }
 
-      // Implementation would use your email service (SendGrid, AWS SES, etc.)
-      safeLogger.info(`Email notification to ${userProfile.email}:`, { title, message, actionUrl });
+      const emailPayload = {
+        to: userProfile.email,
+        subject: title,
+        body: message,
+        actionUrl,
+        receipt: receiptData
+      };
 
-      // Example implementation:
-      // const emailService = EmailService.getInstance();
-      // await emailService.sendEmail({
-      //   to: userProfile.email,
-      //   subject: title,
-      //   html: this.generateEmailTemplate(title, message, actionUrl)
-      // });
+      // SIMULATION: In a real environment, this would call SendGrid/Mailgun/SES
+      safeLogger.info(`📧 SENDING EMAIL to ${userProfile.email}:`, JSON.stringify(emailPayload, null, 2));
+
+      // For demonstration/testing, we log that it would have been sent
+      console.log(`[EMAIL SERVICE] To: ${userProfile.email} | Subject: ${title}`);
+      
+      if (receiptData) {
+        console.log(`[EMAIL SERVICE] Receipt attached for Order ${receiptData.orderId}`);
+      }
+
     } catch (error) {
       safeLogger.error('Error sending email notification:', error);
     }
+  }
+
+  /**
+   * Special method to send receipt via email
+   */
+  async sendReceiptEmail(
+    userAddress: string,
+    orderId: string,
+    receipt: any
+  ): Promise<void> {
+    const title = `Receipt for Order #${orderId}`;
+    const message = `Thank you for your purchase! Your order #${orderId} has been confirmed. Please find your receipt details below.`;
+    const actionUrl = `/orders/${orderId}`;
+    
+    await this.sendEmailNotification(userAddress, title, message, actionUrl, receipt);
   }
 
   private async sendPushNotification(
