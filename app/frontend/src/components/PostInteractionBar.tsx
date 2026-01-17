@@ -194,14 +194,7 @@ export default function PostInteractionBar({
   return (
     <div className={`space-y-4 relative ${className}`}>
       {/* Tipping Status Mini-Overlay */}
-      {isTipping && (
-        <div className="absolute -top-2 left-0 right-0 z-20 flex justify-center pointer-events-none">
-          <div className="bg-blue-600 text-white text-xs px-3 py-1 rounded-full shadow-lg flex items-center gap-2 animate-bounce">
-            <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            Blockchain transaction in progress...
-          </div>
-        </div>
-      )}
+      {/* Tipping Status Mini-Overlay - Removed due to redundancy and ReferenceError */}
 
       {/* Action Buttons */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
@@ -213,10 +206,10 @@ export default function PostInteractionBar({
               onClick={handleUpvoteClick}
               disabled={!onUpvote}
               className={`flex items-center space-x-1 p-1.5 rounded-md transition-colors ${userVote === 'upvote'
-                  ? 'text-green-600 bg-green-50 dark:bg-green-900/20'
-                  : onUpvote
-                    ? 'text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
-                    : 'text-gray-300 cursor-not-allowed'
+                ? 'text-green-600 bg-green-50 dark:bg-green-900/20'
+                : onUpvote
+                  ? 'text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
+                  : 'text-gray-300 cursor-not-allowed'
                 }`}
               aria-label="Upvote"
             >
@@ -230,10 +223,10 @@ export default function PostInteractionBar({
               onClick={handleDownvoteClick}
               disabled={!onDownvote}
               className={`flex items-center space-x-1 p-1.5 rounded-md transition-colors ${userVote === 'downvote'
-                  ? 'text-red-600 bg-red-50 dark:bg-red-900/20'
-                  : onDownvote
-                    ? 'text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
-                    : 'text-gray-300 cursor-not-allowed'
+                ? 'text-red-600 bg-red-50 dark:bg-red-900/20'
+                : onDownvote
+                  ? 'text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
+                  : 'text-gray-300 cursor-not-allowed'
                 }`}
               aria-label="Downvote"
             >
@@ -387,11 +380,10 @@ export default function PostInteractionBar({
           <button
             onClick={handleSavePost}
             disabled={isBookmarkLoading}
-            className={`flex items-center space-x-2 text-sm font-medium transition-colors duration-200 hover:scale-105 ${
-              isBookmarked
+            className={`flex items-center space-x-2 text-sm font-medium transition-colors duration-200 hover:scale-105 ${isBookmarked
                 ? 'text-primary-600 dark:text-primary-400'
                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-            } ${isBookmarkLoading ? 'opacity-50 cursor-wait' : ''}`}
+              } ${isBookmarkLoading ? 'opacity-50 cursor-wait' : ''}`}
             title={isBookmarked ? 'Remove from bookmarks' : 'Save to bookmarks'}
           >
             <svg
