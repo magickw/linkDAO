@@ -120,7 +120,7 @@ class EnhancedAuthService {
             array[i] = Math.floor(Math.random() * 256);
           }
         }
-        
+
         this.sessionKey = Array.from(array)
           .map(b => b.toString(16).padStart(2, '0')).join('');
         localStorage.setItem(this.STORAGE_KEYS.SESSION_KEY, this.sessionKey);
@@ -128,7 +128,7 @@ class EnhancedAuthService {
 
       // 2. Load Session Data (check localStorage first for persistence)
       let sessionDataStr = localStorage.getItem(this.STORAGE_KEYS.SESSION_DATA);
-      
+
       // Fallback/Migration: Check sessionStorage
       if (!sessionDataStr) {
         sessionDataStr = sessionStorage.getItem(this.STORAGE_KEYS.SESSION_DATA);
@@ -1038,6 +1038,13 @@ class EnhancedAuthService {
   }
 
   /**
+   * Get current token (alias for getToken for compatibility)
+   */
+  getAuthToken(): string | null {
+    return this.getToken();
+  }
+
+  /**
    * Get current token
    */
   getToken(): string | null {
@@ -1113,9 +1120,9 @@ class EnhancedAuthService {
 
               return storedToken;
             } else {
-              console.warn('Session expired in getToken', { 
-                now: Date.now(), 
-                expiresAt: sessionData?.expiresAt 
+              console.warn('Session expired in getToken', {
+                now: Date.now(),
+                expiresAt: sessionData?.expiresAt
               });
               this.clearStoredSession();
             }
