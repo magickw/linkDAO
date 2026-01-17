@@ -110,6 +110,15 @@ export default function GovernanceTabScreen() {
 
           <TouchableOpacity
             style={styles.actionCard}
+            onPress={() => router.push('/governance/index#analytics')}
+          >
+            <Ionicons name="stats-chart" size={28} color={THEME.colors.info} />
+            <Text style={styles.actionTitle}>Analytics</Text>
+            <Text style={styles.actionDescription}>View insights</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
             onPress={() => router.push('/staking/index')}
           >
             <Ionicons name="wallet" size={28} color={THEME.colors.warning} />

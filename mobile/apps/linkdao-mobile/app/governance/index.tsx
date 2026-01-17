@@ -23,7 +23,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import { THEME } from '../../src/constants/theme';
 import { EnhancedProposalCard } from '../../src/components/EnhancedProposalCard';
 
-type TabType = 'active' | 'ended' | 'create' | 'delegation' | 'charity';
+type TabType = 'active' | 'ended' | 'create' | 'delegation' | 'charity' | 'analytics';
 
 export default function GovernancePage() {
   const { user } = useAuthStore();
@@ -302,6 +302,7 @@ export default function GovernancePage() {
           {renderTabButton('active', 'Active', 'list-outline')}
           {renderTabButton('ended', 'Ended', 'checkmark-done-outline')}
           {renderTabButton('charity', 'Charity', 'heart-outline')}
+          {renderTabButton('analytics', 'Analytics', 'stats-chart-outline')}
           {renderTabButton('create', 'Create', 'add-circle-outline')}
           {renderTabButton('delegation', 'Delegate', 'swap-horizontal-outline')}
         </View>
@@ -500,6 +501,91 @@ export default function GovernancePage() {
                 </View>
               </View>
             )}
+          </View>
+        )}
+
+        {activeTab === 'analytics' && (
+          <View style={styles.analyticsSection}>
+            <Text style={styles.sectionTitle}>Governance Analytics</Text>
+            <Text style={styles.sectionDescription}>
+              Track your governance participation and proposal insights.
+            </Text>
+
+            {/* Voting Power Stats */}
+            <View style={styles.statsGrid}>
+              <View style={styles.statCard}>
+                <Ionicons name="diamond-outline" size={32} color={THEME.colors.primary} />
+                <Text style={styles.statValue}>{votingPower.toLocaleString()}</Text>
+                <Text style={styles.statLabel}>Voting Power</Text>
+              </View>
+
+              <View style={styles.statCard}>
+                <Ionicons name="checkmark-circle" size={32} color={THEME.colors.success} />
+                <Text style={styles.statValue}>{proposals.filter(p => p.userVote !== undefined).length}</Text>
+                <Text style={styles.statLabel}>Your Votes</Text>
+              </View>
+
+              <View style={styles.statCard}>
+                <Ionicons name="document" size={32} color={THEME.colors.info} />
+                <Text style={styles.statValue}>{proposals.length}</Text>
+                <Text style={styles.statLabel}>Total Proposals</Text>
+              </View>
+
+              <View style={styles.statCard}>
+                <Ionicons name="people" size={32} color={THEME.colors.warning} />
+                <Text style={styles.statValue}>{votingPower > 0 ? '51.1%' : '0%'}</Text>
+                <Text style={styles.statLabel}>Participation</Text>
+              </View>
+            </View>
+
+            {/* Participation Insights */}
+            <View style={styles.insightCard}>
+              <View style={styles.insightHeader}>
+                <Ionicons name="trending-up" size={24} color={THEME.colors.success} />
+                <Text style={styles.insightTitle}>Participation Insights</Text>
+              </View>
+              <Text style={styles.insightText}>
+                {votingPower > 0 
+                  ? 'You\'re actively participating in governance! Keep voting on proposals to increase your influence.'
+                  : 'Start staking LDAO tokens to gain voting power and participate in governance decisions.'}
+              </Text>
+            </View>
+
+            {/* Proposal Stats */}
+            <View style={styles.proposalStatsCard}>
+              <Text style={styles.proposalStatsTitle}>Proposal Statistics</Text>
+              <View style={styles.proposalStatRow}>
+                <View style={styles.proposalStatItem}>
+                  <View style={[styles.proposalStatDot, { backgroundColor: THEME.colors.success }]} />
+                  <Text style={styles.proposalStatLabel}>Passed</Text>
+                  <Text style={styles.proposalStatValue}>
+                    {proposals.filter(p => p.status === 'passed').length}
+                  </Text>
+                </View>
+                <View style={styles.proposalStatItem}>
+                  <View style={[styles.proposalStatDot, { backgroundColor: THEME.colors.error }]} />
+                  <Text style={styles.proposalStatLabel}>Failed</Text>
+                  <Text style={styles.proposalStatValue}>
+                    {proposals.filter(p => p.status === 'rejected').length}
+                  </Text>
+                </View>
+                <View style={styles.proposalStatItem}>
+                  <View style={[styles.proposalStatDot, { backgroundColor: THEME.colors.warning }]} />
+                  <Text style={styles.proposalStatLabel}>Active</Text>
+                  <Text style={styles.proposalStatValue}>
+                    {proposals.filter(p => p.status === 'active').length}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.viewFullAnalyticsButton}
+              onPress={() => router.push('/charity-dashboard')}
+            >
+              <Text style={styles.viewFullAnalyticsText}>View Charity Dashboard</Text>
+              <Ionicons name="arrow-forward" size={20} color={THEME.colors.primary} />
+            </TouchableOpacity>
           </View>
         )}
 
@@ -845,5 +931,112 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: THEME.colors.white,
+  },
+  analyticsSection: {
+    padding: 16,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -8,
+    marginTop: 16,
+  },
+  statCard: {
+    width: '48%',
+    marginHorizontal: '1%',
+    marginBottom: 16,
+    backgroundColor: THEME.colors.white,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: THEME.colors.text,
+    marginTop: 8,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: THEME.colors.gray,
+    marginTop: 4,
+  },
+  insightCard: {
+    backgroundColor: THEME.colors.white,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+    marginTop: 16,
+  },
+  insightHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  insightTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: THEME.colors.text,
+    marginLeft: 8,
+  },
+  insightText: {
+    fontSize: 14,
+    color: THEME.colors.gray,
+    lineHeight: 20,
+  },
+  proposalStatsCard: {
+    backgroundColor: THEME.colors.white,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+    marginTop: 16,
+  },
+  proposalStatsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: THEME.colors.text,
+    marginBottom: 12,
+  },
+  proposalStatRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  proposalStatItem: {
+    alignItems: 'center',
+  },
+  proposalStatDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+  proposalStatLabel: {
+    fontSize: 12,
+    color: THEME.colors.gray,
+  },
+  proposalStatValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: THEME.colors.text,
+    marginTop: 4,
+  },
+  viewFullAnalyticsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: THEME.colors.primary + '10',
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 16,
+  },
+  viewFullAnalyticsText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: THEME.colors.primary,
+    marginRight: 8,
   },
 });

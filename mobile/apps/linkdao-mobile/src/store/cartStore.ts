@@ -58,11 +58,64 @@ export const cartStore = create<CartState>()(
       savedItems: [],
       giftOptions: {
         isGift: false,
-        giftWrapOption: 'none'
+        giftWrapOption: 'none',
       },
 
       addItem: (item) => {
-// ...
+        set((state) => {
+          const existingItem = state.items.find(i => i.id === item.id);
+          if (existingItem) {
+            return {
+              items: state.items.map(i =>
+                i.id === item.id
+                  ? { ...i, quantity: i.quantity + item.quantity }
+                  : i
+              ),
+            };
+          }
+          return { items: [...state.items, item] };
+        });
+      },
+      removeItem: (id) => {
+        set((state) => ({
+          items: state.items.filter((item) => item.id !== id),
+        }));
+      },
+
+      updateQuantity: (id, quantity) => {
+        set((state) => ({
+          items: state.items.map((item) =>
+            item.id === id ? { ...item, quantity } : item
+          ),
+        }));
+      },
+
+      clearCart: () => {
+        set({ items: [] });
+      },
+
+      getTotalPrice: () => {
+        return get().items.reduce(
+          (total, item) => total + item.price * item.quantity,
+          0
+        );
+      },
+
+      getTotalItems: () => {
+        return get().items.reduce((total, item) => total + item.quantity, 0);
+      },
+
+      syncWithBackend: async () => {
+        try {
+          // Sync local cart with backend
+          // This is a placeholder - actual implementation would call the backend
+          return true;
+        } catch (error) {
+          console.error('Failed to sync cart with backend:', error);
+          return false;
+        }
+      },
+
       updateGiftOptions: (options) => {
         set({ giftOptions: options });
       },

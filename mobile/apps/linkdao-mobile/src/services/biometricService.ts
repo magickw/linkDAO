@@ -46,6 +46,12 @@ export async function isBiometricAvailable(): Promise<{
  */
 export async function getBiometricConfig(): Promise<BiometricConfig | null> {
   try {
+    // Check if Keychain is available
+    if (!Keychain || typeof Keychain.getGenericPassword !== 'function') {
+      console.warn('Keychain is not available');
+      return null;
+    }
+
     const config = await Keychain.getGenericPassword({
       service: 'linkdao',
     });
@@ -89,12 +95,21 @@ export async function enableBiometrics(): Promise<BiometricAuthResult> {
         lastUsed: new Date().toISOString(),
       };
 
+      // Check if Keychain is available
+      if (!Keychain || typeof Keychain.setGenericPassword !== 'function') {
+        console.warn('Keychain is not available');
+        return {
+          success: false,
+          error: 'Keychain is not available on this platform',
+        };
+      }
+
       await Keychain.setGenericPassword(
         BIOMETRIC_KEY,
         JSON.stringify(config),
         {
           service: 'linkdao',
-          accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY,
+          accessControl: Keychain.ACCESS_CONTROL?.BIOMETRY_ANY,
         }
       );
 
@@ -122,6 +137,12 @@ export async function enableBiometrics(): Promise<BiometricAuthResult> {
  */
 export async function disableBiometrics(): Promise<boolean> {
   try {
+    // Check if Keychain is available
+    if (!Keychain || typeof Keychain.resetGenericPassword !== 'function') {
+      console.warn('Keychain is not available');
+      return false;
+    }
+
     await Keychain.resetGenericPassword({
       service: 'linkdao',
     });

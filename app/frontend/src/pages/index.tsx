@@ -11,7 +11,7 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 import { CreatePostInput } from '@/models/Post';
 import { Status } from '@/models/Status';
 import Link from 'next/link';
-import { Send, Vote, Users, MessageCircle, RefreshCw, Award, Video, Mail, Shield, Zap } from 'lucide-react';
+import { Send, Vote, Users, MessageCircle, RefreshCw, Award, Video, Mail, Shield, Zap, TrendingUp } from 'lucide-react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { newsletterService } from '@/services/newsletterService';
 import { usePostModalManager } from '@/hooks/usePostModalManager';
