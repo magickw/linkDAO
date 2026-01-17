@@ -1210,7 +1210,8 @@ app.use('/api/order-events', orderEventHandlerRoutes);
 app.use('/api/marketplace/seller/returns', returnRoutes);
 
 // IPFS proxy routes (for serving IPFS content without CORS issues)
-app.use('/api', ipfsProxyRoutes);
+// Mount IPFS proxy routes under /api/proxy to avoid conflict with /api/ipfs routes
+app.use('/api/proxy', ipfsProxyRoutes);
 
 // Generic RPC proxy routes (for avoiding CORS issues with blockchain nodes)
 app.use('/api/proxy', rpcProxyRoutes);

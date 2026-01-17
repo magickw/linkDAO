@@ -179,7 +179,7 @@ const GemPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
   // Package themes
   const packageThemes: Record<string, { name: string; icon: string; description: string }> = {
     '100': { name: 'Starter Stack', icon: '🚀', description: 'Perfect for your first awards' },
-    '200': { name: 'DeFi Degen', icon: '💎', description: 'For the true degen in you' },
+    '200': { name: 'DeFi Degen', icon: '🔥', description: 'For the true degen in you' },
     '300': { name: 'Whale Pack', icon: '🐋', description: 'Make a splash with big awards' },
     '500': { name: 'Diamond Hands', icon: '💎', description: 'HODL strong, award stronger' },
     '1000': { name: 'OG Collection', icon: '👑', description: 'Legendary status unlocked' }

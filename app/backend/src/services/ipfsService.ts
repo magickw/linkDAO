@@ -65,7 +65,8 @@ export class IPFSService {
       apiUrl = 'http://localhost:5001';
     }
 
-    this.gatewayUrl = (process.env.IPFS_GATEWAY_URL || 'https://gateway.pinata.cloud/ipfs').replace(/\/+$/, '');
+    // Use local backend IPFS route as default gateway to ensure correct image processing and avoid mixed content/CORS issues
+    this.gatewayUrl = (process.env.IPFS_GATEWAY_URL || '/api/ipfs').replace(/\/+$/, '');
     this.defaultPinning = process.env.IPFS_DEFAULT_PINNING !== 'false' && !this.isMemoryConstrained; // Disable pinning in constrained environments
 
     // IPFS client not used - we use Pinata REST API directly
@@ -184,7 +185,7 @@ export class IPFSService {
 
       // Provide detailed error message
       let errorMessage = `Pinata upload failed: ${error.message}`;
-      
+
       if (error.response?.data?.error?.reason) {
         errorMessage = `Pinata error: ${error.response.data.error.reason}`;
       } else if (error.response?.data?.error) {
@@ -778,8 +779,8 @@ export class IPFSService {
    * Get gateway URL for IPFS hash
    */
   getGatewayUrl(ipfsHash?: string): string {
-    // Using Pinata gateway
-    const gateway = 'https://gateway.pinata.cloud/ipfs';
+    // Using local backend route by default
+    const gateway = '/api/ipfs';
 
     // Ensure both parts don't have conflicting slashes
     if (ipfsHash) {

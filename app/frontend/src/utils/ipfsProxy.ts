@@ -71,10 +71,13 @@ export function getProxiedIPFSUrl(ipfsUrl: string): string {
     else if (ipfsUrl.startsWith('/ipfs/')) {
         hash = ipfsUrl.replace('/ipfs/', '');
     }
-    // Assume it's already just a hash
-    else {
-        hash = ipfsUrl;
+    // If it's a standard HTTP/HTTPS URL that didn't match any IPFS patterns above, return it as-is
+    if (ipfsUrl.startsWith('http')) {
+        return ipfsUrl;
     }
+
+    // Assume it's a raw hash
+    hash = ipfsUrl;
 
     // Remove any query parameters or fragments
     hash = hash.split('?')[0].split('#')[0];

@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMessagesStore } from '../../src/store';
 import { messagingService } from '../../src/services';
+import NewConversationModal from '../../src/components/NewConversationModal';
 
 export default function MessagesScreen() {
   const conversations = useMessagesStore((state) => state.conversations);
@@ -17,9 +18,11 @@ export default function MessagesScreen() {
   const setConversations = useMessagesStore((state) => state.setConversations);
   const setLoading = useMessagesStore((state) => state.setLoading);
   const markAsRead = useMessagesStore((state) => state.markAsRead);
+  const addConversation = useMessagesStore((state) => state.addConversation);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [showNewConversationModal, setShowNewConversationModal] = useState(false);
 
   useEffect(() => {
     loadConversations();
@@ -62,6 +65,15 @@ export default function MessagesScreen() {
     router.push(`/messages/${conversationId}`);
   };
 
+  const handleNewConversation = () => {
+    setShowNewConversationModal(true);
+  };
+
+  const handleConversationCreated = (conversationId: string) => {
+    loadConversations();
+    router.push(`/messages/${conversationId}`);
+  };
+
   const formatTime = (timestamp?: string) => {
     if (!timestamp) return '';
     const date = new Date(timestamp);
@@ -78,7 +90,7 @@ export default function MessagesScreen() {
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Messages</Text>
-        <TouchableOpacity style={styles.newChatButton}>
+        <TouchableOpacity style={styles.newChatButton} onPress={handleNewConversation}>
           <Ionicons name="create-outline" size={24} color="#3b82f6" />
         </TouchableOpacity>
       </View>
@@ -94,10 +106,13 @@ export default function MessagesScreen() {
           <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search messages..."
+            placeholder="Search conversations..."
             placeholderTextColor="#9ca3af"
+            value={searchQuery}
+            onChangeText={handleSearch}
           />
         </View>
+        
         {/* Loading State */}
         {loading && conversations.length === 0 && (
           <View style={styles.centerContainer}>
@@ -117,6 +132,11 @@ export default function MessagesScreen() {
               <View style={styles.avatarContainer}>
                 <View style={[styles.avatar, conversation.avatar && { backgroundColor: conversation.avatar }]} />
                 {conversation.isOnline && <View style={styles.onlineIndicator} />}
+                {conversation.isGroup && (
+                  <View style={styles.groupIcon}>
+                    <Ionicons name="people" size={16} color="#ffffff" />
+                  </View>
+                )}
               </View>
               <View style={styles.conversationInfo}>
                 <View style={styles.conversationHeader}>
@@ -148,10 +168,18 @@ export default function MessagesScreen() {
           <View style={styles.centerContainer}>
             <Ionicons name="chatbubbles-outline" size={64} color="#9ca3af" />
             <Text style={styles.emptyText}>No conversations yet</Text>
-            <Text style={styles.emptySubtext}>Start a new conversation!</Text>
+            <TouchableOpacity style={styles.startChatButton} onPress={handleNewConversation}>
+              <Text style={styles.startChatButtonText}>Start a conversation</Text>
+            </TouchableOpacity>
           </View>
         )}
       </ScrollView>
+
+      <NewConversationModal
+        visible={showNewConversationModal}
+        onClose={() => setShowNewConversationModal(false)}
+        onConversationCreated={handleConversationCreated}
+      />
     </SafeAreaView>
   );
 }
@@ -235,6 +263,19 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#ffffff',
   },
+  groupIcon: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#3b82f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
   conversationInfo: {
     flex: 1,
   },
@@ -299,9 +340,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#6b7280',
   },
-  emptySubtext: {
-    marginTop: 8,
-    fontSize: 14,
-    color: '#9ca3af',
+  startChatButton: {
+    marginTop: 16,
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  startChatButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });

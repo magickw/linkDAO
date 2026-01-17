@@ -399,7 +399,8 @@ export class CommunityWeb3Service {
         'function approve(address spender, uint256 amount) returns (bool)',
         'function allowance(address owner, address spender) view returns (uint256)',
         'function balanceOf(address account) view returns (uint256)',
-        'function decimals() view returns (uint8)'
+        'function decimals() view returns (uint8)',
+        'function transfer(address to, uint256 amount) returns (bool)'
       ];
 
       // Create contract instances with the signer (which should now be on the correct network)
