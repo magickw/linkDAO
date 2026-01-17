@@ -447,6 +447,14 @@ class CartService {
     if (this.isAuthenticated) {
       try {
         await this.addItemToBackend(product.id, quantity);
+
+        // Refresh cart from backend to get the new cartItemId
+        // This is crucial for subsequent operations like remove or update quantity
+        const updatedCart = await this.getCartFromBackend();
+        if (updatedCart) {
+          await this.saveCartState(updatedCart);
+          this.notifyListeners(updatedCart);
+        }
       } catch (error) {
         console.warn('Failed to add item to backend cart:', error);
       }
@@ -517,8 +525,18 @@ class CartService {
         if (item?.cartItemId) {
           await this.removeItemFromBackend(item.cartItemId);
         } else {
-          // If no cartItemId, this might be a local-only item, skip backend update
-          console.warn('No cartItemId found for item, skipping backend removal');
+          // If no cartItemId, try to sync first - maybe it was added but not synced back yet
+          console.log('No cartItemId found, attempting sync before removal...');
+          await this.syncCartWithBackend();
+
+          const syncedState = await this.getCartState();
+          const syncedItem = syncedState.items.find(i => i.id === itemId);
+
+          if (syncedItem?.cartItemId) {
+            await this.removeItemFromBackend(syncedItem.cartItemId);
+          } else {
+            console.warn('No cartItemId found even after sync, item likely already removed or local-only');
+          }
         }
       } catch (error) {
         console.warn('Failed to remove item from backend cart:', error);
@@ -1152,7 +1170,7 @@ class CartService {
       window.addEventListener('storage', handleStorageChange);
 
       // Helper function to get current token
-      const getCurrentToken = (): string => {
+      const getCurrentToken = (): string | null => {
         let token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || localStorage.getItem('user_session') || sessionStorage.getItem('auth_token') || sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
 
         if (!token) {
