@@ -139,7 +139,7 @@ export class PushNotificationService {
       // Using raw SQL since table is not in schema
       const existingSubscription = await db.execute(sql`
         SELECT * FROM push_notification_subscriptions 
-        WHERE user_id = ${userId} AND endpoint = ${subscription.endpoint}
+        WHERE user_address = ${userId} AND endpoint = ${subscription.endpoint}
         LIMIT 1
       `);
 
@@ -158,7 +158,7 @@ export class PushNotificationService {
         // Create new subscription
         await db.execute(sql`
           INSERT INTO push_notification_subscriptions 
-          (user_id, endpoint, keys, user_agent, is_active, created_at, last_used_at)
+          (user_address, endpoint, keys, user_agent, is_active, created_at, last_used_at)
           VALUES (${userId}, ${subscription.endpoint}, ${JSON.stringify(subscription.keys)}, 
                   ${userAgent || ''}, true, ${new Date()}, ${new Date()})
         `);
@@ -177,7 +177,7 @@ export class PushNotificationService {
     try {
 await db.execute(sql`
         DELETE FROM push_notification_subscriptions 
-        WHERE user_id = ${userId} AND endpoint = ${endpoint}
+        WHERE user_address = ${userId} AND endpoint = ${endpoint}
       `);
 
       safeLogger.info(`Device subscription unregistered for user: ${userId}`);
@@ -193,7 +193,7 @@ await db.execute(sql`
     try {
       const result = await db.execute(sql`
         SELECT * FROM notification_preferences 
-        WHERE user_id = ${userId}
+        WHERE user_address = ${userId}
         LIMIT 1
       `);
       
@@ -215,7 +215,7 @@ await db.execute(sql`
 
         await db.execute(sql`
           INSERT INTO notification_preferences 
-          (user_id, preferences, created_at, updated_at)
+          (user_address, preferences, created_at, updated_at)
           VALUES (${userId}, ${JSON.stringify(defaultPreferences)}, ${new Date()}, ${new Date()})
         `);
 
@@ -250,7 +250,7 @@ await db.execute(sql`
         UPDATE notification_preferences 
         SET preferences = ${JSON.stringify(updatedPreferences)},
             updated_at = ${new Date()}
-        WHERE user_id = ${userId}
+        WHERE user_address = ${userId}
       `);
 
       safeLogger.info(`Notification preferences updated for user: ${userId}`);
@@ -274,7 +274,7 @@ await db.execute(sql`
       // Get user's active device subscriptions
       const subscriptions = await db.execute(sql`
         SELECT * FROM push_notification_subscriptions 
-        WHERE user_id = ${payload.userId} AND is_active = true
+        WHERE user_address = ${payload.userId} AND is_active = true
       `);
 
       if (subscriptions.length === 0) {
@@ -588,7 +588,7 @@ await db.execute(sql`
     try {
       await db.execute(sql`
         INSERT INTO notification_logs 
-        (user_id, type, community_id, post_id, title, message, success_count, failed_count, created_at)
+        (user_address, type, community_id, post_id, title, message, success_count, failed_count, created_at)
         VALUES (${payload.userId}, ${payload.type}, ${payload.communityId}, ${payload.postId}, 
                 ${payload.title}, ${payload.message}, ${successCount}, ${failedCount}, ${new Date()})
       `);
@@ -630,7 +630,7 @@ await db.execute(sql`
                SUM(failed_count) as failed,
                type as byType
         FROM notification_logs 
-        WHERE user_id = ${userId} AND created_at >= ${cutoffDate}
+        WHERE user_address = ${userId} AND created_at >= ${cutoffDate}
         GROUP BY type
       `);
 

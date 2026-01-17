@@ -25,6 +25,78 @@ interface AuthenticatedRequest extends Request {
 }
 
 export class CommunityController {
+  constructor() {
+    // Bind all methods to ensure 'this' is preserved when used as Express route handlers
+    this.listCommunities = this.listCommunities.bind(this);
+    this.getTrendingCommunities = this.getTrendingCommunities.bind(this);
+    this.getCommunityDetails = this.getCommunityDetails.bind(this);
+    this.getCommunityBySlug = this.getCommunityBySlug.bind(this);
+    this.createCommunity = this.createCommunity.bind(this);
+    this.updateCommunity = this.updateCommunity.bind(this);
+    this.getMembership = this.getMembership.bind(this);
+    this.joinCommunity = this.joinCommunity.bind(this);
+    this.leaveCommunity = this.leaveCommunity.bind(this);
+    this.getCommunityPosts = this.getCommunityPosts.bind(this);
+    this.getFollowedCommunitiesFeed = this.getFollowedCommunitiesFeed.bind(this);
+    this.deletePost = this.deletePost.bind(this);
+    this.updateCommunityPost = this.updateCommunityPost.bind(this);
+    this.createCommunityPost = this.createCommunityPost.bind(this);
+    this.createAIAssistedPost = this.createAIAssistedPost.bind(this);
+    this.getCommunityMembers = this.getCommunityMembers.bind(this);
+    this.getCommunityStats = this.getCommunityStats.bind(this);
+    this.moderateContent = this.moderateContent.bind(this);
+    this.getGovernanceProposals = this.getGovernanceProposals.bind(this);
+    this.createGovernanceProposal = this.createGovernanceProposal.bind(this);
+    this.voteOnProposal = this.voteOnProposal.bind(this);
+    this.executeProposal = this.executeProposal.bind(this);
+    this.getModerationQueue = this.getModerationQueue.bind(this);
+    this.flagContent = this.flagContent.bind(this);
+    this.searchCommunities = this.searchCommunities.bind(this);
+    this.createDelegation = this.createDelegation.bind(this);
+    this.revokeDelegation = this.revokeDelegation.bind(this);
+    this.getDelegationsAsDelegate = this.getDelegationsAsDelegate.bind(this);
+    this.createProxyVote = this.createProxyVote.bind(this);
+    this.createMultiSigApproval = this.createMultiSigApproval.bind(this);
+    this.getMultiSigApprovals = this.getMultiSigApprovals.bind(this);
+    this.createAutomatedExecution = this.createAutomatedExecution.bind(this);
+    this.getAutomatedExecutions = this.getAutomatedExecutions.bind(this);
+    this.getUserCommunityMemberships = this.getUserCommunityMemberships.bind(this);
+    this.checkContentAccess = this.checkContentAccess.bind(this);
+    this.grantContentAccess = this.grantContentAccess.bind(this);
+    this.createTokenGatedContent = this.createTokenGatedContent.bind(this);
+    this.getTokenGatedContentByPost = this.getTokenGatedContentByPost.bind(this);
+    this.createSubscriptionTier = this.createSubscriptionTier.bind(this);
+    this.getSubscriptionTiers = this.getSubscriptionTiers.bind(this);
+    this.subscribeUser = this.subscribeUser.bind(this);
+    this.getUserSubscriptions = this.getUserSubscriptions.bind(this);
+    this.searchAuthors = this.searchAuthors.bind(this);
+    this.getMyCommunities = this.getMyCommunities.bind(this);
+    this.getUserCreatedCommunities = this.getUserCreatedCommunities.bind(this);
+    this.updateModerationFeedback = this.updateModerationFeedback.bind(this);
+    this.bulkAddMembers = this.bulkAddMembers.bind(this);
+    this.bulkRemoveMembers = this.bulkRemoveMembers.bind(this);
+    this.bulkUpdateMemberRoles = this.bulkUpdateMemberRoles.bind(this);
+    this.bulkUpdateMemberReputation = this.bulkUpdateMemberReputation.bind(this);
+    this.bulkBanMembers = this.bulkBanMembers.bind(this);
+    this.bulkUnbanMembers = this.bulkUnbanMembers.bind(this);
+    this.exportMembers = this.exportMembers.bind(this);
+    this.importMembers = this.importMembers.bind(this);
+    this.getMemberStatistics = this.getMemberStatistics.bind(this);
+    this.registerDeviceSubscription = this.registerDeviceSubscription.bind(this);
+    this.unregisterDeviceSubscription = this.unregisterDeviceSubscription.bind(this);
+    this.getNotificationPreferences = this.getNotificationPreferences.bind(this);
+    this.updateNotificationPreferences = this.updateNotificationPreferences.bind(this);
+    this.sendTestNotification = this.sendTestNotification.bind(this);
+    this.getNotificationStatistics = this.getNotificationStatistics.bind(this);
+    this.getVapidPublicKey = this.getVapidPublicKey.bind(this);
+    this.getCommunityHealthMetrics = this.getCommunityHealthMetrics.bind(this);
+    this.getCommunityHealthAlerts = this.getCommunityHealthAlerts.bind(this);
+    this.getHistoricalHealthMetrics = this.getHistoricalHealthMetrics.bind(this);
+    this.getCommunityBenchmarkComparison = this.getCommunityBenchmarkComparison.bind(this);
+    this.getAllCommunitiesHealthMetrics = this.getAllCommunitiesHealthMetrics.bind(this);
+    this.getModerationStats = this.getModerationStats.bind(this);
+  }
+
   // List communities with filtering
   async listCommunities(req: Request, res: Response): Promise<void> {
     try {

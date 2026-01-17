@@ -8,6 +8,7 @@ import CommunityTipButton from './CommunityTipButton';
 import AwardSelectionModal from './TokenReactionSystem/AwardSelectionModal';
 import { communityWeb3Service } from '@/services/communityWeb3Service';
 import { bookmarkService } from '@/services/bookmarkService';
+import { getUserAddress } from '@/utils/userDisplay';
 
 interface PostInteractionBarProps {
   post: {

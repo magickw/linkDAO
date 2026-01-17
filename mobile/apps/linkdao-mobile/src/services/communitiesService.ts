@@ -146,6 +146,21 @@ class CommunitiesService {
       return [];
     }
   }
+
+  /**
+   * Get community members
+   */
+  async getCommunityMembers(id: string, page: number = 1, limit: number = 20): Promise<any[]> {
+    try {
+      const response = await apiClient.get<{ members: any[] }>(
+        `/api/communities/${id}/members?page=${page}&limit=${limit}`
+      );
+      return response.data.members || [];
+    } catch (error) {
+      console.error('Error fetching community members:', error);
+      return [];
+    }
+  }
 }
 
 export const communitiesService = new CommunitiesService();

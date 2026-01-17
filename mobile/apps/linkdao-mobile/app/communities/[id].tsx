@@ -10,15 +10,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { OptimizedFlatList } from '../../src/components/OptimizedFlatList';
 import { Skeleton } from '../../src/components/Skeleton';
-import { communitiesService } from '../../src/services';
+import { communitiesService, postsService } from '../../src/services';
 import { useCommunitiesStore } from '../../src/store';
 
 export default function CommunityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  
+
   const [community, setCommunity] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
+  const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'posts' | 'members' | 'about'>('posts');
@@ -27,76 +28,33 @@ export default function CommunityDetailScreen() {
   const leaveCommunity = useCommunitiesStore((state) => state.leaveCommunity);
 
   useEffect(() => {
-    loadCommunity();
+    if (id) {
+      loadCommunity();
+    }
   }, [id]);
 
   const loadCommunity = async () => {
     setLoading(true);
     try {
-      // In production, fetch from API
-      const mockCommunity = {
-        id: id || '1',
-        name: 'Web3 Developers',
-        handle: 'web3dev',
-        description: 'A community for Web3 developers to share knowledge, collaborate on projects, and discuss the latest trends in blockchain technology.',
-        image: '#3b82f6',
-        coverImage: '#8b5cf6',
-        members: 1234,
-        posts: 5678,
-        isJoined: false,
-        isPublic: true,
-        createdAt: '2024-01-01',
-        tags: ['Web3', 'Blockchain', 'Development', 'DeFi'],
-        moderators: ['0x1234...5678', '0xabcd...efgh'],
-        rules: [
-          'Be respectful to all members',
-          'No spam or self-promotion',
-          'Stay on topic',
-          'Follow community guidelines',
-        ],
-      };
+      if (!id) return;
 
-      const mockPosts = [
-        {
-          id: '1',
-          content: 'Just deployed my first smart contract on Ethereum mainnet! 🎉',
-          author: {
-            id: '1',
-            name: 'Alice',
-            avatar: '#3b82f6',
-          },
-          likes: 42,
-          comments: 8,
-          timestamp: '2 hours ago',
-        },
-        {
-          id: '2',
-          content: 'Looking for collaborators on a new DeFi protocol. DM me if interested!',
-          author: {
-            id: '2',
-            name: 'Bob',
-            avatar: '#10b981',
-          },
-          likes: 28,
-          comments: 15,
-          timestamp: '5 hours ago',
-        },
-        {
-          id: '3',
-          content: 'Great discussion in the latest governance proposal. Everyone should participate!',
-          author: {
-            id: '3',
-            name: 'Charlie',
-            avatar: '#f59e0b',
-          },
-          likes: 67,
-          comments: 23,
-          timestamp: '1 day ago',
-        },
-      ];
+      const [communityData, postsData, membersData] = await Promise.all([
+        communitiesService.getCommunity(id),
+        postsService.getCommunityPosts(id),
+        communitiesService.getCommunityMembers(id)
+      ]);
 
-      setCommunity(mockCommunity);
-      setPosts(mockPosts);
+      if (communityData) {
+        setCommunity(communityData);
+      }
+
+      if (postsData && postsData.posts) {
+        setPosts(postsData.posts);
+      }
+
+      if (membersData) {
+        setMembers(membersData);
+      }
     } catch (error) {
       console.error('Failed to load community:', error);
       Alert.alert('Error', 'Failed to load community details');
@@ -306,13 +264,9 @@ export default function CommunityDetailScreen() {
         {activeTab === 'members' && (
           <View style={styles.tabContent}>
             <OptimizedFlatList
-              data={[
-                { id: '1', name: 'Alice', handle: 'alice', avatar: '#3b82f6', isModerator: true },
-                { id: '2', name: 'Bob', handle: 'bob', avatar: '#10b981', isModerator: false },
-                { id: '3', name: 'Charlie', handle: 'charlie', avatar: '#f59e0b', isModerator: false },
-              ]}
+              data={members}
               renderItem={renderMember}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item: any) => item.id || item.walletAddress}
               estimatedItemSize={80}
             />
           </View>

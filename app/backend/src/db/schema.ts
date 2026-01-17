@@ -6461,7 +6461,8 @@ export const socialMediaConnections = pgTable("social_media_connections", {
 // Social Media Posts - Track cross-posted content for analytics and retry logic
 export const socialMediaPosts = pgTable("social_media_posts", {
   id: uuid("id").defaultRandom().primaryKey(),
-  statusId: uuid("status_id").notNull().references(() => statuses.id, { onDelete: "cascade" }),
+  postId: uuid("post_id").references(() => posts.id, { onDelete: "cascade" }),
+  statusId: uuid("status_id").references(() => statuses.id, { onDelete: "cascade" }),
   connectionId: uuid("connection_id").notNull().references(() => socialMediaConnections.id, { onDelete: "cascade" }),
   platform: varchar("platform", { length: 32 }).notNull(),
 
@@ -6482,6 +6483,7 @@ export const socialMediaPosts = pgTable("social_media_posts", {
   postedAt: timestamp("posted_at"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
+  postIdx: index("idx_social_posts_post_id").on(t.postId),
   statusIdx: index("idx_social_posts_status_id").on(t.statusId),
   connectionIdx: index("idx_social_posts_connection_id").on(t.connectionId),
   postStatusIdx: index("idx_social_posts_post_status").on(t.postStatus),
