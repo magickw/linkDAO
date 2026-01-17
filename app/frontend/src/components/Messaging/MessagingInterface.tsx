@@ -1628,9 +1628,9 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                                 className={`flex items-center px-3 py-1.5 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700/50 dark:hover:bg-gray-600 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors ${touchTargetClasses}`}
                                 onClick={() => {
                                   let authorDisplayName = 'Unknown';
-                                  if (message.fromAddress === address) {
+                                  if (message.fromAddress && message.fromAddress === address) {
                                     authorDisplayName = 'You';
-                                  } else {
+                                  } else if (message.fromAddress) {
                                     // Try to resolve using same logic as senderDisplayName above
                                     let p: UserProfile | undefined;
                                     if (getParticipantProfile) {
@@ -1642,7 +1642,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                                     else authorDisplayName = message.fromAddress.slice(0, 6) + '...' + message.fromAddress.slice(-4);
                                   }
 
-                                  replyToMessage(message.id, authorDisplayName, message.content);
+                                  replyToMessage(message.id, authorDisplayName, message.content || '');
                                 }}
                                 title="Reply to this message"
                               >
@@ -1654,9 +1654,9 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                                 className={`flex items-center px-2 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700/50 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors ${touchTargetClasses}`}
                                 onClick={() => {
                                   let authorDisplayName = 'Unknown';
-                                  if (message.fromAddress === address) {
+                                  if (message.fromAddress && message.fromAddress === address) {
                                     authorDisplayName = 'You';
-                                  } else {
+                                  } else if (message.fromAddress) {
                                     // Try to resolve using same logic as senderDisplayName above
                                     let p: UserProfile | undefined;
                                     if (getParticipantProfile) {
@@ -1668,7 +1668,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                                     else authorDisplayName = message.fromAddress.slice(0, 6) + '...' + message.fromAddress.slice(-4);
                                   }
 
-                                  quoteMessage(message.content, authorDisplayName);
+                                  quoteMessage(message.content || '', authorDisplayName);
                                 }}
                                 title="Quote this message"
                               >
