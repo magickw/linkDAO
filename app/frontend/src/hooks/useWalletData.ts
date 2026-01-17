@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useAccount, useChainId } from 'wagmi';
 import { walletService, WalletService, TokenBalance as ServiceTokenBalance } from '../services/walletService';
 import { EnhancedWalletData, TokenBalance } from '../types/wallet';
@@ -106,6 +106,9 @@ export function useWalletData({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Track whether transaction fetch has been initiated for current address
+  const txFetchInitiatedRef = useRef<string | null>(null);
 
   // Fetch wallet data
   const fetchWalletData = useCallback(async () => {
@@ -393,6 +396,12 @@ export function useWalletData({
   // Refresh wallet data manually
   const refreshWalletData = useCallback(async () => {
     setIsRefreshing(true);
+    // Reset transaction fetch ref to allow re-fetching
+    txFetchInitiatedRef.current = null;
+    // Clear transaction cache for current address
+    if (address) {
+      invalidateTxCache(address);
+    }
     try {
       await refetchBalance();
       await fetchWalletData();
@@ -403,7 +412,7 @@ export function useWalletData({
     } finally {
       setIsRefreshing(false);
     }
-  }, [refetchBalance, fetchWalletData, chainId, providedChainId, connectedChainId]);
+  }, [refetchBalance, fetchWalletData, chainId, providedChainId, connectedChainId, address]);
 
   // Initial fetch when address is available - strictly deferred to prevent UI blocking
   useEffect(() => {
@@ -464,21 +473,23 @@ export function useWalletData({
 
   // Separate effect for transaction history to avoid blocking initial wallet data load
   useEffect(() => {
-    if (!walletData || !enableTransactionHistory || !address) return;
+    if (!enableTransactionHistory || !address) return;
 
-    // Skip if we already have transactions populated (e.g. from price update)
-    // We only want to fetch if they were reset (e.g. by fetchWalletData) or haven't been loaded
-    if (walletData.recentTransactions && walletData.recentTransactions.length > 0) {
+    // Skip if we already initiated fetch for this address
+    if (txFetchInitiatedRef.current === address) {
       return;
     }
 
     const fetchTransactionHistory = async () => {
+      // Mark fetch as initiated for this address
+      txFetchInitiatedRef.current = address;
+
       try {
         const cacheKey = `${address}:${maxTransactions}`;
         const cached = txCache.get(cacheKey);
         if (cached && Date.now() - cached.timestamp < TX_TTL_MS) {
           const cachedTransactions = cached.data.map((t) => ({ ...t, timestamp: new Date(t.timestamp) }));
-          
+
           setWalletData(currentData => {
             if (!currentData) return currentData;
             return {
@@ -526,7 +537,7 @@ export function useWalletData({
                     token: nativeSymbolFor(chainId),
                     valueUSD: undefined,
                     timestamp: new Date((Number(tx.timeStamp) || 0) * 1000),
-                    status: Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending',
+                    status: tx.isError === '1' ? 'failed' : (Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending'),
                     hash: tx.hash,
                     chainId,
                     from: tx.from,
@@ -534,7 +545,9 @@ export function useWalletData({
                   };
                 });
               }
-            } catch (_) { }
+            } catch (err) {
+              console.warn(`Failed to fetch native transactions for chain ${chainId}:`, err);
+            }
             return [];
           });
 
@@ -571,7 +584,9 @@ export function useWalletData({
                   };
                 });
               }
-            } catch (_) { }
+            } catch (err) {
+              console.warn(`Failed to fetch ERC20 transactions for chain ${chainId}:`, err);
+            }
             return [];
           });
 
@@ -611,7 +626,7 @@ export function useWalletData({
                     token: nativeSymbol,
                     valueUSD: undefined,
                     timestamp: new Date((Number(tx.timeStamp) || 0) * 1000),
-                    status: Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending',
+                    status: tx.isError === '1' ? 'failed' : (Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending'),
                     hash: tx.hash,
                     chainId,
                     from: tx.from,
@@ -619,7 +634,9 @@ export function useWalletData({
                   };
                 });
               }
-            } catch (_) { }
+            } catch (err) {
+              console.warn(`Failed to fetch native transactions:`, err);
+            }
             return [];
           });
 
@@ -655,7 +672,9 @@ export function useWalletData({
                   };
                 });
               }
-            } catch (_) { }
+            } catch (err) {
+              console.warn(`Failed to fetch ERC20 transactions:`, err);
+            }
             return [];
           });
 
@@ -675,7 +694,7 @@ export function useWalletData({
             return { ...t, valueUSD: usd };
           });
         }
-        
+
         // Cache normalized result (serialize timestamp)
         txCache.set(cacheKey, { data: recentTransactions.map((t) => ({ ...t, timestamp: (t.timestamp as Date).toISOString() })), timestamp: Date.now() });
 
@@ -692,10 +711,9 @@ export function useWalletData({
       }
     };
 
-    // Use setTimeout to defer transaction history fetch
-    const timer = setTimeout(fetchTransactionHistory, 1500);
-    return () => clearTimeout(timer);
-  }, [walletData, enableTransactionHistory, address, maxTransactions]);
+    // Start fetching immediately without delay - the ref prevents duplicate calls
+    fetchTransactionHistory();
+  }, [enableTransactionHistory, address, maxTransactions]);
 
   // Transform data for the wallet page
   const portfolio = walletData ? {

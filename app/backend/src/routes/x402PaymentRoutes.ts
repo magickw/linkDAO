@@ -4,13 +4,13 @@ import { safeLogger } from '../utils/safeLogger';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { db } from '../db';
-import { userGoldBalance, goldTransaction } from '../db/schema';
+import { userGemBalance, gemTransaction } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
 const router = express.Router();
 
-// Gold packages configuration (same as in goldPurchaseRoutes)
-const GOLD_PACKAGES = [
+// Gem packages configuration (same as in gemPurchaseRoutes)
+const GEM_PACKAGES = [
   { id: '100', name: 'Starter Stack', amount: 100, price: 1.79 },
   { id: '200', name: 'DeFi Degen', amount: 200, price: 3.59 },
   { id: '300', name: 'Whale Pack', amount: 300, price: 5.39 },
@@ -19,17 +19,17 @@ const GOLD_PACKAGES = [
 ];
 
 /**
- * x402 Gold Purchase endpoint
- * POST /api/x402/gold-purchase
- * Uses x402 protocol for ultra-low fee gold purchases
+ * x402 Gem Purchase endpoint
+ * POST /api/x402/gem-purchase
+ * Uses x402 protocol for ultra-low fee gem purchases
  */
-router.post('/gold-purchase', async (req, res) => {
+router.post('/gem-purchase', async (req, res) => {
   try {
     const { packageId, amount, userId } = req.body;
 
     // Validate required fields
     if (!packageId || !userId) {
-      safeLogger.warn('Missing required fields in x402 gold purchase request', {
+      safeLogger.warn('Missing required fields in x402 gem purchase request', {
         missingFields: { packageId: !packageId, userId: !userId }
       });
 
@@ -39,44 +39,44 @@ router.post('/gold-purchase', async (req, res) => {
       });
     }
 
-    // Find the gold package
-    const goldPackage = GOLD_PACKAGES.find(p => p.id === packageId);
-    if (!goldPackage) {
-      safeLogger.warn('Invalid gold package in x402 purchase', { packageId });
+    // Find the gem package
+    const gemPackage = GEM_PACKAGES.find(p => p.id === packageId);
+    if (!gemPackage) {
+      safeLogger.warn('Invalid gem package in x402 purchase', { packageId });
       return res.status(400).json({
         success: false,
-        error: 'Invalid gold package'
+        error: 'Invalid gem package'
       });
     }
 
     // Validate user address format
     const ethereumAddressRegex = /^0x[a-fA-F0-9]{40}$/;
     if (!ethereumAddressRegex.test(userId)) {
-      safeLogger.warn('Invalid user address in x402 gold purchase', { userId });
+      safeLogger.warn('Invalid user address in x402 gem purchase', { userId });
       return res.status(400).json({
         success: false,
         error: 'Invalid user address'
       });
     }
 
-    safeLogger.info('Processing x402 gold purchase', { packageId, amount: goldPackage.price, userId });
+    safeLogger.info('Processing x402 gem purchase', { packageId, amount: gemPackage.price, userId });
 
     // Generate a transaction ID for the x402 payment
-    const transactionId = `x402-gold-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    const transactionId = `x402-gem-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
     // For x402 protocol, we process the payment through the x402 service
     // In production, this would interact with the actual x402 payment infrastructure
     const paymentResult = await x402PaymentService.processPayment({
       orderId: transactionId,
-      amount: goldPackage.price.toString(),
+      amount: gemPackage.price.toString(),
       currency: 'USDC',
       buyerAddress: userId,
       sellerAddress: process.env.TREASURY_ADDRESS || '0xeF85C8CcC03320dA32371940b315D563be2585e5',
-      listingId: `gold-package-${packageId}`
+      listingId: `gem-package-${packageId}`
     });
 
     if (!paymentResult.success) {
-      safeLogger.error('x402 gold purchase payment failed', {
+      safeLogger.error('x402 gem purchase payment failed', {
         transactionId,
         error: paymentResult.error
       });
@@ -87,13 +87,13 @@ router.post('/gold-purchase', async (req, res) => {
       });
     }
 
-    // Update user's gold balance
+    // Update user's gem balance
     try {
-      let userBalance = await db.select().from(userGoldBalance)
-        .where(eq(userGoldBalance.userId, String(userId))).limit(1);
+      let userBalance = await db.select().from(userGemBalance)
+        .where(eq(userGemBalance.userId, String(userId))).limit(1);
 
       if (!userBalance.length) {
-        const newBalance = await db.insert(userGoldBalance).values({
+        const newBalance = await db.insert(userGemBalance).values({
           userId: String(userId),
           balance: 0,
           totalPurchased: 0,
@@ -101,22 +101,22 @@ router.post('/gold-purchase', async (req, res) => {
         userBalance = newBalance;
       }
 
-      // Update gold balance
-      await db.update(userGoldBalance)
+      // Update gem balance
+      await db.update(userGemBalance)
         .set({
-          balance: (userBalance[0]?.balance || 0) + goldPackage.amount,
-          totalPurchased: (userBalance[0]?.totalPurchased || 0) + goldPackage.amount,
+          balance: (userBalance[0]?.balance || 0) + gemPackage.amount,
+          totalPurchased: (userBalance[0]?.totalPurchased || 0) + gemPackage.amount,
           lastPurchaseAt: new Date(),
           updatedAt: new Date(),
         })
-        .where(eq(userGoldBalance.userId, String(userId)));
+        .where(eq(userGemBalance.userId, String(userId)));
 
       // Create transaction record
-      await db.insert(goldTransaction).values({
+      await db.insert(gemTransaction).values({
         userId: String(userId),
-        amount: goldPackage.amount,
+        amount: gemPackage.amount,
         type: 'purchase',
-        price: String(goldPackage.price),
+        price: String(gemPackage.price),
         paymentMethod: 'x402',
         paymentIntentId: transactionId,
         network: 'base',
@@ -125,20 +125,20 @@ router.post('/gold-purchase', async (req, res) => {
         createdAt: new Date(),
       });
 
-      safeLogger.info('x402 gold purchase completed successfully', {
+      safeLogger.info('x402 gem purchase completed successfully', {
         transactionId,
         userId,
-        goldAmount: goldPackage.amount
+        gemAmount: gemPackage.amount
       });
 
       res.status(200).json({
         success: true,
         transactionId: transactionId,
-        goldAmount: goldPackage.amount,
-        newBalance: (userBalance[0]?.balance || 0) + goldPackage.amount
+        gemAmount: gemPackage.amount,
+        newBalance: (userBalance[0]?.balance || 0) + gemPackage.amount
       });
     } catch (dbError) {
-      safeLogger.error('Database error during x402 gold purchase:', dbError);
+      safeLogger.error('Database error during x402 gem purchase:', dbError);
       // Payment went through but DB update failed - log for manual resolution
       res.status(500).json({
         success: false,
@@ -147,10 +147,10 @@ router.post('/gold-purchase', async (req, res) => {
       });
     }
   } catch (error) {
-    safeLogger.error('Error processing x402 gold purchase:', error);
+    safeLogger.error('Error processing x402 gem purchase:', error);
     res.status(500).json({
       success: false,
-      error: 'Internal server error during x402 gold purchase'
+      error: 'Internal server error during x402 gem purchase'
     });
   }
 });
@@ -165,7 +165,7 @@ router.post('/payment', authMiddleware, csrfProtection, async (req, res) => {
 
     // Validate required fields
     if (!orderId || !amount || !currency || !buyerAddress || !sellerAddress || !listingId) {
-      safeLogger.warn('Missing required fields in x402 payment request', { 
+      safeLogger.warn('Missing required fields in x402 payment request', {
         missingFields: {
           orderId: !orderId,
           amount: !amount,
@@ -175,7 +175,7 @@ router.post('/payment', authMiddleware, csrfProtection, async (req, res) => {
           listingId: !listingId
         }
       });
-      
+
       return res.status(400).json({
         success: false,
         error: 'Missing required fields: orderId, amount, currency, buyerAddress, sellerAddress, listingId'
@@ -223,19 +223,19 @@ router.post('/payment', authMiddleware, csrfProtection, async (req, res) => {
     });
 
     if (!paymentResult.success) {
-      safeLogger.error('X402 payment processing failed', { 
-        orderId, 
-        error: paymentResult.error 
+      safeLogger.error('X402 payment processing failed', {
+        orderId,
+        error: paymentResult.error
       });
-      
+
       return res.status(400).json({
         success: false,
         error: paymentResult.error || 'Failed to process x402 payment'
       });
     }
 
-    safeLogger.info('X402 payment processed successfully', { 
-      orderId, 
+    safeLogger.info('X402 payment processed successfully', {
+      orderId,
       transactionId: paymentResult.transactionId,
       status: paymentResult.status
     });
@@ -284,19 +284,19 @@ router.get('/payment/:transactionId', async (req, res) => {
     const paymentResult = await x402PaymentService.checkPaymentStatus(transactionId);
 
     if (!paymentResult.success) {
-      safeLogger.error('X402 payment status check failed', { 
-        transactionId, 
-        error: paymentResult.error 
+      safeLogger.error('X402 payment status check failed', {
+        transactionId,
+        error: paymentResult.error
       });
-      
+
       return res.status(400).json({
         success: false,
         error: paymentResult.error || 'Failed to check x402 payment status'
       });
     }
 
-    safeLogger.info('X402 payment status checked successfully', { 
-      transactionId, 
+    safeLogger.info('X402 payment status checked successfully', {
+      transactionId,
       status: paymentResult.status
     });
 
@@ -344,19 +344,19 @@ router.post('/payment/:transactionId/refund', authMiddleware, csrfProtection, as
     const refundResult = await x402PaymentService.refundPayment(transactionId);
 
     if (!refundResult.success) {
-      safeLogger.error('X402 refund processing failed', { 
-        transactionId, 
-        error: refundResult.error 
+      safeLogger.error('X402 refund processing failed', {
+        transactionId,
+        error: refundResult.error
       });
-      
+
       return res.status(400).json({
         success: false,
         error: refundResult.error || 'Failed to process refund'
       });
     }
 
-    safeLogger.info('X402 refund processed successfully', { 
-      transactionId, 
+    safeLogger.info('X402 refund processed successfully', {
+      transactionId,
       refundId: refundResult.transactionId,
       status: refundResult.status
     });
@@ -403,8 +403,8 @@ router.get('/status', async (req, res) => {
       available: status.available,
       hasCredentials: status.hasCredentials,
       usingMock: status.usingMock,
-      message: status.hasCredentials 
-        ? 'x402 payment service is available' 
+      message: status.hasCredentials
+        ? 'x402 payment service is available'
         : 'x402 payment requires Coinbase CDP credentials'
     });
   } catch (error) {

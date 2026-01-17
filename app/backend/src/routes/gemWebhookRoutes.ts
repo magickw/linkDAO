@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import Stripe from 'stripe';
 import { db } from '../db';
-import { userGoldBalance, goldTransaction } from '../db/schema';
+import { userGemBalance, gemTransaction } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
 const router = Router();
@@ -9,15 +9,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
 });
 
-// Gold packages configuration
-const GOLD_PACKAGES = [
-  { id: 'small', name: 'Small Gold Pack', amount: 100, price: 4.99 },
-  { id: 'medium', name: 'Medium Gold Pack', amount: 500, price: 19.99 },
-  { id: 'large', name: 'Large Gold Pack', amount: 1200, price: 39.99 },
-  { id: 'xlarge', name: 'Extra Large Gold Pack', amount: 3000, price: 99.99 },
+// Gem packages configuration (for price reference)
+const GEM_PACKAGES = [
+  { id: 'small', name: 'Small Gem Pack', amount: 100, price: 4.99 },
+  { id: 'medium', name: 'Medium Gem Pack', amount: 500, price: 19.99 },
+  { id: 'large', name: 'Large Gem Pack', amount: 1200, price: 39.99 },
+  { id: 'xlarge', name: 'Extra Large Gem Pack', amount: 3000, price: 99.99 },
 ];
 
-// Stripe webhook handler for gold purchases
+// Stripe webhook handler for gem purchases
 router.post('/stripe', async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -39,10 +39,10 @@ router.post('/stripe', async (req, res) => {
     switch (event.type) {
       case 'payment_intent.succeeded':
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        
-        // Only process gold purchases
-        if (paymentIntent.metadata?.type === 'gold_purchase') {
-          await processGoldPurchase(paymentIntent);
+
+        // Only process gem purchases
+        if (paymentIntent.metadata?.type === 'gem_purchase') {
+          await processGemPurchase(paymentIntent);
         }
         break;
 
@@ -63,20 +63,20 @@ router.post('/stripe', async (req, res) => {
   }
 });
 
-async function processGoldPurchase(paymentIntent: Stripe.PaymentIntent) {
-  const { userId, packageId, goldAmount } = paymentIntent.metadata || {};
+async function processGemPurchase(paymentIntent: Stripe.PaymentIntent) {
+  const { userId, packageId, gemAmount } = paymentIntent.metadata || {};
 
-  if (!userId || !packageId || !goldAmount) {
+  if (!userId || !packageId || !gemAmount) {
     console.error('Missing metadata in payment intent:', paymentIntent.id);
     return;
   }
 
   try {
-    // Get or create user gold balance
-    let userBalance = await db.select().from(userGoldBalance).where(eq(userGoldBalance.userId, String(userId))).limit(1);
+    // Get or create user gem balance
+    let userBalance = await db.select().from(userGemBalance).where(eq(userGemBalance.userId, String(userId))).limit(1);
 
     if (!userBalance.length) {
-      const newBalance = await db.insert(userGoldBalance).values({
+      const newBalance = await db.insert(userGemBalance).values({
         userId: String(userId),
         balance: 0,
         totalPurchased: 0,
@@ -84,23 +84,23 @@ async function processGoldPurchase(paymentIntent: Stripe.PaymentIntent) {
       userBalance = newBalance;
     }
 
-    // Update gold balance
-    const updatedBalance = await db.update(userGoldBalance)
+    // Update gem balance
+    const updatedBalance = await db.update(userGemBalance)
       .set({
-        balance: (userBalance[0]?.balance || 0) + parseInt(goldAmount),
-        totalPurchased: (userBalance[0]?.totalPurchased || 0) + parseInt(goldAmount),
+        balance: (userBalance[0]?.balance || 0) + parseInt(gemAmount),
+        totalPurchased: (userBalance[0]?.totalPurchased || 0) + parseInt(gemAmount),
         lastPurchaseAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(userGoldBalance.userId, String(userId)))
+      .where(eq(userGemBalance.userId, String(userId)))
       .returning();
 
     // Create transaction record
-    await db.insert(goldTransaction).values({
+    await db.insert(gemTransaction).values({
       userId: String(userId),
-      amount: parseInt(goldAmount),
+      amount: parseInt(gemAmount),
       type: 'purchase',
-      price: String(GOLD_PACKAGES.find(p => p.id === packageId)?.price || 0),
+      price: String(GEM_PACKAGES.find(p => p.id === packageId)?.price || 0),
       paymentMethod: 'stripe',
       paymentIntentId: paymentIntent.id,
       status: 'completed',
@@ -111,9 +111,9 @@ async function processGoldPurchase(paymentIntent: Stripe.PaymentIntent) {
       createdAt: new Date(),
     });
 
-    console.log(`Gold purchase completed for user ${userId}: +${goldAmount} gold`);
+    console.log(`Gem purchase completed for user ${userId}: +${gemAmount} gems`);
   } catch (error) {
-    console.error('Error processing gold purchase:', error);
+    console.error('Error processing gem purchase:', error);
     throw error;
   }
 }

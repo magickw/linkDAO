@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticateToken } from '../middleware/auth';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { db } from '../db';
-import { userGoldBalance, goldTransaction, users } from '../db/schema';
+import { userGemBalance, gemTransaction, users } from '../db/schema';
 import { eq, sql } from 'drizzle-orm';
 import Stripe from 'stripe';
 import { emailService } from '../services/emailService';
@@ -13,21 +13,21 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
 });
 
-interface GoldPackage {
+interface GemPackage {
   id: string;
   name: string;
   amount: number;
   price: number; // in USD
 }
 
-const GOLD_PACKAGES: GoldPackage[] = [
-  { id: 'small', name: 'Small Gold Pack', amount: 100, price: 4.99 },
-  { id: 'medium', name: 'Medium Gold Pack', amount: 500, price: 19.99 },
-  { id: 'large', name: 'Large Gold Pack', amount: 1200, price: 39.99 },
-  { id: 'xlarge', name: 'Extra Large Gold Pack', amount: 3000, price: 99.99 },
+const GEM_PACKAGES: GemPackage[] = [
+  { id: 'small', name: 'Small Gem Pack', amount: 100, price: 4.99 },
+  { id: 'medium', name: 'Medium Gem Pack', amount: 500, price: 19.99 },
+  { id: 'large', name: 'Large Gem Pack', amount: 1200, price: 39.99 },
+  { id: 'xlarge', name: 'Extra Large Gem Pack', amount: 3000, price: 99.99 },
 ];
 
-// Create payment intent for gold purchase
+// Create payment intent for gem purchase
 router.post('/payment-intent', authenticateToken, csrfProtection, async (req, res) => {
   try {
     const { packageId, paymentMethod } = req.body;
@@ -37,19 +37,19 @@ router.post('/payment-intent', authenticateToken, csrfProtection, async (req, re
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    const goldPackage = GOLD_PACKAGES.find(p => p.id === packageId);
-    if (!goldPackage) {
-      return res.status(400).json({ error: 'Invalid gold package' });
+    const gemPackage = GEM_PACKAGES.find(p => p.id === packageId);
+    if (!gemPackage) {
+      return res.status(400).json({ error: 'Invalid gem package' });
     }
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(goldPackage.price * 100), // Convert to cents
+      amount: Math.round(gemPackage.price * 100), // Convert to cents
       currency: 'usd',
       metadata: {
         userId: userAddress,
-        packageId: goldPackage.id,
-        goldAmount: goldPackage.amount.toString(),
-        type: 'gold_purchase'
+        packageId: gemPackage.id,
+        gemAmount: gemPackage.amount.toString(),
+        type: 'gem_purchase'
       },
       automatic_payment_methods: {
         enabled: true,
@@ -59,7 +59,7 @@ router.post('/payment-intent', authenticateToken, csrfProtection, async (req, re
     res.json({
       id: paymentIntent.id,
       clientSecret: paymentIntent.client_secret,
-      package: goldPackage,
+      package: gemPackage,
     });
   } catch (error) {
     console.error('Error creating payment intent:', error);
@@ -67,10 +67,10 @@ router.post('/payment-intent', authenticateToken, csrfProtection, async (req, re
   }
 });
 
-// Complete gold purchase (called by Stripe webhook or client after successful payment)
+// Complete gem purchase (called by Stripe webhook or client after successful payment)
 router.post('/complete', async (req, res) => {
   try {
-    const { paymentIntentId, userId, packageId, goldAmount, paymentMethod = 'stripe', network, transactionHash } = req.body;
+    const { paymentIntentId, userId, packageId, gemAmount, paymentMethod = 'stripe', network, transactionHash } = req.body;
 
     // Verify payment intent (with simulation bypass for dev/test)
     // If it's a simulated ID (starts with stripe-timestamp) and we are not in production, allow it
@@ -95,11 +95,11 @@ router.post('/complete', async (req, res) => {
       return res.status(400).json({ error: 'Payment not successful or could not be verified' });
     }
 
-    // Get or create user gold balance
-    let userBalance = await db.select().from(userGoldBalance).where(eq(userGoldBalance.userId, String(userId))).limit(1);
+    // Get or create user gem balance
+    let userBalance = await db.select().from(userGemBalance).where(eq(userGemBalance.userId, String(userId))).limit(1);
 
     if (!userBalance.length) {
-      const newBalance = await db.insert(userGoldBalance).values({
+      const newBalance = await db.insert(userGemBalance).values({
         userId: String(userId),
         balance: 0,
         totalPurchased: 0,
@@ -107,23 +107,23 @@ router.post('/complete', async (req, res) => {
       userBalance = newBalance;
     }
 
-    // Update gold balance
-    const updatedBalance = await db.update(userGoldBalance)
+    // Update gem balance
+    const updatedBalance = await db.update(userGemBalance)
       .set({
-        balance: (userBalance[0]?.balance || 0) + parseInt(goldAmount),
-        totalPurchased: (userBalance[0]?.totalPurchased || 0) + parseInt(goldAmount),
+        balance: (userBalance[0]?.balance || 0) + parseInt(gemAmount),
+        totalPurchased: (userBalance[0]?.totalPurchased || 0) + parseInt(gemAmount),
         lastPurchaseAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(userGoldBalance.userId, String(userId)))
+      .where(eq(userGemBalance.userId, String(userId)))
       .returning();
 
     // Create transaction record
-    await db.insert(goldTransaction).values({
+    await db.insert(gemTransaction).values({
       userId: String(userId),
-      amount: parseInt(goldAmount),
+      amount: parseInt(gemAmount),
       type: 'purchase',
-      price: String(GOLD_PACKAGES.find(p => p.id === packageId)?.price || 0),
+      price: String(GEM_PACKAGES.find(p => p.id === packageId)?.price || 0),
       paymentMethod: paymentMethod,
       paymentIntentId,
       network: network,
@@ -138,21 +138,21 @@ router.post('/complete', async (req, res) => {
 
     // Send receipt email
     if (userEmail) {
-      const goldPackage = GOLD_PACKAGES.find(p => p.id === packageId);
-      if (goldPackage) {
+      const gemPackage = GEM_PACKAGES.find(p => p.id === packageId);
+      if (gemPackage) {
         try {
           await emailService.sendPurchaseReceiptEmail(userEmail, {
-            orderId: `GOLD-${Date.now()}`,
-            goldAmount: parseInt(goldAmount),
-            totalCost: goldPackage.price,
+            orderId: `GEM-${Date.now()}`,
+            goldAmount: parseInt(gemAmount), // Keeping param name compatible if email service expects goldAmount, or update service too. Assuming service interface for now, but logged as Gem receipt.
+            totalCost: gemPackage.price,
             paymentMethod: paymentMethod === 'stripe' ? 'Credit/Debit Card' : `USDC on ${network || 'Ethereum'}`,
             network,
             transactionHash,
             timestamp: new Date()
           });
-          safeLogger.info(`Gold purchase receipt sent to ${userEmail}`);
+          safeLogger.info(`Gem purchase receipt sent to ${userEmail}`);
         } catch (emailError) {
-          safeLogger.error('Error sending gold purchase receipt email:', emailError);
+          safeLogger.error('Error sending gem purchase receipt email:', emailError);
         }
       }
     } else {
@@ -162,15 +162,15 @@ router.post('/complete', async (req, res) => {
     res.json({
       success: true,
       newBalance: updatedBalance[0]?.balance || 0,
-      goldAdded: parseInt(goldAmount),
+      gemsAdded: parseInt(gemAmount),
     });
   } catch (error) {
-    safeLogger.error('Error completing gold purchase:', error);
-    res.status(500).json({ error: 'Failed to complete gold purchase' });
+    safeLogger.error('Error completing gem purchase:', error);
+    res.status(500).json({ error: 'Failed to complete gem purchase' });
   }
 });
 
-// Get user's gold balance
+// Get user's gem balance
 router.get('/balance', authenticateToken, async (req, res) => {
   try {
     const userAddress = req.user?.walletAddress;
@@ -179,7 +179,7 @@ router.get('/balance', authenticateToken, async (req, res) => {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    const userBalance = await db.select().from(userGoldBalance).where(eq(userGoldBalance.userId, userAddress)).limit(1);
+    const userBalance = await db.select().from(userGemBalance).where(eq(userGemBalance.userId, userAddress)).limit(1);
 
     res.json({
       balance: userBalance[0]?.balance || 0,
@@ -187,17 +187,17 @@ router.get('/balance', authenticateToken, async (req, res) => {
       lastPurchaseAt: userBalance[0]?.lastPurchaseAt,
     });
   } catch (error) {
-    console.error('Error fetching gold balance:', error);
-    res.status(500).json({ error: 'Failed to fetch gold balance' });
+    console.error('Error fetching gem balance:', error);
+    res.status(500).json({ error: 'Failed to fetch gem balance' });
   }
 });
 
-// Get available gold packages
+// Get available gem packages
 router.get('/packages', (req, res) => {
-  res.json(GOLD_PACKAGES);
+  res.json(GEM_PACKAGES);
 });
 
-// Get user's gold transaction history
+// Get user's gem transaction history
 router.get('/transactions', authenticateToken, async (req, res) => {
   try {
     const userAddress = req.user?.walletAddress;
@@ -208,15 +208,15 @@ router.get('/transactions', authenticateToken, async (req, res) => {
     }
 
     const transactions = await db.select()
-      .from(goldTransaction)
-      .where(eq(goldTransaction.userId, userAddress))
-      .orderBy(goldTransaction.createdAt)
+      .from(gemTransaction)
+      .where(eq(gemTransaction.userId, userAddress))
+      .orderBy(gemTransaction.createdAt)
       .limit(Number(limit))
       .offset((Number(page) - 1) * Number(limit));
 
     const totalResult = await db.select({ count: sql<number>`count(*)` })
-      .from(goldTransaction)
-      .where(eq(goldTransaction.userId, userAddress));
+      .from(gemTransaction)
+      .where(eq(gemTransaction.userId, userAddress));
     const total = totalResult[0]?.count || 0;
 
     res.json({
@@ -229,8 +229,8 @@ router.get('/transactions', authenticateToken, async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching gold transactions:', error);
-    res.status(500).json({ error: 'Failed to fetch gold transactions' });
+    console.error('Error fetching gem transactions:', error);
+    res.status(500).json({ error: 'Failed to fetch gem transactions' });
   }
 });
 

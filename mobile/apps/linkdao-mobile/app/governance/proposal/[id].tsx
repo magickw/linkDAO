@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { governanceService, Proposal, VotingMetrics } from '../../../src/services/governanceService';
+import { governanceService, Proposal, VotingMetrics, AIProposalAnalysis } from '../../../src/services/governanceService';
 import { useAuthStore } from '../../../src/store/authStore';
 import { THEME } from '../../../src/constants/theme';
 
@@ -28,6 +28,9 @@ export default function ProposalDetailPage() {
   const [votingMetrics, setVotingMetrics] = useState<VotingMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState<AIProposalAnalysis | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
 
   // Load proposal details
   const loadProposal = useCallback(async () => {
@@ -99,6 +102,30 @@ export default function ProposalDetailPage() {
         },
       ]
     );
+  };
+
+  const handleAnalyzeProposal = async () => {
+    if (!proposal) return;
+
+    try {
+      setIsAnalyzing(true);
+      Alert.alert('Analyzing', 'AI is analyzing this proposal...');
+      
+      const analysis = await governanceService.analyzeProposal(proposal);
+      
+      if (analysis) {
+        setAiAnalysis(analysis);
+        setShowAnalysis(true);
+        Alert.alert('Analysis Complete', 'AI analysis has been generated');
+      } else {
+        Alert.alert('Error', 'Failed to analyze proposal');
+      }
+    } catch (error) {
+      console.error('Error analyzing proposal:', error);
+      Alert.alert('Error', 'Failed to analyze proposal');
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -186,7 +213,105 @@ export default function ProposalDetailPage() {
             </View>
           </View>
           <Text style={styles.proposalTitle}>{proposal.title}</Text>
+          
+          {/* AI Analysis Button */}
+          <TouchableOpacity
+            style={[styles.aiButton, isAnalyzing && styles.aiButtonDisabled]}
+            onPress={handleAnalyzeProposal}
+            disabled={isAnalyzing}
+          >
+            {isAnalyzing ? (
+              <>
+                <ActivityIndicator size="small" color={THEME.colors.primary} />
+                <Text style={styles.aiButtonText}>Analyzing...</Text>
+              </>
+            ) : (
+              <>
+                <Ionicons name="sparkles" size={20} color={THEME.colors.primary} />
+                <Text style={styles.aiButtonText}>AI Analysis</Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
+
+        {/* AI Analysis Display */}
+        {showAnalysis && aiAnalysis && (
+          <View style={styles.aiAnalysisCard}>
+            <View style={styles.aiAnalysisHeader}>
+              <Ionicons name="sparkles" size={20} color={THEME.colors.primary} />
+              <Text style={styles.aiAnalysisTitle}>AI Analysis</Text>
+              <TouchableOpacity onPress={() => setShowAnalysis(false)}>
+                <Ionicons name="close" size={20} color={THEME.colors.gray} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.aiAnalysisContent}>
+              <View style={styles.aiAnalysisSection}>
+                <Text style={styles.aiAnalysisLabel}>Recommendation</Text>
+                <View style={[
+                  styles.recommendationBadge,
+                  {
+                    backgroundColor: aiAnalysis.recommendation === 'APPROVE' ? THEME.colors.success + '20' :
+                                   aiAnalysis.recommendation === 'REJECT' ? THEME.colors.error + '20' :
+                                   THEME.colors.warning + '20'
+                  }
+                ]}>
+                  <Text style={[
+                    styles.recommendationText,
+                    {
+                      color: aiAnalysis.recommendation === 'APPROVE' ? THEME.colors.success :
+                             aiAnalysis.recommendation === 'REJECT' ? THEME.colors.error :
+                             THEME.colors.warning
+                    }
+                  ]}>
+                    {aiAnalysis.recommendation}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.aiAnalysisSection}>
+                <Text style={styles.aiAnalysisLabel}>Confidence</Text>
+                <Text style={styles.aiAnalysisValue}>{aiAnalysis.confidence}%</Text>
+              </View>
+
+              <View style={styles.aiAnalysisSection}>
+                <Text style={styles.aiAnalysisLabel}>Risk Level</Text>
+                <Text style={[
+                  styles.aiAnalysisValue,
+                  {
+                    color: aiAnalysis.riskLevel === 'low' ? THEME.colors.success :
+                           aiAnalysis.riskLevel === 'medium' ? THEME.colors.warning :
+                           THEME.colors.error
+                  }
+                ]}>
+                  {aiAnalysis.riskLevel.toUpperCase()}
+                </Text>
+              </View>
+
+              <View style={styles.aiAnalysisSection}>
+                <Text style={styles.aiAnalysisLabel}>Analysis</Text>
+                <Text style={styles.aiAnalysisText}>{aiAnalysis.analysis}</Text>
+              </View>
+
+              <View style={styles.aiAnalysisSection}>
+                <Text style={styles.aiAnalysisLabel}>Potential Impact</Text>
+                <Text style={styles.aiAnalysisText}>{aiAnalysis.potentialImpact}</Text>
+              </View>
+
+              {aiAnalysis.keyPoints.length > 0 && (
+                <View style={styles.aiAnalysisSection}>
+                  <Text style={styles.aiAnalysisLabel}>Key Points</Text>
+                  {aiAnalysis.keyPoints.map((point, index) => (
+                    <View key={index} style={styles.keyPointItem}>
+                      <Ionicons name="checkmark-circle" size={16} color={THEME.colors.primary} />
+                      <Text style={styles.keyPointText}>{point}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Voting Progress */}
         <View style={styles.card}>
@@ -430,6 +555,88 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: THEME.colors.text,
     lineHeight: 28,
+  },
+  aiButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: THEME.colors.primary + '10',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  aiButtonDisabled: {
+    opacity: 0.6,
+  },
+  aiButtonText: {
+    marginLeft: 8,
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.colors.primary,
+  },
+  aiAnalysisCard: {
+    backgroundColor: THEME.colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: THEME.colors.primary + '20',
+  },
+  aiAnalysisHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  aiAnalysisTitle: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: '600',
+    color: THEME.colors.text,
+  },
+  aiAnalysisContent: {},
+  aiAnalysisSection: {
+    marginBottom: 12,
+  },
+  aiAnalysisLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.colors.gray,
+    marginBottom: 6,
+  },
+  aiAnalysisValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: THEME.colors.text,
+  },
+  aiAnalysisText: {
+    fontSize: 14,
+    color: THEME.colors.text,
+    lineHeight: 20,
+  },
+  recommendationBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  recommendationText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  keyPointItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 6,
+  },
+  keyPointText: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    color: THEME.colors.text,
+    lineHeight: 20,
   },
   card: {
     backgroundColor: THEME.colors.white,

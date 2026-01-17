@@ -6318,8 +6318,8 @@ export const offlineActions = pgTable("offline_actions", {
   statusIdx: index("idx_offline_actions_status").on(t.status),
 }));
 
-// Gold balance tracking
-export const userGoldBalance = pgTable("user_gold_balance", {
+// Gem balance tracking
+export const userGemBalance = pgTable("user_gem_balance", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: varchar("user_id", { length: 66 }).notNull().unique(),
   balance: integer("balance").default(0).notNull(),
@@ -6329,11 +6329,11 @@ export const userGoldBalance = pgTable("user_gold_balance", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({
-  userIdx: index("idx_user_gold_balance_user").on(t.userId),
+  userIdx: index("idx_user_gem_balance_user").on(t.userId),
 }));
 
-// Gold transaction history
-export const goldTransaction = pgTable("gold_transaction", {
+// Gem transaction history
+export const gemTransaction = pgTable("gem_transaction", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: varchar("user_id", { length: 66 }).notNull(),
   amount: integer("amount").notNull(),
@@ -6350,13 +6350,13 @@ export const goldTransaction = pgTable("gold_transaction", {
   transactionHash: varchar("transaction_hash", { length: 66 }), // Blockchain transaction hash
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
-  userIdx: index("idx_gold_transaction_user").on(t.userId),
-  typeIdx: index("idx_gold_transaction_type").on(t.type),
-  statusIdx: index("idx_gold_transaction_status").on(t.status),
-  createdAtIdx: index("idx_gold_transaction_created").on(t.createdAt),
-  networkIdx: index("idx_gold_transaction_network").on(t.network),
-  transactionHashIdx: index("idx_gold_transaction_hash").on(t.transactionHash),
-  orderNetworkIdx: index("idx_gold_transaction_order_network").on(t.orderId, t.network),
+  userIdx: index("idx_gem_transaction_user").on(t.userId),
+  typeIdx: index("idx_gem_transaction_type").on(t.type),
+  statusIdx: index("idx_gem_transaction_status").on(t.status),
+  createdAtIdx: index("idx_gem_transaction_created").on(t.createdAt),
+  networkIdx: index("idx_gem_transaction_network").on(t.network),
+  transactionHashIdx: index("idx_gem_transaction_hash").on(t.transactionHash),
+  orderNetworkIdx: index("idx_gem_transaction_order_network").on(t.orderId, t.network),
 }));
 
 // Seller tier requirements table

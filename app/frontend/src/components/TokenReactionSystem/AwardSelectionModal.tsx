@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import GoldPurchaseModal from './GoldPurchaseModal';
+import GemPurchaseModal from './GemPurchaseModal';
 
 interface Award {
   id: string;
@@ -252,7 +252,7 @@ const AwardSelectionModal: React.FC<AwardSelectionModalProps> = ({
                       {remainingAwards} more awards and the leaderboard will be unlocked.
                     </p>
                     <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
-                      <div 
+                      <div
                         className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                         style={{ width: `${progress}%` }}
                       />
@@ -278,7 +278,7 @@ const AwardSelectionModal: React.FC<AwardSelectionModalProps> = ({
               {AWARDS.map((award) => {
                 const canAfford = userGoldBalance >= award.cost;
                 const isSelected = selectedAward?.id === award.id;
-                
+
                 return (
                   <button
                     key={award.id}
@@ -299,9 +299,9 @@ const AwardSelectionModal: React.FC<AwardSelectionModalProps> = ({
                       <div className="text-xs font-medium text-gray-900">
                         {award.cost}
                       </div>
-                      <div className="text-xs text-gray-500">gold</div>
+                      <div className="text-xs text-gray-500">gems</div>
                     </div>
-                    
+
                     {!canAfford && (
                       <div className="absolute top-1 right-1">
                         <svg className="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
@@ -324,11 +324,11 @@ const AwardSelectionModal: React.FC<AwardSelectionModalProps> = ({
                     <p className="text-sm text-gray-600">{selectedAward.description}</p>
                     <div className="flex items-center space-x-2 mt-1">
                       <span className="text-sm font-medium text-gray-900">
-                        {selectedAward.cost} gold
+                        {selectedAward.cost} gems
                       </span>
                       {userGoldBalance < selectedAward.cost && (
                         <span className="text-sm text-red-600">
-                          (You need {selectedAward.cost - userGoldBalance} more gold)
+                          (You need {selectedAward.cost - userGoldBalance} more gems)
                         </span>
                       )}
                     </div>
@@ -373,12 +373,12 @@ const AwardSelectionModal: React.FC<AwardSelectionModalProps> = ({
         </div>
       </div>
 
-      {/* Gold Purchase Modal */}
+      {/* Gem Purchase Modal */}
       {selectedAward && (
-        <GoldPurchaseModal
+        <GemPurchaseModal
           isOpen={showPurchaseModal}
           awardCost={selectedAward.cost}
-          currentGold={userGoldBalance}
+          currentGems={userGoldBalance}
           onPurchase={handlePurchaseComplete}
           onClose={() => {
             setShowPurchaseModal(false);
@@ -386,7 +386,7 @@ const AwardSelectionModal: React.FC<AwardSelectionModalProps> = ({
           }}
         />
       )}
-      </>
+    </>
   );
 
   try {

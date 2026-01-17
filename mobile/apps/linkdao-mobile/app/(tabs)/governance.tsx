@@ -19,6 +19,7 @@ import { router } from 'expo-router';
 import { governanceService, Proposal } from '../../src/services/governanceService';
 import { useAuthStore } from '../../src/store/authStore';
 import { THEME } from '../../src/constants/theme';
+import { EnhancedProposalCard } from '../../src/components/EnhancedProposalCard';
 
 export default function GovernanceTabScreen() {
   const { user } = useAuthStore();
@@ -122,32 +123,11 @@ export default function GovernanceTabScreen() {
           </View>
         ) : activeProposals.length > 0 ? (
           activeProposals.map((proposal) => (
-            <TouchableOpacity
+            <EnhancedProposalCard
               key={proposal.id}
-              style={styles.proposalCard}
+              proposal={proposal}
               onPress={() => router.push(`/governance/proposal/${proposal.id}`)}
-            >
-              <View style={styles.proposalHeader}>
-                <View style={styles.proposalStatus}>
-                  <View style={[styles.statusDot, { backgroundColor: THEME.colors.success }]} />
-                  <Text style={styles.statusText}>Active</Text>
-                </View>
-                <Text style={styles.proposalTime}>
-                  Ends in {Math.ceil((new Date(proposal.endTime).getTime() - Date.now()) / (1000 * 60 * 60))}h
-                </Text>
-              </View>
-              <Text style={styles.proposalTitle} numberOfLines={2}>
-                {proposal.title}
-              </Text>
-              <View style={styles.proposalVoting}>
-                <View style={styles.votingBar}>
-                  <View style={[styles.votingProgress, { width: `${(proposal.votingPower.for / (proposal.votingPower.for + proposal.votingPower.against)) * 100}%` }]} />
-                </View>
-                <Text style={styles.votingText}>
-                  {proposal.votingPower.for.toLocaleString()} FOR • {proposal.votingPower.against.toLocaleString()} AGAINST
-                </Text>
-              </View>
-            </TouchableOpacity>
+            />
           ))
         ) : (
           <View style={styles.emptyState}>

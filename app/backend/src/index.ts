@@ -524,11 +524,11 @@ import buyerProfileRoutes from './routes/buyerProfileRoutes';
 // Import data deletion routes (GDPR/Platform compliance for Facebook, LinkedIn)
 import dataDeletionRoutes from './routes/dataDeletionRoutes';
 
-// Import Gold Purchase Routes
-import goldPurchaseRoutes from './routes/goldPurchaseRoutes';
+// Import Gem Purchase Routes
+import gemPurchaseRoutes from './routes/gemPurchaseRoutes';
 
-// Mount Gold Purchase Routes
-app.use('/api/gold', goldPurchaseRoutes);
+// Mount Gem Purchase Routes
+app.use('/api/gems', gemPurchaseRoutes);
 
 // Data deletion routes (required by Facebook and LinkedIn for OAuth apps)
 app.use('/api/data-deletion', dataDeletionRoutes);
@@ -1138,9 +1138,9 @@ app.use('/api/checkout', checkoutRoutes);
 
 
 
-// Gold webhook routes
-import goldWebhookRoutes from './routes/goldWebhookRoutes';
-app.use('/api/gold/webhooks', goldWebhookRoutes);
+// Gem webhook routes
+import gemWebhookRoutes from './routes/gemWebhookRoutes';
+app.use('/api/gems/webhooks', gemWebhookRoutes);
 
 // PayPal webhook routes for chargebacks/disputes
 import { createPayPalWebhookRoutes } from './routes/paypalWebhookRoutes';

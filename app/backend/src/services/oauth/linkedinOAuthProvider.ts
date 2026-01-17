@@ -278,8 +278,55 @@ export class LinkedInOAuthProvider extends BaseOAuthProvider {
         },
       };
 
-      // Add link if present
-      if (adaptedContent.link) {
+      // Handle image uploads if media URLs are provided
+      if (adaptedContent.mediaUrls && adaptedContent.mediaUrls.length > 0) {
+        const uploadedAssets: string[] = [];
+
+        for (const mediaUrl of adaptedContent.mediaUrls) {
+          try {
+            // Register the upload with LinkedIn
+            const uploadInfo = await this.registerImageUpload(accessToken, personUrn);
+            if (!uploadInfo) {
+              safeLogger.warn('Failed to register LinkedIn image upload for:', { mediaUrl });
+              continue;
+            }
+
+            // Download the image from the source URL
+            const imageResponse = await fetch(mediaUrl);
+            if (!imageResponse.ok) {
+              safeLogger.warn('Failed to fetch image for LinkedIn upload:', { mediaUrl, status: imageResponse.status });
+              continue;
+            }
+
+            const imageBuffer = await imageResponse.arrayBuffer();
+
+            // Upload the image to LinkedIn
+            const uploadSuccess = await this.uploadImageToLinkedIn(
+              uploadInfo.uploadUrl,
+              accessToken,
+              Buffer.from(imageBuffer)
+            );
+
+            if (uploadSuccess) {
+              uploadedAssets.push(uploadInfo.asset);
+              safeLogger.info('Successfully uploaded image to LinkedIn:', { asset: uploadInfo.asset });
+            }
+          } catch (uploadError) {
+            safeLogger.error('Error uploading image to LinkedIn:', { mediaUrl, error: uploadError });
+          }
+        }
+
+        // If we have uploaded assets, update the payload to include images
+        if (uploadedAssets.length > 0) {
+          postPayload.specificContent['com.linkedin.ugc.ShareContent'].shareMediaCategory = 'IMAGE';
+          postPayload.specificContent['com.linkedin.ugc.ShareContent'].media = uploadedAssets.map(asset => ({
+            status: 'READY',
+            media: asset,
+          }));
+        }
+      }
+      // Add link if present (only if no images, as LinkedIn prefers one or the other)
+      else if (adaptedContent.link) {
         postPayload.specificContent['com.linkedin.ugc.ShareContent'].shareMediaCategory = 'ARTICLE';
         postPayload.specificContent['com.linkedin.ugc.ShareContent'].media = [
           {
@@ -288,12 +335,6 @@ export class LinkedInOAuthProvider extends BaseOAuthProvider {
           },
         ];
       }
-
-      // Note: Image uploads require additional steps:
-      // 1. Register upload with LinkedIn
-      // 2. Upload image to the provided URL
-      // 3. Use the asset URN in the post
-      // This implementation handles text/link posts
 
       const response = await fetch(LINKEDIN_SHARE_URL, {
         method: 'POST',
@@ -348,6 +389,32 @@ export class LinkedInOAuthProvider extends BaseOAuthProvider {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error posting to LinkedIn',
       };
+    }
+  }
+
+  /**
+   * Upload an image to LinkedIn's upload URL
+   */
+  private async uploadImageToLinkedIn(uploadUrl: string, accessToken: string, imageBuffer: Buffer): Promise<boolean> {
+    try {
+      const response = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/octet-stream',
+        },
+        body: imageBuffer,
+      });
+
+      if (!response.ok) {
+        safeLogger.error('LinkedIn image upload failed:', { status: response.status });
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      safeLogger.error('LinkedIn image upload error:', error);
+      return false;
     }
   }
 

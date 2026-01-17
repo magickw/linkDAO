@@ -1,6 +1,6 @@
 /**
  * Enhanced Award Purchase Modal Component
- * Modal for purchasing gold/awards with integrated checkout system supporting USDC and fiat payments
+ * Modal for purchasing gems/awards with integrated checkout system supporting USDC and fiat payments
  * Refactored to use viem/wagmi for consistency with checkout flow
  */
 
@@ -112,7 +112,7 @@ interface PrioritizedPaymentMethod {
   isRecommended?: boolean;
 }
 
-interface GoldPackage {
+interface GemPackage {
   id: string;
   amount: number;
   price: number;
@@ -123,16 +123,16 @@ interface GoldPackage {
 interface AwardPurchaseModalProps {
   isOpen: boolean;
   awardCost: number;
-  currentGold: number;
+  currentGems: number;
   onPurchase: (packageId: string) => Promise<void>;
   onClose: () => void;
   isLoading?: boolean;
 }
 
-const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
+const GemPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
   isOpen,
   awardCost,
-  currentGold,
+  currentGems,
   onPurchase,
   onClose,
   isLoading = false
@@ -163,8 +163,8 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
   const [isEstimatingGas, setIsEstimatingGas] = useState(false);
   const [usdcBalance, setUsdcBalance] = useState<string>('0');
 
-  // Gold packages
-  const goldPackages: GoldPackage[] = [
+  // Gem packages
+  const gemPackages: GemPackage[] = [
     { id: '100', amount: 100, price: 1.79 },
     { id: '200', amount: 200, price: 3.59, popular: true },
     { id: '300', amount: 300, price: 5.39, bonus: 50 },
@@ -172,9 +172,9 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
     { id: '1000', amount: 1000, price: 16.99, bonus: 250 }
   ];
 
-  const selectedPackageData = goldPackages.find(pkg => pkg.id === selectedPackage);
-  const goldNeeded = Math.max(0, awardCost - currentGold);
-  const remainingGold = currentGold + (selectedPackageData?.amount || 0) - awardCost;
+  const selectedPackageData = gemPackages.find(pkg => pkg.id === selectedPackage);
+  const gemsNeeded = Math.max(0, awardCost - currentGems);
+  const remainingGems = currentGems + (selectedPackageData?.amount || 0) - awardCost;
 
   // Package themes
   const packageThemes: Record<string, { name: string; icon: string; description: string }> = {
@@ -360,13 +360,13 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       // Auto-select package that covers the award cost
-      const suitablePackage = goldPackages.find(pkg => pkg.amount >= goldNeeded);
+      const suitablePackage = gemPackages.find(pkg => pkg.amount >= gemsNeeded);
       if (suitablePackage) {
         setSelectedPackage(suitablePackage.id);
       }
       loadPaymentMethods();
     }
-  }, [isOpen, goldNeeded]);
+  }, [isOpen, gemsNeeded]);
 
   useEffect(() => {
     loadPaymentMethods();
@@ -399,7 +399,7 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io';
 
-    const response = await fetchWithAuth(`${apiUrl}/api/x402-payments/gold-purchase`, {
+    const response = await fetchWithAuth(`${apiUrl}/api/x402-payments/gem-purchase`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -476,8 +476,8 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
     return hash;
   };
 
-  // Complete gold purchase on backend
-  const completeGoldPurchase = async (
+  // Complete gem purchase on backend
+  const completeGemPurchase = async (
     paymentId: string,
     packageId: string,
     paymentMethod: string,
@@ -500,7 +500,7 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
       }
     }
 
-    const response = await fetch(`${apiUrl}/api/gold/complete`, {
+    const response = await fetch(`${apiUrl}/api/gems/complete`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -510,7 +510,7 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
         paymentIntentId: paymentId,
         userId: address,
         packageId,
-        goldAmount: selectedPackageData?.amount || 0,
+        gemAmount: selectedPackageData?.amount || 0,
         paymentMethod,
         network,
         transactionHash
@@ -518,7 +518,7 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
     });
 
     if (!response.ok) {
-      throw new Error('Failed to complete gold purchase on backend');
+      throw new Error('Failed to complete gem purchase on backend');
     }
 
     const result = await response.json();
@@ -552,7 +552,7 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
           }
         }
 
-        const response = await fetch(`${apiUrl}/api/gold/payment-intent`, {
+        const response = await fetch(`${apiUrl}/api/gems/payment-intent`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -593,7 +593,7 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
         addToast('Processing x402 payment...', 'info');
         const transactionId = await processX402Payment();
 
-        await completeGoldPurchase(
+        await completeGemPurchase(
           `x402-${transactionId}`,
           selectedPackage,
           'x402',
@@ -601,7 +601,7 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
           transactionId
         );
 
-        addToast('Gold purchase successful!', 'success');
+        addToast('Gem purchase successful!', 'success');
         await onPurchase(selectedPackage);
         onClose();
 
@@ -616,7 +616,7 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
         const transactionHash = await processUSDCPayment();
         const network = selectedNetworkId.replace('usdc-', '');
 
-        await completeGoldPurchase(
+        await completeGemPurchase(
           `crypto-${transactionHash}`,
           selectedPackage,
           'usdc',
@@ -624,7 +624,7 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
           transactionHash
         );
 
-        addToast('Gold purchase successful!', 'success');
+        addToast('Gem purchase successful!', 'success');
         await onPurchase(selectedPackage);
         onClose();
       }
@@ -650,8 +650,8 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
   // Stripe handlers
   const handleStripeSuccess = async (paymentIntentId: string) => {
     try {
-      await completeGoldPurchase(paymentIntentId, selectedPackage, 'stripe');
-      addToast('Gold purchase successful!', 'success');
+      await completeGemPurchase(paymentIntentId, selectedPackage, 'stripe');
+      addToast('Gem purchase successful!', 'success');
       await onPurchase(selectedPackage);
       setShowStripeForm(false);
       setStripeClientSecret(null);
@@ -691,12 +691,12 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
             <h2 className="text-xl font-semibold text-gray-900">
-              {showStripeForm ? 'Complete Your Payment' : 'Buy gold to give this award'}
+              {showStripeForm ? 'Complete Your Payment' : 'Buy gems to give this award'}
             </h2>
             <p className="text-sm text-gray-600 mt-1">
               {showStripeForm
-                ? `You're purchasing ${selectedPackageData?.amount || 0} gold for $${selectedPackageData?.price || 0}`
-                : `Gold is used to give awards. You need at least ${goldNeeded} more gold for this award`}
+                ? `You're purchasing ${selectedPackageData?.amount || 0} gems for $${selectedPackageData?.price || 0}`
+                : `Gems are used to give awards. You need at least ${gemsNeeded} more gems for this award`}
             </p>
           </div>
           <button
@@ -722,7 +722,7 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
                 onCancel={handleStripeCancel}
                 metadata={{
                   packageId: selectedPackage,
-                  goldAmount: String(selectedPackageData?.amount || 0),
+                  gemAmount: String(selectedPackageData?.amount || 0),
                   userId: address || 'anonymous'
                 }}
               />
@@ -733,22 +733,22 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
         {/* Regular Purchase Flow */}
         {!showStripeForm && (
           <>
-            {/* Gold Usage Info */}
+            {/* Gem Usage Info */}
             <div className="p-6 bg-blue-50 border-b border-gray-200">
               <div className="flex items-center space-x-2 mb-2">
                 <Info className="w-5 h-5 text-blue-600" />
-                <span className="text-sm font-medium text-blue-900">How gold will be used</span>
+                <span className="text-sm font-medium text-blue-900">How gems will be used</span>
               </div>
               <p className="text-sm text-blue-800">
-                {awardCost} gold will automatically be used to give this award. {remainingGold} gold will go to your balance to use on future awards.
+                {awardCost} gems will automatically be used to give this award. {remainingGems} gems will go to your balance to use on future awards.
               </p>
             </div>
 
-            {/* Gold Packages */}
+            {/* Gem Packages */}
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Choose Gold Package</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Choose Gem Package</h3>
               <div className="grid grid-cols-3 md:grid-cols-5 gap-4 mb-6">
-                {goldPackages.map((pkg) => {
+                {gemPackages.map((pkg) => {
                   const theme = packageThemes[pkg.id];
                   return (
                     <button
@@ -757,14 +757,14 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
                       className={`
                         relative p-4 rounded-lg border-2 transition-all
                         ${selectedPackage === pkg.id
-                          ? 'border-yellow-500 bg-yellow-50'
+                          ? 'border-indigo-500 bg-indigo-50'
                           : 'border-gray-200 hover:border-gray-300'
                         }
                       `}
                     >
                       {pkg.popular && (
                         <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
-                          <span className="bg-yellow-500 text-white text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                          <span className="bg-indigo-500 text-white text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap">
                             Most Popular
                           </span>
                         </div>
@@ -773,7 +773,7 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
                         <div className="text-2xl mb-1">{theme.icon}</div>
                         <div className="text-xs font-medium text-gray-900 mb-1">{theme.name}</div>
                         <div className="text-lg font-bold text-gray-900">{pkg.amount}</div>
-                        <div className="text-sm text-gray-600">gold</div>
+                        <div className="text-sm text-gray-600">gems</div>
                         <div className="text-lg font-bold text-gray-900 mt-2">${pkg.price}</div>
                         {pkg.bonus && (
                           <div className="text-xs text-green-600 mt-1">+{pkg.bonus} bonus</div>
@@ -824,13 +824,12 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
-                            <div className={`p-2 rounded-lg ${
-                              method.method.type === PaymentMethodType.X402_PROTOCOL
-                                ? 'bg-purple-100'
-                                : method.method.type === PaymentMethodType.STABLECOIN_USDC
-                                  ? 'bg-green-100'
-                                  : 'bg-blue-100'
-                            }`}>
+                            <div className={`p-2 rounded-lg ${method.method.type === PaymentMethodType.X402_PROTOCOL
+                              ? 'bg-purple-100'
+                              : method.method.type === PaymentMethodType.STABLECOIN_USDC
+                                ? 'bg-green-100'
+                                : 'bg-blue-100'
+                              }`}>
                               {method.method.type === PaymentMethodType.X402_PROTOCOL ? (
                                 <Zap className="w-5 h-5 text-purple-600" />
                               ) : method.method.type === PaymentMethodType.STABLECOIN_USDC ? (
@@ -982,4 +981,4 @@ const GoldPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
   }
 };
 
-export default GoldPurchaseModal;
+export default GemPurchaseModal;
