@@ -13,7 +13,7 @@ async function runMigration() {
     }
 
     try {
-        const migrationPath = path.join(process.cwd(), 'app/backend/drizzle/0106_ensure_chat_columns.sql');
+        const migrationPath = path.join(process.cwd(), 'drizzle/0106_ensure_chat_columns.sql');
         const migrationSql = fs.readFileSync(migrationPath, 'utf8');
 
         console.log('Executing SQL...');
