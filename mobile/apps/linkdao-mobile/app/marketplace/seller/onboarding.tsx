@@ -22,7 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuthStore } from '../../src/store/authStore';
+import { useAuthStore } from '../../../src/store/authStore';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 const ONBOARDING_STORAGE_KEY = 'seller_onboarding_data';
@@ -446,16 +446,16 @@ export default function SellerOnboardingScreen() {
         Connect your Web3 wallet to start your seller journey on LinkDAO Marketplace.
       </Text>
 
-      {isConnected ? (
+      {isAuthenticated ? (
         <View style={styles.connectedContainer}>
           <Ionicons name="checkmark-circle" size={24} color="#22c55e" />
           <Text style={styles.connectedText}>Wallet Connected</Text>
           <Text style={styles.addressText}>
-            {address?.slice(0, 6)}...{address?.slice(-4)}
+            {user?.walletAddress?.slice(0, 6)}...{user?.walletAddress?.slice(-4)}
           </Text>
         </View>
       ) : (
-        <TouchableOpacity style={styles.primaryButton} onPress={connect}>
+        <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/auth')}>
           <Text style={styles.primaryButtonText}>Connect Wallet</Text>
         </TouchableOpacity>
       )}
@@ -903,7 +903,7 @@ export default function SellerOnboardingScreen() {
               style={styles.input}
               placeholder="0x..."
               placeholderTextColor="#9ca3af"
-              value={formData.payout.cryptoAddress || address || ''}
+              value={formData.payout.cryptoAddress || user?.walletAddress || ''}
               onChangeText={(value) => updatePayoutData('cryptoAddress', value)}
               autoCapitalize="none"
             />

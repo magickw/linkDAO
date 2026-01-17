@@ -1309,6 +1309,75 @@ export class FeedService {
     }
   }
 
+  /**
+   * Record a tip in the database only (no blockchain transaction).
+   * Use this when the blockchain transaction has already been sent by the component.
+   * This prevents double-tipping when parent components' onTip handlers are called.
+   */
+  static async recordTip(
+    postId: string,
+    amount: number,
+    tokenType: string,
+    txHash: string,
+    message?: string
+  ): Promise<any> {
+    try {
+      let authHeaders = await enhancedAuthService.getAuthHeaders();
+
+      // If token is missing, attempt to refresh
+      if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
+        try {
+          const refreshResult = await enhancedAuthService.refreshToken();
+          if (refreshResult.success) {
+            authHeaders = await enhancedAuthService.getAuthHeaders();
+          }
+        } catch (e) {
+          console.warn('Token refresh failed in recordTip:', e);
+        }
+      }
+
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/tip`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders
+        },
+        body: JSON.stringify({
+          amount,
+          tokenType,
+          message,
+          txHash
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.warn('Failed to record tip in database:', errorData);
+        // Don't throw - the blockchain transaction already succeeded
+        return { success: false, error: errorData };
+      }
+
+      const tip = await response.json();
+
+      // Track success event
+      feedAnalytics.trackEvent({
+        eventType: 'tip_record',
+        postId,
+        timestamp: new Date(),
+        metadata: { amount, tokenType, hasMessage: !!message, txHash }
+      });
+
+      // Invalidate feed cache to ensure updated tip counts appear
+      cacheUtils.invalidate(/^feed_/);
+
+      return { success: true, ...tip, txHash };
+    } catch (error: any) {
+      console.warn('Error recording tip:', error);
+      // Don't throw - the blockchain transaction already succeeded
+      return { success: false, error: error.message };
+    }
+  }
+
   // Share post
   static async sharePost(postId: string, platform: string, message?: string): Promise<any> {
     try {

@@ -24,10 +24,19 @@ interface FormData {
   brand: string;
   images: string[];
   tags: string;
+  // New fields matching web app
+  seoTitle: string;
+  seoDescription: string;
+  listingType: 'FIXED_PRICE' | 'AUCTION';
+  duration: number;
+  royalty: number;
+  unlimitedInventory: boolean;
+  escrowEnabled: boolean;
 }
 
 export default function CreateListingScreen() {
   const [step, setStep] = useState(1);
+const TOTAL_STEPS = 4;
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     title: '',
@@ -41,6 +50,13 @@ export default function CreateListingScreen() {
     brand: '',
     images: [],
     tags: '',
+    seoTitle: '',
+    seoDescription: '',
+    listingType: 'FIXED_PRICE',
+    duration: 7,
+    royalty: 0,
+    unlimitedInventory: false,
+    escrowEnabled: true,
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
@@ -49,7 +65,7 @@ export default function CreateListingScreen() {
     if (!validateStep(step)) {
       return;
     }
-    if (step < 3) {
+    if (step < TOTAL_STEPS) {
       setStep(step + 1);
     } else {
       handleSubmit();
@@ -99,11 +115,17 @@ export default function CreateListingScreen() {
         priceAmount: parseFloat(formData.priceAmount),
         priceCurrency: formData.priceCurrency,
         categoryId: formData.categoryId,
-        inventory: parseInt(formData.inventory),
+        inventory: formData.unlimitedInventory ? -1 : parseInt(formData.inventory),
         itemType: formData.itemType,
+        listingType: formData.listingType,
+        duration: formData.duration,
+        royalty: formData.royalty,
+        escrowEnabled: formData.escrowEnabled,
         metadata: {
           condition: formData.condition,
           brand: formData.brand,
+          seoTitle: formData.seoTitle,
+          seoDescription: formData.seoDescription,
         },
         tags: formData.tags.split(',').map(t => t.trim()).filter(t => t),
         images: formData.images,
@@ -366,6 +388,87 @@ export default function CreateListingScreen() {
         />
         <Text style={styles.hintText}>Separate tags with commas</Text>
       </View>
+    </View>
+  );
+
+  const renderStep4 = () => (
+    <View style={styles.stepContent}>
+      <Text style={styles.stepTitle}>Advanced Settings</Text>
+      <Text style={styles.stepDescription}>Configure additional options</Text>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Listing Type</Text>
+        <View style={styles.itemTypeContainer}>
+          {(['FIXED_PRICE', 'AUCTION'] as const).map((type) => (
+            <TouchableOpacity
+              key={type}
+              style={[styles.itemTypeButton, formData.listingType === type && styles.itemTypeButtonActive]}
+              onPress={() => setFormData({ ...formData, listingType: type })}
+            >
+              <Text style={[styles.itemTypeText, formData.listingType === type && styles.itemTypeTextActive]}>
+                {type.replace('_', ' ')}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {formData.listingType === 'AUCTION' && (
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Auction Duration (days)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="7"
+            placeholderTextColor="#9ca3af"
+            value={formData.duration.toString()}
+            onChangeText={(value) => setFormData({ ...formData, duration: parseInt(value) || 7 })}
+            keyboardType="numeric"
+          />
+        </View>
+      )}
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Royalty (%)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="0"
+          placeholderTextColor="#9ca3af"
+          value={formData.royalty.toString()}
+          onChangeText={(value) => setFormData({ ...formData, royalty: Math.min(10, Math.max(0, parseFloat(value) || 0)) })}
+          keyboardType="numeric"
+        />
+        <Text style={styles.hintText}>Maximum 10% for creator royalties</Text>
+      </View>
+
+      <View style={styles.inputContainer}>
+        <View style={styles.switchContainer}>
+          <View style={styles.switchInfo}>
+            <Text style={styles.label}>Unlimited Inventory</Text>
+            <Text style={styles.hintText}>For digital products or unlimited stock</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.switch, formData.unlimitedInventory && styles.switchActive]}
+            onPress={() => setFormData({ ...formData, unlimitedInventory: !formData.unlimitedInventory })}
+          >
+            <View style={[styles.switchKnob, formData.unlimitedInventory && styles.switchKnobActive]} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.inputContainer}>
+        <View style={styles.switchContainer}>
+          <View style={styles.switchInfo}>
+            <Text style={styles.label}>Enable Escrow</Text>
+            <Text style={styles.hintText}>Protect buyer and seller with smart contract</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.switch, formData.escrowEnabled && styles.switchActive]}
+            onPress={() => setFormData({ ...formData, escrowEnabled: !formData.escrowEnabled })}
+          >
+            <View style={[styles.switchKnob, formData.escrowEnabled && styles.switchKnobActive]} />
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <View style={styles.reviewContainer}>
         <Text style={styles.reviewTitle}>Review Your Listing</Text>
@@ -375,11 +478,25 @@ export default function CreateListingScreen() {
         </View>
         <View style={styles.reviewItem}>
           <Text style={styles.reviewLabel}>Price:</Text>
-          <Text style={styles.reviewValue}>${formData.priceAmount}</Text>
+          <Text style={styles.reviewValue}>{formData.priceCurrency} {formData.priceAmount}</Text>
         </View>
         <View style={styles.reviewItem}>
           <Text style={styles.reviewLabel}>Type:</Text>
           <Text style={styles.reviewValue}>{formData.itemType}</Text>
+        </View>
+        <View style={styles.reviewItem}>
+          <Text style={styles.reviewLabel}>Listing Type:</Text>
+          <Text style={styles.reviewValue}>{formData.listingType}</Text>
+        </View>
+        {formData.listingType === 'AUCTION' && (
+          <View style={styles.reviewItem}>
+            <Text style={styles.reviewLabel}>Duration:</Text>
+            <Text style={styles.reviewValue}>{formData.duration} days</Text>
+          </View>
+        )}
+        <View style={styles.reviewItem}>
+          <Text style={styles.reviewLabel}>Inventory:</Text>
+          <Text style={styles.reviewValue}>{formData.unlimitedInventory ? 'Unlimited' : formData.inventory}</Text>
         </View>
         <View style={styles.reviewItem}>
           <Text style={styles.reviewLabel}>Images:</Text>
@@ -402,15 +519,16 @@ export default function CreateListingScreen() {
       {/* Progress Bar */}
       <View style={styles.progressContainer}>
         <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${(step / 3) * 100}%` }]} />
+          <View style={[styles.progressFill, { width: `${(step / TOTAL_STEPS) * 100}%` }]} />
         </View>
-        <Text style={styles.stepIndicator}>Step {step} of 3</Text>
+        <Text style={styles.stepIndicator}>Step {step} of {TOTAL_STEPS}</Text>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {step === 1 && renderStep1()}
         {step === 2 && renderStep2()}
         {step === 3 && renderStep3()}
+        {step === 4 && renderStep4()}
       </ScrollView>
 
       <View style={styles.footer}>
@@ -429,7 +547,7 @@ export default function CreateListingScreen() {
           {loading ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
-            <Text style={styles.buttonText}>{step === 3 ? 'Create Listing' : 'Next'}</Text>
+            <Text style={styles.buttonText}>{step === TOTAL_STEPS ? 'Create Listing' : 'Next'}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -687,6 +805,34 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: '#1f2937',
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  switchInfo: {
+    flex: 1,
+  },
+  switch: {
+    width: 51,
+    height: 31,
+    borderRadius: 15.5,
+    backgroundColor: '#d1d5db',
+    padding: 2,
+  },
+  switchActive: {
+    backgroundColor: '#3b82f6',
+  },
+  switchKnob: {
+    width: 27,
+    height: 27,
+    borderRadius: 13.5,
+    backgroundColor: '#ffffff',
+  },
+  switchKnobActive: {
+    transform: [{ translateX: 20 }],
   },
   footer: {
     flexDirection: 'row',

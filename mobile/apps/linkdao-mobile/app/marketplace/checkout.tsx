@@ -10,16 +10,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { cartStore } from '../../src/store';
 import { useAuthStore } from '../../src/store';
+import { checkoutService } from '../../src/services/checkoutService';
 
 export default function CheckoutScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
-  
+
   const items = cartStore((state) => state.items);
   const clearCart = cartStore((state) => state.clearCart);
+  const syncWithBackend = cartStore((state) => state.syncWithBackend);
   const getTotalPrice = cartStore((state) => state.getTotalPrice);
 
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'wallet' | 'card'>('wallet');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'crypto' | 'fiat'>('crypto');
   const [processing, setProcessing] = useState(false);
   const [shippingAddress, setShippingAddress] = useState({
     fullName: user?.displayName || '',
@@ -37,8 +39,8 @@ export default function CheckoutScreen() {
 
   const handlePlaceOrder = async () => {
     // Validate shipping address
-    if (!shippingAddress.fullName || !shippingAddress.address || 
-        !shippingAddress.city || !shippingAddress.state || !shippingAddress.zipCode) {
+    if (!shippingAddress.fullName || !shippingAddress.address ||
+      !shippingAddress.city || !shippingAddress.state || !shippingAddress.zipCode) {
       Alert.alert('Incomplete Address', 'Please fill in all shipping address fields.');
       return;
     }
@@ -46,8 +48,33 @@ export default function CheckoutScreen() {
     setProcessing(true);
 
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // 1. Sync cart with backend
+      const synced = await syncWithBackend();
+      if (!synced) {
+        throw new Error('Failed to sync cart with server');
+      }
+
+      // 2. Create checkout session
+      const checkoutSession = await checkoutService.createSession({
+        items: items.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity
+        })),
+        shippingAddress
+      });
+
+      // 3. Process checkout
+      const result = await checkoutService.processCheckout({
+        sessionId: checkoutSession.sessionId,
+        paymentMethod: selectedPaymentMethod,
+        paymentDetails: {
+          walletAddress: user?.address, // Assuming user.address exists on AuthUser
+          // Add token details if needed for crypto
+        },
+        shippingAddress
+      });
 
       // Clear cart
       clearCart();
@@ -67,8 +94,11 @@ export default function CheckoutScreen() {
           },
         ]
       );
-    } catch (error) {
-      Alert.alert('Payment Failed', 'There was an error processing your payment. Please try again.');
+    } catch (error: any) {
+      Alert.alert(
+        'Payment Failed',
+        error.message || 'There was an error processing your payment. Please try again.'
+      );
     } finally {
       setProcessing(false);
     }
@@ -76,13 +106,13 @@ export default function CheckoutScreen() {
 
   const paymentMethods = [
     {
-      id: 'wallet',
+      id: 'crypto',
       name: 'Crypto Wallet',
       icon: 'wallet-outline',
       description: 'Pay with your connected wallet',
     },
     {
-      id: 'card',
+      id: 'fiat',
       name: 'Credit Card',
       icon: 'card-outline',
       description: 'Pay with credit or debit card',
@@ -104,7 +134,7 @@ export default function CheckoutScreen() {
         {/* Shipping Address */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Shipping Address</Text>
-          
+
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Full Name</Text>
             <TextInput
@@ -172,7 +202,7 @@ export default function CheckoutScreen() {
         {/* Payment Method */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Payment Method</Text>
-          
+
           {paymentMethods.map((method) => (
             <TouchableOpacity
               key={method.id}
@@ -212,7 +242,7 @@ export default function CheckoutScreen() {
           ))}
 
           {/* Crypto Wallet Info */}
-          {selectedPaymentMethod === 'wallet' && (
+          {selectedPaymentMethod === 'crypto' && (
             <View style={styles.walletInfo}>
               <Ionicons name="information-circle" size={16} color="#3b82f6" />
               <Text style={styles.walletInfoText}>
@@ -225,7 +255,7 @@ export default function CheckoutScreen() {
         {/* Order Summary */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Order Summary</Text>
-          
+
           {items.map((item) => (
             <View key={item.id} style={styles.orderItem}>
               <View style={[styles.orderItemImage, { backgroundColor: item.image }]} />

@@ -5,6 +5,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { cartService } from '../services/cartService';
 
 export interface CartItem {
   id: string;
@@ -23,6 +24,7 @@ interface CartState {
   clearCart: () => void;
   getTotalPrice: () => number;
   getTotalItems: () => number;
+  syncWithBackend: () => Promise<boolean>;
 }
 
 export const cartStore = create<CartState>()(
@@ -33,7 +35,7 @@ export const cartStore = create<CartState>()(
       addItem: (item) => {
         set((state) => {
           const existingItem = state.items.find((i) => i.id === item.id);
-          
+
           if (existingItem) {
             // Update quantity if item already exists
             return {
@@ -84,6 +86,18 @@ export const cartStore = create<CartState>()(
 
       getTotalItems: () => {
         return get().items.reduce((total, item) => total + item.quantity, 0);
+      },
+
+      syncWithBackend: async () => {
+        const items = get().items;
+        if (items.length === 0) return true;
+
+        const syncItems = items.map(item => ({
+          productId: item.id,
+          quantity: item.quantity
+        }));
+
+        return await cartService.syncCart(syncItems);
       },
     }),
     {

@@ -3,6 +3,7 @@ import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
 import { communityWeb3Service } from '@/services/communityWeb3Service';
 import { getEnabledNetworks, NETWORKS } from '@/config/web3Config';
+import { FeedService } from '@/services/feedService';
 
 interface CommunityTipButtonProps {
   postId: string;
@@ -15,9 +16,7 @@ interface CommunityTipButtonProps {
 const SUPPORTED_TOKENS = [
   { symbol: 'LDAO', name: 'LinkDAO Token', decimals: 18 },
   { symbol: 'USDC', name: 'USD Coin', decimals: 6 },
-  { symbol: 'USDT', name: 'Tether USD', decimals: 6 },
-  { symbol: 'ETH', name: 'Ether', decimals: 18 },
-  { symbol: 'MATIC', name: 'Matic', decimals: 18 }
+  { symbol: 'USDT', name: 'Tether USD', decimals: 6 }
 ];
 
 const QUICK_AMOUNTS = ['1', '5', '10', '25', '50'];
@@ -90,25 +89,32 @@ export default function CommunityTipButton({
         targetChainId: selectedNetwork.chainId
       });
 
-      // Only show success message here if there's no parent handler
-      if (!onTip) {
-        addToast(
-          <div className="flex flex-col gap-1">
-            <span>Successfully tipped {tipAmount} {selectedToken.symbol}!</span>
-            <a
-              href={`${selectedNetwork.blockExplorer}/tx/${txHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs underline"
-            >
-              View on {selectedNetwork.shortName} scan
-            </a>
-          </div> as any,
-          'success'
-        );
-      }
+      // Record the tip in the database (blockchain tx already sent)
+      await FeedService.recordTip(
+        postId,
+        parseFloat(tipAmount),
+        selectedToken.symbol,
+        txHash,
+        message.trim() || undefined
+      );
 
-      // Call parent handler if provided
+      // Show success message
+      addToast(
+        <div className="flex flex-col gap-1">
+          <span>Successfully tipped {tipAmount} {selectedToken.symbol}!</span>
+          <a
+            href={`${selectedNetwork.blockExplorer}/tx/${txHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs underline"
+          >
+            View on {selectedNetwork.shortName} scan
+          </a>
+        </div> as any,
+        'success'
+      );
+
+      // Call parent handler for UI updates only (parent should NOT send another blockchain tx)
       if (onTip) {
         onTip(postId, tipAmount, selectedToken.symbol);
       }

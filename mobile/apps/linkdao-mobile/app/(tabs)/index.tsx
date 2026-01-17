@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, TextInput as RNTextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -37,6 +37,9 @@ export default function FeedScreen() {
   const [sortBy, setSortBy] = useState<'recent' | 'likes'>('recent');
   const [hasNewPosts, setHasNewPosts] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const flatListRef = useRef<FlatList>(null);
 
   // WebSocket for real-time updates
   const webSocket = useWebSocket();
@@ -72,13 +75,13 @@ export default function FeedScreen() {
     }
   };
 
-  // Load posts on mount and when sort changes
+  // Load posts on mount and when sort or search changes
   useEffect(() => {
-    loadPosts(1, sortBy);
-  }, [sortBy]);
+    loadPosts(1, sortBy, false, searchQuery);
+  }, [sortBy, searchQuery]);
 
   // Load statuses from API with retry logic
-  const loadPosts = async (page: number = 1, sort = sortBy, isRetry = false) => {
+  const loadPosts = async (page: number = 1, sort = sortBy, isRetry = false, query = searchQuery) => {
     try {
       setLoading(true);
 
@@ -86,7 +89,18 @@ export default function FeedScreen() {
 
       if (response.posts) {
         // Filter to show ONLY statuses
-        const statusOnly = response.posts.filter(post => post.isStatus === true);
+        let statusOnly = response.posts.filter(post => post.isStatus === true);
+
+        // Filter by search query if provided
+        if (query) {
+          const lowerQuery = query.toLowerCase();
+          statusOnly = statusOnly.filter(post =>
+            post.content?.toLowerCase().includes(lowerQuery) ||
+            post.authorName?.toLowerCase().includes(lowerQuery) ||
+            post.authorHandle?.toLowerCase().includes(lowerQuery)
+          );
+        }
+
         setPosts(statusOnly);
         setRetryCount(0); // Reset retry count on success
       } else {
@@ -102,7 +116,7 @@ export default function FeedScreen() {
 
         setTimeout(() => {
           setRetryCount(prev => prev + 1);
-          loadPosts(page, sort, true);
+          loadPosts(page, sort, true, query);
         }, delay);
       } else {
         setError('Failed to load statuses. Please try again.');
@@ -285,6 +299,17 @@ export default function FeedScreen() {
     }
   };
 
+  // Handle scroll to show/hide back to top button
+  const handleScroll = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    setShowBackToTop(offsetY > 400);
+  };
+
+  // Scroll to top
+  const scrollToTop = () => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  };
+
   // Render footer for FlatList
   const renderFooter = () => {
     if (!loadingMore) return null;
@@ -343,6 +368,7 @@ export default function FeedScreen() {
       )}
 
       <FlatList
+        ref={flatListRef}
         data={posts || []}
         renderItem={renderPost}
         keyExtractor={keyExtractor}
@@ -355,6 +381,23 @@ export default function FeedScreen() {
                 userName={user?.displayName || `${user?.address?.slice(0, 6)}...${user?.address?.slice(-4)}`}
                 placeholder="What's on your mind?"
               />
+            </View>
+
+            {/* Search Bar */}
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
+              <RNTextInput
+                style={styles.searchInput}
+                placeholder="Search posts..."
+                placeholderTextColor="#9ca3af"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={20} color="#9ca3af" />
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Sort Button */}
@@ -391,12 +434,25 @@ export default function FeedScreen() {
         }
         onEndReached={loadMorePosts}
         onEndReachedThreshold={0.5}
+        onScroll={handleScroll}
+        scrollEventThrottle={400}
         contentContainerStyle={hasPosts ? undefined : styles.emptyListContent}
         removeClippedSubviews={true}
         maxToRenderPerBatch={10}
         windowSize={10}
         initialNumToRender={5}
       />
+
+      {/* Back to Top Button */}
+      {showBackToTop && (
+        <TouchableOpacity
+          style={styles.backToTopButton}
+          onPress={scrollToTop}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="arrow-up" size={24} color="#ffffff" />
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 }
@@ -639,5 +695,40 @@ const styles = StyleSheet.create({
   emptyListContent: {
     flexGrow: 1,
     justifyContent: 'flex-start',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    marginHorizontal: THEME.spacing.md,
+    marginTop: 0,
+    marginBottom: THEME.spacing.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: THEME.colors.text,
+  },
+  backToTopButton: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#3b82f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
 });

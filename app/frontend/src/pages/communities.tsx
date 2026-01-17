@@ -676,26 +676,23 @@ const CommunitiesPage: React.FC = () => {
   };
 
   const handleTip = async (postId: string, amount: string, token: string = 'LDAO') => {
+    // This callback is only for UI updates.
+    // The blockchain transaction and database recording are handled by the tip component itself.
     if (isMobile) triggerHapticFeedback('success');
-    
-    try {
-      const post = posts.find(p => p.id === postId);
-      if (!post) throw new Error('Post not found');
 
-      const recipientAddress = post.walletAddress || post.authorId || post.author;
-      
-      const { communityWeb3Service } = await import('../services/communityWeb3Service');
-      const txHash = await communityWeb3Service.tipCommunityPost({
-        postId,
-        recipientAddress,
-        amount,
-        token
-      });
+    // Update the local state to reflect the new tip
+    setPosts(prevPosts =>
+      prevPosts.map(p =>
+        p.id === postId
+          ? {
+            ...p,
+            totalTipAmount: (p.totalTipAmount || 0) + parseFloat(amount)
+          }
+          : p
+      )
+    );
 
-      console.log('Successfully tipped from CommunitiesPage:', txHash);
-    } catch (error: any) {
-      console.error('Tipping error in CommunitiesPage:', error);
-    }
+    console.log('Tip UI updated for post:', postId);
   };
 
   const handleStake = (postId: string) => {

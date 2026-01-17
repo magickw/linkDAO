@@ -267,30 +267,20 @@ export default function EnhancedHomeFeed({
                 }
               }}
               onTip={async (postId, amount, token) => {
+                // This callback is only for UI updates.
+                // The blockchain transaction and database recording are handled by the tip component itself.
                 if (amount && token) {
-                  // Store the previous amount for rollback in case of failure
-                  const previousTipAmount = posts.find(p => p.id === postId)?.totalTipAmount || 0;
-
-                  try {
-                    await FeedService.sendTip(postId, parseFloat(amount), token, '');
-                    // Update the local state to reflect the new tip
-                    setPosts(prevPosts =>
-                      prevPosts.map(p =>
-                        p.id === postId
-                          ? {
-                            ...p,
-                            totalTipAmount: (p.totalTipAmount || 0) + parseFloat(amount)
-                          }
-                          : p
-                      )
-                    );
-                    addToast('Tip sent successfully!', 'success');
-                  } catch (error) {
-                    // Note: We don't revert tip amount here as it's harder to know exact previous state
-                    // since multiple people may tip simultaneously
-                    console.error('Error sending tip:', error);
-                    addToast('Failed to send tip. Please try again.', 'error');
-                  }
+                  // Update the local state to reflect the new tip
+                  setPosts(prevPosts =>
+                    prevPosts.map(p =>
+                      p.id === postId
+                        ? {
+                          ...p,
+                          totalTipAmount: (p.totalTipAmount || 0) + parseFloat(amount)
+                        }
+                        : p
+                    )
+                  );
                 }
               }}
               onExpand={() => {

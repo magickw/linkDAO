@@ -6,7 +6,6 @@ import SharePostModal from './SharePostModal';
 import RepostModal from './RepostModal';
 import CommunityTipButton from './CommunityTipButton';
 import AwardSelectionModal from './TokenReactionSystem/AwardSelectionModal';
-import { communityWeb3Service } from '@/services/communityWeb3Service';
 import { bookmarkService } from '@/services/bookmarkService';
 import { getUserAddress } from '@/utils/userDisplay';
 
@@ -97,11 +96,7 @@ export default function PostInteractionBar({
 
   const [showShareModal, setShowShareModal] = useState(false);
   const [showRepostModal, setShowRepostModal] = useState(false);
-  const [showTipInput, setShowTipInput] = useState(false);
   const [showAwardModal, setShowAwardModal] = useState(false);
-  const [tipAmount, setTipAmount] = useState('');
-  const [selectedToken, setSelectedToken] = useState('USDC');
-  const [isTipping, setIsTipping] = useState(false);
 
   // Handle comment button click
   const handleCommentClick = () => {
@@ -170,67 +165,6 @@ export default function PostInteractionBar({
       addToast(error.message || 'Failed to save post. Please try again.', 'error');
     } finally {
       setIsBookmarkLoading(false);
-    }
-  };
-
-  // Handle quick tip
-  const handleQuickTip = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!isConnected || !address) {
-      addToast('Please connect your wallet to tip', 'error');
-      return;
-    }
-
-    if (!tipAmount || parseFloat(tipAmount) <= 0) {
-      addToast('Please enter a valid tip amount', 'error');
-      return;
-    }
-
-    if (address?.toLowerCase() === post.author.toLowerCase()) {
-      addToast('You cannot tip yourself', 'error');
-      return;
-    }
-
-    try {
-      setIsTipping(true);
-      setShowTipInput(false);
-      addToast('Initiating blockchain transaction...', 'info');
-
-      // Use real blockchain tipping functionality
-      const txHash = await communityWeb3Service.tipCommunityPost({
-        postId: post.id,
-        recipientAddress: post.walletAddress || getUserAddress(post),
-        amount: tipAmount,
-        token: selectedToken,
-        message: ''
-      });
-
-      if (onTip) {
-        await onTip(post.id, tipAmount, selectedToken);
-      } else {
-        addToast(
-          <div className="flex flex-col gap-1">
-            <span>Successfully tipped {tipAmount} {selectedToken}!</span>
-            <a 
-              href={`https://sepolia.etherscan.io/tx/${txHash}`} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-xs underline"
-            >
-              View on Etherscan
-            </a>
-          </div> as any, 
-          'success'
-        );
-      }
-
-      setTipAmount('');
-    } catch (error: any) {
-      console.error('Error sending tip:', error);
-      addToast(`Failed to send tip: ${error.message || 'Please try again.'}`, 'error');
-    } finally {
-      setIsTipping(false);
     }
   };
 
@@ -430,25 +364,13 @@ export default function PostInteractionBar({
             <span className="sm:hidden text-xs">{post.viewCount || 0}</span>
           </div>
 
-          {/* Tip Button */}
-          {postType === 'community' && userMembership ? (
-            <CommunityTipButton
-              postId={post.id}
-              recipientAddress={post.walletAddress || getUserAddress(post)}
-              communityId={post.communityId || ''}
-              onTip={onTip}
-            />
-          ) : (
-            <button
-              onClick={() => setShowTipInput(!showTipInput)}
-              className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium transition-colors duration-200 hover:scale-105"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="hidden sm:inline">Tip</span>
-            </button>
-          )}
+          {/* Tip Button - Use CommunityTipButton for all post types for consistent UX */}
+          <CommunityTipButton
+            postId={post.id}
+            recipientAddress={post.walletAddress || getUserAddress(post)}
+            communityId={post.communityId || ''}
+            onTip={onTip}
+          />
 
           {/* Award Button */}
           <button
@@ -486,45 +408,6 @@ export default function PostInteractionBar({
 
 
       </div>
-
-      {/* Quick Tip Input */}
-      {showTipInput && (postType === 'feed' || postType === 'enhanced') && (
-        <form onSubmit={handleQuickTip} className="flex items-center space-x-2 animate-fadeIn">
-          <input
-            type="number"
-            step="0.01"
-            min="0.01"
-            value={tipAmount}
-            onChange={(e) => setTipAmount(e.target.value)}
-            placeholder="Amount"
-            className="w-24 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-l-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          />
-          <select
-            value={selectedToken}
-            onChange={(e) => setSelectedToken(e.target.value)}
-            className="px-3 py-2 text-sm border-y border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-white"
-          >
-            <option value="USDC">USDC</option>
-            <option value="ETH">ETH</option>
-            <option value="LDAO">LDAO</option>
-          </select>
-          <button
-            type="submit"
-            className="px-4 py-2 text-sm bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 text-white rounded-r-lg transition-all duration-200 font-medium"
-          >
-            Send
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowTipInput(false)}
-            className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors duration-200"
-          >
-            Cancel
-          </button>
-        </form>
-      )}
-
-
 
       {/* Share Modal */}
       <SharePostModal

@@ -162,8 +162,20 @@ export const FeedPage: React.FC<FeedPageProps> = ({
                 await FeedService.sharePost(postId, 'web_share');
               }}
               onTip={async (postId, amount, token, message) => {
+                // This callback is only for UI updates.
+                // The blockchain transaction and database recording are handled by the tip component itself.
                 if (amount && token) {
-                  await FeedService.sendTip(postId, parseFloat(amount), token, message);
+                  // Update the local state to reflect the new tip
+                  setPosts(prevPosts =>
+                    prevPosts.map(p =>
+                      p.id === postId
+                        ? {
+                          ...p,
+                          totalTipAmount: (p.totalTipAmount || 0) + parseFloat(amount)
+                        }
+                        : p
+                    )
+                  );
                 }
               }}
               onReaction={async (postId, type, amount) => {
