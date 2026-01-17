@@ -7,7 +7,7 @@ import { useToast } from '@/context/ToastContext';
 import { useRouter } from 'next/router';
 import { paymentRouterAddress, useWritePaymentRouterSendEthPayment, useWritePaymentRouterSendTokenPayment } from '@/generated';
 import { dexService } from '@/services/dexService';
-import TrendingContentWidget from './TrendingContentWidget';
+
 import QuickActions from './QuickActions';
 
 import PortfolioModal from './PortfolioModal';
@@ -384,8 +384,7 @@ export default function SmartRightSidebar({
         {/* Who to Follow Widget */}
         <WhoToFollowWidget />
 
-        {/* Trending Now (moved here from left sidebar) */}
-        <TrendingContentWidget context={context} />
+
 
 
 

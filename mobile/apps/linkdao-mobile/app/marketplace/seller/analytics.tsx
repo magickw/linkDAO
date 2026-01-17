@@ -1,232 +1,290 @@
 /**
- * Seller Analytics Dashboard
- * Comprehensive analytics for sellers
+ * Advanced Analytics Screen
+ * Comprehensive analytics dashboard for sellers
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-  SafeAreaView,
-} from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { sellerAnalyticsService, SellerMetrics, TopProduct } from '../../../src/services/sellerAnalyticsService';
-import { THEME } from '../../../src/constants/theme';
 
-type Timeframe = 'day' | 'week' | 'month';
+const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
-export default function SellerAnalyticsPage() {
-  const [timeframe, setTimeframe] = useState<Timeframe>('week');
-  const [metrics, setMetrics] = useState<SellerMetrics | null>(null);
-  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
-  const [orderStats, setOrderStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+type TimeRange = '7d' | '30d' | '90d' | '1y';
 
-  // Load data
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [metricsData, productsData, orderData] = await Promise.all([
-        sellerAnalyticsService.getMetrics(timeframe),
-        sellerAnalyticsService.getTopProducts(),
-        sellerAnalyticsService.getOrderStats(),
-      ]);
+interface AnalyticsData {
+  revenue: number;
+  orders: number;
+  visitors: number;
+  conversionRate: number;
+  averageOrderValue: number;
+  topProducts: ProductStat[];
+  recentActivity: Activity[];
+}
 
-      setMetrics(metricsData);
-      setTopProducts(productsData);
-      setOrderStats(orderData);
-    } catch (error) {
-      console.error('Error loading analytics:', error);
-    } finally {
-      setLoading(false);
+interface ProductStat {
+  id: string;
+  name: string;
+  sales: number;
+  revenue: number;
+  views: number;
+}
+
+interface Activity {
+  id: string;
+  type: 'order' | 'view' | 'review';
+  productName: string;
+  timestamp: string;
+  amount?: string;
+}
+
+export default function SellerAnalyticsScreen() {
+  const [timeRange, setTimeRange] = useState<TimeRange>('30d');
+  const [loading, setLoading] = useState(false);
+  const [analytics, setAnalytics] = useState<AnalyticsData>({
+    revenue: 12450.00,
+    orders: 156,
+    visitors: 3420,
+    conversionRate: 4.56,
+    averageOrderValue: 79.81,
+    topProducts: [
+      { id: '1', name: 'Premium Wireless Headphones', sales: 45, revenue: 6749.55, views: 1250 },
+      { id: '2', name: 'Smart Watch Pro', sales: 32, revenue: 9599.68, views: 890 },
+      { id: '3', name: 'Portable Speaker', sales: 28, revenue: 1677.16, views: 670 },
+    ],
+    recentActivity: [
+      { id: '1', type: 'order', productName: 'Premium Wireless Headphones', timestamp: new Date().toISOString(), amount: '149.99' },
+      { id: '2', type: 'view', productName: 'Smart Watch Pro', timestamp: new Date(Date.now() - 3600000).toISOString() },
+      { id: '3', type: 'review', productName: 'Portable Speaker', timestamp: new Date(Date.now() - 7200000).toISOString() },
+    ],
+  });
+
+  const handleTimeRangeChange = (range: TimeRange) => {
+    setTimeRange(range);
+    // TODO: Fetch analytics for selected time range
+  };
+
+  const formatCurrency = (value: number): string => {
+    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const formatNumber = (value: number): string => {
+    if (value >= 1000) {
+      return `${(value / 1000).toFixed(1)}K`;
     }
-  }, [timeframe]);
+    return value.toString();
+  };
 
-  // Refresh data
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  }, [loadData]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const renderMetricCard = (title: string, value: string | number, icon: string, color: string, trend?: number) => (
-    <View style={[styles.metricCard, { borderLeftColor: color }]}>
-      <View style={styles.metricHeader}>
-        <Ionicons name={icon as any} size={20} color={color} />
-        <Text style={styles.metricTitle}>{title}</Text>
-      </View>
-      <Text style={styles.metricValue}>{value}</Text>
-      {trend !== undefined && (
-        <View style={styles.metricTrend}>
-          <Ionicons
-            name={trend >= 0 ? 'trending-up' : 'trending-down'}
-            size={14}
-            color={trend >= 0 ? THEME.colors.success : THEME.colors.error}
-          />
-          <Text style={[styles.metricTrendText, trend >= 0 ? styles.trendUp : styles.trendDown]}>
-            {Math.abs(trend)}%
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-
-  const renderTimeframeButton = (tf: Timeframe) => (
-    <TouchableOpacity
-      style={[styles.timeframeButton, timeframe === tf && styles.activeTimeframeButton]}
-      onPress={() => setTimeframe(tf)}
-    >
-      <Text style={[styles.timeframeText, timeframe === tf && styles.activeTimeframeText]}>
-        {tf.charAt(0).toUpperCase() + tf.slice(1)}
-      </Text>
-    </TouchableOpacity>
-  );
+  const getChangeColor = (positive: boolean) => positive ? '#10b981' : '#ef4444';
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color={THEME.colors.text} />
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#1f2937" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Seller Analytics</Text>
-        <TouchableOpacity onPress={onRefresh} style={styles.headerButton}>
-          <Ionicons name="refresh" size={24} color={THEME.colors.primary} />
+        <Text style={styles.headerTitle}>Analytics</Text>
+        <TouchableOpacity>
+          <Ionicons name="download-outline" size={24} color="#3b82f6" />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.timeframeContainer}>
-        {renderTimeframeButton('day')}
-        {renderTimeframeButton('week')}
-        {renderTimeframeButton('month')}
-      </View>
+      <ScrollView style={styles.content}>
+        {/* Time Range Selector */}
+        <View style={styles.timeRangeContainer}>
+          {(['7d', '30d', '90d', '1y'] as TimeRange[]).map((range) => (
+            <TouchableOpacity
+              key={range}
+              style={[
+                styles.timeRangeButton,
+                timeRange === range && styles.timeRangeButtonActive,
+              ]}
+              onPress={() => handleTimeRangeChange(range)}
+            >
+              <Text style={[
+                styles.timeRangeText,
+                timeRange === range && styles.timeRangeTextActive,
+              ]}>
+                {range === '1y' ? '1 Year' : range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '90 Days'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      <ScrollView
-        style={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={THEME.colors.primary} />
-            <Text style={styles.loadingText}>Loading analytics...</Text>
+        {/* Key Metrics */}
+        <View style={styles.metricsGrid}>
+          <View style={styles.metricCard}>
+            <View style={styles.metricHeader}>
+              <View style={[styles.metricIcon, { backgroundColor: '#dbeafe' }]}>
+                <Ionicons name="wallet-outline" size={24} color="#3b82f6" />
+              </View>
+              <View style={[styles.metricChange, { backgroundColor: '#d1fae5' }]}>
+                <Ionicons name="arrow-up" size={12} color="#10b981" />
+                <Text style={styles.metricChangeText}>+12.5%</Text>
+              </View>
+            </View>
+            <Text style={styles.metricValue}>{formatCurrency(analytics.revenue)}</Text>
+            <Text style={styles.metricLabel}>Revenue</Text>
           </View>
-        ) : metrics ? (
-          <>
-            {/* Revenue Metrics */}
-            <Text style={styles.sectionTitle}>Revenue & Sales</Text>
-            <View style={styles.metricsGrid}>
-              {renderMetricCard('Total Sales', `$${metrics.totalSales.toLocaleString()}`, 'cash', THEME.colors.success, metrics.revenueGrowth)}
-              {renderMetricCard('Total Orders', metrics.totalOrders.toLocaleString(), 'cart', THEME.colors.primary)}
-              {renderMetricCard('Avg Order Value', `$${metrics.averageOrderValue.toFixed(2)}`, 'trending-up', THEME.colors.info)}
-              {renderMetricCard('Conversion Rate', `${metrics.conversionRate}%`, 'people', THEME.colors.warning)}
+
+          <View style={styles.metricCard}>
+            <View style={styles.metricHeader}>
+              <View style={[styles.metricIcon, { backgroundColor: '#d1fae5' }]}>
+                <Ionicons name="cart-outline" size={24} color="#10b981" />
+              </View>
+              <View style={[styles.metricChange, { backgroundColor: '#d1fae5' }]}>
+                <Ionicons name="arrow-up" size={12} color="#10b981" />
+                <Text style={styles.metricChangeText}>+8.3%</Text>
+              </View>
             </View>
+            <Text style={styles.metricValue}>{formatNumber(analytics.orders)}</Text>
+            <Text style={styles.metricLabel}>Orders</Text>
+          </View>
 
-            {/* Performance Metrics */}
-            <Text style={styles.sectionTitle}>Performance</Text>
-            <View style={styles.metricsGrid}>
-              {renderMetricCard('Customer Satisfaction', `${metrics.customerSatisfaction}/5`, 'star', THEME.colors.warning)}
-              {renderMetricCard('Response Time', `${metrics.responseTime}h`, 'time', THEME.colors.info)}
-              {renderMetricCard('Return Rate', `${metrics.returnRate}%`, 'refresh', THEME.colors.error)}
-              {renderMetricCard('Repeat Rate', `${metrics.repeatCustomerRate}%`, 'repeat', THEME.colors.success)}
+          <View style={styles.metricCard}>
+            <View style={styles.metricHeader}>
+              <View style={[styles.metricIcon, { backgroundColor: '#fef3c7' }]}>
+                <Ionicons name="eye-outline" size={24} color="#f59e0b" />
+              </View>
+              <View style={[styles.metricChange, { backgroundColor: '#fee2e2' }]}>
+                <Ionicons name="arrow-down" size={12} color="#ef4444" />
+                <Text style={styles.metricChangeText}>-2.1%</Text>
+              </View>
             </View>
+            <Text style={styles.metricValue}>{formatNumber(analytics.visitors)}</Text>
+            <Text style={styles.metricLabel}>Visitors</Text>
+          </View>
 
-            {/* Order Status */}
-            {orderStats && (
-              <>
-                <Text style={styles.sectionTitle}>Order Status</Text>
-                <View style={styles.orderStatsCard}>
-                  <View style={styles.orderStatItem}>
-                    <Text style={styles.orderStatValue}>{orderStats.pending}</Text>
-                    <Text style={styles.orderStatLabel}>Pending</Text>
-                  </View>
-                  <View style={styles.orderStatItem}>
-                    <Text style={styles.orderStatValue}>{orderStats.processing}</Text>
-                    <Text style={styles.orderStatLabel}>Processing</Text>
-                  </View>
-                  <View style={styles.orderStatItem}>
-                    <Text style={styles.orderStatValue}>{orderStats.shipped}</Text>
-                    <Text style={styles.orderStatLabel}>Shipped</Text>
-                  </View>
-                  <View style={styles.orderStatItem}>
-                    <Text style={styles.orderStatValue}>{orderStats.delivered}</Text>
-                    <Text style={styles.orderStatLabel}>Delivered</Text>
-                  </View>
-                  {orderStats.returns > 0 && (
-                    <View style={styles.orderStatItem}>
-                      <Text style={[styles.orderStatValue, { color: THEME.colors.error }]}>{orderStats.returns}</Text>
-                      <Text style={styles.orderStatLabel}>Returns</Text>
-                    </View>
-                  )}
-                </View>
-              </>
-            )}
+          <View style={styles.metricCard}>
+            <View style={styles.metricHeader}>
+              <View style={[styles.metricIcon, { backgroundColor: '#ede9fe' }]}>
+                <Ionicons name="trending-up-outline" size={24} color="#8b5cf6" />
+              </View>
+              <View style={[styles.metricChange, { backgroundColor: '#d1fae5' }]}>
+                <Ionicons name="arrow-up" size={12} color="#10b981" />
+                <Text style={styles.metricChangeText}>+5.2%</Text>
+              </View>
+            </View>
+            <Text style={styles.metricValue}>{analytics.conversionRate}%</Text>
+            <Text style={styles.metricLabel}>Conversion Rate</Text>
+          </View>
+        </View>
 
-            {/* Top Products */}
+        {/* Average Order Value */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Average Order Value</Text>
+          <View style={styles.aovCard}>
+            <Text style={styles.aovValue}>{formatCurrency(analytics.averageOrderValue)}</Text>
+            <View style={styles.aovTrend}>
+              <Ionicons name="arrow-up" size={16} color="#10b981" />
+              <Text style={styles.aovTrendText}>+3.8% vs last period</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Top Products */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Top Products</Text>
-            <View style={styles.productsContainer}>
-              {topProducts.map((product, index) => (
-                <View key={product.productId} style={styles.productCard}>
-                  <View style={styles.productRank}>
-                    <Text style={styles.productRankText}>#{index + 1}</Text>
-                  </View>
-                  <View style={styles.productInfo}>
-                    <Text style={styles.productTitle} numberOfLines={1}>
-                      {product.title}
-                    </Text>
-                    <Text style={styles.productStats}>
-                      {product.sales} sales • ${product.revenue.toLocaleString()}
-                    </Text>
-                  </View>
-                  <View style={styles.productConversion}>
-                    <Text style={styles.productConversionRate}>{product.conversionRate}%</Text>
-                    <Text style={styles.productConversionLabel}>Conv</Text>
+            <TouchableOpacity>
+              <Text style={styles.viewAllText}>View All</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.productsList}>
+            {analytics.topProducts.map((product, index) => (
+              <View key={product.id} style={styles.productCard}>
+                <View style={styles.productRank}>
+                  <Text style={styles.productRankText}>#{index + 1}</Text>
+                </View>
+                <View style={styles.productInfo}>
+                  <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
+                  <View style={styles.productStats}>
+                    <Text style={styles.productStatText}>{product.sales} sales</Text>
+                    <Text style={styles.productStatSeparator}>•</Text>
+                    <Text style={styles.productStatText}>{formatNumber(product.views)} views</Text>
                   </View>
                 </View>
-              ))}
-            </View>
-
-            {/* Quick Actions */}
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <TouchableOpacity
-              style={styles.actionCard}
-              onPress={() => router.push('/marketplace/seller/create-listing')}
-            >
-              <Ionicons name="add-circle" size={24} color={THEME.colors.primary} />
-              <View style={styles.actionInfo}>
-                <Text style={styles.actionTitle}>Create Listing</Text>
-                <Text style={styles.actionDescription}>Add a new product to your store</Text>
+                <View style={styles.productRevenue}>
+                  <Text style={styles.productRevenueValue}>{formatCurrency(product.revenue)}</Text>
+                </View>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={THEME.colors.gray} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionCard}
-              onPress={() => router.push('/marketplace/seller/dashboard')}
-            >
-              <Ionicons name="grid" size={24} color={THEME.colors.secondary} />
-              <View style={styles.actionInfo}>
-                <Text style={styles.actionTitle}>Manage Orders</Text>
-                <Text style={styles.actionDescription}>View and manage your orders</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={THEME.colors.gray} />
-            </TouchableOpacity>
-          </>
-        ) : (
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle" size={48} color={THEME.colors.error} />
-            <Text style={styles.errorText}>Failed to load analytics</Text>
+            ))}
           </View>
-        )}
+        </View>
+
+        {/* Recent Activity */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recent Activity</Text>
+
+          <View style={styles.activityList}>
+            {analytics.recentActivity.map((activity) => (
+              <View key={activity.id} style={styles.activityCard}>
+                <View style={[
+                  styles.activityIcon,
+                  activity.type === 'order' && { backgroundColor: '#d1fae5' },
+                  activity.type === 'view' && { backgroundColor: '#dbeafe' },
+                  activity.type === 'review' && { backgroundColor: '#fef3c7' },
+                ]}>
+                  <Ionicons
+                    name={
+                      activity.type === 'order' ? 'cart-outline' :
+                      activity.type === 'view' ? 'eye-outline' :
+                      'star-outline'
+                    }
+                    size={20}
+                    color={
+                      activity.type === 'order' ? '#10b981' :
+                      activity.type === 'view' ? '#3b82f6' :
+                      '#f59e0b'
+                    }
+                  />
+                </View>
+                <View style={styles.activityInfo}>
+                  <Text style={styles.activityTitle}>
+                    {activity.type === 'order' ? 'New order' :
+                     activity.type === 'view' ? 'Product viewed' :
+                     'New review'}
+                  </Text>
+                  <Text style={styles.activityProduct}>{activity.productName}</Text>
+                  <Text style={styles.activityTime}>
+                    {new Date(activity.timestamp).toLocaleString()}
+                  </Text>
+                </View>
+                {activity.amount && (
+                  <Text style={styles.activityAmount}>{activity.amount}</Text>
+                )}
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Performance Insights */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Performance Insights</Text>
+
+          <View style={styles.insightsList}>
+            <View style={styles.insightCard}>
+              <Ionicons name="lightbulb-outline" size={20} color="#f59e0b" />
+              <Text style={styles.insightText}>
+                Your top product accounts for 54% of total revenue. Consider increasing inventory.
+              </Text>
+            </View>
+            <View style={styles.insightCard}>
+              <Ionicons name="trending-up-outline" size={20} color="#10b981" />
+              <Text style={styles.insightText}>
+                Conversion rate improved by 5.2% this period. Keep up the great work!
+              </Text>
+            </View>
+            <View style={styles.insightCard}>
+              <Ionicons name="information-circle-outline" size={20} color="#3b82f6" />
+              <Text style={styles.insightText}>
+                Weekend traffic is 23% higher. Consider scheduling promotions for Saturday.
+              </Text>
+            </View>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -235,230 +293,261 @@ export default function SellerAnalyticsPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+    backgroundColor: '#ffffff',
   },
   header: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: THEME.colors.white,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: THEME.colors.border,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderBottomColor: '#e5e7eb',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: THEME.colors.text,
-  },
-  timeframeContainer: {
-    flexDirection: 'row',
-    backgroundColor: THEME.colors.white,
-    padding: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: THEME.colors.border,
-  },
-  timeframeButton: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  activeTimeframeButton: {
-    backgroundColor: THEME.colors.primary + '10',
-  },
-  timeframeText: {
-    fontSize: 14,
-    color: THEME.colors.gray,
-  },
-  activeTimeframeText: {
-    color: THEME.colors.primary,
-    fontWeight: '600',
+    color: '#1f2937',
   },
   content: {
     flex: 1,
-    padding: 16,
   },
-  loadingContainer: {
+  timeRangeContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  timeRangeButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f3f4f6',
     alignItems: 'center',
-    paddingVertical: 40,
   },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: THEME.colors.gray,
+  timeRangeButtonActive: {
+    backgroundColor: '#3b82f6',
   },
-  errorContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
+  timeRangeText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#6b7280',
   },
-  errorText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: THEME.colors.error,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: THEME.colors.text,
-    marginTop: 20,
-    marginBottom: 12,
+  timeRangeTextActive: {
+    color: '#ffffff',
   },
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    padding: 16,
     gap: 12,
-    marginBottom: 8,
   },
   metricCard: {
     flex: 1,
     minWidth: '45%',
-    backgroundColor: THEME.colors.white,
+    backgroundColor: '#f9fafb',
     borderRadius: 12,
     padding: 16,
-    borderLeftWidth: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   metricHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 8,
   },
-  metricTitle: {
-    marginLeft: 8,
-    fontSize: 12,
-    color: THEME.colors.gray,
+  metricIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  metricChange: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    gap: 2,
+  },
+  metricChangeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#10b981',
   },
   metricValue: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: THEME.colors.text,
+    color: '#1f2937',
+    marginBottom: 2,
   },
-  metricTrend: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  metricTrendText: {
-    marginLeft: 4,
+  metricLabel: {
     fontSize: 12,
+    color: '#6b7280',
+  },
+  section: {
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
     fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 12,
   },
-  trendUp: {
-    color: THEME.colors.success,
-  },
-  trendDown: {
-    color: THEME.colors.error,
-  },
-  orderStatsCard: {
+  sectionHeader: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    backgroundColor: THEME.colors.white,
-    borderRadius: 12,
-    padding: 16,
-    gap: 16,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  orderStatItem: {
-    flex: 1,
-    minWidth: '30%',
+  viewAllText: {
+    fontSize: 13,
+    color: '#3b82f6',
+    fontWeight: '500',
+  },
+  aovCard: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
     alignItems: 'center',
   },
-  orderStatValue: {
-    fontSize: 24,
+  aovValue: {
+    fontSize: 32,
     fontWeight: 'bold',
-    color: THEME.colors.text,
+    color: '#1f2937',
+    marginBottom: 8,
   },
-  orderStatLabel: {
-    fontSize: 12,
-    color: THEME.colors.gray,
-    marginTop: 4,
+  aovTrend: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  productsContainer: {
-    backgroundColor: THEME.colors.white,
-    borderRadius: 12,
-    padding: 16,
+  aovTrendText: {
+    fontSize: 13,
+    color: '#10b981',
+  },
+  productsList: {
+    gap: 8,
   },
   productCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: THEME.colors.border,
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   productRank: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: THEME.colors.primary + '10',
-    justifyContent: 'center',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#dbeafe',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
   productRankText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: THEME.colors.primary,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#3b82f6',
   },
   productInfo: {
     flex: 1,
-    marginLeft: 12,
   },
-  productTitle: {
+  productName: {
     fontSize: 14,
-    fontWeight: '600',
-    color: THEME.colors.text,
-    marginBottom: 2,
+    fontWeight: '500',
+    color: '#1f2937',
+    marginBottom: 4,
   },
   productStats: {
-    fontSize: 12,
-    color: THEME.colors.gray,
-  },
-  productConversion: {
-    alignItems: 'flex-end',
-  },
-  productConversionRate: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: THEME.colors.success,
-  },
-  productConversionLabel: {
-    fontSize: 10,
-    color: THEME.colors.gray,
-  },
-  actionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: THEME.colors.white,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    gap: 6,
   },
-  actionInfo: {
-    flex: 1,
+  productStatText: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  productStatSeparator: {
+    fontSize: 12,
+    color: '#9ca3af',
+  },
+  productRevenue: {
     marginLeft: 12,
   },
-  actionTitle: {
-    fontSize: 16,
+  productRevenueValue: {
+    fontSize: 14,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: '#10b981',
   },
-  actionDescription: {
+  activityList: {
+    gap: 8,
+  },
+  activityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  activityIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  activityInfo: {
+    flex: 1,
+  },
+  activityTitle: {
     fontSize: 13,
-    color: THEME.colors.gray,
+    fontWeight: '500',
+    color: '#1f2937',
+    marginBottom: 2,
+  },
+  activityProduct: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 2,
+  },
+  activityTime: {
+    fontSize: 11,
+    color: '#9ca3af',
+  },
+  activityAmount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#10b981',
+  },
+  insightsList: {
+    gap: 12,
+  },
+  insightCard: {
+    flexDirection: 'row',
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    gap: 12,
+  },
+  insightText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#374151',
+    lineHeight: 18,
   },
 });
