@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
 import { communityWeb3Service } from '@/services/communityWeb3Service';
+import { getEnabledNetworks, NETWORKS } from '@/config/web3Config';
 
 interface CommunityTipButtonProps {
   postId: string;
@@ -13,7 +14,10 @@ interface CommunityTipButtonProps {
 
 const SUPPORTED_TOKENS = [
   { symbol: 'LDAO', name: 'LinkDAO Token', decimals: 18 },
-  { symbol: 'USDC', name: 'USD Coin', decimals: 6 }
+  { symbol: 'USDC', name: 'USD Coin', decimals: 6 },
+  { symbol: 'USDT', name: 'Tether USD', decimals: 6 },
+  { symbol: 'ETH', name: 'Ether', decimals: 18 },
+  { symbol: 'MATIC', name: 'Matic', decimals: 18 }
 ];
 
 const QUICK_AMOUNTS = ['1', '5', '10', '25', '50'];
@@ -25,7 +29,7 @@ export default function CommunityTipButton({
   onTip,
   className = ''
 }: CommunityTipButtonProps) {
-  const { address, isConnected } = useWeb3();
+  const { address, isConnected, chainId } = useWeb3();
   const { addToast } = useToast();
 
   const [showTipModal, setShowTipModal] = useState(false);
@@ -33,6 +37,22 @@ export default function CommunityTipButton({
   const [selectedToken, setSelectedToken] = useState(SUPPORTED_TOKENS[0]);
   const [message, setMessage] = useState('');
   const [isTipping, setIsTipping] = useState(false);
+
+  // Initialize with current chain if supported, otherwise default to Ethereum Sepolia (or first enabled)
+  const enabledNetworks = getEnabledNetworks();
+  const [selectedNetwork, setSelectedNetwork] = useState(
+    enabledNetworks.find(n => n.chainId === chainId) || enabledNetworks[0]
+  );
+
+  // Update selected network when wallet chain changes, if modal is not open
+  useEffect(() => {
+    if (!showTipModal && chainId) {
+      const currentNetwork = enabledNetworks.find(n => n.chainId === chainId);
+      if (currentNetwork) {
+        setSelectedNetwork(currentNetwork);
+      }
+    }
+  }, [chainId, showTipModal]);
 
   const handleTipClick = () => {
     if (!isConnected) {
@@ -66,7 +86,8 @@ export default function CommunityTipButton({
         recipientAddress,
         amount: tipAmount,
         token: selectedToken.symbol,
-        message: message.trim() || undefined
+        message: message.trim() || undefined,
+        targetChainId: selectedNetwork.chainId
       });
 
       // Only show success message here if there's no parent handler
@@ -74,19 +95,19 @@ export default function CommunityTipButton({
         addToast(
           <div className="flex flex-col gap-1">
             <span>Successfully tipped {tipAmount} {selectedToken.symbol}!</span>
-            <a 
-              href={`https://sepolia.etherscan.io/tx/${txHash}`} 
-              target="_blank" 
+            <a
+              href={`${selectedNetwork.blockExplorer}/tx/${txHash}`}
+              target="_blank"
               rel="noopener noreferrer"
               className="text-xs underline"
             >
-              View on Etherscan
+              View on {selectedNetwork.shortName} scan
             </a>
-          </div> as any, 
+          </div> as any,
           'success'
         );
       }
-      
+
       // Call parent handler if provided
       if (onTip) {
         onTip(postId, tipAmount, selectedToken.symbol);
@@ -144,6 +165,28 @@ export default function CommunityTipButton({
               </div>
             </div>
 
+            {/* Network Selection */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Network
+              </label>
+              <select
+                value={selectedNetwork.chainId}
+                onChange={(e) => {
+                  const network = enabledNetworks.find(n => n.chainId === Number(e.target.value));
+                  if (network) setSelectedNetwork(network);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                disabled={isTipping}
+              >
+                {enabledNetworks.map((network) => (
+                  <option key={network.chainId} value={network.chainId}>
+                    {network.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Token Selection */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -176,11 +219,10 @@ export default function CommunityTipButton({
                   <button
                     key={amount}
                     onClick={() => handleQuickAmount(amount)}
-                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                      tipAmount === amount
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
+                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors duration-200 ${tipAmount === amount
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
                     disabled={isTipping}
                   >
                     {amount} {selectedToken.symbol}

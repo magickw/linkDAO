@@ -9,7 +9,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useCommunitiesStore } from '../../src/store';
-import { communitiesService } from '../../src/services';
+import { communitiesService } from '../../src/services/communitiesService';
+import { notificationService } from '../../src/services/notificationService';
 import CreateCommunityModal from '../../src/components/CreateCommunityModal';
 import { CrossChainBridge } from '../../src/components/CrossChainBridge';
 
@@ -54,16 +55,24 @@ export default function CommunitiesScreen() {
   const [hasUnread, setHasUnread] = useState(true);
 
   // Mock activity data
-  const activities: Activity[] = [
-    { id: '1', type: 'mention', communityName: 'Web3 Devs', message: '@user mentioned you in a post', time: '2m ago', unread: true },
-    { id: '2', type: 'post', communityName: 'DeFi Masters', message: 'New post in your community', time: '15m ago', unread: true },
-    { id: '3', type: 'join', communityName: 'NFT Art', message: '5 new members joined', time: '1h ago', unread: false },
-    { id: '4', type: 'mention', communityName: 'Crypto Traders', message: '@user replied to your comment', time: '3h ago', unread: false },
-  ];
+  /* Notifications are fetched from the server now */
+  const [notifications, setNotifications] = useState<any[]>([]);
 
   useEffect(() => {
     loadCommunities();
+    loadNotifications();
   }, []);
+
+  const loadNotifications = async () => {
+    try {
+      const data = await notificationService.getNotifications();
+      setNotifications(data);
+      const unreadCount = data.filter(n => !n.read).length;
+      setHasUnread(unreadCount > 0);
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+    }
+  };
 
   const loadCommunities = async () => {
     setLoading(true);
@@ -83,7 +92,7 @@ export default function CommunitiesScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadCommunities();
+    await Promise.all([loadCommunities(), loadNotifications()]);
     setRefreshing(false);
   };
 
@@ -208,7 +217,7 @@ export default function CommunitiesScreen() {
                   style={styles.featuredCard}
                   onPress={() => router.push(`/community/${community.id}`)}
                 >
-                  <View style={[styles.featuredAvatar, community.avatar && { backgroundColor: community.avatar }]} />
+                  <View style={[styles.featuredAvatar, community.avatar ? { backgroundColor: community.avatar } : { backgroundColor: '#e5e7eb' }]} />
                   <Text style={styles.featuredName}>{community.name}</Text>
                   <Text style={styles.featuredMembers}>{community.members.toLocaleString()} members</Text>
                   {!community.isPublic && (
@@ -234,7 +243,7 @@ export default function CommunitiesScreen() {
                 style={styles.communityCard}
                 onPress={() => router.push(`/community/${community.id}`)}
               >
-                <View style={[styles.avatar, community.avatar && { backgroundColor: community.avatar }]} />
+                <View style={[styles.avatar, community.avatar ? { backgroundColor: community.avatar } : { backgroundColor: '#e5e7eb' }]} />
                 <View style={styles.communityInfo}>
                   <View style={styles.communityHeader}>
                     <Text style={styles.communityName}>{community.name}</Text>
@@ -355,32 +364,45 @@ export default function CommunitiesScreen() {
             </View>
 
             <ScrollView style={styles.notificationsList}>
-              {activities.map((activity) => (
-                <TouchableOpacity key={activity.id} style={styles.notificationItem}>
-                  <View style={[styles.notificationIcon, activity.unread && styles.notificationIconUnread]}>
+              {notifications.map((notification) => (
+                <TouchableOpacity key={notification.id} style={styles.notificationItem}>
+                  <View style={[styles.notificationIcon, !notification.read && styles.notificationIconUnread]}>
                     <Ionicons
                       name={
-                        activity.type === 'mention' ? 'at-outline' :
-                          activity.type === 'post' ? 'chatbubble-outline' :
+                        notification.type === 'mention' ? 'at-outline' :
+                          notification.type === 'post' ? 'chatbubble-outline' :
                             'people-outline'
                       }
                       size={20}
-                      color={activity.unread ? '#ffffff' : '#3b82f6'}
+                      color={!notification.read ? '#ffffff' : '#3b82f6'}
                     />
                   </View>
                   <View style={styles.notificationContent}>
-                    <Text style={styles.notificationCommunity}>{activity.communityName}</Text>
-                    <Text style={styles.notificationMessage}>{activity.message}</Text>
-                    <Text style={styles.notificationTime}>{activity.time}</Text>
+                    <Text style={styles.notificationCommunity}>{notification.communityName || 'System'}</Text>
+                    <Text style={styles.notificationMessage}>{notification.message}</Text>
+                    <Text style={styles.notificationTime}>{new Date(notification.createdAt).toLocaleDateString()}</Text>
                   </View>
-                  {activity.unread && <View style={styles.unreadDot} />}
+                  {!notification.read && <View style={styles.unreadDot} />}
                 </TouchableOpacity>
               ))}
+              {notifications.length === 0 && (
+                <View style={styles.centerContainer}>
+                  <Text style={styles.emptyText}>No notifications</Text>
+                </View>
+              )}
             </ScrollView>
 
             <TouchableOpacity
               style={styles.markAllReadButton}
-              onPress={() => setHasUnread(false)}
+              onPress={async () => {
+                try {
+                  await notificationService.markAllAsRead();
+                  setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+                  setHasUnread(false);
+                } catch (e) {
+                  console.error(e);
+                }
+              }}
             >
               <Text style={styles.markAllReadText}>Mark all as read</Text>
             </TouchableOpacity>

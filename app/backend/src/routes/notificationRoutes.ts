@@ -5,7 +5,7 @@
 
 import { Router } from 'express';
 import { body } from 'express-validator';
-import { authMiddleware } from '../middleware/auth';
+import { authenticateToken as authMiddleware } from '../middleware/auth';
 import { NotificationController } from '../controllers/notificationController';
 
 const router = Router();
@@ -34,6 +34,46 @@ router.get(
     '/preferences',
     authMiddleware,
     controller.getPreferences
+);
+
+/**
+ * GET /api/notifications
+ * Get user notifications
+ */
+router.get(
+    '/',
+    authMiddleware,
+    controller.getNotifications
+);
+
+/**
+ * GET /api/notifications/unread-count
+ * Get unread notification count
+ */
+router.get(
+    '/unread-count',
+    authMiddleware,
+    controller.getUnreadCount
+);
+
+/**
+ * PUT /api/notifications/read-all
+ * Mark all notifications as read
+ */
+router.put(
+    '/read-all',
+    authMiddleware,
+    controller.markAllAsRead
+);
+
+/**
+ * PUT /api/notifications/:id/read
+ * Mark notification as read
+ */
+router.put(
+    '/:id/read',
+    authMiddleware,
+    controller.markAsRead
 );
 
 /**

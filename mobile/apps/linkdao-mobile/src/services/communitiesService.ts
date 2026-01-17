@@ -26,10 +26,15 @@ class CommunitiesService {
    */
   async getCommunities(page: number = 1, limit: number = 20): Promise<Community[]> {
     try {
-      const response = await apiClient.get<{ communities: Community[] }>(
+      const response = await apiClient.get<{ data: { communities: Community[] } } | { communities: Community[] }>(
         `/api/communities?page=${page}&limit=${limit}`
       );
-      return response.data.communities || [];
+      // Handle different response structures
+      const data = response.data;
+      if ('data' in data && data.data && Array.isArray(data.data.communities)) {
+        return data.data.communities;
+      }
+      return (data as any).communities || (data as any).data || [];
     } catch (error) {
       console.error('Error fetching communities:', error);
       return [];
@@ -37,12 +42,19 @@ class CommunitiesService {
   }
 
   /**
-   * Get featured communities
+   * Get featured (trending) communities
    */
   async getFeaturedCommunities(): Promise<Community[]> {
     try {
-      const response = await apiClient.get<{ communities: Community[] }>('/api/communities/featured');
-      return response.data.communities || [];
+      // Backend uses /trending, mapped to getTrendingCommunities
+      const response = await apiClient.get<{ data: { communities: Community[] } }>('/api/communities/trending');
+      const data = response.data;
+      // Handle wrapped response: { success: true, data: { communities: [...] } }
+      if (data && data.data && Array.isArray((data.data as any).communities)) {
+        return (data.data as any).communities;
+      }
+      // Fallback for direct array or other structures
+      return (data as any).communities || (data as any).data || [];
     } catch (error) {
       console.error('Error fetching featured communities:', error);
       return [];
@@ -54,8 +66,14 @@ class CommunitiesService {
    */
   async getMyCommunities(): Promise<Community[]> {
     try {
-      const response = await apiClient.get<{ communities: Community[] }>('/api/communities/my');
-      return response.data.communities || [];
+      // Backend uses /my-communities
+      const response = await apiClient.get<{ data: { communities: Community[] } }>('/api/communities/my-communities');
+      const data = response.data;
+      // Handle wrapped response: { success: true, data: { communities: [...] } }
+      if (data && data.data && Array.isArray((data.data as any).communities)) {
+        return (data.data as any).communities;
+      }
+      return (data as any).communities || (data as any).data || [];
     } catch (error) {
       console.error('Error fetching my communities:', error);
       return [];
@@ -67,8 +85,8 @@ class CommunitiesService {
    */
   async getCommunity(id: string): Promise<Community | null> {
     try {
-      const response = await apiClient.get<Community>(`/api/communities/${id}`);
-      return response.data || null;
+      const response = await apiClient.get<{ data: Community }>(`/api/communities/${id}`);
+      return response.data.data || (response.data as any) || null;
     } catch (error) {
       console.error('Error fetching community:', error);
       return null;
@@ -80,8 +98,8 @@ class CommunitiesService {
    */
   async createCommunity(data: CreateCommunityData): Promise<Community | null> {
     try {
-      const response = await apiClient.post<Community>('/api/communities', data);
-      return response.data || null;
+      const response = await apiClient.post<{ data: Community }>('/api/communities', data);
+      return response.data.data || (response.data as any) || null;
     } catch (error) {
       console.error('Error creating community:', error);
       return null;
@@ -93,8 +111,8 @@ class CommunitiesService {
    */
   async updateCommunity(id: string, data: Partial<CreateCommunityData>): Promise<Community | null> {
     try {
-      const response = await apiClient.put<Community>(`/api/communities/${id}`, data);
-      return response.data || null;
+      const response = await apiClient.put<{ data: Community }>('/api/communities/${id}', data);
+      return response.data.data || (response.data as any) || null;
     } catch (error) {
       console.error('Error updating community:', error);
       return null;
@@ -137,10 +155,14 @@ class CommunitiesService {
    */
   async searchCommunities(query: string): Promise<Community[]> {
     try {
-      const response = await apiClient.get<{ communities: Community[] }>(
-        `/api/communities/search?q=${encodeURIComponent(query)}`
+      const response = await apiClient.get<{ data: { communities: Community[] } }>(
+        `/api/communities/search/query?q=${encodeURIComponent(query)}`
       );
-      return response.data.communities || [];
+      const data = response.data;
+      if (data && data.data && Array.isArray((data.data as any).communities)) {
+        return (data.data as any).communities;
+      }
+      return (data as any).communities || (data as any) || [];
     } catch (error) {
       console.error('Error searching communities:', error);
       return [];
@@ -152,10 +174,10 @@ class CommunitiesService {
    */
   async getCommunityMembers(id: string, page: number = 1, limit: number = 20): Promise<any[]> {
     try {
-      const response = await apiClient.get<{ members: any[] }>(
+      const response = await apiClient.get<{ data: any[] }>(
         `/api/communities/${id}/members?page=${page}&limit=${limit}`
       );
-      return response.data.members || [];
+      return response.data.data || (response.data as any) || [];
     } catch (error) {
       console.error('Error fetching community members:', error);
       return [];

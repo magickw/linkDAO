@@ -34,8 +34,11 @@ export default function GovernanceTabScreen() {
       const proposals = await governanceService.getActiveProposals();
       setActiveProposals(proposals.slice(0, 3));
 
-      // Get user voting power (mock for now)
-      setUserVotingPower(1500);
+      // Get user voting power from API
+      if (user?.walletAddress) {
+        const votingPower = await governanceService.getUserVotingPower();
+        setUserVotingPower(votingPower);
+      }
     } catch (error) {
       console.error('Error loading governance data:', error);
     } finally {

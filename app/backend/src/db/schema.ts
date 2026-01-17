@@ -318,6 +318,8 @@ export const statusTips = pgTable("status_tips", {
   amount: numeric("amount").notNull(),
   message: text("message"), // Optional message with the tip
   txHash: varchar("tx_hash", { length: 66 }), // Blockchain transaction hash
+  networkName: varchar("network_name", { length: 64 }),
+  chainId: integer("chain_id"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   idx: index("idx_status_tip").on(t.statusId),
@@ -442,6 +444,8 @@ export const tips = pgTable("tips", {
   amount: numeric("amount").notNull(),
   message: text("message"), // Optional message with the tip
   txHash: varchar("tx_hash", { length: 66 }), // Blockchain transaction hash
+  networkName: varchar("network_name", { length: 64 }),
+  chainId: integer("chain_id"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   idx: index("tip_post_idx").on(t.postId),

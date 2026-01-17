@@ -54,7 +54,16 @@ export default function GovernancePage() {
       setLoading(true);
       let data: Proposal[] = [];
 
-      if (activeTab === 'active') {
+      if (searchTerm && (activeTab === 'active' || activeTab === 'ended')) {
+        // Use search API when search term is provided
+        data = await governanceService.searchProposals(searchTerm);
+        // Filter by status
+        if (activeTab === 'active') {
+          data = data.filter(p => p.status === 'active');
+        } else if (activeTab === 'ended') {
+          data = data.filter(p => p.status === 'executed' || p.status === 'failed' || p.status === 'expired');
+        }
+      } else if (activeTab === 'active') {
         data = await governanceService.getActiveProposals();
       } else if (activeTab === 'ended') {
         data = await governanceService.getAllProposals('executed');
@@ -63,16 +72,6 @@ export default function GovernancePage() {
         data = [];
       } else {
         data = await governanceService.getAllProposals();
-      }
-
-      // Filter by search term
-      if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        data = data.filter(
-          (p) =>
-            p.title.toLowerCase().includes(term) ||
-            p.description.toLowerCase().includes(term)
-        );
       }
 
       setProposals(data);

@@ -287,34 +287,12 @@ const CircularProgressTimer: React.FC<CircularProgressTimerProps> = ({
 
   return (
     <View style={[styles.timerWrapper, { width: size, height: size }]}>
-      <View style={[styles.timerCircle, { width: size, height: size }]}>
-        <svg width={size} height={size} style={styles.svg}>
-          <circle
-            stroke={color + '20'}
-            fill="transparent"
-            strokeWidth={strokeWidth}
-            r={radius}
-            cx={size / 2}
-            cy={size / 2}
-          />
-          <circle
-            stroke={color}
-            fill="transparent"
-            strokeWidth={strokeWidth}
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
-            r={radius}
-            cx={size / 2}
-            cy={size / 2}
-            transform={`rotate(-90 ${size / 2} ${size / 2})`}
-          />
-        </svg>
-        <View style={styles.timerTextContainer}>
-          <Text style={[styles.timerText, { color }]}>
-            {Math.ceil(progress)}%
-          </Text>
-        </View>
+      <View style={[styles.timerBackground, { width: size, height: size, borderRadius: size / 2, borderWidth: strokeWidth, borderColor: color + '20' }]} />
+      <View style={[styles.timerProgress, { width: size, height: size, borderRadius: size / 2, borderWidth: strokeWidth, borderColor: color, borderLeftColor: 'transparent', borderBottomColor: 'transparent', transform: [{ rotate: `${(progress / 100) * 360}deg` }] }]} />
+      <View style={styles.timerTextContainer}>
+        <Text style={[styles.timerText, { color }]}>
+          {Math.ceil(progress)}%
+        </Text>
       </View>
     </View>
   );
@@ -378,12 +356,15 @@ const styles = StyleSheet.create({
   timerContainer: {
     marginLeft: 12,
   },
-  timerWrapper: {},
-  timerCircle: {
+  timerWrapper: {
+    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  svg: {
+  timerBackground: {
+    position: 'absolute',
+  },
+  timerProgress: {
     position: 'absolute',
   },
   timerTextContainer: {

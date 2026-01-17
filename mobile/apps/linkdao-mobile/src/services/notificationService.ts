@@ -32,10 +32,21 @@ export interface NotificationPreferences {
     moderation: boolean;
 }
 
+export interface Notification {
+    id: string;
+    type: string;
+    title?: string;
+    message: string;
+    read: boolean;
+    createdAt: string;
+    data?: any;
+    communityName?: string;
+}
+
 class NotificationService {
     private expoPushToken: string | null = null;
-    private notificationListener: any = null;
-    private responseListener: any = null;
+    private notificationListener: Notifications.Subscription | null = null;
+    private responseListener: Notifications.Subscription | null = null;
 
     /**
      * Initialize notification service
@@ -92,6 +103,65 @@ class NotificationService {
         } catch (error) {
             console.error('[Notifications] Error requesting permissions:', error);
             return false;
+        }
+    }
+
+    /**
+     * Get user notifications
+     */
+    async getNotifications(page: number = 1, limit: number = 20): Promise<Notification[]> {
+        try {
+            const response = await apiClient.get<any>(
+                `/api/notifications?page=${page}&limit=${limit}`
+            );
+
+            const data = response.data;
+            if (data.success && data.data && Array.isArray(data.data.notifications)) {
+                return data.data.notifications;
+            }
+            return [];
+        } catch (error) {
+            console.error('Error fetching notifications:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Mark notification as read
+     */
+    async markAsRead(id: string): Promise<boolean> {
+        try {
+            await apiClient.put(`/api/notifications/${id}/read`);
+            return true;
+        } catch (error) {
+            console.error('Error marking notification as read:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Mark all notifications as read
+     */
+    async markAllAsRead(): Promise<boolean> {
+        try {
+            await apiClient.put('/api/notifications/read-all');
+            return true;
+        } catch (error) {
+            console.error('Error marking all notifications as read:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Get unread count
+     */
+    async getUnreadCount(): Promise<number> {
+        try {
+            const response = await apiClient.get<{ count: number }>('/api/notifications/unread-count');
+            return response.data.count || 0;
+        } catch (error) {
+            console.error('Error fetching unread count:', error);
+            return 0;
         }
     }
 
@@ -264,10 +334,10 @@ class NotificationService {
      */
     cleanup() {
         if (this.notificationListener) {
-            Notifications.removeNotificationSubscription(this.notificationListener);
+            this.notificationListener.remove();
         }
         if (this.responseListener) {
-            Notifications.removeNotificationSubscription(this.responseListener);
+            this.responseListener.remove();
         }
     }
 }

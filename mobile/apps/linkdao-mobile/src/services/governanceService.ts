@@ -304,7 +304,22 @@ class GovernanceService {
       return this.transformProposals(response.data.data || response.data || []);
     } catch (error) {
       console.error('Error fetching active proposals:', error);
-      return this.getMockProposals();
+      return [];
+    }
+  }
+
+  /**
+   * Search proposals by title or description
+   */
+  async searchProposals(query: string): Promise<Proposal[]> {
+    try {
+      const response = await apiClient.get(`${this.baseUrl}/proposals/search`, {
+        params: { q: query }
+      });
+      return this.transformProposals(response.data.data || response.data || []);
+    } catch (error) {
+      console.error('Error searching proposals:', error);
+      return [];
     }
   }
 
@@ -318,7 +333,7 @@ class GovernanceService {
       return this.transformProposals(response.data.data || response.data || []);
     } catch (error) {
       console.error('Error fetching all proposals:', error);
-      return this.getMockProposals();
+      return [];
     }
   }
 
@@ -810,136 +825,6 @@ class GovernanceService {
     }));
   }
 
-  // Mock data for development
-  private getMockProposals(): Proposal[] {
-    return [
-      {
-        id: '1',
-        onChainId: '1',
-        title: 'Increase Community Fund Allocation',
-        description: 'Proposal to increase the community fund allocation from 10% to 15% of protocol revenue to support more community initiatives and grants.',
-        type: 'treasury',
-        proposer: '0x1234567890123456789012345678901234567890',
-        proposerReputation: 850,
-        communityId: 'linkdao',
-        status: ProposalStatus.ACTIVE,
-        votingPower: {
-          for: 45000,
-          against: 12000,
-          abstain: 3000,
-          total: 60000,
-          participationRate: 75.5,
-        },
-        forVotes: '45000',
-        againstVotes: '12000',
-        abstainVotes: '3000',
-        quorum: '1000',
-        participationRate: 75.5,
-        canVote: true,
-        startTime: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-        endTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-        executionDelay: 2 * 24 * 60 * 60 * 1000,
-        requiredMajority: 51,
-        category: ProposalCategory.FUNDING,
-        tags: ['treasury', 'community', 'funding'],
-      },
-      {
-        id: '2',
-        onChainId: '2',
-        title: 'Implement New Governance Token',
-        description: 'Proposal to implement a new governance token with enhanced voting rights and staking capabilities.',
-        type: 'upgrade',
-        proposer: '0x2345678901234567890123456789012345678901',
-        proposerReputation: 920,
-        communityId: 'linkdao',
-        status: ProposalStatus.ACTIVE,
-        votingPower: {
-          for: 32000,
-          against: 8000,
-          abstain: 5000,
-          total: 45000,
-          participationRate: 82.1,
-        },
-        forVotes: '32000',
-        againstVotes: '8000',
-        abstainVotes: '5000',
-        quorum: '1500',
-        participationRate: 82.1,
-        canVote: true,
-        startTime: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-        endTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-        createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-        executionDelay: 2 * 24 * 60 * 60 * 1000,
-        requiredMajority: 60,
-        category: ProposalCategory.GOVERNANCE,
-        tags: ['governance', 'token', 'upgrade'],
-      },
-      {
-        id: '3',
-        onChainId: '3',
-        title: 'Update Community Moderation Guidelines',
-        description: 'Proposal to update the community moderation guidelines to better reflect current community standards and improve the moderation process.',
-        type: 'general',
-        proposer: '0x3456789012345678901234567890123456789012',
-        proposerReputation: 780,
-        communityId: 'linkdao',
-        status: ProposalStatus.SUCCEEDED,
-        votingPower: {
-          for: 18500,
-          against: 1200,
-          abstain: 300,
-          total: 20000,
-          participationRate: 88.5,
-        },
-        forVotes: '18500',
-        againstVotes: '1200',
-        abstainVotes: '300',
-        quorum: '1200',
-        participationRate: 88.5,
-        canVote: false,
-        startTime: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        endTime: new Date(Date.now() - 86400000),
-        createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        executedAt: new Date(Date.now() - 43200000),
-        executionDelay: 2 * 24 * 60 * 60 * 1000,
-        requiredMajority: 60,
-        category: ProposalCategory.COMMUNITY,
-        tags: ['community', 'moderation', 'guidelines'],
-      },
-      {
-        id: '4',
-        onChainId: '4',
-        title: 'Charity Grant for Education Initiative',
-        description: 'Proposal to allocate 50,000 LDAO tokens to support blockchain education programs in developing countries.',
-        type: 'treasury',
-        proposer: '0x4567890123456789012345678901234567890123',
-        proposerReputation: 650,
-        communityId: 'linkdao',
-        status: ProposalStatus.ACTIVE,
-        votingPower: {
-          for: 15000,
-          against: 2000,
-          abstain: 1000,
-          total: 18000,
-          participationRate: 72.0,
-        },
-        forVotes: '15000',
-        againstVotes: '2000',
-        abstainVotes: '1000',
-        quorum: '1000',
-        participationRate: 72.0,
-        canVote: true,
-        startTime: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-        endTime: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000),
-        createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-        executionDelay: 2 * 24 * 60 * 60 * 1000,
-        requiredMajority: 51,
-        category: ProposalCategory.CHARITY,
-        tags: ['charity', 'education', 'grant'],
-      },
-    ];
   }
-}
 
 export const governanceService = new GovernanceService();

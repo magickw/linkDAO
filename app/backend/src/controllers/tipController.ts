@@ -31,7 +31,7 @@ export class TipController {
   async createTip(req: Request, res: Response): Promise<Response> {
     try {
       safeLogger.info('Creating tip request:', { body: req.body, user: req.user });
-      const { postId: rawPostId, creatorAddress, amount, message, transactionHash, token, currency } = req.body;
+      const { postId: rawPostId, creatorAddress, amount, message, transactionHash, token, currency, networkName, chainId } = req.body;
       const { walletAddress: fromAddress } = req.user as { walletAddress: string };
 
       const postId = normalizePostId(rawPostId);
@@ -64,7 +64,9 @@ export class TipController {
         amount.toString(),
         tokenSymbol,
         message,
-        transactionHash
+        transactionHash,
+        networkName,
+        chainId
       );
 
       safeLogger.info('Tip recorded:', newTip);

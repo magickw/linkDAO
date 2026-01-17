@@ -30,12 +30,14 @@ export class TipService {
     amount: string,
     token: string = 'LDAO',
     message?: string,
-    txHash?: string
+    txHash?: string,
+    networkName?: string,
+    chainId?: number
   ) {
     try {
       // Check if it's a regular post or a status
       const postResult = await db.select().from(schema.posts).where(eq(schema.posts.id, postId)).limit(1);
-      
+
       if (postResult.length > 0) {
         const result = await db.insert(schema.tips).values({
           postId,
@@ -44,7 +46,9 @@ export class TipService {
           amount,
           token,
           message,
-          txHash
+          txHash,
+          networkName,
+          chainId
         }).returning();
         return result[0];
       }
@@ -58,7 +62,9 @@ export class TipService {
           amount,
           token,
           message,
-          txHash
+          txHash,
+          networkName,
+          chainId
         }).returning();
         // Normalize result to match tip shape (statusId -> postId)
         return { ...result[0], postId: result[0].statusId };
@@ -72,7 +78,9 @@ export class TipService {
         amount,
         token,
         message,
-        txHash
+        txHash,
+        networkName,
+        chainId
       }).returning();
 
       return result[0];

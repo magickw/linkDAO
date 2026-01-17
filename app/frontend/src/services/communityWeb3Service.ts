@@ -46,6 +46,7 @@ export interface CommunityTipInput {
   amount: string;
   token: string;
   message?: string;
+  targetChainId?: number;
 }
 
 export interface StakingReward {
@@ -245,6 +246,7 @@ export class CommunityWeb3Service {
     amount: string;
     token: string;
     message?: string;
+    targetChainId?: number;
   }): Promise<string> {
     try {
       // Validate recipient address before anything else
@@ -253,148 +255,118 @@ export class CommunityWeb3Service {
         throw new Error(`Invalid recipient address: ${input.recipientAddress}. Expected a 0x wallet address.`);
       }
 
-      // Try to get signer with better error handling
+      // Try to get signer
       let signer = await getSigner();
-
       if (!signer) throw new Error('No signer available. Please ensure your wallet is connected.');
 
-      // Use environment configuration for contract addresses
+      // Import config
       const { ENV_CONFIG } = await import('@/config/environment');
+      const { getNetwork } = await import('@/config/web3Config');
+      const { switchNetwork, getSigner: getRefreshedSigner } = await import('@/utils/web3');
 
-      const TIP_ROUTER_ADDRESS = ENV_CONFIG.TIP_ROUTER_ADDRESS;
-      const LDAO_TOKEN_ADDRESS = ENV_CONFIG.LDAO_TOKEN_ADDRESS;
-
-      // Get current chain ID directly from the signer's provider
-      let chainId: number;
-      try {
-        if (signer.provider) {
-          const network = await (signer.provider as any).getNetwork();
-          chainId = Number(network.chainId);
-          console.log('Detected chain ID from signer:', chainId);
-
-          // Enforce Base Sepolia for USDC/USDT tipping (where testnet tokens are available)
-          const requiredChainId = 84532; // Base Sepolia
-          if (chainId !== requiredChainId) {
-            console.warn(`[Web3Service] Wallet is on chain ${chainId}, but this feature requires Base Sepolia (${requiredChainId}). Attempting to switch...`);
-
-            try {
-              // Dynamically import switchNetwork to avoid circular dependencies if any
-              const { switchNetwork } = await import('@/utils/web3');
-              await switchNetwork(requiredChainId);
-
-              // Poll for network change
-              const maxRetries = 10; // Wait up to 5 seconds (500ms * 10)
-              let retries = 0;
-              let isCorrectNetwork = false;
-
-              while (retries < maxRetries) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-
-                // Re-check network
-                // We specifically access the property again to ensure we get fresh data
-                try {
-                  const freshNetwork = await (signer.provider as any).getNetwork();
-                  const freshChainId = Number(freshNetwork.chainId);
-                  console.log(`[Web3Service] Network check retry ${retries + 1}/${maxRetries}: ${freshChainId}`);
-
-                  if (freshChainId === requiredChainId) {
-                    isCorrectNetwork = true;
-                    break;
-                  }
-                } catch (e) {
-                  console.warn('Error checking network during retry:', e);
-                }
-
-                retries++;
-              }
-
-              // CRITICAL: Re-fetch signer after network switch. 
-              // The old signer might be bound to the old network provider state.
-              if (isCorrectNetwork) {
-                console.log('[Web3Service] Network switched successfully. Re-fetching signer...');
-                const { getSigner } = await import('@/utils/web3');
-
-                // Re-fetch signer to ensure it's bound to the new network
-                const newSigner = await getSigner();
-                if (!newSigner) throw new Error('Failed to get signer after network switch');
-
-                signer = newSigner;
-                chainId = requiredChainId; // We confirmed it in the loop
-              } else {
-                throw new Error(`Network switch timed out. Please manually switch your wallet to Base Sepolia Testnet and try again.`);
-              }
-
-            } catch (switchError: any) {
-              console.error('Network switch failed:', switchError);
-              throw new Error(`Please switch your wallet to the Base Sepolia Testnet. Currently connected to ${chainId === 1 ? 'Ethereum Mainnet' : chainId === 11155111 ? 'Ethereum Sepolia' : 'another network'}.`);
-            }
-          }
-        } else {
-          console.warn('Signer has no provider, defaulting to Base Sepolia');
-          chainId = 84532;
+      // 1. Determine Target Network and Switch if needed
+      // -----------------------------------------------
+      const currentNetworkFn = async () => {
+        if (signer?.provider) {
+          const net = await (signer.provider as any).getNetwork();
+          return Number(net.chainId);
         }
-      } catch (e: any) {
-        if (e.message.includes('switch your wallet')) throw e;
-        // If getting network fails, we might proceed but risk failure later.
-        console.warn('Failed to get chain ID from signer provider, defaulting to Sepolia:', e);
-        chainId = 11155111;
+        return 0;
+      };
+
+      let chainId = await currentNetworkFn();
+      console.log('Detected chain ID from signer:', chainId);
+
+      // Default to Sepolia (11155111) if not provided, or purely trust input
+      const targetChainId = input.targetChainId || 11155111;
+      const targetNetworkConfig = getNetwork(targetChainId);
+      const networkName = targetNetworkConfig ? targetNetworkConfig.name : `Chain ${targetChainId}`;
+
+      if (chainId !== targetChainId) {
+        console.warn(`[Web3Service] Wallet is on chain ${chainId}, switching to ${networkName} (${targetChainId}).`);
+
+        try {
+          await switchNetwork(targetChainId);
+
+          // Poll for network change
+          const maxRetries = 10;
+          let retries = 0;
+          let isCorrectNetwork = false;
+
+          while (retries < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            try {
+              const freshChainId = await currentNetworkFn();
+              console.log(`[Web3Service] Network check retry ${retries + 1}/${maxRetries}: ${freshChainId}`);
+              if (freshChainId === targetChainId) {
+                isCorrectNetwork = true;
+                break;
+              }
+            } catch (e) { console.warn('Error checking network:', e); }
+            retries++;
+          }
+
+          if (isCorrectNetwork) {
+            console.log('[Web3Service] Network switched. Re-fetching signer...');
+            const newSigner = await getRefreshedSigner();
+            if (!newSigner) throw new Error('Failed to get signer after network switch');
+            signer = newSigner;
+            chainId = targetChainId;
+          } else {
+            throw new Error(`Network switch timed out. Please manually switch to ${networkName}.`);
+          }
+        } catch (switchError: any) {
+          console.error('Network switch failed:', switchError);
+          throw new Error(`Please switch your wallet to ${networkName}.`);
+        }
       }
 
-      // Get token address based on token type and chain
-      let tokenAddress: string;
-      let tokenDecimals: number;
+      // 2. Resolve Token and Contract Addresses
+      // ---------------------------------------
+      const networkConfig = getNetwork(chainId); // Should match targetChainId now
+
+      let tokenAddress = '';
+      let tokenDecimals = 18;
 
       if (input.token === 'LDAO') {
-        tokenAddress = LDAO_TOKEN_ADDRESS;
+        tokenAddress = networkConfig?.contracts?.ldaoToken || ENV_CONFIG.LDAO_TOKEN_ADDRESS;
         tokenDecimals = 18;
       } else if (input.token === 'USDC') {
-        // Get USDC address from environment or use chain-specific addresses
-        tokenAddress = process.env.NEXT_PUBLIC_USDC_ADDRESS || '';
-        if (!tokenAddress) {
-          // Fallback to known Base Sepolia USDC address
-          if (chainId === 84532) {
-            // Base Sepolia USDC address
-            tokenAddress = '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
-          } else if (chainId === 11155111) {
-            // Ethereum Sepolia USDC address (fallback)
-            tokenAddress = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
-          } else {
-            throw new Error('USDC address not configured for this network');
-          }
-        }
         tokenDecimals = 6;
+        tokenAddress = networkConfig?.contracts?.usdcToken || process.env.NEXT_PUBLIC_USDC_ADDRESS || '';
+        // Fallbacks
+        if (!tokenAddress) {
+          if (chainId === 84532) tokenAddress = '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
+          else if (chainId === 11155111) tokenAddress = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
+          else if (chainId === 8453) tokenAddress = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+          else if (chainId === 137) tokenAddress = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
+          else if (chainId === 1) tokenAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+        }
       } else if (input.token === 'USDT') {
-        tokenAddress = process.env.NEXT_PUBLIC_USDT_TOKEN_ADDRESS || '';
-        if (!tokenAddress) {
-          // Fallback to known Base Sepolia USDT address
-          if (chainId === 84532) {
-            // Base Sepolia USDT address (if available)
-            tokenAddress = '0x0000000000000000000000000000000000000000'; // TODO: Update with actual Base Sepolia USDT
-          } else if (chainId === 11155111) {
-            // Ethereum Sepolia USDT address
-            tokenAddress = '0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0';
-          } else {
-            throw new Error('USDT address not configured for this network');
-          }
-        }
         tokenDecimals = 6;
+        tokenAddress = networkConfig?.contracts?.usdtToken || process.env.NEXT_PUBLIC_USDT_TOKEN_ADDRESS || '';
+        // Fallbacks
+        if (!tokenAddress) {
+          if (chainId === 11155111) tokenAddress = '0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0';
+          else if (chainId === 1) tokenAddress = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
+          else if (chainId === 137) tokenAddress = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
+        }
       } else {
-        throw new Error(`Unsupported token: ${input.token}. Supported tokens: LDAO, USDC, USDT`);
+        throw new Error(`Unsupported token: ${input.token}`);
       }
 
-      // Validate contract addresses
-      if (!TIP_ROUTER_ADDRESS || !tokenAddress) {
-        throw new Error('Contract addresses not configured');
-      }
+      if (!tokenAddress) throw new Error(`Token address for ${input.token} not found on chain ${chainId}`);
 
-      // TipRouter ABI - includes paymentMethod parameter
-      const TIP_ROUTER_ABI = [
-        'function tip(bytes32 postId, address creator, uint256 amount, uint8 paymentMethod)',
-        'function tipWithComment(bytes32 postId, address creator, uint256 amount, uint8 paymentMethod, string comment)',
-        'function calculateFee(uint256 amount) view returns (uint256)'
-      ];
+      const tipRouterAddress = networkConfig?.contracts?.tipRouter || ENV_CONFIG.TIP_ROUTER_ADDRESS;
 
-      // ERC20 ABI for approve
+      // Determine mode
+      // Logic: If we have a TipRouter address AND we are on a chain where we expect it (currently mainly Sepolia), use it.
+      // Otherwise fallback to simple transfer.
+      // Explicitly for now: Only use TipRouter on Sepolia (11155111) as per legacy logic, UNLESS configured otherwise.
+      const useTipRouter = !!tipRouterAddress && chainId === 11155111;
+
+      // 3. Prepare Contract Instances and Data
+      // --------------------------------------
       const ERC20_ABI = [
         'function approve(address spender, uint256 amount) returns (bool)',
         'function allowance(address owner, address spender) view returns (uint256)',
@@ -403,258 +375,83 @@ export class CommunityWeb3Service {
         'function transfer(address to, uint256 amount) returns (bool)'
       ];
 
-      // Create contract instances with the signer (which should now be on the correct network)
-      const tipRouterContract = new ethers.Contract(TIP_ROUTER_ADDRESS, TIP_ROUTER_ABI, signer);
+      const TIP_ROUTER_ABI = [
+        'function tip(bytes32 postId, address creator, uint256 amount, uint8 paymentMethod)',
+        'function tipWithComment(bytes32 postId, address creator, uint256 amount, uint8 paymentMethod, string comment)',
+        'function calculateFee(uint256 amount) view returns (uint256)'
+      ];
+
       const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
-
-      // Verify we're using the correct token contract
-      console.log(`[Balance Check] Token contract address: ${tokenAddress}`);
-      console.log(`[Balance Check] Token: ${input.token}`);
-      console.log(`[Balance Check] Chain ID: ${chainId}`);
-
-      // Convert amount to proper units based on token decimals
       const amountInUnits = ethers.parseUnits(input.amount, tokenDecimals);
-      console.log(`[Balance Check] Amount requested: ${input.amount} ${input.token} (${amountInUnits.toString()} units)`);
-
-      // Check user's token balance
       const userAddress = await signer.getAddress();
-      console.log(`[Balance Check] Checking balance for address: ${userAddress}`);
 
-      // Get balance with error handling
-      let balance;
+      // Check Balance
       try {
-        balance = await tokenContract.balanceOf(userAddress);
-        console.log(`[Balance Check] Raw balance: ${balance.toString()} units`);
-        console.log(`[Balance Check] Formatted balance: ${ethers.formatUnits(balance, tokenDecimals)} ${input.token}`);
-      } catch (balanceError) {
-        console.error(`[Balance Check] Failed to fetch balance:`, balanceError);
-        throw new Error(`Failed to check ${input.token} balance. Please ensure you're on the correct network (Sepolia).`);
+        const balance = await tokenContract.balanceOf(userAddress);
+        if (balance < amountInUnits) {
+          throw new Error(`Insufficient ${input.token} balance.`);
+        }
+      } catch (err: any) {
+        // Re-throw if it's our own error, otherwise wrap
+        if (err.message.includes('Insufficient')) throw err;
+        throw new Error(`Failed to check balance of ${input.token}.`);
       }
 
-      if (balance < amountInUnits) {
-        const formattedBalance = ethers.formatUnits(balance, tokenDecimals);
-        console.error(`[Balance Check] Insufficient balance: have ${formattedBalance} ${input.token}, need ${input.amount} ${input.token}`);
-        throw new Error(`Insufficient ${input.token} balance. You have ${formattedBalance} ${input.token} but need ${input.amount} ${input.token}`);
-      }
-
-      console.log(`[Balance Check] ✅ Sufficient balance confirmed`);
-
-      console.log(`[Balance Check] ✅ Sufficient balance confirmed`);
-
-      // Determine if we should use TipRouter or Direct Transfer based on network
-      const useTipRouter = chainId === 11155111; // Only use TipRouter on Ethereum Sepolia
-
-      if (!useTipRouter && chainId === 84532) {
-        console.log('[Web3Service] Using Direct Transfer fallback for Base Sepolia (TipRouter not deployed)');
-      }
-
-      // Check current allowance only if using TipRouter
-      if (useTipRouter) {
-        const currentAllowance = await tokenContract.allowance(userAddress, TIP_ROUTER_ADDRESS);
-
-        // IMPORTANT: The TipRouter contract will transfer the FULL amount from the user
-        // (it splits it into creator portion + fee portion internally)
-        // So we need to approve the full amountInUnits, not just the net amount
-        // The user's input amount already represents the gross amount they want to tip
-        if (currentAllowance < amountInUnits) {
-          console.log(`Approving TipRouter to spend ${input.amount} ${input.token} (full amount including fee)...`);
-          const approveTx = await tokenContract.approve(TIP_ROUTER_ADDRESS, amountInUnits);
-          await approveTx.wait();
-          console.log('Approval confirmed');
-        } else {
-          console.log(`Sufficient allowance already exists: ${ethers.formatUnits(currentAllowance, tokenDecimals)} ${input.token}`);
+      // Check Allowance (TipRouter only)
+      if (useTipRouter && tipRouterAddress) {
+        const allowance = await tokenContract.allowance(userAddress, tipRouterAddress);
+        if (allowance < amountInUnits) {
+          console.log(`Approving ${input.amount} ${input.token}...`);
+          const tx = await tokenContract.approve(tipRouterAddress, amountInUnits);
+          await tx.wait();
         }
       }
 
-      // Convert postId to bytes32 correctly (needed for TipRouter or backend logging)
-      // If it's a UUID, we need to strip hyphens and pad it to the RIGHT.
-      // Solidity bytes32 is left-aligned, so padding should be at the end.
+      // Format Post ID
       let postIdBytes32;
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
       if (uuidRegex.test(input.postId)) {
-        // Remove hyphens and ensure lowercase
         const cleanHex = input.postId.replace(/-/g, '').toLowerCase();
-        // Construct 32-byte hex string (64 characters + 0x)
-        // UUID is 16 bytes (32 chars). We need 32 more chars (16 bytes) of zeros at the END.
         postIdBytes32 = '0x' + cleanHex.padEnd(64, '0');
-        console.log(`[Web3Service] Formatted UUID ${input.postId} to bytes32 (right-padded): ${postIdBytes32}`);
       } else if (input.postId.startsWith('0x') && input.postId.length === 66) {
         postIdBytes32 = input.postId;
       } else {
-        // Fallback for non-UUID strings
         postIdBytes32 = ethers.id(input.postId);
       }
 
-      // Convert token to paymentMethod enum (0 = LDAO, 1 = USDC, 2 = USDT)
+      // Payment Method Enum
       let paymentMethod = 0;
-      if (input.token === 'USDC') {
-        paymentMethod = 1;
-      } else if (input.token === 'USDT') {
-        paymentMethod = 2;
-      }
+      if (input.token === 'USDC') paymentMethod = 1;
+      else if (input.token === 'USDT') paymentMethod = 2;
 
-      // Send tip (with or without comment)
+      // 4. Send Transaction
+      // -------------------
       let tx;
 
-      // Debug Logs for Revert Analysis
-      console.log('--- Debugging Tip Transaction ---');
-      console.log('User Address:', userAddress);
-      console.log('Mode:', useTipRouter ? 'TipRouter Contract' : 'Direct Transfer');
-      console.log('LDAO Token Address (ENV):', LDAO_TOKEN_ADDRESS);
-      console.log('Tip Router Address (ENV):', TIP_ROUTER_ADDRESS);
-      console.log('Token Address Used:', tokenAddress);
-      console.log('PostId (Original):', input.postId);
-      console.log('PostId (Bytes32):', postIdBytes32);
-      console.log('Recipient:', input.recipientAddress);
-      console.log('Amount (Original):', input.amount);
-      console.log('Amount (Units):', amountInUnits.toString());
-      console.log('Payment Method:', paymentMethod);
-
-      const debugData = {
-        postId: postIdBytes32,
-        recipient: input.recipientAddress,
-        amount: amountInUnits.toString(),
-        paymentMethod,
-        token: tokenAddress,
-        router: TIP_ROUTER_ADDRESS,
-        mode: useTipRouter ? 'contract' : 'direct'
-      };
-
-      console.log('Transaction Data:', JSON.stringify(debugData, null, 2));
-
-      try {
-        if (useTipRouter) {
-          // Standard TipRouter flow (Ethereum Sepolia)
-          if (input.message && input.message.trim()) {
-            console.log(`Tipping ${input.amount} ${input.token} with comment to ${input.recipientAddress}`);
-            tx = await tipRouterContract.tipWithComment(
-              postIdBytes32,
-              input.recipientAddress,
-              amountInUnits,
-              paymentMethod,
-              input.message.trim()
-            );
-          } else {
-            console.log(`Tipping ${input.amount} ${input.token} to ${input.recipientAddress}`);
-            tx = await tipRouterContract.tip(
-              postIdBytes32,
-              input.recipientAddress,
-              amountInUnits,
-              paymentMethod
-            );
-          }
+      if (useTipRouter && tipRouterAddress) {
+        const tipRouterContract = new ethers.Contract(tipRouterAddress, TIP_ROUTER_ABI, signer);
+        if (input.message?.trim()) {
+          tx = await tipRouterContract.tipWithComment(postIdBytes32, input.recipientAddress, amountInUnits, paymentMethod, input.message.trim());
         } else {
-          // Direct Transfer fallback (Base Sepolia)
-          // We transfer tokens directly from user to recipient
-          console.log(`[Direct] Transferring ${input.amount} ${input.token} directly to ${input.recipientAddress}`);
-
-          // Connect token contract for transfer (needs signer)
-          const transferContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
-
-          tx = await transferContract.transfer(
-            input.recipientAddress,
-            amountInUnits
-          );
+          tx = await tipRouterContract.tip(postIdBytes32, input.recipientAddress, amountInUnits, paymentMethod);
         }
-
-        console.log('Transaction object received:', {
-          hash: tx.hash,
-          to: tx.to,
-          from: tx.from,
-          dataLength: tx.data?.length || 0,
-          dataPreview: tx.data?.slice(0, 20) || 'NO DATA'
-        });
-
-        // Verify transaction has data before waiting
-        if (!tx.data || tx.data === '0x' || tx.data === '') {
-          console.error('CRITICAL: Transaction encoding failed - empty data field!');
-          console.error('Transaction object:', tx);
-          throw new Error('Transaction encoding failed - empty data field. This is a critical error in ethers.js transaction construction.');
-        }
-
-        console.log('✅ Transaction sent successfully with data:', tx.data.slice(0, 10) + '...');
-      } catch (estimateError: any) {
-        console.error('Transaction failed:', estimateError);
-
-        // Check if this is a gas estimation error or an actual transaction failure
-        if (estimateError.code === 'CALL_EXCEPTION' && estimateError.action === 'estimateGas') {
-          console.warn('Gas estimation failed, attempting with fixed gas limit:', estimateError.message);
-
-          // Try again with a fixed gas limit
-          try {
-            if (useTipRouter) {
-              if (input.message && input.message.trim()) {
-                tx = await tipRouterContract.tipWithComment(
-                  postIdBytes32,
-                  input.recipientAddress,
-                  amountInUnits,
-                  paymentMethod,
-                  input.message.trim(),
-                  { gasLimit: 400000 }
-                );
-              } else {
-                tx = await tipRouterContract.tip(
-                  postIdBytes32,
-                  input.recipientAddress,
-                  amountInUnits,
-                  paymentMethod,
-                  { gasLimit: 400000 }
-                );
-              }
-            } else {
-              // Direct transfer retry
-              const transferContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
-              tx = await transferContract.transfer(
-                input.recipientAddress,
-                amountInUnits,
-                { gasLimit: 100000 }
-              );
-            }
-
-            console.log('Transaction object received (with fixed gas):', {
-              hash: tx.hash,
-              to: tx.to,
-              from: tx.from,
-              dataLength: tx.data?.length || 0,
-              dataPreview: tx.data?.slice(0, 20) || 'NO DATA'
-            });
-
-            // Verify transaction has data
-            if (!tx.data || tx.data === '0x' || tx.data === '') {
-              console.error('CRITICAL: Transaction encoding failed even with fixed gas!');
-              throw new Error('Transaction encoding failed - empty data field');
-            }
-
-            console.log('✅ Transaction sent with fixed gas and data:', tx.data.slice(0, 10) + '...');
-          } catch (fixedGasError: any) {
-            console.error('Fixed gas transaction also failed:', fixedGasError);
-            throw fixedGasError;
-          }
-        } else {
-          // Not a gas estimation error, re-throw
-          throw estimateError;
-        }
+      } else {
+        // Direct Transfer
+        tx = await tokenContract.transfer(input.recipientAddress, amountInUnits);
       }
 
-      // Wait for transaction confirmation
+      console.log('Transaction sent:', tx.hash);
       const receipt = await tx.wait();
-      console.log('Tip transaction confirmed:', receipt.hash);
 
-      // Record tip to backend
+      // 5. Backend Logging
+      // ------------------
       try {
-        // Unified storage uses localStorage
         const sessionToken = typeof window !== 'undefined' ? localStorage.getItem('linkdao_access_token') : null;
         if (sessionToken) {
           const backendUrl = ENV_CONFIG.BACKEND_URL || 'http://localhost:10000';
-
-          // Added cache buster to prevent any 404/proxy issues
           await fetch(`${backendUrl}/api/tips?t=${Date.now()}`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${sessionToken}`
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionToken}` },
             body: JSON.stringify({
               postId: input.postId,
               creatorAddress: input.recipientAddress,
@@ -662,17 +459,15 @@ export class CommunityWeb3Service {
               message: input.message,
               token: input.token,
               transactionHash: receipt.hash,
-              networkName: useTipRouter ? 'sepolia' : 'base-sepolia',
+              networkName: networkName.toLowerCase().replace(' ', '-'),
               chainId: chainId
             })
           });
-          console.log('Tip recorded to backend');
         }
-      } catch (backendError) {
-        console.error('Failed to record tip to backend:', backendError);
-      }
+      } catch (logErr) { console.warn('Failed to log tip:', logErr); }
 
       return receipt.hash;
+
     } catch (error) {
       console.error('Error tipping community post:', error);
       throw error;

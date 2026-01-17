@@ -40,7 +40,7 @@ export default function SettingsScreen() {
   } = useSettingsStore();
 
   const [activeTab, setActiveTab] = useState<TabType>('profile');
-  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [localBiometricEnabled, setLocalBiometricEnabled] = useState(false);
   const [biometricType, setBiometricType] = useState<string | null>(null);
   const [cacheSize, setCacheSize] = useState<string>('0 KB');
   const [email, setEmail] = useState('');
@@ -55,7 +55,7 @@ export default function SettingsScreen() {
     try {
       const config = await getBiometricConfig();
       if (config?.enableBiometrics) {
-        setBiometricEnabled(true);
+        setLocalBiometricEnabled(true);
         setBiometricType(getBiometryTypeName(config.biometryType));
       }
     } catch (error) {
@@ -114,7 +114,7 @@ export default function SettingsScreen() {
 
         const result = await enableBiometrics();
         if (result.success) {
-          setBiometricEnabled(true);
+          setLocalBiometricEnabled(true);
           setBiometricType(getBiometryTypeName(result.biometryType));
           setBiometricEnabled(true);
           Alert.alert('Success', `${getBiometryTypeName(result.biometryType)} has been enabled for authentication`);
@@ -129,7 +129,7 @@ export default function SettingsScreen() {
       try {
         const success = await disableBiometrics();
         if (success) {
-          setBiometricEnabled(false);
+          setLocalBiometricEnabled(false);
           setBiometricType(null);
           setBiometricEnabled(false);
           Alert.alert('Success', 'Biometric authentication has been disabled');

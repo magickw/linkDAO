@@ -6,6 +6,7 @@ import { hasInjectedProvider, requestWalletConnection, onAccountsChanged, onChai
 interface Web3ContextType {
   address: string | undefined;
   isConnected: boolean;
+  chainId: number | undefined;
   hasWallet: boolean;
   signer: any;
   connect: (connectorId?: string) => void;
@@ -21,7 +22,7 @@ interface Web3ProviderProps {
 }
 
 export function Web3Provider({ children }: Web3ProviderProps) {
-  const { address, isConnected, connector } = useAccount();
+  const { address, isConnected, connector, chainId } = useAccount();
   const signer = useEthersSigner();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
@@ -131,6 +132,7 @@ export function Web3Provider({ children }: Web3ProviderProps) {
   const value: Web3ContextType = {
     address,
     isConnected,
+    chainId: (connector as any)?.chainId || undefined,
     hasWallet,
     signer,
     connect: handleConnect,
