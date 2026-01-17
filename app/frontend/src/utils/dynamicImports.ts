@@ -21,7 +21,6 @@ export const DynamicComponents = {
   EnhancedFeedView: lazy(() => import('@/components/Feed/EnhancedFeedView') as any),
   InfiniteScrollFeed: lazy(() => import('@/components/Feed/InfiniteScrollFeed') as any),
   FeedSortingTabs: lazy(() => import('@/components/Feed/FeedSortingTabs') as any),
-  TrendingContentDetector: lazy(() => import('@/components/Feed/TrendingContentDetector') as any),
 
   // Navigation Components
   AdvancedNavigationSidebar: lazy(() => import('@/components/Navigation/AdvancedNavigationSidebar') as any),
@@ -33,7 +32,6 @@ export const DynamicComponents = {
   SmartRightSidebar: lazy(() => import('@/components/SmartRightSidebar/SmartRightSidebar') as any),
   QuickActions: lazy(() => import('@/components/SmartRightSidebar/QuickActions') as any),
   PortfolioModal: lazy(() => import('@/components/SmartRightSidebar/PortfolioModal') as any),
-  TrendingContentWidget: lazy(() => import('@/components/SmartRightSidebar/TrendingContentWidget') as any),
 
   // Reputation System Components
   BadgeCollection: lazy(() => import('@/components/Reputation/BadgeCollection') as any),
@@ -51,7 +49,6 @@ export const DynamicComponents = {
   EnhancedSearchInterface: lazy(() => import('@/components/EnhancedSearch/EnhancedSearchInterface') as any),
   SearchResultsView: lazy(() => import('@/components/EnhancedSearch/SearchResultsView') as any),
   DiscoveryDashboard: lazy(() => import('@/components/EnhancedSearch/DiscoveryDashboard') as any),
-  TrendingSection: lazy(() => import('@/components/EnhancedSearch/TrendingSection') as any),
 
   // Performance Components
   VirtualScrollManager: lazy(() => import('@/components/Performance/VirtualScrollManager') as any),

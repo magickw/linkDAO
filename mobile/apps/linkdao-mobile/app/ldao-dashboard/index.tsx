@@ -688,7 +688,7 @@ const styles = StyleSheet.create({
   },
   referralStatValue: {
     fontSize: 20,
-    fontWeight: 'bold,
+    fontWeight: 'bold',
     color: '#f59e0b',
     marginBottom: 2,
   },

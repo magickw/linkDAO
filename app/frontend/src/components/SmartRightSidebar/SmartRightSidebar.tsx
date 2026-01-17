@@ -361,9 +361,6 @@ export default function SmartRightSidebar({
 
         {/* Who to Follow Widget (available even when wallet is disconnected) */}
         <WhoToFollowWidget />
-
-        {/* Trending Now (available even when wallet is disconnected) */}
-        <TrendingContentWidget context={context} />
       </div>
     );
   }
