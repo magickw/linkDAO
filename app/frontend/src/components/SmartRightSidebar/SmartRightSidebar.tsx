@@ -9,7 +9,7 @@ import { paymentRouterAddress, useWritePaymentRouterSendEthPayment, useWritePaym
 import { dexService } from '@/services/dexService';
 import TrendingContentWidget from './TrendingContentWidget';
 import QuickActions from './QuickActions';
-import TransactionMiniFeed from './TransactionMiniFeed';
+
 import PortfolioModal from './PortfolioModal';
 import SendTokenModal from '@/components/WalletActions/SendTokenModal';
 import ReceiveTokenModal from '@/components/WalletActions/ReceiveTokenModal';
@@ -387,13 +387,7 @@ export default function SmartRightSidebar({
         {/* Trending Now (moved here from left sidebar) */}
         <TrendingContentWidget context={context} />
 
-        {/* Transaction Mini Feed - only show if we have transactions */}
-        {walletData && walletData.recentTransactions && walletData.recentTransactions.length > 0 && (
-          <TransactionMiniFeed
-            transactions={walletData.recentTransactions}
-            onTransactionClick={handleTransactionClick}
-          />
-        )}
+
 
         {/* Trending content moved to left sidebar */}
       </div>
