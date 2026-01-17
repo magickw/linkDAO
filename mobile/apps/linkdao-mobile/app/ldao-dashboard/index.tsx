@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 
-const API_BASE_URL = interface.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
 interface TokenBalance {
   balance: string;

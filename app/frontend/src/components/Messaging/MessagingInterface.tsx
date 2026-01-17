@@ -70,6 +70,12 @@ interface ChannelMessage {
   fromAddress: string;
   content: string;
   timestamp: Date;
+  replyToId?: string;
+  replyTo?: {
+    fromAddress: string;
+    content: string;
+    senderName?: string;
+  };
   reactions?: {
     emoji: string;
     count: number;
@@ -235,6 +241,14 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     scrollToBottom();
   }, [messages]);
 
+  // Auto-resize textarea when newMessage changes
+  useEffect(() => {
+    if (messageInputRef.current) {
+      messageInputRef.current.style.height = 'auto';
+      messageInputRef.current.style.height = `${Math.min(messageInputRef.current.scrollHeight, 200)}px`;
+    }
+  }, [newMessage]);
+
   // Sync hook conversations into DM list
   useEffect(() => {
     if (!hookConversations) return;
@@ -307,6 +321,8 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
         fromAddress: m.fromAddress,
         content: m.content,
         timestamp: new Date(m.timestamp),
+        replyToId: (m as any).replyToId,
+        replyTo: (m as any).replyTo,
         reactions: (m as any).reactions as any,
         threadReplies: (m as any).threadReplies as any,
         isEncrypted: !!(m as any).isEncrypted,
@@ -418,6 +434,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
     setNewMessage('');
     setReplyingTo(null);
+    setQuotingTo(null);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -522,13 +539,36 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     }));
   };
 
-  const quoteMessage = (content: string, author: string) => {
+  const quoteMessage = (content: string, author: string, messageId: string) => {
+    // Set quoting metadata
+    setQuotingTo({ messageId, username: author, content });
+    setReplyingTo(null); // Clear reply if quoting
+
+    // Format each line with a blockquote prefix for the editable area
+    const lines = content.trim().split('\n');
+    const quotedContent = lines.map(line => `> ${line}`).join('\n');
+    const quoteBlock = `> **${author}**:\n${quotedContent}\n\n`;
+
     setNewMessage(prev => {
-      const prefix = prev ? prev + '\n' : '';
-      return prefix + `> **${author}**: ${content}\n\n`;
+      // Add proper spacing between existing message and new quote
+      const prefix = prev ? (prev.endsWith('\n\n') ? prev : prev.endsWith('\n') ? prev + '\n' : prev + '\n\n') : '';
+      return prefix + quoteBlock;
     });
-    // Focus input after a short delay to ensure state update
-    setTimeout(() => messageInputRef.current?.focus(), 0);
+
+    // Focus input and position cursor after a short delay to ensure state update
+    setTimeout(() => {
+      if (messageInputRef.current) {
+        messageInputRef.current.focus();
+        // Position at the end of the newly inserted text
+        const length = messageInputRef.current.value.length;
+        messageInputRef.current.selectionStart = length;
+        messageInputRef.current.selectionEnd = length;
+
+        // Manually trigger auto-resize for the new content
+        messageInputRef.current.style.height = 'auto';
+        messageInputRef.current.style.height = `${Math.min(messageInputRef.current.scrollHeight, 200)}px`;
+      }
+    }, 0);
   };
 
   const copyMessage = (content: string) => {
@@ -613,6 +653,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   });
   const [threadMessages, setThreadMessages] = useState<ChannelMessage[]>([]);
   const [replyingTo, setReplyingTo] = useState<{ messageId: string; username: string; content: string } | null>(null);
+  const [quotingTo, setQuotingTo] = useState<{ messageId: string; username: string; content: string } | null>(null);
   const [showChannelSettings, setShowChannelSettings] = useState(false);
   const [showCrossChainBridge, setShowCrossChainBridge] = useState(false);
   const [notificationSettings, setNotificationSettings] = useState({
@@ -805,9 +846,70 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     if (!content) {
       return <></>;
     }
+
+    // Split by blockquotes first
+    const blockquoteRegex = /^>\s(.*)$/gm;
+    const parts = content.split(blockquoteRegex);
+    
+    // Check if content has any blockquotes
+    const hasBlockquotes = content.match(blockquoteRegex);
+
+    if (hasBlockquotes) {
+      const lines = content.split('\n');
+      const renderedLines: React.ReactNode[] = [];
+      let currentBlockquote: string[] = [];
+
+      lines.forEach((line, i) => {
+        if (line.startsWith('>')) {
+          let content = line.substring(1).trim();
+          // Detect author header: **Name**:
+          const authorMatch = content.match(/^\*\*(.*)\*\*:/);
+          if (authorMatch) {
+            if (currentBlockquote.length > 0) {
+              renderedLines.push(renderBlockquote(currentBlockquote, `bq-${i}`));
+              currentBlockquote = [];
+            }
+            renderedLines.push(
+              <div key={`author-${i}`} className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mt-2 ml-1">
+                {authorMatch[1]}
+              </div>
+            );
+            content = content.replace(/^\*\*(.*)\*\*:/, '').trim();
+          }
+          if (content) currentBlockquote.push(content);
+        } else {
+          if (currentBlockquote.length > 0) {
+            renderedLines.push(renderBlockquote(currentBlockquote, `bq-${i}`));
+            currentBlockquote = [];
+          }
+          if (line.trim() || i < lines.length - 1) {
+            renderedLines.push(<div key={`l-${i}`} className="min-h-[1.2em]">{renderMentions(line)}</div>);
+          }
+        }
+      });
+
+      if (currentBlockquote.length > 0) {
+        renderedLines.push(renderBlockquote(currentBlockquote, "bq-final"));
+      }
+
+      return <>{renderedLines}</>;
+    }
+
+    return renderMentions(content);
+  };
+
+  const renderBlockquote = (lines: string[], key: string) => (
+    <div key={key} className="bg-gray-100 dark:bg-gray-800/50 border-l-4 border-gray-400 p-3 my-1 rounded-r-lg text-sm text-gray-600 dark:text-gray-300 italic shadow-sm">
+      {lines.map((line, idx) => (
+        <div key={idx}>{line}</div>
+      ))}
+    </div>
+  );
+
+  const renderMentions = (text: string): JSX.Element => {
     // Simple regex to find @mentions (addresses or usernames)
     const mentionRegex = /(@[\w\d]+\.eth|@0x[a-fA-F0-9]{40}|@\w+)/g;
-    const parts = content.split(mentionRegex);
+    const parts = text.split(mentionRegex);
 
     return (
       <>
@@ -883,6 +985,12 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
   const handleMessageChange = (value: string) => {
     setNewMessage(value);
+
+    // Auto-resize textarea
+    if (messageInputRef.current) {
+      messageInputRef.current.style.height = 'auto';
+      messageInputRef.current.style.height = `${Math.min(messageInputRef.current.scrollHeight, 200)}px`;
+    }
 
     // Handle typing indicators
     if (isViewingDM && selectedDM) {
@@ -1436,9 +1544,35 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                               </span>
                             )}
                           </div>
+
+                          {/* Reply Reference - Blue accent for replies */}
+                          {message.replyToId && (
+                            <button 
+                              onClick={() => {
+                                const element = document.getElementById(`message-${message.replyToId}`);
+                                element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                element?.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-50');
+                                setTimeout(() => element?.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-50'), 2000);
+                              }}
+                              className="mb-2 flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-2 rounded-r text-left w-full group/reply"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-tight">
+                                  Replying to {message.replyTo?.senderName || truncateAddress(message.replyTo?.fromAddress || '')}
+                                </div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300 truncate italic">
+                                  {message.replyTo?.content || 'Original message...'}
+                                </div>
+                              </div>
+                              <CornerUpLeft size={12} className="text-blue-400 opacity-0 group-hover/reply:opacity-100 transition-opacity" />
+                            </button>
+                          )}
+
                           {/* Only show content if it exists */}
                           {message.content && message.content.trim() && (
-                            <p className="text-gray-700 dark:text-gray-200">{parseMentions(message.content)}</p>
+                            <div className="text-gray-700 dark:text-gray-200">
+                              {parseMentions(message.content)}
+                            </div>
                           )}
 
                           {/* Attachments */}
@@ -1668,7 +1802,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                                     else authorDisplayName = message.fromAddress.slice(0, 6) + '...' + message.fromAddress.slice(-4);
                                   }
 
-                                  quoteMessage(message.content || '', authorDisplayName);
+                                  quoteMessage(message.content || '', authorDisplayName, message.id);
                                 }}
                                 title="Quote this message"
                               >
@@ -1985,6 +2119,26 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
               </div>
               <button
                 onClick={() => setReplyingTo(null)}
+                className={`${touchTargetClasses} text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white`}
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
+
+          {/* Quote banner - Gray for quotes */}
+          {quotingTo && (
+            <div className="bg-gray-100 dark:bg-gray-800 border-l-4 border-gray-400 p-2 mb-2 rounded flex items-center justify-between">
+              <div className="flex-1 min-w-0 mr-2">
+                <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-0.5">
+                  Quoting {quotingTo.username}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-300 truncate">
+                  {quotingTo.content}
+                </div>
+              </div>
+              <button
+                onClick={() => setQuotingTo(null)}
                 className={`${touchTargetClasses} text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white`}
               >
                 <X size={16} />

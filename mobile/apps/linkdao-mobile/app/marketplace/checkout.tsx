@@ -3,7 +3,7 @@
  * Complete the purchase with payment flow
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { cartStore } from '../../src/store';
 import { useAuthStore } from '../../src/store';
 import { checkoutService } from '../../src/services/checkoutService';
+import { taxService, TaxCalculationResult } from '../../src/services/taxService';
 
 export default function CheckoutScreen() {
   const router = useRouter();
@@ -23,6 +24,9 @@ export default function CheckoutScreen() {
 
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'crypto' | 'fiat'>('crypto');
   const [processing, setProcessing] = useState(false);
+  const [taxCalculation, setTaxCalculation] = useState<TaxCalculationResult | null>(null);
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
   const [shippingAddress, setShippingAddress] = useState({
     fullName: user?.displayName || '',
     address: '',
@@ -33,8 +37,69 @@ export default function CheckoutScreen() {
   });
 
   const subtotal = getTotalPrice();
-  const tax = subtotal * 0.08;
   const shipping = 0;
+  
+  useEffect(() => {
+    loadSavedAddresses();
+  }, []);
+
+  const loadSavedAddresses = async () => {
+    try {
+      setLoadingAddresses(true);
+      const addresses = await checkoutService.getSavedAddresses();
+      setSavedAddresses(addresses);
+    } catch (error) {
+      console.error('Error loading saved addresses:', error);
+    } finally {
+      setLoadingAddresses(false);
+    }
+  };
+
+  const handleSelectSavedAddress = (addr: any) => {
+    setShippingAddress({
+      fullName: `${addr.firstName} ${addr.lastName}`,
+      address: addr.addressLine1,
+      city: addr.city,
+      state: addr.state,
+      zipCode: addr.postalCode,
+      country: addr.country === 'US' ? 'United States' : addr.country,
+    });
+  };
+
+  // Calculate tax when address or items change
+  useEffect(() => {
+    if (shippingAddress.country && items.length > 0) {
+      calculateTax();
+    }
+  }, [shippingAddress.country, shippingAddress.state, items]);
+
+  const calculateTax = async () => {
+    try {
+      const taxableItems = items.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity
+      }));
+
+      const result = await taxService.calculateTax(
+        taxableItems,
+        {
+          country: shippingAddress.country === 'United States' ? 'US' : shippingAddress.country,
+          state: shippingAddress.state,
+          city: shippingAddress.city,
+          postalCode: shippingAddress.zipCode,
+          line1: shippingAddress.address
+        },
+        shipping
+      );
+      setTaxCalculation(result);
+    } catch (error) {
+      console.error('Tax calculation error:', error);
+    }
+  };
+
+  const tax = taxCalculation?.taxAmount || subtotal * 0.08;
   const total = subtotal + tax + shipping;
 
   const handlePlaceOrder = async () => {
@@ -131,6 +196,26 @@ export default function CheckoutScreen() {
       </View>
 
       <ScrollView style={styles.content}>
+        {/* Saved Addresses */}
+        {savedAddresses.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Use Saved Address</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.savedAddressesScroll}>
+              {savedAddresses.map((addr) => (
+                <TouchableOpacity 
+                  key={addr.id} 
+                  style={styles.savedAddressCard}
+                  onPress={() => handleSelectSavedAddress(addr)}
+                >
+                  <Text style={styles.savedAddressName}>{addr.firstName} {addr.lastName}</Text>
+                  <Text style={styles.savedAddressText} numberOfLines={1}>{addr.addressLine1}</Text>
+                  <Text style={styles.savedAddressText}>{addr.city}, {addr.state}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         {/* Shipping Address */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Shipping Address</Text>
@@ -286,7 +371,9 @@ export default function CheckoutScreen() {
           </View>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Tax (8%)</Text>
+            <Text style={styles.summaryLabel}>
+              Tax {taxCalculation ? `(${(taxCalculation.taxRate * 100).toFixed(1)}%)` : '(8%)'}
+            </Text>
             <Text style={styles.summaryValue}>${tax.toFixed(2)}</Text>
           </View>
 
@@ -362,6 +449,28 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1f2937',
     marginBottom: 16,
+  },
+  savedAddressesScroll: {
+    paddingBottom: 4,
+  },
+  savedAddressCard: {
+    width: 200,
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    padding: 12,
+    marginRight: 12,
+  },
+  savedAddressName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  savedAddressText: {
+    fontSize: 13,
+    color: '#6b7280',
   },
   inputContainer: {
     marginBottom: 16,

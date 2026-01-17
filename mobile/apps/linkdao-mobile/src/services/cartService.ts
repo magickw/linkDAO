@@ -20,8 +20,61 @@ class CartService {
             return true;
         } catch (error) {
             console.error('[Cart] Error syncing cart:', error);
-            // We return false but don't throw, so UI can decide whether to block or try anyway
-            // (though for checkout, sync is likely strict)
+            return false;
+        }
+    }
+
+    /**
+     * Get saved for later items
+     */
+    async getSavedItems() {
+        try {
+            const response = await apiClient.get('/api/saved-for-later');
+            if (response.data && response.data.success) {
+                return response.data.data;
+            }
+            return [];
+        } catch (error) {
+            console.error('[Cart] Error fetching saved items:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Save item for later
+     */
+    async saveForLater(productId: string) {
+        try {
+            const response = await apiClient.post(`/api/saved-for-later/${productId}`);
+            return response.data && response.data.success;
+        } catch (error) {
+            console.error('[Cart] Error saving for later:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Move saved item back to cart
+     */
+    async moveToCart(savedItemId: string) {
+        try {
+            const response = await apiClient.post(`/api/saved-for-later/${savedItemId}/move-to-cart`);
+            return response.data && response.data.success;
+        } catch (error) {
+            console.error('[Cart] Error moving to cart:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Remove saved item
+     */
+    async removeSavedItem(savedItemId: string) {
+        try {
+            await apiClient.delete(`/api/saved-for-later/${savedItemId}`);
+            return true;
+        } catch (error) {
+            console.error('[Cart] Error removing saved item:', error);
             return false;
         }
     }

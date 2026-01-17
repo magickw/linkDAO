@@ -53,6 +53,22 @@ class CheckoutService {
     }
 
     /**
+     * Get user's saved shipping addresses
+     */
+    async getSavedAddresses() {
+        try {
+            const response = await apiClient.get('/api/user/addresses');
+            if (response.data && response.data.success) {
+                return response.data.data;
+            }
+            return [];
+        } catch (error) {
+            console.error('[Checkout] Error fetching saved addresses:', error);
+            return [];
+        }
+    }
+
+    /**
      * Validate checkout data
      */
     async validateCheckout(data: any) {

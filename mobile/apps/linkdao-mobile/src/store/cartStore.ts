@@ -16,8 +16,25 @@ export interface CartItem {
   seller: string;
 }
 
+export interface SavedItem {
+  id: string;
+  productId: string;
+  name: string;
+  price: number;
+  image: string;
+  seller: string;
+}
+
+export interface GiftOptions {
+  isGift: boolean;
+  giftMessage?: string;
+  giftWrapOption?: 'standard' | 'premium' | 'none';
+}
+
 interface CartState {
   items: CartItem[];
+  savedItems: SavedItem[];
+  giftOptions: GiftOptions;
   addItem: (item: CartItem) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
@@ -25,79 +42,63 @@ interface CartState {
   getTotalPrice: () => number;
   getTotalItems: () => number;
   syncWithBackend: () => Promise<boolean>;
+  updateGiftOptions: (options: GiftOptions) => void;
+  
+  // Saved for later methods
+  fetchSavedItems: () => Promise<void>;
+  moveToSaved: (id: string) => Promise<void>;
+  restoreFromSaved: (savedItemId: string) => Promise<void>;
+  removeSavedItem: (savedItemId: string) => Promise<void>;
 }
 
 export const cartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
+      savedItems: [],
+      giftOptions: {
+        isGift: false,
+        giftWrapOption: 'none'
+      },
 
       addItem: (item) => {
-        set((state) => {
-          const existingItem = state.items.find((i) => i.id === item.id);
-
-          if (existingItem) {
-            // Update quantity if item already exists
-            return {
-              items: state.items.map((i) =>
-                i.id === item.id
-                  ? { ...i, quantity: i.quantity + item.quantity }
-                  : i
-              ),
-            };
-          } else {
-            // Add new item
-            return {
-              items: [...state.items, item],
-            };
-          }
-        });
+// ...
+      updateGiftOptions: (options) => {
+        set({ giftOptions: options });
       },
 
-      removeItem: (id) => {
-        set((state) => ({
-          items: state.items.filter((item) => item.id !== id),
-        }));
+      fetchSavedItems: async () => {
+        const savedItems = await cartService.getSavedItems();
+        set({ savedItems });
       },
 
-      updateQuantity: (id, quantity) => {
-        if (quantity <= 0) {
-          get().removeItem(id);
-          return;
+      moveToSaved: async (productId) => {
+        const success = await cartService.saveForLater(productId);
+        if (success) {
+          get().removeItem(productId);
+          await get().fetchSavedItems();
         }
-
-        set((state) => ({
-          items: state.items.map((item) =>
-            item.id === id ? { ...item, quantity } : item
-          ),
-        }));
       },
 
-      clearCart: () => {
-        set({ items: [] });
+      restoreFromSaved: async (savedItemId) => {
+        const success = await cartService.moveToCart(savedItemId);
+        if (success) {
+          // In a real app, moveToCart would update the backend cart, 
+          // then we might need to re-fetch the local items.
+          // For now, let's assume we need to refresh both.
+          await get().fetchSavedItems();
+          // We don't have a fetchCartItems yet, but removeItem/addItem are local.
+          // The backend sync handles persistence.
+        }
       },
 
-      getTotalPrice: () => {
-        return get().items.reduce(
-          (total, item) => total + item.price * item.quantity,
-          0
-        );
-      },
-
-      getTotalItems: () => {
-        return get().items.reduce((total, item) => total + item.quantity, 0);
-      },
-
-      syncWithBackend: async () => {
-        const items = get().items;
-        if (items.length === 0) return true;
-
-        const syncItems = items.map(item => ({
-          productId: item.id,
-          quantity: item.quantity
-        }));
-
-        return await cartService.syncCart(syncItems);
+      removeSavedItem: async (savedItemId) => {
+        const success = await cartService.removeSavedItem(savedItemId);
+        if (success) {
+          set((state) => ({
+            savedItems: state.savedItems.filter(item => item.id !== savedItemId)
+          }));
+        }
       },
     }),
     {

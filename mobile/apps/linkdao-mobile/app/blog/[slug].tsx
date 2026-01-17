@@ -9,7 +9,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { format } from 'date-fns';
-import Markdown from 'react-native-markdown';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
@@ -125,7 +124,7 @@ export default function BlogPostScreen() {
           <View style={styles.divider} />
 
           {/* Content */}
-          <Markdown style={styles.markdown}>{post.content}</Markdown>
+          <Text style={styles.content}>{post.content}</Text>
 
           {/* Share */}
           <View style={styles.shareSection}>
@@ -166,7 +165,7 @@ const styles = StyleSheet.create({
   errorContainer: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: center',
+    justifyContent: 'center',
     padding: 32,
   },
   errorTitle: {
@@ -270,7 +269,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e5e7eb',
     marginBottom: 24,
   },
-  markdown: {
+  content: {
     fontSize: 16,
     lineHeight: 26,
     color: '#374151',
