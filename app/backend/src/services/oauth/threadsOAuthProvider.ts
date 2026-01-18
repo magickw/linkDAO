@@ -37,6 +37,10 @@ export class ThreadsOAuthProvider extends BaseOAuthProvider {
    * Build Threads OAuth authorization URL
    */
   getAuthorizationUrl(state: string, _codeVerifier?: string): string {
+    if (!this.config.clientId) {
+      throw new Error('Threads App ID is not configured (THREADS_APP_ID)');
+    }
+
     const params = new URLSearchParams({
       client_id: this.config.clientId,
       redirect_uri: this.config.callbackUrl,

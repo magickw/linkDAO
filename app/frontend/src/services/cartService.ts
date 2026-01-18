@@ -97,6 +97,9 @@ class CartService {
   private pendingDeletions: Set<string> = new Set(); // Track items pending deletion to preventing ghosting
 
   private constructor() {
+    // Load pending deletions from storage to handle page refreshes
+    this.loadPendingDeletions();
+
     // Check for authentication on initialization
     this.checkAuthStatus();
 
@@ -109,6 +112,47 @@ class CartService {
       CartService.instance = new CartService();
     }
     return CartService.instance;
+  }
+
+  // Load pending deletions from session storage
+  private loadPendingDeletions(): void {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = sessionStorage.getItem('cart_pending_deletions');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          const now = Date.now();
+          // Only keep deletions that are less than 1 minute old
+          const validDeletions = parsed.filter((item: { id: string, timestamp: number }) => 
+            now - item.timestamp < 60000
+          );
+          
+          validDeletions.forEach((item: { id: string }) => this.pendingDeletions.add(item.id));
+          
+          // Clean up storage if we filtered out expired items
+          if (validDeletions.length !== parsed.length) {
+            this.savePendingDeletions();
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load pending deletions:', error);
+      }
+    }
+  }
+
+  // Save pending deletions to session storage
+  private savePendingDeletions(): void {
+    if (typeof window !== 'undefined') {
+      try {
+        const deletions = Array.from(this.pendingDeletions).map(id => ({
+          id,
+          timestamp: Date.now()
+        }));
+        sessionStorage.setItem('cart_pending_deletions', JSON.stringify(deletions));
+      } catch (error) {
+        console.warn('Failed to save pending deletions:', error);
+      }
+    }
   }
 
   // Subscribe to cart state changes
@@ -503,6 +547,7 @@ class CartService {
   async removeItem(itemId: string): Promise<void> {
     // Add to pending deletions to prevent it from reappearing during sync
     this.pendingDeletions.add(itemId);
+    this.savePendingDeletions();
 
     const currentState = await this.getCartState();
     const newItems = currentState.items.filter(item => item.id !== itemId);
@@ -545,10 +590,12 @@ class CartService {
         // filter it out, but eventually clear it to avoid memory leaks
         setTimeout(() => {
           this.pendingDeletions.delete(itemId);
+          this.savePendingDeletions();
         }, 5000);
       }
     } else {
       this.pendingDeletions.delete(itemId);
+      this.savePendingDeletions();
     }
   }
 

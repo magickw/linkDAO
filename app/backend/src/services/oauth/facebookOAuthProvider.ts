@@ -17,7 +17,7 @@ const FACEBOOK_FEED_URL = `https://graph.facebook.com/${FACEBOOK_API_VERSION}/me
 // Default scopes for Facebook
 // Note: public_profile is always included by default
 // pages_manage_posts requires app review for production
-const DEFAULT_SCOPES = ['public_profile', 'email'];
+const DEFAULT_SCOPES = ['public_profile'];
 
 export class FacebookOAuthProvider extends BaseOAuthProvider {
   constructor() {
@@ -36,6 +36,10 @@ export class FacebookOAuthProvider extends BaseOAuthProvider {
    * Build Facebook OAuth authorization URL
    */
   getAuthorizationUrl(state: string, _codeVerifier?: string): string {
+    if (!this.config.clientId) {
+      throw new Error('Facebook App ID is not configured (FACEBOOK_APP_ID)');
+    }
+
     const params = new URLSearchParams({
       client_id: this.config.clientId,
       redirect_uri: this.config.callbackUrl,

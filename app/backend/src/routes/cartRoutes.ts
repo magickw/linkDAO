@@ -2,6 +2,7 @@ import express from 'express';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { cartController } from '../controllers/cartController';
 import { shareCartController } from '../controllers/shareCartController';
+import { savedForLaterController } from '../controllers/savedForLaterController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validation';
 
@@ -65,6 +66,21 @@ router.delete('/items/:id', csrfProtection,
     }
   }),
   cartController.removeItem.bind(cartController)
+);
+
+/**
+ * @route POST /api/cart/save-for-later/:itemId
+ * @desc Save cart item for later
+ * @access Private
+ * @params { itemId: string }
+ */
+router.post('/save-for-later/:itemId', csrfProtection,
+  validateRequest({
+    params: {
+      itemId: { type: 'string', required: true }
+    }
+  }),
+  savedForLaterController.saveCartItemForLater.bind(savedForLaterController)
 );
 
 /**

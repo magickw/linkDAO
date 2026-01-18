@@ -34,6 +34,10 @@ export class TwitterOAuthProvider extends BaseOAuthProvider {
    * Build Twitter OAuth 2.0 authorization URL with PKCE
    */
   getAuthorizationUrl(state: string, codeVerifier?: string): string {
+    if (!this.config.clientId) {
+      throw new Error('Twitter Client ID is not configured (TWITTER_CLIENT_ID)');
+    }
+
     if (!codeVerifier) {
       throw new Error('Code verifier is required for Twitter OAuth 2.0 PKCE');
     }

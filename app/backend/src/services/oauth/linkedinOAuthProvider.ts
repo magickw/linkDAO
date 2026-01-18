@@ -44,6 +44,10 @@ export class LinkedInOAuthProvider extends BaseOAuthProvider {
    * Build LinkedIn OAuth authorization URL
    */
   getAuthorizationUrl(state: string, _codeVerifier?: string): string {
+    if (!this.config.clientId) {
+      throw new Error('LinkedIn Client ID is not configured (LINKEDIN_CLIENT_ID)');
+    }
+
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: this.config.clientId,
