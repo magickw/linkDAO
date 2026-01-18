@@ -8,7 +8,7 @@ export interface FinancialMetrics {
     totalRevenue: string;
     pendingPayouts: string;
     completedPayouts: string;
-    platformFees: string; // e.g., 2.5% taken
+    platformFees: string; // 15% platform fee charged to sellers
     escrowBalance: string;
     disputedFunds: string;
 }
@@ -48,13 +48,13 @@ export class FinancialMonitoringService {
                 totalRevenue: sql<number>`sum(case when ${orders.status} = 'completed' then ${orders.amount} else 0 end)`,
                 escrowBalance: sql<number>`sum(case when ${orders.status} in ('pending', 'processing', 'shipped') then ${orders.amount} else 0 end)`,
                 disputedFunds: sql<number>`sum(case when ${orders.status} = 'disputed' then ${orders.amount} else 0 end)`,
-                // Approximating platform fees as 2.5% of total revenue for now if not explicitly stored
-                // Ideally this should come from a fees table or column
+                // Platform fee is 15% of total revenue, charged to sellers
+                // Ideally this should come from a fees table or the platformFee column on orders
             }).from(orders);
 
             const metrics = result[0];
             const totalRevenue = Number(metrics.totalRevenue || 0);
-            const platformFees = totalRevenue * 0.025; // 2.5% platform fee assumption
+            const platformFees = totalRevenue * 0.15; // 15% platform fee charged to sellers
 
             // Payouts logic would typically query a separate payouts table.
             // For now, we assume completed orders imply completed payouts to sellers minus fees.

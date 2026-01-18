@@ -171,20 +171,13 @@ export const TransactionSummary: React.FC<TransactionSummaryProps> = ({
                             </>
                         )}
 
-                        {(costEstimate as any).platformFee > 0 && (
-                            <div className="flex justify-between">
-                                <span className="text-gray-600 dark:text-gray-400">Platform Fee</span>
-                                <span className="font-medium text-gray-900 dark:text-white">
-                                    +{formatCurrency((costEstimate as any).platformFee)}
-                                </span>
-                            </div>
-                        )}
+                        {/* Note: Platform fee is charged to sellers, not shown to buyers */}
 
                         <div className="pt-3 border-t-2 border-gray-200 dark:border-gray-700 flex justify-between items-center">
                             <span className="font-bold text-gray-900 dark:text-white">Total Amount</span>
                             <span className="font-bold text-xl text-green-600">
                                 {formatCurrency(
-                                    costEstimate.totalCost
+                                    costEstimate.baseCost + costEstimate.gasFee + (taxBreakdown?.reduce((sum, t) => sum + t.amount, 0) || 0)
                                 )}
                             </span>
                         </div>

@@ -8,3 +8,4 @@ export { PortfolioSummary } from './PortfolioSummary';
 export { StakingQuickActions } from './StakingQuickActions';
 export { TransactionHistoryView } from './TransactionHistoryView';
 export { GovernanceVotingPanel } from './GovernanceVotingPanel';
+export { WalletUnlockFlow } from './WalletUnlockFlow';

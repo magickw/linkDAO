@@ -93,23 +93,18 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
         newErrors.offRampProvider = 'Please select an off-ramp provider';
       }
 
-      if (formData.offRampProvider === 'circle') {
-        if (!formData.bankAccount.accountNumber) {
-          newErrors.accountNumber = 'Account number is required';
-        }
-        if (!formData.bankAccount.routingNumber) {
-          newErrors.routingNumber = 'Routing number is required';
-        }
-        if (!formData.bankAccount.bankName) {
-          newErrors.bankName = 'Bank name is required';
-        }
-        if (!formData.bankAccount.accountHolderName) {
-          newErrors.accountHolderName = 'Account holder name is required';
-        }
-        // Swift code is optional for domestic withdrawals
-        // if (!formData.bankAccount.swiftCode) {
-        //   newErrors.swiftCode = 'Swift Code is required';
-        // }
+      // Validate bank account for all fiat providers
+      if (!formData.bankAccount.accountNumber) {
+        newErrors.accountNumber = 'Account number is required';
+      }
+      if (!formData.bankAccount.routingNumber) {
+        newErrors.routingNumber = 'Routing number is required';
+      }
+      if (!formData.bankAccount.bankName) {
+        newErrors.bankName = 'Bank name is required';
+      }
+      if (!formData.bankAccount.accountHolderName) {
+        newErrors.accountHolderName = 'Account holder name is required';
       }
     }
 
@@ -256,8 +251,8 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
               )}
             </div>
 
-            {/* Bank Account Details (for Circle) */}
-            {formData.offRampProvider === 'circle' && (
+            {/* Bank Account Details (Required for all providers) */}
+            {formData.offRampProvider && (
               <div className="bg-gray-800 rounded-lg p-4 space-y-4">
                 <h4 className="text-white font-medium">Bank Account Details</h4>
 

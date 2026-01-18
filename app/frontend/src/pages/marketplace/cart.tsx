@@ -514,7 +514,7 @@ const CartPage: React.FC = () => {
                   shipping={parseFloat(cartState.totals.shipping.fiat)}
                   tax={estimatedTax}
                   total={grandTotal}
-                  itemCount={cartState.items.length}
+                  itemCount={cartState.totals.itemCount}
                   currency="USD"
                   onCheckout={handleCheckout}
                   onContinueShopping={handleContinueShopping}

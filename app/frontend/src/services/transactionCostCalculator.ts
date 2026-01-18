@@ -15,15 +15,12 @@ import {
 } from '../types/paymentPrioritization';
 import { gasFeeEstimationService } from './gasFeeEstimationService';
 
-// Platform fee configuration
-const PLATFORM_FEES = {
-  [PaymentMethodType.STABLECOIN_USDC]: 0.15, // 15%
-  [PaymentMethodType.STABLECOIN_USDT]: 0.15, // 15%
-  [PaymentMethodType.FIAT_STRIPE]: 0.15, // 15%
-  [PaymentMethodType.NATIVE_ETH]: 0.15, // 15%
-  [PaymentMethodType.X402]: 0.15 // 15%
-};
+// Platform fee (15%) - charged to SELLERS, not buyers
+// Tracked for internal use and seller payout calculations
+const SELLER_PLATFORM_FEE_RATE = 0.15; // 15%
 
+// Stripe processing fees - these CAN be passed to buyers
+const STRIPE_PROCESSING_FEE_RATE = 0.029; // 2.9%
 const STRIPE_FIXED_FEE = 0.30; // $0.30 fixed fee for Stripe
 
 // Exchange rate cache configuration
@@ -151,22 +148,20 @@ export class TransactionCostCalculator {
     networkConditions?: NetworkConditions
   ): Promise<TransactionCostBreakdown> {
     const baseAmount = amount;
-    let platformFee = 0;
     let networkFee = 0;
     let gasFee = 0;
     let exchangeRateFee = 0;
 
-    // Calculate platform fee
-    const platformFeeRate = PLATFORM_FEES[paymentMethod.type] || 0;
-    platformFee = baseAmount * platformFeeRate;
+    // Platform fee (15%) - charged to SELLERS, tracked for payout calculations
+    // This is NOT added to buyer's total
+    const platformFee = baseAmount * SELLER_PLATFORM_FEE_RATE;
 
-    // Add Stripe fixed fee for fiat payments
+    // Calculate fees that ARE charged to buyer based on payment method
     if (paymentMethod.type === PaymentMethodType.FIAT_STRIPE) {
-      platformFee += STRIPE_FIXED_FEE;
-    }
-
-    // Calculate gas fee for crypto payments
-    if (this.isCryptoPayment(paymentMethod)) {
+      // Stripe processing fee: 2.9% + $0.30 - passed to buyer
+      networkFee = (baseAmount * STRIPE_PROCESSING_FEE_RATE) + STRIPE_FIXED_FEE;
+    } else if (this.isCryptoPayment(paymentMethod)) {
+      // Gas fees for crypto payments - charged to buyer
       const gasEstimate = await this.getGasEstimate(paymentMethod, networkConditions);
       gasFee = gasEstimate.totalCostUSD;
       networkFee = gasFee; // Network fee is the gas fee for crypto
@@ -181,11 +176,13 @@ export class TransactionCostCalculator {
       }
     }
 
-    const totalCost = baseAmount + platformFee + networkFee + exchangeRateFee;
+    // Buyer's total: base amount + network fees + exchange rate fees
+    // Platform fee is NOT included - that's deducted from seller
+    const totalCost = baseAmount + networkFee + exchangeRateFee;
 
     return {
       baseAmount,
-      platformFee,
+      platformFee, // Tracked for seller payout, NOT charged to buyer
       networkFee,
       gasFee,
       exchangeRateFee: exchangeRateFee > 0 ? exchangeRateFee : undefined,
@@ -566,20 +563,25 @@ export class TransactionCostCalculator {
     amount: number,
     currency: string
   ): CostEstimate {
-    const platformFeeRate = PLATFORM_FEES[paymentMethod.type] || 0.03;
-    let platformFee = amount * platformFeeRate;
+    // Platform fee (15%) - for internal tracking, NOT charged to buyer
+    const platformFee = amount * SELLER_PLATFORM_FEE_RATE;
+
+    let networkFee = 0;
+    let estimatedGasFee = 0;
 
     if (paymentMethod.type === PaymentMethodType.FIAT_STRIPE) {
-      platformFee += STRIPE_FIXED_FEE;
-    }
-
-    let estimatedGasFee = 0;
-    if (this.isCryptoPayment(paymentMethod)) {
+      // Stripe processing fee passed to buyer
+      networkFee = (amount * STRIPE_PROCESSING_FEE_RATE) + STRIPE_FIXED_FEE;
+    } else if (this.isCryptoPayment(paymentMethod)) {
       estimatedGasFee = this.getRealisticGasFeeForChain(paymentMethod.chainId || 1);
+      networkFee = estimatedGasFee;
     } else if (paymentMethod.type === PaymentMethodType.X402) {
       estimatedGasFee = 0.1; // Very low fee for x402
+      networkFee = estimatedGasFee;
     }
-    const totalCost = amount + platformFee + estimatedGasFee;
+
+    // Buyer's total: amount + network fees (NO platform fee)
+    const totalCost = amount + networkFee;
 
     return {
       totalCost,
@@ -590,8 +592,8 @@ export class TransactionCostCalculator {
       currency,
       breakdown: {
         amount,
-        networkFee: estimatedGasFee,
-        platformFee
+        networkFee,
+        platformFee // Tracked for seller payout, NOT in buyer total
       }
     };
   }

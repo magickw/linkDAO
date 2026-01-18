@@ -263,17 +263,17 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
     setLoading(true);
     try {
-      // Calculate total amount including shipping and tax
+      // Calculate base amount (subtotal + shipping) WITHOUT tax
+      // Tax is passed separately to TransactionSummary to avoid double-counting
       const subtotal = parseFloat(cartState.totals.subtotal.fiat);
       const shipping = parseFloat(cartState.totals.shipping?.fiat || '0');
-      const tax = taxCalculation?.taxAmount || 0;
-      // Platform fee is calculated dynamically by the cost calculator based on this total
-      const totalAmount = subtotal + shipping + tax;
+      // Note: Tax is NOT included in transactionAmount - it's displayed separately in TransactionSummary
+      const baseAmount = subtotal + shipping;
 
       // Create prioritization context WITHOUT wallet balance detection
       // Balance will only be checked when user selects a crypto payment method
       const context: PrioritizationContext = {
-        transactionAmount: totalAmount,
+        transactionAmount: baseAmount,
         transactionCurrency: 'USD',
         userContext: {
           userAddress: address || undefined,
@@ -690,13 +690,20 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
     const subtotal = parseFloat(cartState.totals.subtotal.fiat);
     const shipping = parseFloat(cartState.totals.shipping.fiat);
     const tax = taxCalculation?.taxAmount || 0;
-    // Note: totalDiscount is already subtracted from subtotal in cart logic? 
-    // Wait, earlier I saw: "Subtotal (${cartState.totals.subtotal.fiat}) + Total Discount". 
-    // CartService typically: subtotal = sum(price * qty) - discount. 
+
+    // Gas fee only for crypto payments (this is a network fee paid by buyer)
+    // Note: Platform fee is a SELLER fee, not shown to buyers
+    const gasFee = selectedPaymentMethod?.costEstimate?.gasFee || 0;
+
+    // Note: totalDiscount is already subtracted from subtotal in cart logic
+    // CartService: subtotal = sum(price * qty) - discount
     // So subtotal IS the discounted price.
     // If we want to show "Gross Subtotal", we add back discount.
     const grossSubtotal = subtotal + totalDiscount;
-    const finalTotal = subtotal + shipping + tax;
+
+    // Final total for buyer: subtotal + shipping + tax + gas fee (if crypto)
+    // Platform fee is NOT included - that's charged to sellers
+    const finalTotal = subtotal + shipping + tax + gasFee;
 
     return (
       <GlassPanel variant="secondary" className="p-6">
@@ -771,9 +778,17 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
             {/* Tax Display */}
             <div className="flex justify-between text-white/70">
-              <span>Tax {taxCalculation ? `(${taxCalculation.taxRate * 100}%)` : '(Est.)'}</span>
+              <span>Tax {taxCalculation ? `(${(taxCalculation.taxRate * 100).toFixed(0)}%)` : '(Est.)'}</span>
               <span>${tax.toFixed(2)}</span>
             </div>
+
+            {/* Gas Fee - only show for crypto payments */}
+            {gasFee > 0 && (
+              <div className="flex justify-between text-white/70">
+                <span>Network Fee</span>
+                <span>${gasFee.toFixed(2)}</span>
+              </div>
+            )}
 
             <hr className="border-white/20 my-2" />
 
@@ -782,9 +797,9 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
               <span>${finalTotal.toFixed(2)}</span>
             </div>
 
-            {selectedPaymentMethod?.method.type !== PaymentMethodType.FIAT_STRIPE && (
+            {selectedPaymentMethod?.method.type !== PaymentMethodType.FIAT_STRIPE && selectedPaymentMethod?.method.token && (
               <div className="text-right text-xs text-white/50">
-                ≈ {selectedPaymentMethod?.costEstimate?.totalCost.toFixed(4)} {selectedPaymentMethod?.method.token?.symbol}
+                ≈ {((finalTotal / (selectedPaymentMethod?.costEstimate?.exchangeRate || 1))).toFixed(4)} {selectedPaymentMethod?.method.token?.symbol}
               </div>
             )}
           </div>

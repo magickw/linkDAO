@@ -384,6 +384,180 @@ class EnhancedAuthService {
   }
 
   /**
+   * Authenticate with non-custodial wallet using decrypted private key
+   * This method allows users to login using their locally stored non-custodial wallet
+   */
+  async authenticateWithNonCustodialWallet(
+    address: string,
+    privateKey: string,
+    options: AuthenticationOptions = {}
+  ): Promise<AuthResponse> {
+    const {
+      retries = this.MAX_RETRY_ATTEMPTS,
+      timeout = 30000,
+      skipCache = false,
+      forceRefresh = false
+    } = options;
+
+    // Prevent concurrent authentication attempts
+    if (this.authenticationInProgress) {
+      return {
+        success: false,
+        error: 'Authentication already in progress',
+        retryable: false
+      };
+    }
+
+    // Rate limiting - prevent too frequent authentication attempts
+    const now = Date.now();
+    if (now - this.lastAuthAttempt < this.AUTH_COOLDOWN) {
+      return {
+        success: false,
+        error: 'Please wait before attempting authentication again',
+        retryable: true
+      };
+    }
+
+    this.lastAuthAttempt = now;
+    this.authenticationInProgress = true;
+
+    try {
+      // Check for existing valid session unless forced refresh
+      if (!forceRefresh && !skipCache && this.hasValidSession(address)) {
+        console.log('✅ Using existing valid session for address:', address);
+        return {
+          success: true,
+          token: this.sessionData!.token,
+          user: this.sessionData!.user
+        };
+      }
+
+      // Execute authentication with retry logic
+      const result = await this.executeNonCustodialAuthenticationWithRetry(
+        address,
+        privateKey,
+        retries,
+        timeout
+      );
+
+      if (result.success && result.token && result.user) {
+        this.storeSession(result.token, result.user, result.refreshToken);
+      }
+
+      return result;
+
+    } catch (error: any) {
+      console.error('Non-custodial wallet authentication failed:', error);
+      return {
+        success: false,
+        error: this.getErrorMessage(error),
+        retryable: this.isRetryableError(error)
+      };
+    } finally {
+      this.authenticationInProgress = false;
+    }
+  }
+
+  /**
+   * Execute non-custodial wallet authentication with retry logic
+   */
+  private async executeNonCustodialAuthenticationWithRetry(
+    address: string,
+    privateKey: string,
+    maxRetries: number,
+    timeout: number
+  ): Promise<AuthResponse & { refreshToken?: string }> {
+    let lastError: any;
+    const retryKey = `nc_auth:${address}`;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        // Reset retry count on successful attempt
+        if (attempt > 0) {
+          console.log(`Non-custodial authentication retry attempt ${attempt}/${maxRetries} for ${address}`);
+        }
+
+        const result = await this.performNonCustodialAuthentication(address, privateKey, timeout);
+
+        // Clear retry count on success
+        this.retryAttempts.delete(retryKey);
+
+        return result;
+
+      } catch (error: any) {
+        lastError = error;
+
+        // Don't retry on certain errors
+        if (!this.isRetryableError(error) || attempt === maxRetries) {
+          break;
+        }
+
+        // Exponential backoff with jitter
+        const delay = Math.min(1000 * Math.pow(2, attempt), 10000) + Math.random() * 1000;
+        console.warn(`Non-custodial authentication attempt ${attempt + 1} failed, retrying in ${delay}ms:`, error.message);
+
+        await this.sleep(delay);
+      }
+    }
+
+    // Track retry attempts
+    const currentRetries = this.retryAttempts.get(retryKey) || 0;
+    this.retryAttempts.set(retryKey, currentRetries + 1);
+
+    throw lastError;
+  }
+
+  /**
+   * Perform non-custodial wallet authentication using private key
+   */
+  private async performNonCustodialAuthentication(
+    address: string,
+    privateKey: string,
+    timeout: number
+  ): Promise<AuthResponse & { refreshToken?: string }> {
+    // Validate inputs
+    if (!address || !privateKey) {
+      throw new Error('Invalid authentication parameters');
+    }
+
+    // Get nonce with retry logic
+    const { nonce, message } = await this.getNonceWithRetry(address);
+
+    // Sign message using private key
+    const signature = await this.signMessageWithPrivateKey(privateKey, message);
+
+    // Authenticate with backend
+    return await this.authenticateWithBackend(address, signature, message);
+  }
+
+  /**
+   * Sign message using private key (for non-custodial wallets)
+   */
+  private async signMessageWithPrivateKey(privateKey: string, message: string): Promise<string> {
+    try {
+      // Import ethers dynamically to avoid circular dependencies
+      const { ethers } = await import('ethers');
+
+      // Create wallet from private key
+      const wallet = new ethers.Wallet(privateKey);
+
+      // Sign the message
+      const signature = await wallet.signMessage(message);
+
+      if (!signature) {
+        throw new Error('No signature returned from wallet');
+      }
+
+      console.log('✅ Message signed successfully with non-custodial wallet');
+      return signature;
+
+    } catch (error: any) {
+      console.error('Failed to sign message with private key:', error);
+      throw new Error(`Signing failed: ${error.message}`);
+    }
+  }
+
+  /**
    * Verify 2FA token and complete login
    */
   async verify2FAAndCompleteLogin(

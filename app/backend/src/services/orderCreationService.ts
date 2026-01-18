@@ -247,8 +247,8 @@ export class OrderCreationService {
     const subtotal = price * quantity;
     const shippingCost = 5.99; // Fixed shipping cost for now, logic can be enhanced later
 
-    // Calculate Platform Fee (e.g. 2.5%)
-    const platformFeeRate = 0.025;
+    // Calculate Platform Fee (15% - charged to SELLER, not included in buyer total)
+    const platformFeeRate = 0.15;
     const platformFee = subtotal * platformFeeRate;
 
     // Use TaxCalculationService
@@ -271,13 +271,14 @@ export class OrderCreationService {
       shippingCost
     );
 
-    const total = subtotal + shippingCost + taxResult.taxAmount + platformFee;
+    // Buyer total does NOT include platform fee - that's charged to seller
+    const total = subtotal + shippingCost + taxResult.taxAmount;
 
     return {
       subtotal,
       shippingCost,
       tax: taxResult.taxAmount,
-      platformFee,
+      platformFee, // Tracked for seller deduction, not charged to buyer
       total,
       taxBreakdown: taxResult.taxBreakdown
     };

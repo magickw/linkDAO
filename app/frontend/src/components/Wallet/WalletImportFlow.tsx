@@ -3,14 +3,15 @@
  * Handles importing existing wallets from private key or mnemonic
  */
 
-import React, { useState } from 'react';
-import { Upload, Key, FileText, Eye, EyeOff, CheckCircle, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Upload, Key, FileText, Eye, EyeOff, CheckCircle, AlertCircle, ArrowRight, ArrowLeft, Fingerprint } from 'lucide-react';
 import { validateMnemonic, derivePrivateKeyFromMnemonic, deriveAddressFromPrivateKey, hasDuplicateWords } from '@/utils/bip39Utils';
 import { SecureKeyStorage } from '@/security/secureKeyStorage';
 import { useToast } from '@/context/ToastContext';
 import { PasswordStrengthIndicator } from './PasswordStrengthIndicator';
 import { rateLimiter } from '@/services/rateLimiter';
 import { isPasswordStrong } from '@/utils/passwordStrength';
+import { webAuthnService } from '@/services/webAuthnService';
 
 type ImportMethod = 'mnemonic' | 'privateKey' | 'hardware';
 type Step = 'method' | 'input' | 'password' | 'complete';
@@ -39,6 +40,8 @@ export const WalletImportFlow: React.FC<WalletImportFlowProps> = ({
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
+  const [enableBiometric, setEnableBiometric] = useState(false);
+  const [isBiometricSupported, setIsBiometricSupported] = useState(false);
 
   const handleMethodSelect = (method: ImportMethod) => {
     setImportMethod(method);
@@ -70,6 +73,15 @@ export const WalletImportFlow: React.FC<WalletImportFlowProps> = ({
         break;
     }
   };
+
+  // Check if biometric authentication is supported
+  useEffect(() => {
+    const checkBiometricSupport = async () => {
+      const supported = await webAuthnService.isPlatformAuthenticatorAvailable();
+      setIsBiometricSupported(supported);
+    };
+    checkBiometricSupport();
+  }, []);
 
   const handleComplete = async () => {
     // Check rate limit
@@ -123,6 +135,26 @@ export const WalletImportFlow: React.FC<WalletImportFlowProps> = ({
         isHardwareWallet: importMethod === 'hardware',
         chainIds: [1, 8453, 137, 42161],
       });
+
+      // Register biometric credentials if enabled
+      if (enableBiometric && isBiometricSupported) {
+        try {
+          const result = await webAuthnService.registerCredential({
+            username: address,
+            displayName: walletName || 'Imported Wallet',
+            userId: address
+          });
+
+          if (result.success) {
+            addToast('Biometric authentication enabled successfully', 'success');
+          } else {
+            addToast(`Biometric registration failed: ${result.error}`, 'warning');
+          }
+        } catch (error: any) {
+          console.error('Biometric registration error:', error);
+          addToast('Failed to enable biometric authentication', 'warning');
+        }
+      }
 
       setWalletAddress(address);
       setStep('complete');
@@ -379,6 +411,38 @@ export const WalletImportFlow: React.FC<WalletImportFlowProps> = ({
                   </button>
                 </div>
               </div>
+
+              {/* Biometric Authentication Toggle */}
+              {isBiometricSupported && (
+                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                      <Fingerprint className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        Enable Biometric Authentication
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Use fingerprint or face to unlock
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEnableBiometric(!enableBiometric)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      enableBiometric ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        enableBiometric ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              )}
 
               {password && confirmPassword && password !== confirmPassword && (
                 <p className="text-sm text-red-600 dark:text-red-400">

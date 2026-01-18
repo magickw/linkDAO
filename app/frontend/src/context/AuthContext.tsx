@@ -12,6 +12,7 @@ interface AuthContextType {
   kycStatus: KYCStatus | null;
   accessToken: string | null;
   login: (address: string, connector: any, status: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithNonCustodialWallet: (token: string, user: any) => Promise<{ success: boolean; error?: string }>;
   register: (userData: {
     address: string;
     handle: string;
@@ -192,6 +193,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [syncAuthState, addToast]);
 
+  const loginWithNonCustodialWallet = useCallback(async (token: string, user: any): Promise<{ success: boolean; error?: string }> => {
+    // Set loading state to prevent premature redirects during auth
+    setIsLoading(true);
+    try {
+      // Store the token and user data
+      setUser(user);
+      await syncAuthState();
+      addToast('Successfully authenticated with non-custodial wallet!', 'success');
+      return { success: true };
+    } catch (error: any) {
+      addToast(error.message, 'error');
+      return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
+    }
+  }, [syncAuthState, addToast]);
+
   const register = async (userData: {
     address: string;
     handle: string;
@@ -349,6 +367,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     kycStatus,
     accessToken,
     login,
+    loginWithNonCustodialWallet,
     register,
     logout: handleLogout,
     connectWallet,

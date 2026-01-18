@@ -1545,7 +1545,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                       // Use default values for now - payout settings integration will be added later
                       defaultCrypto: 'USDC',
                       cryptoAddresses: {},
-                      fiatEnabled: false,
+                      fiatEnabled: true,
                       offRampProvider: '',
                       bankAccount: {}
                     }}

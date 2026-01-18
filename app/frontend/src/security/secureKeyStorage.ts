@@ -433,6 +433,56 @@ export class SecureKeyStorage {
   }
 
   /**
+   * Store a biometric credential mapping
+   */
+  static async storeBiometricCredential(
+    address: string,
+    credentialId: string,
+    publicKey: any
+  ): Promise<void> {
+    try {
+      const storageKey = `linkdao_biometric_${address.toLowerCase()}`;
+      const data = {
+        credentialId,
+        publicKey,
+        createdAt: Date.now()
+      };
+      localStorage.setItem(storageKey, JSON.stringify(data));
+    } catch (error) {
+      console.error('Failed to store biometric credential:', error);
+      throw new Error('Failed to store biometric credential');
+    }
+  }
+
+  /**
+   * Get a biometric credential mapping
+   */
+  static async getBiometricCredential(address: string): Promise<any | null> {
+    try {
+      const storageKey = `linkdao_biometric_${address.toLowerCase()}`;
+      const data = localStorage.getItem(storageKey);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error('Failed to get biometric credential:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Delete a biometric credential mapping
+   */
+  static async deleteBiometricCredential(address: string): Promise<boolean> {
+    try {
+      const storageKey = `linkdao_biometric_${address.toLowerCase()}`;
+      localStorage.removeItem(storageKey);
+      return true;
+    } catch (error) {
+      console.error('Failed to delete biometric credential:', error);
+      return false;
+    }
+  }
+
+  /**
    * Clear all wallet data (for testing/reset)
    */
   static clearAll(): void {

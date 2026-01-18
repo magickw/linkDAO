@@ -17,8 +17,9 @@ import { transactionCostCalculator } from './transactionCostCalculator';
 import { exchangeRateService } from './exchangeRateService';
 
 export class CostEffectivenessCalculator implements ICostEffectivenessCalculator {
-  private readonly PLATFORM_FEE_RATE = 0.15; // 15%
-  private readonly STRIPE_FEE_RATE = 0.029; // 2.9% + $0.30
+  // Platform fee is charged to SELLERS, not buyers - tracked for internal use only
+  private readonly PLATFORM_FEE_RATE = 0.15; // 15% (seller fee)
+  private readonly STRIPE_FEE_RATE = 0.029; // 2.9% + $0.30 (processing fee)
   private readonly STRIPE_FIXED_FEE = 0.30;
 
   async calculateTransactionCost(
@@ -48,6 +49,7 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
     const baseCost = amount;
     let gasFee = 0;
     let networkFee = 0;
+    // Platform fee is tracked for seller deduction but NOT charged to buyer
     let platformFee = baseCost * this.PLATFORM_FEE_RATE;
     let estimatedTime = 5; // Default 5 minutes
     let confidence = 0.9; // Default high confidence
@@ -73,7 +75,8 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
         // X402 has minimal fees - most gas costs are covered by the protocol
         gasFee = 0.05; // Minimal network fee
         networkFee = 0;
-        platformFee = baseCost * 0.15; // 15% platform fee for x402
+        // Platform fee still 15% but NOT charged to buyer
+        platformFee = baseCost * 0.15;
         estimatedTime = 1; // ~1 minute with x402
         confidence = 0.95; // High confidence
         break;
@@ -94,7 +97,8 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
         confidence = 0.7;
     }
 
-    const totalCost = baseCost + gasFee + networkFee + platformFee;
+    // Buyer's total: baseCost + gasFee + networkFee (NO platform fee - that's for sellers)
+    const totalCost = baseCost + gasFee + networkFee;
 
     return {
       totalCost,
@@ -109,7 +113,7 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
         gasLimit: paymentMethod.token ? BigInt(21000) : undefined, // Standard transfer
         gasPrice: paymentMethod.token ? networkConditions.gasPrice : undefined,
         networkFee,
-        platformFee
+        platformFee // Tracked for internal use (seller deduction), not shown to buyer
       }
     };
   }

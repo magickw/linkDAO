@@ -14,6 +14,7 @@ import { Fragment } from 'react';
 import { base, baseSepolia, mainnet, polygon, arbitrum, sepolia } from '@/lib/wagmi';
 import { getTokensForChain, SUPPORTED_CHAINS } from '@/config/payment';
 import { getTokenLogoWithFallback } from '@/utils/tokenLogoUtils';
+import { TokenSwapModal } from '@/components/Wallet/TokenSwapModal';
 
 export default function Wallet() {
   const { isConnected } = useWeb3();
@@ -29,6 +30,8 @@ export default function Wallet() {
   const [selectedChainId, setSelectedChainId] = useState(chain?.id || mainnet.id);
   const [activeTab, setActiveTab] = useState<'overview' | 'send' | 'history'>('overview');
   const [portfolioTimeframe, setPortfolioTimeframe] = useState<'1d' | '1w' | '1m' | '1y'>('1d');
+  const [showTokenSwapModal, setShowTokenSwapModal] = useState(false);
+  const [swapTokenIn, setSwapTokenIn] = useState(null);
 
   // Get available tokens for the selected chain
   const availableTokens = getTokensForChain(selectedChainId);
@@ -208,28 +211,16 @@ export default function Wallet() {
   };
 
   const handleSwapAsset = (assetName: string) => {
-    // Set the token and open a swap interface
+    // Set the token and open integrated swap modal
     setToken(assetName);
 
-    // For now, we'll redirect to a swap interface or open a DEX
+    // Open integrated token swap modal instead of external redirect
     const selectedToken = availableTokens.find(t => t.symbol === assetName);
-
+    
     if (selectedToken) {
-      // Open a swap interface (e.g., Uniswap, 1inch)
-      const swapUrl = `https://app.uniswap.org/swap?inputCurrency=${selectedToken.address || 'ETH'}&chain=${selectedChainId}`;
-
-      try {
-        const newWindow = window.open(swapUrl, '_blank', 'noopener,noreferrer');
-        if (newWindow) {
-          newWindow.opener = null;
-          addToast(`Opening swap interface for ${assetName}...`, 'info');
-        } else {
-          addToast('Failed to open swap interface. Please check your popup blocker.', 'error');
-        }
-      } catch (error) {
-        console.error('Error opening swap interface:', error);
-        addToast('Failed to open swap interface. Please try again.', 'error');
-      }
+      setShowTokenSwapModal(true);
+      setSwapTokenIn(selectedToken);
+      addToast(`Opening swap interface for ${assetName}...`, 'info');
     } else {
       addToast(`Swap interface not available for ${assetName}`, 'error');
     }
@@ -932,6 +923,16 @@ export default function Wallet() {
           )}
         </div>
       </div>
+      
+      {/* Integrated Token Swap Modal */}
+      <TokenSwapModal
+        isOpen={showTokenSwapModal}
+        onClose={() => {
+          setShowTokenSwapModal(false);
+          setSwapTokenIn(null);
+        }}
+        initialTokenIn={swapTokenIn}
+      />
     </Layout>
   );
 }
