@@ -15,6 +15,7 @@ interface NotificationData {
   type: string;
   title: string;
   message: string;
+  category?: string;
   data?: any;
   priority?: 'low' | 'medium' | 'high' | 'urgent';
   timestamp?: Date;

@@ -397,26 +397,37 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     }
 
     // If viewing a DM, use hook sendMessage to persist
+    // If viewing a DM, use hook sendMessage to persist
     if (isViewingDM && selectedDM) {
+      // Don't send replyToId if it's an optimistic ID (starts with msg_)
+      const validReplyToId = replyingTo?.messageId && !replyingTo.messageId.startsWith('msg_')
+        ? replyingTo.messageId
+        : undefined;
+
       sendMessage({
         conversationId: selectedDM,
         fromAddress: address,
         content: newMessage.trim(),
         messageType: 'text',
-        replyToId: replyingTo?.messageId
+        replyToId: validReplyToId
       } as any).catch(err => {
         console.warn('Failed to send DM via hook', err);
         // Do NOT manually add to local state here - the hook handles optimistic updates
         // and we don't want duplicates if the hook retries or when network recovers
       });
     } else if (selectedChannel) {
+      // Don't send replyToId if it's an optimistic ID (starts with msg_)
+      const validReplyToId = replyingTo?.messageId && !replyingTo.messageId.startsWith('msg_')
+        ? replyingTo.messageId
+        : undefined;
+
       // Handle channel message - persist to backend
       sendMessage({
         conversationId: selectedChannel,
         fromAddress: address,
         content: newMessage.trim(),
         messageType: 'text',
-        replyToId: replyingTo?.messageId
+        replyToId: validReplyToId
       } as any).catch(err => {
         console.warn('Failed to send channel message via hook', err);
       });
@@ -850,7 +861,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     // Split by blockquotes first
     const blockquoteRegex = /^>\s(.*)$/gm;
     const parts = content.split(blockquoteRegex);
-    
+
     // Check if content has any blockquotes
     const hasBlockquotes = content.match(blockquoteRegex);
 
@@ -1547,7 +1558,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
                           {/* Reply Reference - Blue accent for replies */}
                           {message.replyToId && (
-                            <button 
+                            <button
                               onClick={() => {
                                 const element = document.getElementById(`message-${message.replyToId}`);
                                 element?.scrollIntoView({ behavior: 'smooth', block: 'center' });

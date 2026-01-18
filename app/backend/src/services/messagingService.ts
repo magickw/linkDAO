@@ -291,10 +291,16 @@ export class MessagingService {
     const { conversationId, userAddress } = data;
 
     try {
+      // Validate UUID format
+      if (!conversationId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(conversationId)) {
+        safeLogger.warn('[MessagingService] Invalid conversationId format', { conversationId });
+        return null;
+      }
+
       this.validateAddress(userAddress);
       // Normalize to lowercase to ensure matching against DB
       const normalizedAddress = userAddress.toLowerCase();
-      
+
       // Use case-insensitive query to handle legacy data with mixed-case addresses
       const conversation = await db
         .select()
@@ -318,7 +324,7 @@ export class MessagingService {
           .from(conversations)
           .where(eq(conversations.id, conversationId))
           .limit(1);
-        
+
         if (convoWithoutCheck.length > 0) {
           safeLogger.warn('[MessagingService] Conversation found but access denied', {
             conversationId,
@@ -327,7 +333,7 @@ export class MessagingService {
             mismatch: 'User address not found in participants (case mismatch?)'
           });
         }
-        
+
         return null;
       }
 
@@ -395,7 +401,7 @@ export class MessagingService {
         conversationId,
         userAddress: userAddress.toLowerCase()
       });
-      
+
       const conversation = await this.getConversationDetails({ conversationId, userAddress });
       if (!conversation) {
         safeLogger.warn('[MessagingService] Access denied - conversation not found or user not participant', {
@@ -501,7 +507,7 @@ export class MessagingService {
       // Rate limiting: Check if user has sent > 100 messages in last minute
       const rateLimitKey = `message_rate:${fromAddress}`;
       const rateLimitResult = await cacheService.checkRateLimit(rateLimitKey, 100, 60);
-      
+
       if (!rateLimitResult.allowed) {
         safeLogger.warn(`Rate limit exceeded for user ${fromAddress}`, {
           limit: 100,
@@ -509,11 +515,11 @@ export class MessagingService {
           remaining: rateLimitResult.remaining,
           resetTime: rateLimitResult.resetTime
         });
-        
+
         return {
           success: false,
           message: 'Rate limit exceeded. Please wait before sending more messages.',
-          retryAfter: Math.ceil((rateLimitResult.resetTime.getTime() - Date.now()) / 1000)
+          retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
         };
       }
 
@@ -549,7 +555,7 @@ export class MessagingService {
           encryptionMetadata: data.encryptionMetadata || null,
           replyToId: data.replyToId,
           attachments: sanitizedMessage.attachments || [], // Default to empty array for JSONB
-          sentAt: new Date() 
+          sentAt: new Date()
         })
         .returning();
 

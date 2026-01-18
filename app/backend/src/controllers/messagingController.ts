@@ -135,6 +135,14 @@ export class MessagingController {
       }
 
       const { id } = req.params;
+
+      // Validate conversationId format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(id)) {
+        res.status(400).json(apiResponse.error('Invalid conversation ID format', 400));
+        return;
+      }
+
       safeLogger.info(`[MessagingController] getConversationMessages called for ${id} by ${userAddress}, query:`, req.query);
 
       const {
@@ -191,13 +199,34 @@ export class MessagingController {
       // For now, this is a placeholder for the rate limiting logic
 
       const { id } = req.params;
+
+      // Validate conversationId format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(id)) {
+        res.status(400).json(apiResponse.error('Invalid conversation ID format', 400));
+        return;
+      }
+
       const {
         content = '', // Default to empty string
         contentType = 'text',
-        replyToId,
         attachments = [],
         encryptionMetadata
       } = req.body;
+
+      // Handle replyToId - STRICT VALIDATION
+      let replyToId = req.body.replyToId;
+      if (replyToId) {
+        // Check if it's a valid UUID
+        if (!uuidRegex.test(replyToId)) {
+          safeLogger.warn('Invalid replyToId format (likely optimistic ID), stripping to prevent 500 error', {
+            replyToId,
+            conversationId: id
+          });
+          // Strip invalid replyToId to process as a normal message
+          replyToId = undefined;
+        }
+      }
 
       // Validate that message has some content (text, attachments, or encrypted data)
       if ((!content || content.trim() === '') && (!attachments || attachments.length === 0) && !encryptionMetadata) {
