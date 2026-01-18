@@ -49,6 +49,43 @@ export class UserNotificationController {
     }
 
     /**
+     * Get unread notification count
+     */
+    async getUnreadCount(req: Request, res: Response) {
+        try {
+            const userId = (req as any).user?.id;
+            if (!userId) {
+                return res.status(401).json({ error: 'Unauthorized' });
+            }
+
+            const userResult = await db
+                .select({ walletAddress: users.walletAddress })
+                .from(users)
+                .where(eq(users.id, userId))
+                .limit(1);
+
+            if (userResult.length === 0) {
+                return res.status(404).json({ error: 'User not found' });
+            }
+
+            const user = userResult[0];
+
+            // Use the service to get notifications which includes unread count
+            // Limit 1 is efficient enough for now
+            const result = await communityNotificationService.getUserNotifications(
+                user.walletAddress,
+                1,
+                0
+            );
+
+            res.json({ count: result.unreadCount });
+        } catch (error) {
+            safeLogger.error('Error getting unread count:', error);
+            res.status(500).json({ error: 'Failed to get unread count' });
+        }
+    }
+
+    /**
      * Mark notification as read
      */
     async markAsRead(req: Request, res: Response) {

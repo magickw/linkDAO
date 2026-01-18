@@ -891,6 +891,44 @@ export function parseUnits(value: string, decimals: number): bigint {
 }
 
 /**
+ * Get a dedicated Mainnet provider for ENS resolution and other cross-chain needs
+ */
+let cachedMainnetProvider: ethers.Provider | null = null;
+
+export async function getMainnetProvider() {
+  if (cachedMainnetProvider) return cachedMainnetProvider;
+
+  const mainnetRpc = process.env.NEXT_PUBLIC_MAINNET_RPC_URL || 'https://eth.llamarpc.com';
+  
+  try {
+    const network = ethers.Network.from(1);
+    // Use our backend proxy to avoid CORS issues
+    const proxiedRpc = `/api/proxy?target=${encodeURIComponent(mainnetRpc)}`;
+    
+    const provider = new ethers.JsonRpcProvider(proxiedRpc, network, {
+      staticNetwork: true,
+      polling: false
+    });
+    
+    await provider.getBlockNumber();
+    cachedMainnetProvider = provider;
+    return provider;
+  } catch (error) {
+    console.warn('Failed to create Mainnet provider:', error);
+    // Fallback to direct public RPC if proxy fails
+    try {
+      const provider = new ethers.JsonRpcProvider(mainnetRpc, ethers.Network.from(1), {
+        staticNetwork: true
+      });
+      cachedMainnetProvider = provider;
+      return provider;
+    } catch (e) {
+      return null;
+    }
+  }
+}
+
+/**
  * Reset provider cache - useful when wallet state changes
  */
 export function resetProviderCache(): void {

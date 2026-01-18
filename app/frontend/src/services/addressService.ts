@@ -1,8 +1,6 @@
+import { API_BASE_URL } from '@/config/api';
 import { deduplicatedFetch } from '../utils/requestDeduplication';
 import { csrfService } from './csrfService';
-
-// Get the backend API base URL from environment variables
-const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
 
 export interface Address {
     id: string;
@@ -53,7 +51,7 @@ export class AddressService {
         if (!authToken) return [];
 
         try {
-            const data = await deduplicatedFetch(`${BACKEND_API_BASE_URL}/api/user/addresses`, {
+            const data = await deduplicatedFetch(`${API_BASE_URL}/api/user/addresses`, {
                 headers: await this.getHeaders(authToken),
             });
             return data as Address[];
@@ -71,7 +69,7 @@ export class AddressService {
         if (!authToken) throw new Error('Not authenticated');
 
         try {
-            const response = await fetch(`${BACKEND_API_BASE_URL}/api/user/addresses`, {
+            const response = await fetch(`${API_BASE_URL}/api/user/addresses`, {
                 method: 'POST',
                 headers: await this.getHeaders(authToken),
                 body: JSON.stringify(input),
@@ -97,7 +95,7 @@ export class AddressService {
         if (!authToken) throw new Error('Not authenticated');
 
         try {
-            const response = await fetch(`${BACKEND_API_BASE_URL}/api/user/addresses/${id}`, {
+            const response = await fetch(`${API_BASE_URL}/api/user/addresses/${id}`, {
                 method: 'PUT',
                 headers: await this.getHeaders(authToken),
                 body: JSON.stringify(input),
@@ -123,7 +121,7 @@ export class AddressService {
         if (!authToken) throw new Error('Not authenticated');
 
         try {
-            const response = await fetch(`${BACKEND_API_BASE_URL}/api/user/addresses/${id}`, {
+            const response = await fetch(`${API_BASE_URL}/api/user/addresses/${id}`, {
                 method: 'DELETE',
                 headers: await this.getHeaders(authToken),
             });
@@ -146,7 +144,7 @@ export class AddressService {
         if (!authToken) throw new Error('Not authenticated');
 
         try {
-            const response = await fetch(`${BACKEND_API_BASE_URL}/api/user/addresses/${id}/default`, {
+            const response = await fetch(`${API_BASE_URL}/api/user/addresses/${id}/default`, {
                 method: 'POST',
                 headers: await this.getHeaders(authToken),
             });

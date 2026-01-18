@@ -84,17 +84,22 @@ export class PrioritizationPerformanceOptimizer {
       console.warn('⚠️ parallelCostCalculation called with undefined or empty methods array');
       return {
         results: [],
+        executionTime: 0,
         errors: [],
         cacheHits: 0,
-        cacheMisses: 0,
-        totalTime: 0,
-        metadata: {
-          totalTasks: 0,
-          completedTasks: 0,
-          failedTasks: 0,
-          averageTaskDuration: 0
-        }
+        cacheMisses: 0
       };
+    }
+
+    // Pre-fetch all exchange rates in a single batch call to reduce API calls
+    const uniqueTokens = [...new Set(methods.map(m => m.token?.symbol).filter(Boolean))] as string[];
+    if (uniqueTokens.length > 0) {
+      try {
+        await transactionCostCalculator.prefetchExchangeRates(uniqueTokens, 'USD');
+        console.log(`✅ Pre-fetched exchange rates for ${uniqueTokens.length} tokens:`, uniqueTokens);
+      } catch (error) {
+        console.warn('⚠️ Exchange rate prefetch failed, will use fallback:', error);
+      }
     }
 
     // Create cost calculation tasks

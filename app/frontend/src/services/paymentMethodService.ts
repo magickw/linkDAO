@@ -1,7 +1,4 @@
-/**
- * Secure Payment Method Service
- * Handles encrypted storage and tokenization of payment methods
- */
+import { API_BASE_URL } from '@/config/api';
 
 export interface PaymentMethod {
   id: string;
@@ -33,10 +30,10 @@ export interface CreatePaymentMethodInput {
 }
 
 class PaymentMethodService {
-  private baseUrl: string;
+  private baseUrl = `${API_BASE_URL}/api`;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+    // baseUrl is initialized above
   }
 
   /**
@@ -225,8 +222,8 @@ class PaymentMethodService {
     transactionId?: string;
     error?: string;
   }> {
-    // Use the x402 payment endpoint for processing payments
-    const response = await fetch(`${this.baseUrl}/x402/payment`, {
+    // Use the x402-payments endpoint for processing payments
+    const response = await fetch(`${this.baseUrl}/x402-payments/payment`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify({

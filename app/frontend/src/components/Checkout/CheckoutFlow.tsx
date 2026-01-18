@@ -49,6 +49,7 @@ import { useToast } from '@/context/ToastContext';
 import { getNetworkName } from '@/config/escrowConfig';
 import { USDC_MAINNET, USDC_POLYGON, USDC_ARBITRUM, USDC_SEPOLIA, USDC_BASE, USDC_BASE_SEPOLIA } from '@/config/payment';
 import { TRANSACTION_HELPERS } from '@/config/networks';
+import { API_BASE_URL } from '@/config/api';
 import { taxService, TaxCalculationResult } from '@/services/taxService';
 
 import { PaymentErrorModal } from '@/components/Payment/PaymentErrorModal';
@@ -179,7 +180,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         setLoadingSavedData(true);
 
         // Fetch saved addresses
-        const addressResponse = await fetch('/api/user/addresses', {
+        const addressResponse = await fetch(`${API_BASE_URL}/api/user/addresses`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
@@ -200,7 +201,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         }
 
         // Fetch saved payment methods
-        const paymentResponse = await fetch('/api/user/payment-methods', {
+        const paymentResponse = await fetch(`${API_BASE_URL}/api/user/payment-methods`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }

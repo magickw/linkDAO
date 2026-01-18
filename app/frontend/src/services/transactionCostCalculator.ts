@@ -24,7 +24,7 @@ const STRIPE_PROCESSING_FEE_RATE = 0.029; // 2.9%
 const STRIPE_FIXED_FEE = 0.30; // $0.30 fixed fee for Stripe
 
 // Exchange rate cache configuration
-const EXCHANGE_RATE_CACHE_DURATION = 60 * 1000; // 1 minute
+const EXCHANGE_RATE_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes (increased from 1 minute)
 const EXCHANGE_RATE_CACHE_KEY_PREFIX = 'exchange_rate_';
 
 interface CachedExchangeRate {
@@ -49,6 +49,15 @@ export class TransactionCostCalculator {
     exchangeRate: 0.3,
     networkConditions: 0.2,
     historicalData: 0.1
+  };
+
+  // Rate limiting state for CoinGecko API
+  private rateLimitState = {
+    lastCallTime: 0,
+    callCount: 0,
+    resetTime: 0,
+    MIN_INTERVAL: 500, // 500ms between calls
+    MAX_CALLS_PER_MINUTE: 10
   };
 
   /**
@@ -387,17 +396,46 @@ export class TransactionCostCalculator {
   }
 
   /**
-   * Fetch exchange rate from API
+   * Fetch exchange rate from API with rate limiting
    */
   private async fetchExchangeRate(
     fromToken: string,
     toToken: string
   ): Promise<ExchangeRate | null> {
+    // Rate limiting check
+    const now = Date.now();
+
+    // Reset counter every minute
+    if (now > this.rateLimitState.resetTime) {
+      this.rateLimitState.callCount = 0;
+      this.rateLimitState.resetTime = now + 60000;
+    }
+
+    // Check if we've exceeded rate limit
+    if (this.rateLimitState.callCount >= this.rateLimitState.MAX_CALLS_PER_MINUTE) {
+      console.warn('⚠️ CoinGecko rate limit reached, using fallback exchange rate');
+      return this.getFallbackExchangeRate(fromToken, toToken);
+    }
+
+    // Enforce minimum interval between calls
+    const timeSinceLastCall = now - this.rateLimitState.lastCallTime;
+    if (timeSinceLastCall < this.rateLimitState.MIN_INTERVAL) {
+      await new Promise(resolve => setTimeout(resolve, this.rateLimitState.MIN_INTERVAL - timeSinceLastCall));
+    }
+
     try {
+      this.rateLimitState.callCount++;
+      this.rateLimitState.lastCallTime = Date.now();
+
       const coingeckoId = this.getCoingeckoId(fromToken);
       const response = await fetch(
         `https://api.coingecko.com/api/v3/simple/price?ids=${coingeckoId}&vs_currencies=${toToken.toLowerCase()}`
       );
+
+      if (!response.ok) {
+        throw new Error(`CoinGecko API returned ${response.status}`);
+      }
+
       const data = await response.json();
 
       const rate = data[coingeckoId]?.[toToken.toLowerCase()];
@@ -411,11 +449,145 @@ export class TransactionCostCalculator {
           confidence: 0.9
         };
       }
-      return null;
+
+      // No rate found, use fallback
+      return this.getFallbackExchangeRate(fromToken, toToken);
     } catch (error) {
       console.error('CoinGecko API error:', error);
-      return null;
+      // Return fallback instead of null
+      return this.getFallbackExchangeRate(fromToken, toToken);
     }
+  }
+
+  /**
+   * Get fallback exchange rate when API fails
+   */
+  private getFallbackExchangeRate(fromToken: string, toToken: string): ExchangeRate {
+    // Hardcoded reasonable exchange rates as fallback
+    const fallbackRates: Record<string, number> = {
+      'ETH_USD': 2000,
+      'USDC_USD': 1.0,
+      'USDT_USD': 1.0,
+      'MATIC_USD': 0.80,
+      'ARB_USD': 0.90,
+      'OP_USD': 1.50
+    };
+
+    const key = `${fromToken}_${toToken}`;
+    const rate = fallbackRates[key] || 1.0;
+
+    return {
+      fromToken,
+      toToken,
+      rate,
+      source: 'fallback',
+      lastUpdated: new Date(),
+      confidence: 0.6 // Medium confidence for fallback
+    };
+  }
+
+  /**
+   * Batch fetch exchange rates for multiple tokens (reduces API calls)
+   */
+  async fetchBatchExchangeRates(
+    tokens: string[],
+    targetCurrency: string = 'USD'
+  ): Promise<Map<string, ExchangeRate>> {
+    const uniqueTokens = [...new Set(tokens)];
+    const results = new Map<string, ExchangeRate>();
+
+    // Filter out tokens that are already cached
+    const tokensToFetch = uniqueTokens.filter(token => {
+      const cacheKey = `${EXCHANGE_RATE_CACHE_KEY_PREFIX}${token}_${targetCurrency}`;
+      const cached = this.exchangeRateCache.get(cacheKey);
+
+      if (cached && Date.now() - cached.timestamp.getTime() < EXCHANGE_RATE_CACHE_DURATION) {
+        results.set(token, cached.rate);
+        return false; // Already cached
+      }
+      return true; // Need to fetch
+    });
+
+    if (tokensToFetch.length === 0) {
+      return results; // All cached
+    }
+
+    // Rate limit check
+    const now = Date.now();
+    if (now > this.rateLimitState.resetTime) {
+      this.rateLimitState.callCount = 0;
+      this.rateLimitState.resetTime = now + 60000;
+    }
+
+    if (this.rateLimitState.callCount >= this.rateLimitState.MAX_CALLS_PER_MINUTE) {
+      console.warn('⚠️ CoinGecko rate limit reached, using fallback for batch fetch');
+      tokensToFetch.forEach(token => {
+        results.set(token, this.getFallbackExchangeRate(token, targetCurrency));
+      });
+      return results;
+    }
+
+    try {
+      this.rateLimitState.callCount++;
+      this.rateLimitState.lastCallTime = Date.now();
+
+      const coingeckoIds = tokensToFetch.map(t => this.getCoingeckoId(t)).join(',');
+      const response = await fetch(
+        `https://api.coingecko.com/api/v3/simple/price?ids=${coingeckoIds}&vs_currencies=${targetCurrency.toLowerCase()}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`CoinGecko API returned ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      tokensToFetch.forEach(token => {
+        const coingeckoId = this.getCoingeckoId(token);
+        const rate = data[coingeckoId]?.[targetCurrency.toLowerCase()];
+
+        if (rate) {
+          const exchangeRate: ExchangeRate = {
+            fromToken: token,
+            toToken: targetCurrency,
+            rate,
+            source: 'coingecko',
+            lastUpdated: new Date(),
+            confidence: 0.9
+          };
+
+          results.set(token, exchangeRate);
+
+          // Cache the result
+          const cacheKey = `${EXCHANGE_RATE_CACHE_KEY_PREFIX}${token}_${targetCurrency}`;
+          this.exchangeRateCache.set(cacheKey, {
+            rate: exchangeRate,
+            timestamp: new Date()
+          });
+        } else {
+          // Use fallback for missing rates
+          results.set(token, this.getFallbackExchangeRate(token, targetCurrency));
+        }
+      });
+
+      return results;
+    } catch (error) {
+      console.error('Batch exchange rate fetch failed:', error);
+
+      // Use fallback for all tokens
+      tokensToFetch.forEach(token => {
+        results.set(token, this.getFallbackExchangeRate(token, targetCurrency));
+      });
+
+      return results;
+    }
+  }
+
+  /**
+   * Prefetch exchange rates for multiple tokens (call before cost calculations)
+   */
+  async prefetchExchangeRates(tokens: string[], targetCurrency: string = 'USD'): Promise<void> {
+    await this.fetchBatchExchangeRates(tokens, targetCurrency);
   }
 
   /**

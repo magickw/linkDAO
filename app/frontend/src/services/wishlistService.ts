@@ -1,6 +1,4 @@
-/**
- * Wishlist Service - Manages user wishlist state with backend persistence
- */
+import { API_BASE_URL } from '@/config/api';
 
 export interface WishlistItem {
   id: string;
@@ -35,7 +33,7 @@ class WishlistService {
   private static instance: WishlistService;
   private storageKey = 'linkdao_marketplace_wishlist';
   private listeners: Set<(state: WishlistState) => void> = new Set();
-  private baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
+  private baseURL = API_BASE_URL;
   private isAuthenticated = false;
   private authToken: string | null = null;
   private isSyncing = false;

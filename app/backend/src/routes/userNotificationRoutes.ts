@@ -7,6 +7,7 @@ const router = express.Router();
 // Apply auth middleware to all routes
 router.use(authMiddleware);
 
+router.get('/unread-count', (req, res) => userNotificationController.getUnreadCount(req, res));
 router.get('/', (req, res) => userNotificationController.getNotifications(req, res));
 router.post('/:id/read', (req, res) => userNotificationController.markAsRead(req, res));
 router.post('/read-all', (req, res) => userNotificationController.markAllAsRead(req, res));

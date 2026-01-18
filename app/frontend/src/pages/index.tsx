@@ -556,7 +556,7 @@ export default function Home() {
                         Don't have a wallet yet? Create a secure non-custodial wallet in seconds. Your keys, your control, your crypto.
                       </p>
                       <Link
-                        href="/wallet-dashboard"
+                        href="/wallet/manage"
                         className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
                       >
                         Create Wallet Now
@@ -1142,7 +1142,7 @@ export default function Home() {
                 <div className="space-y-4">
                   {/* Wallet CTA for new users */}
                   <Link
-                    href="/wallet-dashboard"
+                    href="/wallet/manage"
                     className="group relative inline-flex items-center justify-center w-full px-8 py-4 text-lg font-semibold rounded-xl text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
                   >
                     <div className="absolute -inset-3 rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 opacity-30 group-hover:opacity-100 blur-lg transition-opacity duration-200" />

@@ -4,6 +4,7 @@
  * Implements requirements 6.1, 6.3, 6.4, 6.5 from the interconnected social platform spec
  */
 
+import { API_BASE_URL } from '../config/api';
 import type {
   AppNotification,
   NotificationPreferences,
@@ -13,7 +14,7 @@ import type {
 
 class NotificationService {
   private static instance: NotificationService;
-  private baseUrl = '/api/user-notifications';
+  private baseUrl = `${API_BASE_URL}/api/user-notifications`;
 
   static getInstance(): NotificationService {
     if (!NotificationService.instance) {
@@ -118,7 +119,7 @@ class NotificationService {
   async markAsRead(notificationId: string): Promise<void> {
     try {
       const response = await fetch(`${this.baseUrl}/${notificationId}/read`, {
-        method: 'PUT',
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.getAuthToken()}`,
         },
@@ -148,8 +149,8 @@ class NotificationService {
    */
   async markAllAsRead(): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/mark-all-read`, {
-        method: 'PUT',
+      const response = await fetch(`${this.baseUrl}/read-all`, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.getAuthToken()}`,
         },

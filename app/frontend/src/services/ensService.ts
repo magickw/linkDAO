@@ -4,7 +4,7 @@
  */
 
 import { ethers } from 'ethers';
-import { getProvider } from '@/utils/web3'; // Import the central provider
+import { getProvider, getMainnetProvider } from '@/utils/web3'; // Import the central provider
 
 export interface ENSProfile {
   name: string;
@@ -113,7 +113,8 @@ class ENSService {
     if (cached) return cached;
 
     try {
-      const provider = await getProvider();
+      // ENS is on Mainnet, so always use Mainnet provider for resolution
+      const provider = await getMainnetProvider() || await getProvider();
       if (!provider) {
         throw new Error('ENS provider not available');
       }
@@ -239,7 +240,8 @@ class ENSService {
     if (cached) return cached.resolved || null;
 
     try {
-      const provider = await getProvider();
+      // ENS is on Mainnet, so always use Mainnet provider for lookup
+      const provider = await getMainnetProvider() || await getProvider();
       if (!provider || !this.isEthereumAddress(address)) {
         return null;
       }

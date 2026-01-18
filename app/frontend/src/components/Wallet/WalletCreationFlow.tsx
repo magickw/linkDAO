@@ -13,7 +13,7 @@ import { rateLimiter } from '@/services/rateLimiter';
 import { isPasswordStrong } from '@/utils/passwordStrength';
 import { webAuthnService } from '@/services/webAuthnService';
 
-type Step = 'intro' | 'create' | 'backup' | 'verify' | 'password' | 'complete';
+type Step = 'intro' | 'create' | 'backup' | 'password' | 'complete';
 
 interface WalletCreationFlowProps {
   onComplete?: (address: string) => void;
@@ -132,11 +132,8 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
       case 'backup':
         setStep('create');
         break;
-      case 'verify':
-        setStep('backup');
-        break;
       case 'password':
-        setStep('verify');
+        setStep('backup');
         break;
       default:
         break;
@@ -152,9 +149,6 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
         setStep('backup');
         break;
       case 'backup':
-        setStep('verify');
-        break;
-      case 'verify':
         setStep('password');
         break;
       case 'password':
@@ -471,124 +465,7 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
           </div>
         );
 
-      case 'verify':
-        return (
-          <div className="space-y-6">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              </div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                Set Wallet Password
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Create a password to encrypt your wallet
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Wallet Name (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={walletName}
-                  onChange={(e) => setWalletName(e.target.value)}
-                  placeholder="My Wallet"
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter password"
-                    className="w-full px-4 py-3 pr-12 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white"
-                  />
-                  <button
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
-                      <Eye className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
-
-                {/* Password Strength Indicator */}
-                {password && (
-                  <div className="mt-2">
-                    <PasswordStrengthIndicator password={password} />
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Confirm Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm password"
-                    className="w-full px-4 py-3 pr-12 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white"
-                  />
-                  <button
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
-                      <Eye className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {password && confirmPassword && password !== confirmPassword && (
-                <p className="text-sm text-red-600 dark:text-red-400">
-                  Passwords do not match
-                </p>
-              )}
-
-              {/* Biometric Authentication Option */}
-              {isBiometricSupported && (
-                <div className="flex items-start space-x-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600">
-                  <input
-                    type="checkbox"
-                    id="biometric"
-                    checked={enableBiometric}
-                    onChange={(e) => setEnableBiometric(e.target.checked)}
-                    className="mt-1 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <div className="flex-1">
-                    <label htmlFor="biometric" className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-                      <Fingerprint className="w-4 h-4" />
-                      <span>Enable biometric authentication</span>
-                    </label>
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      Use Face ID, Touch ID, or Windows Hello to unlock your wallet without entering your password
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-
-      case 'complete':
+      case 'password':
         return (
           <div className="space-y-6">
             <div className="text-center">
@@ -666,13 +543,13 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex items-center space-x-2">
-            {['intro', 'create', 'backup', 'verify', 'password', 'complete'].map(
+            {['intro', 'create', 'backup', 'password', 'complete'].map(
               (s, index) => (
                 <div
                   key={s}
                   className={`w-2 h-2 rounded-full ${step === s
                     ? 'bg-blue-500'
-                    : ['intro', 'create', 'backup', 'verify', 'password', 'complete'].indexOf(step) > index
+                    : ['intro', 'create', 'backup', 'password', 'complete'].indexOf(step) > index
                       ? 'bg-blue-200 dark:bg-blue-800'
                       : 'bg-gray-200 dark:bg-gray-700'
                     }`}
