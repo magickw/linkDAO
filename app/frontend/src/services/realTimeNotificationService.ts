@@ -9,6 +9,8 @@ import {
 } from '../types/realTimeNotifications';
 import { io, Socket } from 'socket.io-client';
 import { ENV_CONFIG } from '../config/environment';
+import { pollingService } from './pollingService';
+import { notificationService } from './notificationService';
 
 class RealTimeNotificationService {
   private socket: Socket | null = null;
@@ -19,6 +21,8 @@ class RealTimeNotificationService {
   private batchTimeout: NodeJS.Timeout | null = null;
   private pendingBatch: RealTimeNotification[] = [];
   private db: IDBDatabase | null = null;
+  private isPolling = false;
+  private lastPollTime: Date = new Date();
   
   private listeners: Map<string, Set<Function>> = new Map();
   private notificationQueue: NotificationQueue = {
@@ -139,6 +143,7 @@ class RealTimeNotificationService {
         this.socket.on('connect', () => {
           console.log('[RealTimeNotification] Socket.IO connected:', this.socket?.id);
           this.reconnectAttempts = 0;
+          this.stopPollingFallback();
           this.startHeartbeat();
           this.syncOfflineNotifications();
           this.emit('connection', { status: 'connected' });
@@ -149,20 +154,28 @@ class RealTimeNotificationService {
           const errorMsg = error.message || 'Socket.IO connection error';
           console.error('[RealTimeNotification] Socket.IO error:', errorMsg);
           this.emit('connection', { status: 'error', error: errorMsg });
+          
+          // Start polling fallback on connection error
+          this.startPollingFallback();
+          
           if (this.reconnectAttempts === 0) {
-            reject(new Error(errorMsg));
+            // Don't reject, just resolve and fall back to polling
+            // reject(new Error(errorMsg));
+            resolve();
           }
         });
 
         this.socket.on('disconnect', (reason) => {
           console.log('[RealTimeNotification] Socket.IO disconnected:', reason);
           this.stopHeartbeat();
+          this.startPollingFallback();
           this.emit('connection', { status: 'disconnected', reason });
         });
 
         this.socket.on('reconnect', (attemptNumber) => {
           console.log('[RealTimeNotification] Socket.IO reconnected after', attemptNumber, 'attempts');
           this.reconnectAttempts = 0;
+          this.stopPollingFallback();
           this.emit('connection', { status: 'connected' });
         });
 
@@ -174,6 +187,7 @@ class RealTimeNotificationService {
 
         this.socket.on('reconnect_failed', () => {
           console.error('[RealTimeNotification] Socket.IO reconnection failed');
+          this.startPollingFallback();
           this.emit('connection', { status: 'error', error: 'Max reconnection attempts reached' });
         });
 
@@ -195,7 +209,9 @@ class RealTimeNotificationService {
         });
 
       } catch (error) {
-        reject(error);
+        // Fallback to polling on init error
+        this.startPollingFallback();
+        resolve(); // Resolve to allow app to continue
       }
     });
   }
@@ -206,6 +222,72 @@ class RealTimeNotificationService {
       this.socket = null;
     }
     this.stopHeartbeat();
+    this.stopPollingFallback();
+  }
+
+  // Polling Fallback Implementation
+  private startPollingFallback(): void {
+    if (this.isPolling) return;
+    
+    console.log('[RealTimeNotification] Starting polling fallback');
+    this.isPolling = true;
+    
+    pollingService.startPolling('notifications', async () => {
+      await this.checkNewNotifications();
+    }, { interval: 30000, runImmediately: true });
+  }
+
+  private stopPollingFallback(): void {
+    if (!this.isPolling) return;
+    
+    console.log('[RealTimeNotification] Stopping polling fallback');
+    pollingService.stopPolling('notifications');
+    this.isPolling = false;
+  }
+
+  private async checkNewNotifications(): Promise<void> {
+    try {
+      // 1. Fetch unread count to see if we missed anything
+      const unreadCount = await notificationService.getUnreadCount();
+      
+      // 2. Fetch latest notifications
+      const response = await notificationService.getNotifications({
+        limit: 10,
+        includeRead: false
+      });
+
+      // 3. Process new notifications
+      const newNotifications = response.notifications.filter(n => 
+        new Date(n.createdAt).getTime() > this.lastPollTime.getTime()
+      );
+
+      if (newNotifications.length > 0) {
+        console.log(`[RealTimeNotification] Polling found ${newNotifications.length} new notifications`);
+        this.lastPollTime = new Date();
+        
+        // Convert AppNotification to RealTimeNotification format if needed
+        // Assuming they are compatible or mapping is handled
+        newNotifications.forEach(n => {
+          // Map AppNotification fields to RealTimeNotification
+          const rtNotification: RealTimeNotification = {
+            id: n.id,
+            type: n.type,
+            category: n.category as NotificationCategory,
+            title: n.title,
+            message: n.message,
+            timestamp: n.createdAt,
+            read: n.isRead,
+            actionUrl: n.actionUrl,
+            priority: n.priority as NotificationPriority || NotificationPriority.NORMAL,
+            data: n.data,
+            urgency: 'normal' // Default for polled items
+          };
+          this.handleNotification(rtNotification);
+        });
+      }
+    } catch (error) {
+      console.warn('[RealTimeNotification] Polling error:', error);
+    }
   }
 
   private startHeartbeat(): void {

@@ -1111,7 +1111,6 @@ const CommunitiesPage: React.FC = () => {
                               await handleTip(postId, amount, token);
                             }}
                             onComment={() => handleComment(postId)}
-                            onOpenPost={(post, communitySlug) => handleOpenPost(post, communitySlug)}
                           />
                         </Suspense>
                       </Web3SwipeGestureHandler>

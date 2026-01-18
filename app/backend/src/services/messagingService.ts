@@ -294,18 +294,40 @@ export class MessagingService {
       this.validateAddress(userAddress);
       // Normalize to lowercase to ensure matching against DB
       const normalizedAddress = userAddress.toLowerCase();
+      
+      // Use case-insensitive query to handle legacy data with mixed-case addresses
       const conversation = await db
         .select()
         .from(conversations)
         .where(
           and(
             eq(conversations.id, conversationId),
-            sql`${conversations.participants} ? ${normalizedAddress}`
+            sql`EXISTS (
+              SELECT 1 
+              FROM jsonb_array_elements_text(${conversations.participants}) 
+              WHERE LOWER(value) = ${normalizedAddress}
+            )`
           )
         )
         .limit(1);
 
       if (conversation.length === 0) {
+        // Debug logging to help identify the issue
+        const convoWithoutCheck = await db
+          .select()
+          .from(conversations)
+          .where(eq(conversations.id, conversationId))
+          .limit(1);
+        
+        if (convoWithoutCheck.length > 0) {
+          safeLogger.warn('[MessagingService] Conversation found but access denied', {
+            conversationId,
+            participants: convoWithoutCheck[0].participants,
+            userAddress: normalizedAddress,
+            mismatch: 'User address not found in participants (case mismatch?)'
+          });
+        }
+        
         return null;
       }
 
@@ -333,6 +355,16 @@ export class MessagingService {
     try {
       this.validateAddress(userAddress);
 
+      // DEBUG: Log the request details
+      safeLogger.info('[MessagingService] getConversationMessages called', {
+        conversationId,
+        userAddress,
+        page,
+        limit,
+        before,
+        after
+      });
+
       // MEMORY OPTIMIZATION: Track active connections
       this.activeConnections.set(userAddress, (this.activeConnections.get(userAddress) || 0) + 1);
 
@@ -354,12 +386,22 @@ export class MessagingService {
       const cacheKey = `messages:${conversationId}:${userAddress}:${page}:${limit}:${before || ''}:${after || ''}`;
       const cached = await cacheService.get(cacheKey);
       if (cached) {
+        safeLogger.debug('[MessagingService] Returning cached messages', { cacheKey });
         return cached;
       }
 
       // Check if user is participant
+      safeLogger.debug('[MessagingService] Checking if user is participant', {
+        conversationId,
+        userAddress: userAddress.toLowerCase()
+      });
+      
       const conversation = await this.getConversationDetails({ conversationId, userAddress });
       if (!conversation) {
+        safeLogger.warn('[MessagingService] Access denied - conversation not found or user not participant', {
+          conversationId,
+          userAddress: userAddress.toLowerCase()
+        });
         return {
           success: false,
           message: 'Conversation not found or access denied'

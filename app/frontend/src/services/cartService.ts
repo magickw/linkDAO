@@ -450,6 +450,12 @@ class CartService {
 
   // Add item to cart
   async addItem(product: Omit<CartItem, 'quantity' | 'addedAt'>, quantity: number = 1): Promise<void> {
+    // Ensure the item is removed from pending deletions if it was previously deleted
+    if (this.pendingDeletions.has(product.id)) {
+      this.pendingDeletions.delete(product.id);
+      this.savePendingDeletions();
+    }
+
     const currentState = await this.getCartState();
     const existingItemIndex = currentState.items.findIndex(item => item.id === product.id);
 
@@ -507,6 +513,12 @@ class CartService {
 
   // Synchronous version for backward compatibility
   addItemSync(product: Omit<CartItem, 'quantity' | 'addedAt'>, quantity: number = 1): void {
+    // Ensure the item is removed from pending deletions if it was previously deleted
+    if (this.pendingDeletions.has(product.id)) {
+      this.pendingDeletions.delete(product.id);
+      this.savePendingDeletions();
+    }
+
     const currentState = this.getCartStateSync();
     const existingItemIndex = currentState.items.findIndex(item => item.id === product.id);
 
@@ -1068,6 +1080,14 @@ class CartService {
       } else if (localState.items.length > 0) {
         // Local cart has items, sync to backend
         await this.saveCartToBackend(localState);
+
+        // Fetch the updated cart to get the new cartItemIds
+        // This is crucial - without this, subsequent update/remove operations will fail with 404
+        const updatedCart = await this.getCartFromBackend();
+        if (updatedCart) {
+          this.saveCartStateSync(updatedCart);
+          this.notifyListeners(updatedCart);
+        }
       }
     } catch (error) {
       console.warn('Failed to sync cart with backend:', error);

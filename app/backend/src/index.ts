@@ -243,34 +243,33 @@ const isRenderFree = process.env.RENDER && !process.env.RENDER_PRO &&
   (!process.env.MEMORY_LIMIT || parseInt(process.env.MEMORY_LIMIT) < 1024) &&
   process.env.RENDER_SERVICE_TYPE !== 'pro';
 
-// improved Render Pro detection - checks for explicit flag OR high memory allocation (>= 3GB)
-const isRenderPro = (process.env.RENDER && (
+// improved High Resource detection - checks for explicit flag OR high memory allocation (>= 2GB)
+// 4GB RAM users should always be detected as High Resource (Pro)
+const isHighResource = (
   process.env.RENDER_PRO === 'true' ||
   process.env.RENDER_SERVICE_TYPE === 'pro' ||
-  (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) >= 3000)
-)) || false;
+  process.env.RENDER_SERVICE_PLAN === 'pro' ||
+  (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) >= 2048)
+) || false;
+
+// Alias for backward compatibility
+const isRenderPro = isHighResource;
 
 const isRenderStandard = process.env.RENDER && (process.env.RENDER_SERVICE_TYPE === 'standard' || process.env.RENDER_SERVICE_PLAN === 'standard');
-const isResourceConstrained = (isRenderFree || (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 1024 && !isRenderStandard)) &&
+const isResourceConstrained = !isHighResource && (isRenderFree || (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 1024 && !isRenderStandard)) &&
   process.env.FORCE_ENABLE_WEBSOCKETS !== 'true';
 
 // More aggressive resource constraints for memory-critical environments
 const isMemoryCritical = process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 512;
-const isSevereResourceConstrained = isRenderFree || isMemoryCritical || (process.env.RENDER && !isRenderStandard);
+const isSevereResourceConstrained = !isHighResource && (isRenderFree || isMemoryCritical || (process.env.RENDER && !isRenderStandard));
 
-// Debug Render configuration
-console.log('🔍 RENDER ENVIRONMENT DEBUG:');
-console.log('   RENDER:', process.env.RENDER);
-console.log('   RENDER_SERVICE_TYPE:', process.env.RENDER_SERVICE_TYPE);
-console.log('   RENDER_SERVICE_PLAN:', process.env.RENDER_SERVICE_PLAN);
-console.log('   RENDER_PRO:', process.env.RENDER_PRO);
-console.log('   MEMORY_LIMIT:', process.env.MEMORY_LIMIT);
-console.log('   isRenderFree:', isRenderFree);
-console.log('   isRenderPro:', isRenderPro);
-console.log('   isRenderStandard:', isRenderStandard);
+// Debug Resource configuration
+console.log('🚀 RESOURCE CONFIGURATION DEBUG:');
+console.log('   MEMORY_LIMIT:', process.env.MEMORY_LIMIT, 'MB');
+console.log('   isHighResource:', isHighResource);
 console.log('   isResourceConstrained:', isResourceConstrained);
-console.log('   isMemoryCritical:', isMemoryCritical);
 console.log('   isSevereResourceConstrained:', isSevereResourceConstrained);
+console.log('   isRenderPro (Legacy):', isRenderPro);
 
 // Database connection pool optimization for different environments
 const dbConfig = productionConfig.database;
@@ -1407,11 +1406,10 @@ httpServer.listen(PORT, () => {
       //   console.warn('⚠️ Performance monitoring initialization failed:', error.message);
       // }
 
-      // WebSocket services - enabled on Render Pro and non-constrained environments
+      // WebSocket services - enabled on High Resource (Pro) and non-constrained environments
       // Render Pro (4GB RAM, 2 CPU) can easily handle WebSocket connections
-      // Also forced enabled if FORCE_ENABLE_WEBSOCKETS is set to true
       const forceEnableWebSockets = process.env.FORCE_ENABLE_WEBSOCKETS === 'true';
-      const enableWebSockets = forceEnableWebSockets || ((isRenderPro || (!isSevereResourceConstrained || isRenderStandard)) && !process.env.DISABLE_WEBSOCKETS);
+      const enableWebSockets = !process.env.DISABLE_WEBSOCKETS && (forceEnableWebSockets || isHighResource || (!isSevereResourceConstrained || isRenderStandard));
 
       if (enableWebSockets) {
         try {
@@ -1420,11 +1418,11 @@ httpServer.listen(PORT, () => {
           const webSocketService = initializeWebSocket(httpServer, productionConfig.webSocket);
           socketIOInitialized = true; // Mark Socket.IO as initialized to prevent fallback route 500 errors
           console.log('✅ WebSocket service initialized (shared Socket.IO instance created)');
-          console.log(`🔌 WebSocket ready for real-time updates`);
+          console.log(`🔌 WebSocket ready for real-time updates (High Performance Mode: ${isHighResource ? 'Active' : 'Standard'})`);
           console.log(`📊 WebSocket config: maxConnections=${productionConfig.webSocket.maxConnections}, memoryThreshold=${productionConfig.webSocket.memoryThreshold}MB`);
 
           // Admin WebSocket service - uses the shared Socket.IO instance via namespaces
-          if (isRenderPro || !isSevereResourceConstrained) {
+          if (isHighResource || !isSevereResourceConstrained) {
             try {
               // DO NOT pass httpServer - this would create a duplicate Socket.IO instance
               // AdminWebSocketService should get the shared instance via getWebSocketService()
@@ -1439,7 +1437,7 @@ httpServer.listen(PORT, () => {
           }
 
           // Seller WebSocket service - uses the shared Socket.IO instance
-          if (isRenderPro || !isSevereResourceConstrained) {
+          if (isHighResource || !isSevereResourceConstrained) {
             try {
               const sellerWebSocketService = initializeSellerWebSocket();
               console.log('✅ Seller WebSocket service initialized (using shared Socket.IO instance)');
@@ -1452,7 +1450,7 @@ httpServer.listen(PORT, () => {
           }
 
           // Live Chat Socket service - uses the shared Socket.IO instance
-          if (isRenderPro || !isSevereResourceConstrained) {
+          if (isHighResource || !isSevereResourceConstrained) {
             try {
               // Get the shared Socket.IO instance using the proper method
               const sharedIo = webSocketService.getSocketIOServer();
@@ -1474,7 +1472,7 @@ httpServer.listen(PORT, () => {
         }
       } else {
         const reason = isRenderFree ? 'Render free tier' :
-          isMemoryCritical ? 'memory critical (<512MB)' : // More specific reason
+          isMemoryCritical ? 'memory critical (<512MB)' : 
             isResourceConstrained ? 'resource constraints' :
               'manual disable';
         console.log(`⚠️ WebSocket service disabled (${reason}) to conserve memory`);
@@ -1520,15 +1518,14 @@ httpServer.listen(PORT, () => {
         console.log('📝 Server will continue without caching');
       }
 
-      // Comprehensive monitoring - enabled on Render Pro and non-constrained environments
-      // Can also be disabled via ENABLE_COMPREHENSIVE_MONITORING=false
+      // Comprehensive monitoring - enabled on High Resource (Pro) and non-constrained environments
       const enableComprehensiveMonitoring = process.env.ENABLE_COMPREHENSIVE_MONITORING !== 'false';
-      const enableMonitoring = (isRenderPro || !isSevereResourceConstrained) && !process.env.DISABLE_MONITORING && enableComprehensiveMonitoring;
+      const enableMonitoring = (isHighResource || !isSevereResourceConstrained) && !process.env.DISABLE_MONITORING && enableComprehensiveMonitoring;
 
       if (enableMonitoring) {
         try {
           // Use longer intervals to reduce overhead
-          const monitoringInterval = isRenderPro ? 300000 : 180000; // 5min for Pro, 3min for others (increased from 2min/1min)
+          const monitoringInterval = isHighResource ? 300000 : 180000; // 5min for Pro, 3min for others
           comprehensiveMonitoringService.startMonitoring(monitoringInterval);
           console.log('✅ Comprehensive monitoring service started');
           console.log(`📊 System health monitoring active (${monitoringInterval / 1000}s intervals)`);
@@ -1544,11 +1541,10 @@ httpServer.listen(PORT, () => {
         console.log(`⚠️ Comprehensive monitoring disabled (${reason}) to save memory`);
       }
 
-      // Order event listener - enabled on Render Pro and non-constrained environments
-      // Can also be disabled via ENABLE_BACKGROUND_SERVICES=false
+      // Order event listener - enabled on High Resource (Pro) and non-constrained environments
       const enableBackgroundServices = process.env.ENABLE_BACKGROUND_SERVICES !== 'false';
 
-      if (enableMonitoring && (isRenderPro || !isSevereResourceConstrained) && enableBackgroundServices) {
+      if (enableMonitoring && (isHighResource || !isSevereResourceConstrained) && enableBackgroundServices) {
         try {
           orderEventListenerService.startListening();
           console.log('✅ Order event listener started');

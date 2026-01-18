@@ -4,11 +4,11 @@
  * Future-proof for community posts, proposals, marketplace items, etc.
  */
 
-import { db } from '../db';
 import { statuses, posts, users, communities } from '../db/schema';
-import { eq, or } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { isValidShareId } from '../utils/shareIdGenerator';
 import { safeLogger } from '../utils/safeLogger';
+import { databaseService } from './databaseService';
 
 export type ContentType = 'status' | 'community_post' | 'proposal' | 'marketplace_item' | 'comment';
 
@@ -32,31 +32,35 @@ export class UnifiedShareResolver {
    * Resolve a share ID to its content and owner
    */
   async resolve(shareId: string): Promise<ShareResolution | null> {
+    safeLogger.info(`[UnifiedShareResolver] Resolving share ID: ${shareId}`);
+
     // Validate share ID format
     if (!isValidShareId(shareId)) {
-      safeLogger.warn(`Invalid share ID format: ${shareId}`);
+      safeLogger.warn(`[UnifiedShareResolver] Invalid share ID format: ${shareId}`);
       return null;
     }
 
     try {
       // Try statuses first (most common)
       const status = await this.resolveStatus(shareId);
-      if (status) return status;
+      if (status) {
+        safeLogger.info(`[UnifiedShareResolver] Resolved status for share ID: ${shareId}`);
+        return status;
+      }
+
+      safeLogger.info(`[UnifiedShareResolver] Status not found for ${shareId}, checking community posts`);
 
       // Try community posts
       const communityPost = await this.resolveCommunityPost(shareId);
-      if (communityPost) return communityPost;
+      if (communityPost) {
+        safeLogger.info(`[UnifiedShareResolver] Resolved community post for share ID: ${shareId}`);
+        return communityPost;
+      }
 
-      // TODO: Add other content types as they're implemented
-      // const proposal = await this.resolveProposal(shareId);
-      // if (proposal) return proposal;
-
-      // const marketplaceItem = await this.resolveMarketplaceItem(shareId);
-      // if (marketplaceItem) return marketplaceItem;
-
+      safeLogger.warn(`[UnifiedShareResolver] Content not found for share ID: ${shareId}`);
       return null;
     } catch (error) {
-      safeLogger.error(`Error resolving share ID ${shareId}:`, error);
+      safeLogger.error(`[UnifiedShareResolver] Error resolving share ID ${shareId}:`, error);
       return null;
     }
   }
@@ -65,6 +69,7 @@ export class UnifiedShareResolver {
    * Resolve status by share ID
    */
   private async resolveStatus(shareId: string): Promise<ShareResolution | null> {
+    const db = databaseService.getDatabase();
     const statusResult = await db
       .select({
         id: statuses.id,
@@ -112,6 +117,25 @@ export class UnifiedShareResolver {
    * Resolve community post by share ID
    */
   private async resolveCommunityPost(shareId: string): Promise<ShareResolution | null> {
+    const db = databaseService.getDatabase();
+    
+    // First, try to find the post without complex joins to debug if it exists
+    const basicPost = await db
+      .select({ 
+        id: posts.id,
+        communityId: posts.communityId 
+      })
+      .from(posts)
+      .where(eq(posts.shareId, shareId))
+      .limit(1);
+
+    if (!basicPost || basicPost.length === 0) {
+      safeLogger.warn(`[UnifiedShareResolver] No post found with shareId: ${shareId}`);
+      return null;
+    }
+
+    safeLogger.info(`[UnifiedShareResolver] Found post ${basicPost[0].id} with shareId ${shareId}, fetching details`);
+
     const communityPosts = await db
       .select({
         id: posts.id,
@@ -137,6 +161,7 @@ export class UnifiedShareResolver {
       .limit(1);
 
     if (!communityPosts || communityPosts.length === 0) {
+      safeLogger.error(`[UnifiedShareResolver] Failed to fetch full details for post ${basicPost[0].id}`);
       return null;
     }
 
@@ -144,12 +169,17 @@ export class UnifiedShareResolver {
 
     // Only resolve posts that belong to a community
     if (!post.communityId) {
+      safeLogger.warn(`[UnifiedShareResolver] Post ${post.id} found but has no communityId`);
       return null;
     }
 
     const authorHandle = post.authorHandle || post.authorWallet?.slice(0, 8) || 'unknown';
     const authorName = post.authorName || authorHandle;
     const communitySlug = post.communitySlug || 'community';
+
+    // Canonical URL should point to the community post page
+    // Note: The frontend route is /communities/[slug]/posts/[shareId]
+    const canonicalUrl = `/communities/${encodeURIComponent(communitySlug)}/posts/${post.shareId}`;
 
     return {
       type: 'community_post',
@@ -161,7 +191,7 @@ export class UnifiedShareResolver {
         handle: communitySlug,
         name: post.communityName || communitySlug,
       },
-      canonicalUrl: `/communities/${encodeURIComponent(communitySlug)}/posts/${post.shareId}`,
+      canonicalUrl,
       shareUrl: `/cp/${shareId}`, // Community post specific share prefix
       data: {
         ...post,
