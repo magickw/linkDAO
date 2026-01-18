@@ -541,6 +541,30 @@ export default function Home() {
                     Explore Features
                   </button>
                 </div>
+
+                {/* Non-Custodial Wallet CTA Section */}
+                <div className="mt-8 p-6 bg-gradient-to-r from-blue-900/30 via-purple-900/30 to-pink-900/30 backdrop-blur-sm border border-white/10 rounded-2xl">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex-shrink-0">
+                      <Shield className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <h3 className="text-lg font-bold text-white mb-2">
+                        New to Web3? Create Your Secure Wallet
+                      </h3>
+                      <p className="text-sm text-gray-300 mb-4">
+                        Don't have a wallet yet? Create a secure non-custodial wallet in seconds. Your keys, your control, your crypto.
+                      </p>
+                      <Link
+                        href="/wallet-dashboard"
+                        className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                      >
+                        Create Wallet Now
+                        <Zap className="w-4 h-4" />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Floating 3D Elements (Visual Representation) */}
@@ -1115,20 +1139,34 @@ export default function Home() {
                   </form>
                 </div>
 
-                <ConnectButton.Custom>
-                  {({ openConnectModal, authenticationStatus, mounted: rainbowMounted }) => {
-                    const ready = rainbowMounted && authenticationStatus !== 'loading';
-                    return (
-                      <button
-                        onClick={openConnectModal}
-                        disabled={!ready}
-                        className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-xl text-white bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50"
-                      >
-                        🚀 Start Your Web3 Journey
-                      </button>
-                    );
-                  }}
-                </ConnectButton.Custom>
+                <div className="space-y-4">
+                  {/* Wallet CTA for new users */}
+                  <Link
+                    href="/wallet-dashboard"
+                    className="group relative inline-flex items-center justify-center w-full px-8 py-4 text-lg font-semibold rounded-xl text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+                  >
+                    <div className="absolute -inset-3 rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 opacity-30 group-hover:opacity-100 blur-lg transition-opacity duration-200" />
+                    <span className="relative flex items-center gap-2">
+                      <Shield className="w-5 h-5" />
+                      Create Your Wallet
+                    </span>
+                  </Link>
+
+                  <ConnectButton.Custom>
+                    {({ openConnectModal, authenticationStatus, mounted: rainbowMounted }) => {
+                      const ready = rainbowMounted && authenticationStatus !== 'loading';
+                      return (
+                        <button
+                          onClick={openConnectModal}
+                          disabled={!ready}
+                          className="inline-flex items-center justify-center w-full px-8 py-4 text-lg font-semibold rounded-xl text-white bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50"
+                        >
+                          🚀 Start Your Web3 Journey
+                        </button>
+                      );
+                    }}
+                  </ConnectButton.Custom>
+                </div>
               </div>
             </div>
           </div>

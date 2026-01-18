@@ -10,6 +10,8 @@ import { useUnifiedSeller, useUnifiedSellerListings } from '@/hooks/useUnifiedSe
 import { DAOEndorsementModal } from './DAOEndorsementModal';
 import { withSellerErrorBoundary } from './ErrorHandling';
 import { normalizeTier, getTierDisplayName } from '@/utils/tierMapping';
+import { TrustBadge, VerificationTier, VerificationStatus } from '@/components/Trust/TrustBadge';
+import { VerificationHistory } from '@/components/Trust/VerificationHistory';
 import {
   Star,
   Shield,
@@ -411,7 +413,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             disputesRatio: 0,
 
             verificationLevels: {
-              identity: { type: 'ENHANCED', verified: false, verifiedAt: null },
+              identity: { type: 'ENHANCED', verified: false, verifiedAt: undefined },
               business: { type: 'BASIC', verified: false },
               kyc: { type: 'PREMIUM', verified: false }
             },
@@ -629,7 +631,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             disputesRatio: 0,
 
             verificationLevels: {
-              identity: { type: 'ENHANCED', verified: false, verifiedAt: null },
+              identity: { type: 'ENHANCED', verified: false, verifiedAt: undefined },
               business: { type: 'BASIC', verified: false },
               kyc: { type: 'PREMIUM', verified: false }
             },
@@ -738,7 +740,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
         ]);
       }
     };
-    
+
     fetchCategories();
   }, []);
 
@@ -924,9 +926,14 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                   )}
                 </div>
 
-                {/* Tier Badge with Progress */}
-                <div className={`mt-4 px-3 py-1 rounded-full text-sm font-semibold ${getTierBadgeColor(seller.tier)}`}>
-                  {getTierDisplayName(seller.tier)}
+                {/* Trust Badge - Replaces old tier badge */}
+                <div className="mt-4">
+                  <TrustBadge
+                    tier={seller.tier as VerificationTier}
+                    status={seller.isKYCVerified ? 'verified' : 'pending'}
+                    size="lg"
+                    showLabel={true}
+                  />
                 </div>
                 <div className="mt-2 text-center">
                   <div className="text-xs text-white/70 mb-1">
