@@ -266,7 +266,7 @@ export const SizeConfigurationSystem: React.FC<SizeConfigurationSystemProps> = (
 
   const renderRangeBased = () => {
     const [minWeight, setMinWeight] = useState('');
-    const [maxWeight, setMinWeight] = useState('');
+    const [maxWeight, setMaxWeight] = useState('');
     const [weightUnit, setWeightUnit] = useState<'lbs' | 'kg'>('lbs');
 
     const handleAddRange = () => {
@@ -274,7 +274,7 @@ export const SizeConfigurationSystem: React.FC<SizeConfigurationSystemProps> = (
         const range = `${minWeight}-${maxWeight} ${weightUnit}`;
         handleVariantAdd(range);
         setMinWeight('');
-        setMinWeight('');
+        setMaxWeight('');
       }
     };
 
