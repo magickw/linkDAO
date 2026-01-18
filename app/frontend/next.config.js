@@ -340,10 +340,6 @@ if (process.env.NODE_ENV === 'development') {
       {
         source: '/api/:path*',
         destination: 'http://localhost:10000/api/:path*'
-      },
-      {
-        source: '/cp/:shareId',
-        destination: 'http://localhost:10000/cp/:shareId'
       }
     ];
   };

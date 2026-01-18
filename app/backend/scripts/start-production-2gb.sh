@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 Starting LinkDAO Backend - Production (2GB RAM Optimized)"
+echo "🚀 Starting LinkDAO Backend - Production (4GB RAM Optimized)"
 
 # Load production environment if it exists
 if [ -f ".env.production" ]; then
@@ -13,13 +13,13 @@ fi
 export RENDER_SERVICE_TYPE=standard
 export RENDER_SERVICE_PLAN=standard
 export RENDER_PRO=true
-export MEMORY_LIMIT=2048
+export MEMORY_LIMIT=4096
 
-# Set optimized Node.js options for 2GB RAM (only if not already set by Render)
+# Set optimized Node.js options for 4GB RAM (only if not already set by Render)
 # Render.yaml sets --max-old-space-size=3072 for Pro plan
 if [ -z "$NODE_OPTIONS" ]; then
-  export NODE_OPTIONS="--max-old-space-size=1536 --expose-gc"
-  echo "   - Using default heap size: 1.5GB"
+  export NODE_OPTIONS="--max-old-space-size=3072 --expose-gc"
+  echo "   - Using default heap size: 3GB"
 else
   echo "   - Using Render-configured heap size from NODE_OPTIONS: $NODE_OPTIONS"
 fi
@@ -38,6 +38,7 @@ export REDIS_MAX_MEMORY_POLICY=allkeys-lru
 export DISABLE_ANALYTICS=false
 export DISABLE_BACKGROUND_JOBS=false
 export DISABLE_REAL_TIME_UPDATES=false
+export FORCE_ENABLE_WEBSOCKETS=true
 
 # Performance optimizations
 export ENABLE_COMPRESSION=true

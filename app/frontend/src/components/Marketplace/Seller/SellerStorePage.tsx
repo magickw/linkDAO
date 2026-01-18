@@ -553,7 +553,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             },
             totalTransactions: sellerProfile.stats?.completedOrders || 0,
             successfulTransactions: sellerProfile.stats?.completedOrders || 0,
-            disputesRatio: 0.02, // Default
+            disputesRatio: sellerProfile.stats?.disputeRate || null,
 
             verificationLevels: {
               identity: { type: 'ENHANCED', verified: sellerProfile.ensVerified, verifiedAt: new Date() },
@@ -567,21 +567,21 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             },
 
             performanceMetrics: {
-              avgDeliveryTime: '1.2 days',
+              avgDeliveryTime: null,
               customerSatisfaction: sellerProfile.stats?.averageRating || 0,
-              returnRate: 1.2,
-              repeatCustomerRate: 68,
-              responseTime: '< 2 hours',
-              trend: 'up',
-              trendValue: '+12%'
+              returnRate: sellerProfile.stats?.returnRate || null,
+              repeatCustomerRate: sellerProfile.stats?.repeatCustomerRate || null,
+              responseTime: null,
+              trend: null,
+              trendValue: null
             },
             tier: normalizeTier(sellerProfile.tier),
-            tierProgress: { current: 150, required: 500, nextTier: 'gold' },
+            tierProgress: null,
             isKYCVerified: sellerProfile.ensVerified,
-            isDAOEndorsed: false, // Default
+            isDAOEndorsed: sellerProfile.isDAOEndorsed || false,
             hasEscrowProtection: true,
-            followers: 0, // Default
-            following: 0, // Default
+            followers: sellerProfile.stats?.followers || null,
+            following: sellerProfile.stats?.following || null
             daoMemberships: [],
             daoEndorsements: [],
             topCategories: categories.map(cat => cat.slug), // Use dynamic categories
@@ -731,13 +731,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
         setCategories(categoriesData);
       } catch (error) {
         console.error('Failed to fetch categories:', error);
-        // Fallback to default categories
-        setCategories([
-          { id: 'electronics', name: 'Electronics', slug: 'electronics' },
-          { id: 'digital', name: 'Digital Assets', slug: 'digital' },
-          { id: 'collectibles', name: 'Collectibles', slug: 'collectibles' },
-          { id: 'fashion', name: 'Fashion', slug: 'fashion' },
-        ]);
+        // Set empty array if categories fail to load
+        setCategories([]);
       }
     };
 
