@@ -755,7 +755,11 @@ export class HealthMonitoringService {
 
       // Log warning with context
       logger.warn('Warning Alert: Error rate at ' + health.metrics.errorRate + '%', {
-        alertKey: 'high_error_rate'
+        alertKey: 'high_error_rate',
+        requestCount: health.metrics.totalRequests,
+        errorCount: this.errorCount,
+        throughput: health.metrics.throughput,
+        memoryUsage: health.metrics.memory.heapUsed / 1024 / 1024 + 'MB'
       });
     } else {
       this.removeAlert('high_error_rate');

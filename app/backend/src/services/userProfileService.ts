@@ -49,8 +49,13 @@ async function decryptAddressData(encryptedData: string): Promise<any> {
     }
   } catch (error) {
     // If JSON parsing failed, it might be a plain string or corrupted data
-    // Log at debug/warn level since this is expected for legacy data
-    safeLogger.warn('Unable to parse address data, returning empty object');
+    // Log with more details for debugging
+    safeLogger.warn('Unable to parse address data', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      dataType: typeof encryptedData,
+      dataLength: encryptedData?.length,
+      dataPreview: encryptedData?.substring(0, 100)
+    });
     return {};
   }
 }

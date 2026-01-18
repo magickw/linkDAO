@@ -391,11 +391,16 @@ export class SystemHealthMonitoringService extends EventEmitter {
       condition: (metrics) => {
         const failedServices = Object.values(metrics.services)
           .filter(service => service.status === 'failed').length;
-        return failedServices > 0;
+        // Only alert if there are failed services AND they're critical services (not just external dependencies)
+        const criticalFailedServices = Object.values(metrics.services)
+          .filter(service => service.status === 'failed' && 
+                         !['ENS', 'Ethereum_RPC', 'external_services'].includes(service.name as any))
+          .length;
+        return criticalFailedServices > 0;
       },
       severity: 'warning',
-      message: 'Warning: One or more services have failed',
-      cooldownMs: 60000 // 1 minute
+      message: 'Warning: One or more critical services have failed',
+      cooldownMs: 300000 // 5 minutes
     });
 
     // Memory pressure alerts

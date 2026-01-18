@@ -12,14 +12,30 @@ export const metricsTrackingMiddleware = (
   
   // Track response to increment error counter if needed
   const originalJson = res.json;
-  res.json = function(body: any) {
-    // Check if this is an error response
-    if (res.statusCode >= 400 || (body && body.success === false)) {
+  const originalSend = res.send;
+  const originalEnd = res.end;
+  
+  // Track errors on response finish
+  res.on('finish', () => {
+    // Check if this is an error response (4xx or 5xx)
+    if (res.statusCode >= 400) {
       healthMonitoringService.incrementErrorCount();
     }
-    
-    // Call original json method
+  });
+  
+  // Override json method to maintain compatibility
+  res.json = function(body: any) {
     return originalJson.call(this, body);
+  };
+  
+  // Override send method to maintain compatibility
+  res.send = function(body: any) {
+    return originalSend.call(this, body);
+  };
+  
+  // Override end method to maintain compatibility
+  res.end = function(chunk?: any, encoding?: BufferEncoding) {
+    return originalEnd.call(this, chunk, encoding);
   };
   
   next();
