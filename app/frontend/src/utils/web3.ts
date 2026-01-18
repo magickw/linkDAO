@@ -284,8 +284,10 @@ export async function getProvider() {
           }
           console.log('Creating JsonRpcProvider with RPC:', envRpc, 'Chain ID:', chainId);
 
-          // Wrap the RPC URL in our backend proxy to avoid CORS issues
-          const proxiedRpc = `/api/proxy?target=${encodeURIComponent(envRpc)}`;
+          // Wrap the RPC URL in our backend proxy to avoid CORS issues (only needed in browser)
+          const proxiedRpc = (typeof window !== 'undefined')
+            ? `${window.location.origin}/api/proxy?target=${encodeURIComponent(envRpc)}`
+            : envRpc;
 
           // Correct way to initialize JsonRpcProvider in ethers v6 with static network
           const network = ethers.Network.from(chainId);
@@ -317,8 +319,10 @@ export async function getProvider() {
       }
 
       if (rpcUrl) {
-        // Wrap the RPC URL in our backend proxy to avoid CORS issues
-        const proxiedRpcUrl = `/api/proxy?target=${encodeURIComponent(rpcUrl)}`;
+        // Wrap the RPC URL in our backend proxy to avoid CORS issues (only needed in browser)
+        const proxiedRpcUrl = (typeof window !== 'undefined')
+          ? `${window.location.origin}/api/proxy?target=${encodeURIComponent(rpcUrl)}`
+          : rpcUrl;
         
         // Correct way to initialize JsonRpcProvider in ethers v6 with static network
         const network = ethers.Network.from(chainId);
@@ -358,7 +362,9 @@ export async function getProvider() {
     for (const rpc of fallbackRpcs) {
       try {
         console.log(`Trying fallback RPC: ${rpc}`);
-        const proxiedRpc = `/api/proxy?target=${encodeURIComponent(rpc)}`;
+        const proxiedRpc = (typeof window !== 'undefined')
+          ? `${window.location.origin}/api/proxy?target=${encodeURIComponent(rpc)}`
+          : rpc;
         const provider = new ethers.JsonRpcProvider(proxiedRpc, network, {
           staticNetwork: true,
           polling: false,

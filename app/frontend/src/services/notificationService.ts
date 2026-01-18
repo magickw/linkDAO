@@ -580,18 +580,27 @@ class NotificationService {
       }
     }
 
+    let metadata: any = {};
+    if (data.metadata) {
+      try {
+        metadata = typeof data.metadata === 'string' ? JSON.parse(data.metadata) : data.metadata;
+      } catch (e) {
+        console.warn('Failed to parse notification metadata:', e);
+      }
+    }
+
     return {
       id: data.id,
       type: data.type,
       category: category,
-      title: data.title || (data.metadata ? JSON.parse(data.metadata).title : 'Notification'), // Fallback title
+      title: data.title || metadata.title || 'Notification',
       message: data.message,
       data: data.data,
       fromAddress: data.fromAddress,
       fromName: data.fromName,
       avatarUrl: data.avatarUrl,
-      actionUrl: data.actionUrl || (data.metadata ? JSON.parse(data.metadata).actionUrl : undefined), // Fallback actionUrl
-      priority: data.priority || (data.metadata ? JSON.parse(data.metadata).priority : 'medium'), // Fallback priority
+      actionUrl: data.actionUrl || metadata.actionUrl,
+      priority: data.priority || metadata.priority || 'medium',
       isRead: data.isRead,
       createdAt: new Date(data.createdAt),
       expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined,
