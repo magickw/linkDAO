@@ -581,7 +581,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             isDAOEndorsed: sellerProfile.isDAOEndorsed || false,
             hasEscrowProtection: true,
             followers: sellerProfile.stats?.followers || null,
-            following: sellerProfile.stats?.following || null
+            following: sellerProfile.stats?.following || null,
             daoMemberships: [],
             daoEndorsements: [],
             topCategories: categories.map(cat => cat.slug), // Use dynamic categories

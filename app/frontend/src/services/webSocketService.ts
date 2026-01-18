@@ -96,10 +96,11 @@ class WebSocketService {
     const navigator = window.navigator as any;
     
     // Check for low-power mode or data saver
+    // Only mark as optional if device is severely constrained
     this.isOptional = !!(
       navigator.connection?.saveData ||
-      navigator.deviceMemory && navigator.deviceMemory < 4 ||
-      navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4
+      (navigator.deviceMemory && navigator.deviceMemory < 2) || // Only skip if < 2GB RAM
+      (navigator.hardwareConcurrency && navigator.hardwareConcurrency < 2) // Only skip if < 2 CPU cores
     );
 
     // Monitor memory usage if available
