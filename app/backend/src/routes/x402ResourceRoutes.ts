@@ -71,6 +71,12 @@ router.post('/checkout', async (req, res, next) => {
             // No signature provided - return 402 with payment requirements
             safeLogger.info(`No payment signature for order ${orderId}, returning 402`);
 
+            // Set standard x402 WWW-Authenticate header required by the client
+            res.setHeader(
+                'WWW-Authenticate', 
+                `x402 scheme="exact", price="${orderAmount}", network="eip155:84532", payTo="${PAY_TO_ADDRESS}", token="USDC"`
+            );
+
             // Return 402 Payment Required with payment instructions
             return res.status(402).json({
                 success: false,

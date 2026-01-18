@@ -1,4 +1,4 @@
-import { ENV_CONFIG } from '@/config/env';
+import { getBackendUrl } from '@/utils/environmentConfig';
 
 export interface EarnToOwnChallenge {
     id: string;
@@ -35,7 +35,7 @@ export interface EarningHistoryItem {
 }
 
 class EarnToOwnService {
-    private baseUrl = `${ENV_CONFIG.BACKEND_URL}/api/earn-to-own`;
+    private baseUrl = `${getBackendUrl()}/api/earn-to-own`;
 
     /**
      * Get user's earn-to-own progress
