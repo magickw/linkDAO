@@ -546,7 +546,14 @@ class NotificationService {
 
   private getAuthToken(): string {
     // Get auth token from localStorage or context
-    return localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
+    // Check for the key used by enhancedAuthService first
+    return (
+      localStorage.getItem('linkdao_access_token') ||
+      localStorage.getItem('token') ||
+      localStorage.getItem('authToken') ||
+      localStorage.getItem('auth_token') ||
+      ''
+    );
   }
 
   private transformNotification(data: any): AppNotification {

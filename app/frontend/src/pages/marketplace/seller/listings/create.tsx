@@ -9,6 +9,11 @@ import Layout from '@/components/Layout';
 import { ipfsUploadService } from '@/services/ipfsUploadService';
 import ShippingConfigurationForm, { type ShippingConfiguration } from '@/components/Marketplace/Seller/ShippingConfigurationForm';
 import SizeSelector from '@/components/Marketplace/SizeSelector';
+import { SpecificationEditor } from '@/components/Marketplace/Seller/SpecificationEditor';
+import { SizeConfigurationSystem } from '@/components/Marketplace/Seller/SizeConfigurationSystem';
+import { SpecificationPreview } from '@/components/Marketplace/Seller/SpecificationPreview';
+import { validateSpecifications } from '@/components/Marketplace/Seller/specificationValidator';
+import { getCategoryTemplate } from '@/config/marketplace/specifications';
 import {
   Upload,
   X,
@@ -58,7 +63,35 @@ interface EnhancedFormData {
   // Shipping
   shipping?: ShippingConfiguration;
 
-  // Product Specifications
+  // Product Specifications (new comprehensive system)
+  specs: {
+    weight?: {
+      value: number;
+      unit: 'g' | 'kg' | 'oz' | 'lbs';
+    };
+    dimensions?: {
+      length: number;
+      width: number;
+      height: number;
+      unit: 'mm' | 'cm' | 'm' | 'in' | 'ft';
+    };
+    attributes: { key: string; value: string }[];
+  };
+
+  // Size Configuration
+  sizeConfig: {
+    system: 'apparel_standard' | 'simple_variants' | 'matrix' | 'dimensions' | 'technical' | 'range_based' | 'volume_capacity' | 'none';
+    selectedSizes: string[];
+    matrix?: {
+      rows: string[];
+      cols: string[];
+      selected: string[];
+    };
+    chart?: any;
+    customVariants?: string[];
+  };
+
+  // Legacy specifications for backward compatibility
   specifications?: {
     weight?: {
       value: number;
@@ -211,6 +244,15 @@ const CreateListingPage: React.FC = () => {
     inventory: 1,
     unlimitedInventory: false,
     escrowEnabled: true,
+    specs: {
+      weight: undefined,
+      dimensions: undefined,
+      attributes: []
+    },
+    sizeConfig: {
+      system: 'none',
+      selectedSizes: []
+    },
     specifications: {
       weight: {
         value: 0,
@@ -235,6 +277,7 @@ const CreateListingPage: React.FC = () => {
   // UI state
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showSpecPreview, setShowSpecPreview] = useState(false);
   const [ethPrice, setEthPrice] = useState<number>(2400); // Mock ETH price
   const [newTag, setNewTag] = useState('');
 
@@ -638,6 +681,13 @@ const CreateListingPage: React.FC = () => {
           const firstError = Object.values(shippingErrors)[0];
           throw new Error(firstError || 'Shipping configuration is required for physical items');
         }
+
+        // Validate specifications for physical items
+        const specValidation = validateSpecifications(formData.specs, formData.sizeConfig, formData.category);
+        if (!specValidation.isValid) {
+          const errorMessages = specValidation.errors.map(e => e.message).join('\n');
+          throw new Error(`Specification validation failed:\n${errorMessages}`);
+        }
       }
 
       // Upload images to IPFS first
@@ -685,6 +735,10 @@ const CreateListingPage: React.FC = () => {
           primaryImageIndex: 0, // Primary is now always first after reordering
           seoTitle: formData.seoTitle || formData.title,
           seoDescription: formData.seoDescription || formData.description.substring(0, 160),
+          // New comprehensive specification system
+          specs: formData.specs,
+          sizeConfig: formData.sizeConfig,
+          // Legacy specifications for backward compatibility
           specifications: formData.specifications
         }
       };
@@ -1142,162 +1196,94 @@ const CreateListingPage: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Specifications */}
-                  <div>
-                    <label className="block text-sm font-medium text-white/90 mb-2">
-                      Specifications (Optional)
-                    </label>
-
-                    {/* Weight Input */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <label className="block text-sm text-white/70 mb-1">Weight</label>
-                        <div className="flex gap-2">
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={formData.specifications?.weight?.value || 0}
-                            onChange={(e) => handleFormChange('specifications', {
-                              ...formData.specifications,
-                              weight: {
-                                value: parseFloat(e.target.value) || 0,
-                                unit: formData.specifications?.weight?.unit || 'g'
-                              }
-                            })}
-                            className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                            placeholder="0.00"
-                          />
-                          <select
-                            value={formData.specifications?.weight?.unit || 'g'}
-                            onChange={(e) => handleFormChange('specifications', {
-                              ...formData.specifications,
-                              weight: {
-                                value: formData.specifications?.weight?.value || 0,
-                                unit: e.target.value as 'g' | 'kg' | 'oz' | 'lbs'
-                              }
-                            })}
-                            className="w-20 px-2 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                          >
-                            <option value="g">g</option>
-                            <option value="kg">kg</option>
-                            <option value="oz">oz</option>
-                            <option value="lbs">lbs</option>
-                          </select>
-                        </div>
+                  {/* Specifications - New Comprehensive System */}
+                  {formData.itemType === 'PHYSICAL' && (
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-sm font-medium text-white/90">
+                          Product Specifications
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setShowSpecPreview(!showSpecPreview)}
+                          className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                        >
+                          <Eye size={14} />
+                          {showSpecPreview ? 'Hide Preview' : 'Show Preview'}
+                        </button>
                       </div>
 
-                      {/* Dimension Inputs */}
-                      <div>
-                        <label className="block text-sm text-white/70 mb-1">Dimensions</label>
-                        <div className="flex flex-wrap gap-2">
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={formData.specifications?.dimensions?.length || 0}
-                            onChange={(e) => handleFormChange('specifications', {
-                              ...formData.specifications,
-                              dimensions: {
-                                ...formData.specifications?.dimensions,
-                                length: parseFloat(e.target.value) || 0
-                              }
-                            })}
-                            className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                            placeholder="L"
+                      {/* Preview Mode */}
+                      {showSpecPreview && (
+                        <SpecificationPreview
+                          specs={formData.specs}
+                          sizeConfig={formData.sizeConfig}
+                          category={formData.category}
+                          productName={formData.title}
+                        />
+                      )}
+
+                      {/* Edit Mode */}
+                      {!showSpecPreview && (
+                        <div className="space-y-6">
+                          {/* Specification Editor */}
+                          <SpecificationEditor
+                            value={formData.specs}
+                            onChange={(specs) => handleFormChange('specs', specs)}
+                            category={formData.category}
                           />
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={formData.specifications?.dimensions?.width || 0}
-                            onChange={(e) => handleFormChange('specifications', {
-                              ...formData.specifications,
-                              dimensions: {
-                                ...formData.specifications?.dimensions,
-                                width: parseFloat(e.target.value) || 0
-                              }
-                            })}
-                            className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                            placeholder="W"
+
+                          {/* Size Configuration */}
+                          <SizeConfigurationSystem
+                            system={getCategoryTemplate(formData.category).sizeSystem}
+                            value={formData.sizeConfig}
+                            onChange={(sizeConfig) => handleFormChange('sizeConfig', sizeConfig)}
+                            category={formData.category}
                           />
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={formData.specifications?.dimensions?.height || 0}
-                            onChange={(e) => handleFormChange('specifications', {
-                              ...formData.specifications,
-                              dimensions: {
-                                ...formData.specifications?.dimensions,
-                                height: parseFloat(e.target.value) || 0
-                              }
-                            })}
-                            className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                            placeholder="H"
-                          />
-                          <select
-                            value={formData.specifications?.dimensions?.unit || 'cm'}
-                            onChange={(e) => handleFormChange('specifications', {
-                              ...formData.specifications,
-                              dimensions: {
-                                ...formData.specifications?.dimensions,
-                                unit: e.target.value as 'mm' | 'cm' | 'm' | 'in' | 'ft'
-                              }
-                            })}
-                            className="w-20 px-2 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                          >
-                            <option value="mm">mm</option>
-                            <option value="cm">cm</option>
-                            <option value="m">m</option>
-                            <option value="in">in</option>
-                            <option value="ft">ft</option>
-                          </select>
+
+                          {/* Validation Status */}
+                          {(() => {
+                            const validation = validateSpecifications(formData.specs, formData.sizeConfig, formData.category);
+                            if (!validation.isValid || validation.warnings.length > 0) {
+                              return (
+                                <div className={`p-4 rounded-lg border ${
+                                  !validation.isValid 
+                                    ? 'bg-red-500/10 border-red-500/30' 
+                                    : 'bg-yellow-500/10 border-yellow-500/30'
+                                }`}>
+                                  <div className="flex items-start gap-3">
+                                    <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                                      !validation.isValid ? 'text-red-400' : 'text-yellow-400'
+                                    }`} />
+                                    <div>
+                                      <h4 className={`text-sm font-medium mb-2 ${
+                                        !validation.isValid ? 'text-red-400' : 'text-yellow-400'
+                                      }`}>
+                                        {!validation.isValid ? 'Validation Errors' : 'Warnings'}
+                                      </h4>
+                                      <ul className="space-y-1">
+                                        {validation.errors.map((error, idx) => (
+                                          <li key={`error-${idx}`} className="text-xs text-red-300">
+                                            • {error.message}
+                                          </li>
+                                        ))}
+                                        {validation.warnings.map((warning, idx) => (
+                                          <li key={`warning-${idx}`} className="text-xs text-yellow-300">
+                                            • {warning.message}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
-                      </div>
+                      )}
                     </div>
-
-                    {/* Additional Specifications Textarea */}
-                    <textarea
-                      rows={4}
-                      placeholder="Brand: AudioTech Pro&#10;Model: AT-WH1000XM5&#10;Battery Life: 30 hours&#10;Material: Plastic"
-                      className="block w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
-                      value={(() => {
-                        // Convert specifications object to textarea format
-                        const specs = formData.specifications || {};
-                        const lines = [];
-
-                        // Add other specifications (excluding weight and dimensions which have their own inputs)
-                        Object.entries(specs).forEach(([key, value]) => {
-                          if (key !== 'weight' && key !== 'dimensions' && value !== undefined) {
-                            lines.push(`${key}: ${value}`);
-                          }
-                        });
-
-                        return lines.join('\n');
-                      })()}
-                      onChange={(e) => {
-                        // Parse textarea content and merge with existing weight/dimensions
-                        const lines = e.target.value.split('\n').filter(line => line.trim() !== '');
-                        const newSpecs: any = {
-                          weight: formData.specifications?.weight,
-                          dimensions: formData.specifications?.dimensions
-                        };
-
-                        lines.forEach(line => {
-                          const [key, ...valueParts] = line.split(':');
-                          if (key && valueParts.length > 0) {
-                            newSpecs[key.trim()] = valueParts.join(':').trim();
-                          }
-                        });
-
-                        handleFormChange('specifications', newSpecs);
-                      }}
-                    />
-                    <p className="text-xs text-white/60 mt-1">
-                      Enter key specifications, one per line (Key: Value format)
-                    </p>
-                  </div>
+                  )}
 
                   {/* Inventory */}
                   <div>

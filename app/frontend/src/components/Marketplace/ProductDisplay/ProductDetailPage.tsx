@@ -37,6 +37,7 @@ import { Button } from '../../../design-system/components/Button';
 import { DualPricing } from '../../../design-system/components/DualPricing';
 import { AnimatedProductBadge, AnimatedTrustIndicator } from '../../../components/VisualPolish/MarketplaceAnimations';
 import { OptimizedImage } from '../../Performance/OptimizedImageLoader';
+import { SpecificationPreview } from '../../Marketplace/Seller/SpecificationPreview';
 
 interface ProductDetailPageProps {
   product: {
@@ -766,14 +767,11 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               {/* Specifications */}
               <div className="mb-6">
                 <h3 className="font-medium text-white mb-3">Specifications</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {Object.entries(product.specifications).map(([key, value]) => (
-                    <div key={key} className="flex justify-between py-1 border-b border-white/10">
-                      <span className="text-white/70">{key}:</span>
-                      <span className="text-white">{value}</span>
-                    </div>
-                  ))}
-                </div>
+                <SpecificationPreview
+                  specs={product.metadata?.specs}
+                  sizeConfig={product.metadata?.sizeConfig}
+                  category={product.categoryId}
+                />
               </div>
 
               {/* Quantity Selector */}

@@ -130,6 +130,26 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ address })
       ),
     },
     {
+      key: 'specs',
+      header: 'Specs',
+      render: (product: ExtendedProduct) => {
+        const specs = (product as any).metadata?.specs;
+        if (!specs) return <span className="text-gray-400">-</span>;
+        
+        const weight = specs.weight ? `${specs.weight.value}${specs.weight.unit}` : '';
+        const dims = specs.dimensions 
+          ? `${specs.dimensions.length}×${specs.dimensions.width}×${specs.dimensions.height}${specs.dimensions.unit}`
+          : '';
+        
+        return (
+          <div className="text-sm text-gray-400">
+            {weight && <div>{weight}</div>}
+            {dims && <div>{dims}</div>}
+          </div>
+        );
+      },
+    },
+    {
       key: 'inventory',
       header: 'Inventory',
       render: (product: ExtendedProduct) => (
