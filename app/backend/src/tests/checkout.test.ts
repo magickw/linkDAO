@@ -31,19 +31,19 @@ describe('Checkout Process Tests', () => {
       const mockPaymentToken = 'USDC';
 
       // Mock database transaction
-      const mockTransaction = jest.fn<any, [Function]>().mockImplementation(async (callback: Function) => {
+      const mockTransaction = jest.fn().mockImplementation(async (callback: Function) => {
         return await callback({
-          select: jest.fn<any, any[]>().mockReturnValue([
+          select: jest.fn().mockReturnValue([
             { id: '1', inventory: 10, inventoryHolds: 0 }
           ]),
-          insert: jest.fn<any, any[]>().mockReturnValue({
-            values: jest.fn<any, any[]>().mockReturnValue({
-              returning: jest.fn<any, any[]>().mockResolvedValue([{ id: 'hold-123' }])
+          insert: jest.fn().mockReturnValue({
+            values: jest.fn().mockReturnValue({
+              returning: jest.fn().mockResolvedValue([{ id: 'hold-123' }])
             })
           }),
-          update: jest.fn<any, any[]>().mockReturnValue({
-            set: jest.fn<any, any[]>().mockReturnValue({
-              where: jest.fn<any, any[]>().mockResolvedValue([{ id: '1' }])
+          update: jest.fn().mockReturnValue({
+            set: jest.fn().mockReturnValue({
+              where: jest.fn().mockResolvedValue([{ id: '1' }])
             })
           })
         });
@@ -75,8 +75,8 @@ describe('Checkout Process Tests', () => {
       ];
 
       jest.spyOn(databaseService.db, 'select').mockReturnValue({
-        from: jest.fn<any, any[]>().mockReturnValue({
-          where: jest.fn<any, any[]>().mockResolvedValue(mockExpiredHolds)
+        from: jest.fn().mockReturnValue({
+          where: jest.fn<() => any>().mockResolvedValue(mockExpiredHolds)
         })
       } as any);
 
@@ -94,8 +94,8 @@ describe('Checkout Process Tests', () => {
       };
 
       jest.spyOn(databaseService.db, 'select').mockReturnValue({
-        from: jest.fn<any, any[]>().mockReturnValue({
-          where: jest.fn<any, any[]>().mockResolvedValue([mockProduct])
+        from: jest.fn().mockReturnValue({
+          where: jest.fn<() => any>().mockResolvedValue([mockProduct])
         })
       } as any);
 

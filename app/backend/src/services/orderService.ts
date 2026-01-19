@@ -53,7 +53,7 @@ export class OrderService {
       ]);
 
       // Create escrow contract first
-      const escrowId = await this.enhancedEscrowService.createEscrow(
+      const { escrowId } = await this.enhancedEscrowService.createEscrow(
         input.listingId,
         input.buyerAddress,
         input.sellerAddress,
@@ -888,7 +888,7 @@ export class OrderService {
       case OrderStatus.PAID:
         // Generate Receipt
         try {
-          await receiptService.generateMarketplaceReceipt({
+          await receiptService.generateReceipt({
             orderId: order.id,
             transactionId: order.escrowId || `txn_${Date.now()}`,
             buyerAddress: order.buyerWalletAddress,

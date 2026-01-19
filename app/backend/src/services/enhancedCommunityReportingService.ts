@@ -1,11 +1,14 @@
 import { db } from '../db';
-import { 
+import {
   contentReports as communityReports,  // Using contentReports as communityReports
-  users, 
-  userReputationScores, 
+  users,
+  userReputationScores,
   reputationChangeEvents,
   workflowInstances,
-  workflowStepExecutions
+  workflowStepExecutions,
+  posts,
+  comments,
+  products
 } from '../db/schema';
 import { eq, and, or, desc, asc, sql, inArray, gt, count, between } from 'drizzle-orm';
 import { logger } from '../utils/logger';
@@ -109,7 +112,7 @@ export class EnhancedCommunityReportingService extends EventEmitter {
     try {
       // Calculate reporter's consensus-based weight
       const reporterWeight = await this.calculateConsensusBasedWeight(reportData.reporterId, reportData.reportType);
-      
+
       // Check if reporter has sufficient weight
       if (reporterWeight.finalWeight < 0.1) {
         throw new Error('Insufficient reputation weight to submit reports');
@@ -225,12 +228,12 @@ export class EnhancedCommunityReportingService extends EventEmitter {
 
       // Select validators based on reputation and expertise
       const validators = await this.selectConsensusValidators(report.targetType, report.reportType);
-      
+
       if (validators.length < this.minimumParticipants) {
-        logger.warn('Insufficient validators for consensus', { 
-          reportId, 
+        logger.warn('Insufficient validators for consensus', {
+          reportId,
           validatorsFound: validators.length,
-          minimumRequired: this.minimumParticipants 
+          minimumRequired: this.minimumParticipants
         });
         return;
       }
@@ -238,9 +241,9 @@ export class EnhancedCommunityReportingService extends EventEmitter {
       // Create validation workflow
       await this.createValidationWorkflow(parseInt(reportId), validators);
 
-      logger.info('Consensus validation started', { 
-        reportId, 
-        validatorCount: validators.length 
+      logger.info('Consensus validation started', {
+        reportId,
+        validatorCount: validators.length
       });
     } catch (error) {
       logger.error('Failed to start consensus validation', { error, reportId });
@@ -250,7 +253,7 @@ export class EnhancedCommunityReportingService extends EventEmitter {
   /**
    * Select validators for consensus based on reputation and expertise
    */
-  private async selectConsensusValidators(targetType: string, reportType: string, limit: number = 10): Promise<Array<{userId: string; weight: number}>> {
+  private async selectConsensusValidators(targetType: string, reportType: string, limit: number = 10): Promise<Array<{ userId: string; weight: number }>> {
     try {
       // Get users with sufficient reputation and no conflicts of interest
       const potentialValidators = await db.select({
@@ -258,13 +261,13 @@ export class EnhancedCommunityReportingService extends EventEmitter {
         overallScore: userReputationScores.overallScore,
         moderationScore: userReputationScores.moderationScore
       })
-      .from(userReputationScores)
-      .where(and(
-        gt(userReputationScores.overallScore, '60'), // Minimum reputation threshold
-        gt(userReputationScores.moderationScore, '50') // Good moderation history
-      ))
-      .orderBy(desc(userReputationScores.overallScore))
-      .limit(limit * 2); // Get more than needed for filtering
+        .from(userReputationScores)
+        .where(and(
+          gt(userReputationScores.overallScore, '60'), // Minimum reputation threshold
+          gt(userReputationScores.moderationScore, '50') // Good moderation history
+        ))
+        .orderBy(desc(userReputationScores.overallScore))
+        .limit(limit * 2); // Get more than needed for filtering
 
       // Filter out users who have interacted with the target
       const validators = [];
@@ -304,15 +307,15 @@ export class EnhancedCommunityReportingService extends EventEmitter {
 
       const validatedReports = reports.filter(r => r.status === 'validated').length;
       const totalReports = reports.length;
-      
+
       // Calculate accuracy with time decay
       let weightedAccuracy = 0;
       let totalWeight = 0;
-      
+
       reports.forEach((report, index) => {
         const ageInDays = (Date.now() - report.createdAt.getTime()) / (1000 * 60 * 60 * 24);
         const weight = Math.pow(this.reportingWeightDecay, ageInDays);
-        
+
         const isAccurate = report.status === 'validated' ? 1 : 0;
         weightedAccuracy += isAccurate * weight;
         totalWeight += weight;
@@ -337,8 +340,8 @@ export class EnhancedCommunityReportingService extends EventEmitter {
         agreements: sql<number>`count(case when validation_vote = 'agree' then 1 end)`,
         averageConsensus: sql<number>`avg(consensus_score)`
       })
-      .from(reputationChangeEvents)
-      .where(eq(reputationChangeEvents.userId, reporterId));
+        .from(reputationChangeEvents)
+        .where(eq(reputationChangeEvents.userId, reporterId));
 
       if (participationData.length === 0 || participationData[0].totalValidations === 0) {
         return 0.5; // Default trust for new users
@@ -419,7 +422,7 @@ export class EnhancedCommunityReportingService extends EventEmitter {
   /**
    * Create validation workflow for consensus-based validation
    */
-  private async createValidationWorkflow(reportId: number, validators: Array<{userId: string; weight: number}>): Promise<void> {
+  private async createValidationWorkflow(reportId: number, validators: Array<{ userId: string; weight: number }>): Promise<void> {
     try {
       // Create workflow instance
       const [workflowInstance] = await db.insert(workflowInstances).values({
@@ -450,10 +453,10 @@ export class EnhancedCommunityReportingService extends EventEmitter {
         });
       }
 
-      logger.info('Validation workflow created', { 
+      logger.info('Validation workflow created', {
         workflowInstanceId: workflowInstance.id,
         reportId,
-        validatorCount: validators.length 
+        validatorCount: validators.length
       });
     } catch (error) {
       logger.error('Failed to create validation workflow', { error, reportId });
@@ -463,7 +466,7 @@ export class EnhancedCommunityReportingService extends EventEmitter {
   /**
    * Process validation result and calculate consensus
    */
-  async processValidationResult(reportId: number, validatorVotes: Array<{userId: string; vote: 'validate' | 'reject'; weight: number}>): Promise<ReportValidationResult> {
+  async processValidationResult(reportId: number, validatorVotes: Array<{ userId: string; vote: 'validate' | 'reject'; weight: number }>): Promise<ReportValidationResult> {
     try {
       const [report] = await db.select()
         .from(communityReports)
@@ -503,8 +506,8 @@ export class EnhancedCommunityReportingService extends EventEmitter {
       }
 
       // Calculate rewards and penalties
-      const rewards: Array<{userId: string; amount: number; reason: string}> = [];
-      const penalties: Array<{userId: string; amount: number; reason: string}> = [];
+      const rewards: Array<{ userId: string; amount: number; reason: string }> = [];
+      const penalties: Array<{ userId: string; amount: number; reason: string }> = [];
 
       validatorVotes.forEach(vote => {
         if (isValid && vote.vote === 'validate') {
@@ -593,8 +596,8 @@ export class EnhancedCommunityReportingService extends EventEmitter {
    * Apply validation rewards and penalties
    */
   private async applyValidationRewardsAndPenalties(
-    rewards: Array<{userId: string; amount: number; reason: string}>,
-    penalties: Array<{userId: string; amount: number; reason: string}>
+    rewards: Array<{ userId: string; amount: number; reason: string }>,
+    penalties: Array<{ userId: string; amount: number; reason: string }>
   ): Promise<void> {
     try {
       // Apply rewards
@@ -626,7 +629,7 @@ export class EnhancedCommunityReportingService extends EventEmitter {
   /**
    * Get enhanced reporting analytics
    */
-  async getEnhancedReportingAnalytics(timeRange: {start: Date; end: Date}): Promise<EnhancedReportingAnalytics> {
+  async getEnhancedReportingAnalytics(timeRange: { start: Date; end: Date }): Promise<EnhancedReportingAnalytics> {
     try {
       // Get basic statistics
       const [totalReports] = await db
@@ -651,7 +654,7 @@ export class EnhancedCommunityReportingService extends EventEmitter {
         ));
 
       // Calculate consensus rate
-      const consensusRate = totalReports.count > 0 ? 
+      const consensusRate = totalReports.count > 0 ?
         (validatedReports.count / totalReports.count) * 100 : 0;
 
       // Get top reporters
@@ -661,11 +664,11 @@ export class EnhancedCommunityReportingService extends EventEmitter {
         accuracyRate: sql<number>`sum(case when status = 'validated' then 1 else 0 end) / count(*)`,
         totalReward: sql<number>`sum(case when status = 'validated' then 10 else 0 end)`
       })
-      .from(communityReports)
-      .where(between(communityReports.createdAt, timeRange.start, timeRange.end))
-      .groupBy(communityReports.reporterId)
-      .orderBy(desc(count()))
-      .limit(10);
+        .from(communityReports)
+        .where(between(communityReports.createdAt, timeRange.start, timeRange.end))
+        .groupBy(communityReports.reporterId)
+        .orderBy(desc(count()))
+        .limit(10);
 
       // Get reporting trends
       const reportingTrends = await db.select({
@@ -674,21 +677,21 @@ export class EnhancedCommunityReportingService extends EventEmitter {
         validated: sql<number>`sum(case when status = 'validated' then 1 else 0 end)`,
         consensusScore: sql<number>`avg(consensus_score)`
       })
-      .from(communityReports)
-      .where(between(communityReports.createdAt, timeRange.start, timeRange.end))
-      .groupBy(sql`date_trunc('day', ${communityReports.createdAt})`)
-      .orderBy(asc(sql`date_trunc('day', ${communityReports.createdAt})`));
+        .from(communityReports)
+        .where(between(communityReports.createdAt, timeRange.start, timeRange.end))
+        .groupBy(sql`date_trunc('day', ${communityReports.createdAt})`)
+        .orderBy(asc(sql`date_trunc('day', ${communityReports.createdAt})`));
 
       // Calculate average time to validation
       const validationTimes = await db.select({
         validationTime: sql<number>`extract(epoch from (validated_at - created_at))`
       })
-      .from(communityReports)
-      .where(and(
-        eq(communityReports.status, 'validated'),
-        between(communityReports.createdAt, timeRange.start, timeRange.end),
-        sql`${communityReports.validatedAt} is not null`
-      ));
+        .from(communityReports)
+        .where(and(
+          eq(communityReports.status, 'validated'),
+          between(communityReports.createdAt, timeRange.start, timeRange.end),
+          sql`${communityReports.validatedAt} is not null`
+        ));
 
       const averageTimeToValidation = validationTimes.length > 0 ?
         validationTimes.reduce((sum, vt) => sum + (vt.validationTime || 0), 0) / validationTimes.length / 3600 : 0; // Convert to hours
@@ -731,26 +734,46 @@ export class EnhancedCommunityReportingService extends EventEmitter {
         eq(communityReports.status, 'pending')
       ))
       .limit(1);
-    
+
     return (existing as CommunityReport) || null;
   }
 
   private async checkConflictOfInterest(userId: string, targetType: string, targetId: string): Promise<boolean> {
     // Check if user has interacted with the target content
-    // This is a simplified implementation
     try {
       // Check if user created the content
-      if (targetType === 'post' || targetType === 'comment') {
-        const [content] = await db.select()
-          .from(users) // This would query the appropriate content table
-          .where(eq(users.id, targetId))
+      if (targetType === 'post') {
+        const [post] = await db.select({ authorId: posts.authorId })
+          .from(posts)
+          .where(eq(posts.id, targetId))
           .limit(1);
-        
-        if (content && 'userId' in content && content.userId === userId) {
-          return true;
-        }
+
+        if (post && post.authorId === userId) return true;
       }
-      
+
+      else if (targetType === 'comment') {
+        const [comment] = await db.select({ authorId: comments.authorId })
+          .from(comments)
+          .where(eq(comments.id, targetId))
+          .limit(1);
+
+        if (comment && comment.authorId === userId) return true;
+      }
+
+      else if (targetType === 'listing' || targetType === 'product') {
+        const [product] = await db.select({ sellerId: products.sellerId })
+          .from(products)
+          .where(eq(products.id, targetId))
+          .limit(1);
+
+        if (product && product.sellerId === userId) return true;
+      }
+
+      // Check if user is reporting themselves (for user reports)
+      else if (targetType === 'user') {
+        if (targetId === userId) return true;
+      }
+
       return false;
     } catch (error) {
       logger.error('Failed to check conflict of interest', { error, userId, targetType, targetId });

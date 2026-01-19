@@ -203,7 +203,8 @@ export class HybridPaymentOrchestrator {
               platformFee, // Still tracked for seller deduction
               gasFee,
               taxAmount,
-              currency: request.currency
+              currency: request.currency,
+              totalFees: platformFee + processingFee + (gasFee || 0) + taxAmount
             };
       
             // Generate fallback options

@@ -156,7 +156,7 @@ export class RedisSessionService {
 
     try {
       const key = this.getSessionKey(sessionId);
-      const data = await this.client!.get(key);
+      const data = await this.client!.get(key) as string;
 
       if (!data) {
         return null;
@@ -182,7 +182,7 @@ export class RedisSessionService {
     await this.ensureConnected();
 
     try {
-      const sessionId = await this.client!.get(`checkout:order:${orderId}`);
+      const sessionId = await this.client!.get(`checkout:order:${orderId}`) as string;
       if (!sessionId) {
         return null;
       }

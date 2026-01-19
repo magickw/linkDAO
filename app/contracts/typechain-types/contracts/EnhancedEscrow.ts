@@ -66,6 +66,7 @@ export interface EnhancedEscrowInterface extends Interface {
   getFunction(
     nameOrSignature:
       | "DEADLINE_GRACE_PERIOD"
+      | "EMERGENCY_REFUND_DELAY"
       | "MAX_DISPUTE_BOND_PERCENTAGE"
       | "MAX_PLATFORM_FEE"
       | "MIN_DISPUTE_BOND"
@@ -95,6 +96,7 @@ export interface EnhancedEscrowInterface extends Interface {
       | "disputeBondRequired"
       | "disputeBonds"
       | "disputeInitiator"
+      | "emergencyRefundTimelocks"
       | "escrowChainId"
       | "escrows"
       | "executeEmergencyRefund"
@@ -108,6 +110,7 @@ export interface EnhancedEscrowInterface extends Interface {
       | "getTopSellers"
       | "getUserReviews"
       | "governance"
+      | "initiateEmergencyRefund"
       | "isEligibleForDeadlineRefund"
       | "ldaoToken"
       | "lockFunds"
@@ -151,6 +154,7 @@ export interface EnhancedEscrowInterface extends Interface {
       | "DisputeBondRefunded"
       | "DisputeOpened"
       | "EmergencyRefund"
+      | "EmergencyRefundInitiated"
       | "EscrowCreated"
       | "EscrowReadyForRelease"
       | "EscrowResolved"
@@ -167,6 +171,10 @@ export interface EnhancedEscrowInterface extends Interface {
 
   encodeFunctionData(
     functionFragment: "DEADLINE_GRACE_PERIOD",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "EMERGENCY_REFUND_DELAY",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -311,6 +319,10 @@ export interface EnhancedEscrowInterface extends Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "emergencyRefundTimelocks",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "escrowChainId",
     values: [BigNumberish]
   ): string;
@@ -361,6 +373,10 @@ export interface EnhancedEscrowInterface extends Interface {
   encodeFunctionData(
     functionFragment: "governance",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "initiateEmergencyRefund",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "isEligibleForDeadlineRefund",
@@ -488,6 +504,10 @@ export interface EnhancedEscrowInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "EMERGENCY_REFUND_DELAY",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "MAX_DISPUTE_BOND_PERCENTAGE",
     data: BytesLike
   ): Result;
@@ -595,6 +615,10 @@ export interface EnhancedEscrowInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "emergencyRefundTimelocks",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "escrowChainId",
     data: BytesLike
   ): Result;
@@ -640,6 +664,10 @@ export interface EnhancedEscrowInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "governance", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "initiateEmergencyRefund",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "isEligibleForDeadlineRefund",
     data: BytesLike
@@ -907,6 +935,22 @@ export namespace EmergencyRefundEvent {
     escrowId: bigint;
     buyer: string;
     amount: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace EmergencyRefundInitiatedEvent {
+  export type InputTuple = [
+    escrowId: BigNumberish,
+    executionTime: BigNumberish
+  ];
+  export type OutputTuple = [escrowId: bigint, executionTime: bigint];
+  export interface OutputObject {
+    escrowId: bigint;
+    executionTime: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -1193,6 +1237,8 @@ export interface EnhancedEscrow extends BaseContract {
 
   DEADLINE_GRACE_PERIOD: TypedContractMethod<[], [bigint], "view">;
 
+  EMERGENCY_REFUND_DELAY: TypedContractMethod<[], [bigint], "view">;
+
   MAX_DISPUTE_BOND_PERCENTAGE: TypedContractMethod<[], [bigint], "view">;
 
   MAX_PLATFORM_FEE: TypedContractMethod<[], [bigint], "view">;
@@ -1371,6 +1417,12 @@ export interface EnhancedEscrow extends BaseContract {
 
   disputeInitiator: TypedContractMethod<[arg0: BigNumberish], [string], "view">;
 
+  emergencyRefundTimelocks: TypedContractMethod<
+    [arg0: BigNumberish],
+    [bigint],
+    "view"
+  >;
+
   escrowChainId: TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
 
   escrows: TypedContractMethod<
@@ -1506,6 +1558,12 @@ export interface EnhancedEscrow extends BaseContract {
   getUserReviews: TypedContractMethod<[user: AddressLike], [bigint[]], "view">;
 
   governance: TypedContractMethod<[], [string], "view">;
+
+  initiateEmergencyRefund: TypedContractMethod<
+    [escrowId: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
 
   isEligibleForDeadlineRefund: TypedContractMethod<
     [escrowId: BigNumberish],
@@ -1698,6 +1756,9 @@ export interface EnhancedEscrow extends BaseContract {
     nameOrSignature: "DEADLINE_GRACE_PERIOD"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
+    nameOrSignature: "EMERGENCY_REFUND_DELAY"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
     nameOrSignature: "MAX_DISPUTE_BOND_PERCENTAGE"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
@@ -1869,6 +1930,9 @@ export interface EnhancedEscrow extends BaseContract {
     nameOrSignature: "disputeInitiator"
   ): TypedContractMethod<[arg0: BigNumberish], [string], "view">;
   getFunction(
+    nameOrSignature: "emergencyRefundTimelocks"
+  ): TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
+  getFunction(
     nameOrSignature: "escrowChainId"
   ): TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
   getFunction(
@@ -2001,6 +2065,9 @@ export interface EnhancedEscrow extends BaseContract {
   getFunction(
     nameOrSignature: "governance"
   ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "initiateEmergencyRefund"
+  ): TypedContractMethod<[escrowId: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "isEligibleForDeadlineRefund"
   ): TypedContractMethod<
@@ -2247,6 +2314,13 @@ export interface EnhancedEscrow extends BaseContract {
     EmergencyRefundEvent.OutputObject
   >;
   getEvent(
+    key: "EmergencyRefundInitiated"
+  ): TypedContractEvent<
+    EmergencyRefundInitiatedEvent.InputTuple,
+    EmergencyRefundInitiatedEvent.OutputTuple,
+    EmergencyRefundInitiatedEvent.OutputObject
+  >;
+  getEvent(
     key: "EscrowCreated"
   ): TypedContractEvent<
     EscrowCreatedEvent.InputTuple,
@@ -2429,6 +2503,17 @@ export interface EnhancedEscrow extends BaseContract {
       EmergencyRefundEvent.InputTuple,
       EmergencyRefundEvent.OutputTuple,
       EmergencyRefundEvent.OutputObject
+    >;
+
+    "EmergencyRefundInitiated(uint256,uint256)": TypedContractEvent<
+      EmergencyRefundInitiatedEvent.InputTuple,
+      EmergencyRefundInitiatedEvent.OutputTuple,
+      EmergencyRefundInitiatedEvent.OutputObject
+    >;
+    EmergencyRefundInitiated: TypedContractEvent<
+      EmergencyRefundInitiatedEvent.InputTuple,
+      EmergencyRefundInitiatedEvent.OutputTuple,
+      EmergencyRefundInitiatedEvent.OutputObject
     >;
 
     "EscrowCreated(uint256,address,address,uint256)": TypedContractEvent<

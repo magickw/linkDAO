@@ -132,6 +132,7 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
     uint256 public constant MIN_VOTING_POWER = 100; // Minimum LDAO tokens to vote
     uint256 public constant REPUTATION_DECAY_PERIOD = 365 days;
     uint256 public constant DEADLINE_GRACE_PERIOD = 3 days; // Grace period after deadline before auto-refund
+    uint256 public constant EMERGENCY_REFUND_DELAY = 24 hours; // Time lock for emergency actions
 
     // Dispute bond configuration
     uint256 public disputeBondPercentage = 500; // 5% of escrow amount (basis points)
@@ -161,7 +162,9 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
 
     // Dispute bond mappings
     mapping(uint256 => uint256) public disputeBonds; // escrowId => bond amount deposited
+
     mapping(uint256 => address) public disputeInitiator; // escrowId => who opened the dispute
+    mapping(uint256 => uint256) public emergencyRefundTimelocks; // escrowId => timestamp when refund can be executed
     
     // Events
     event EscrowCreated(uint256 indexed escrowId, address indexed buyer, address indexed seller, uint256 amount);
@@ -177,6 +180,7 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
     event ReputationUpdated(address indexed user, uint256 newScore, ReputationTier newTier);
     event ArbitratorAppointed(uint256 indexed escrowId, address indexed arbitrator);
     event EmergencyRefund(uint256 indexed escrowId, address indexed buyer, uint256 amount);
+    event EmergencyRefundInitiated(uint256 indexed escrowId, uint256 executionTime);
     event DeadlineRefund(uint256 indexed escrowId, address indexed buyer, uint256 amount, string reason);
     event PlatformArbiterUpdated(address indexed oldArbiter, address indexed newArbiter);
     event DisputeBondDeposited(uint256 indexed escrowId, address indexed depositor, uint256 amount);
@@ -765,12 +769,33 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
     }
 
     /**
-     * @notice Execute emergency refund (DAO only)
+     * @notice Initiate emergency refund (DAO only) - Step 1
+     * @param escrowId ID of the escrow
+     */
+    function initiateEmergencyRefund(uint256 escrowId) external onlyDAO escrowExists(escrowId) {
+        Escrow storage escrow = escrows[escrowId];
+        require(escrow.status == EscrowStatus.FUNDS_LOCKED || escrow.status == EscrowStatus.DISPUTE_OPENED, "Invalid status for refund");
+        
+        uint256 executionTime = block.timestamp + EMERGENCY_REFUND_DELAY;
+        emergencyRefundTimelocks[escrowId] = executionTime;
+        
+        emit EmergencyRefundInitiated(escrowId, executionTime);
+    }
+
+    /**
+     * @notice Execute emergency refund (DAO only) - Step 2
      * @param escrowId ID of the escrow
      */
     function executeEmergencyRefund(uint256 escrowId) external onlyDAO escrowExists(escrowId) {
         Escrow storage escrow = escrows[escrowId];
         require(escrow.status == EscrowStatus.FUNDS_LOCKED || escrow.status == EscrowStatus.DISPUTE_OPENED, "Invalid status for refund");
+        
+        // Time-lock check
+        require(emergencyRefundTimelocks[escrowId] > 0, "Refund not initiated");
+        require(block.timestamp >= emergencyRefundTimelocks[escrowId], "Time lock active");
+        
+        // Clear timelock to prevent re-use (though status change handles this too)
+        delete emergencyRefundTimelocks[escrowId];
         
         escrow.status = EscrowStatus.CANCELLED;
         escrow.resolvedAt = block.timestamp;
@@ -784,17 +809,37 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
     function _releaseFunds(uint256 escrowId, address recipient) internal {
         Escrow storage escrow = escrows[escrowId];
         
-        if (escrow.tokenAddress == address(0)) {
+        // Cache values to memory
+        uint256 amount = escrow.amount;
+        uint256 fee = escrow.feeAmount;
+        address token = escrow.tokenAddress;
+        
+        // Zero out storage (Effects)
+        // This prevents reentrancy attacks where a malicious contract calls back 
+        // into this function before state is updated
+        escrow.amount = 0;
+        escrow.feeAmount = 0;
+        
+        // Interactions
+        if (token == address(0)) {
             // ETH payment
-            (bool sentToRecipient, ) = payable(recipient).call{value: escrow.amount}("");
-            require(sentToRecipient, "Failed to send ETH to recipient");
+            if (amount > 0) {
+                (bool sentToRecipient, ) = payable(recipient).call{value: amount}("");
+                require(sentToRecipient, "Failed to send ETH to recipient");
+            }
             
-            (bool sentToOwner, ) = payable(owner()).call{value: escrow.feeAmount}("");
-            require(sentToOwner, "Failed to send ETH to owner");
+            if (fee > 0) {
+                (bool sentToOwner, ) = payable(owner()).call{value: fee}("");
+                require(sentToOwner, "Failed to send ETH to owner");
+            }
         } else {
             // ERC20 token payment
-            IERC20(escrow.tokenAddress).transfer(recipient, escrow.amount);
-            IERC20(escrow.tokenAddress).transfer(owner(), escrow.feeAmount);
+            if (amount > 0) {
+                IERC20(token).transfer(recipient, amount);
+            }
+            if (fee > 0) {
+                IERC20(token).transfer(owner(), fee);
+            }
         }
     }
 

@@ -339,7 +339,7 @@ export class ProductListingService {
                 sellerWalletAddress: listing.sellerId, // Assuming sellerId is wallet address
                 tokenAddress: options?.tokenAddress || '0x0000000000000000000000000000000000000000', // Default to ETH
                 price: listing.price.amount,
-                quantity: listing.inventory,
+                quantity: 1,
                 inventory: listing.inventory,
                 itemType: options?.itemType || 'PHYSICAL',
                 listingType: options?.listingType || 'FIXED_PRICE',
@@ -778,12 +778,15 @@ export class ProductListingService {
 
     private async findByBlockchainListingId(blockchainListingId: string): Promise<Product | null> {
         // Search for product by blockchain listing ID in metadata
+        // Using robust JSON extraction instead of fragile text search
         const db = this.databaseService.getDatabase();
 
         try {
+            // Cast metadata text to jsonb and extract field
+            // This assumes postgres database. For other DBs this might need adjustment.
             const result = await db.select()
                 .from(schema.products)
-                .where(like(schema.products.metadata, `%"blockchainListingId":"${blockchainListingId}"%`));
+                .where(sql`(${schema.products.metadata}::jsonb ->> 'blockchainListingId') = ${blockchainListingId}`);
 
             if (result.length > 0) {
                 return await this.mapProductFromDb(result[0]);
@@ -837,7 +840,7 @@ export class ProductListingService {
         if (dbProduct.sellerId) {
             try {
                 // Import review service dynamically to avoid circular dependencies
-                const { reviewService } = await import('./reviewService');
+                const { reviewService } = await import('./reviewService.js');
                 const reviewStats = await reviewService.getReviewStats(dbProduct.sellerId);
                 sellerRating = reviewStats.averageRating;
             } catch (error) {

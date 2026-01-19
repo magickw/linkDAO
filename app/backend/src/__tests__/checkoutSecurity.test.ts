@@ -400,7 +400,7 @@ describe('Checkout Security Tests', () => {
       const cartUserId = 'user-123';
       const requestUserId = 'user-456';
 
-      const isAuthorized = cartUserId === requestUserId;
+      const isAuthorized = (cartUserId as string) === requestUserId;
       expect(isAuthorized).toBe(false);
     });
   });

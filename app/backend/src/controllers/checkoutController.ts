@@ -244,8 +244,7 @@ export class CheckoutController {
                 if (!transactionValidation.valid) {
                     res.status(403).json(apiResponse.error(
                         transactionValidation.error || 'Transaction validation failed',
-                        403,
-                        { warnings: transactionValidation.warnings }
+                        403
                     ));
                     return;
                 }

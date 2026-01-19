@@ -5,10 +5,11 @@
  */
 
 import { db } from '../db';
-import { discountCodes } from '../db/schema';
-import { eq, and, gte, lte, or, isNull } from 'drizzle-orm';
+import { promoCodes } from '../db/schema';
+import { eq, and, sql } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 
+// Mapping local interface to schema promoCodes
 export interface DiscountCode {
   id: string;
   code: string;
@@ -20,9 +21,6 @@ export interface DiscountCode {
   endDate?: Date;
   usageLimit?: number;
   usageCount: number;
-  perUserLimit?: number;
-  applicableProducts?: string[];
-  applicableCategories?: string[];
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -65,8 +63,8 @@ export class DiscountCodeService {
       // Fetch discount code from database
       const [discountCode] = await db
         .select()
-        .from(discountCodes)
-        .where(eq(discountCodes.code, code.toUpperCase()))
+        .from(promoCodes)
+        .where(eq(promoCodes.code, code.toUpperCase()))
         .limit(1);
 
       if (!discountCode) {
@@ -105,7 +103,7 @@ export class DiscountCodeService {
       }
 
       // Check usage limits
-      if (discountCode.usageLimit && discountCode.usageCount >= discountCode.usageLimit) {
+      if (discountCode.usageLimit && (discountCode.usageCount || 0) >= discountCode.usageLimit) {
         return {
           valid: false,
           error: 'This discount code has reached its usage limit',
@@ -113,73 +111,37 @@ export class DiscountCodeService {
         };
       }
 
-      // Check per-user limit
-      if (discountCode.perUserLimit) {
-        const userUsageCount = await this.getUserDiscountUsageCount(discountCode.id, userId);
-        if (userUsageCount >= discountCode.perUserLimit) {
-          return {
-            valid: false,
-            error: 'You have already used this discount code the maximum number of times',
-            errorCode: 'USER_LIMIT_REACHED'
-          };
-        }
-      }
-
       // Check minimum purchase amount
-      if (discountCode.minPurchaseAmount && orderDetails.subtotal < discountCode.minPurchaseAmount) {
+      const minAmount = discountCode.minOrderAmount ? parseFloat(discountCode.minOrderAmount.toString()) : 0;
+      if (minAmount > 0 && orderDetails.subtotal < minAmount) {
         return {
           valid: false,
-          error: `Minimum purchase amount of $${discountCode.minPurchaseAmount} required`,
+          error: `Minimum purchase amount of $${minAmount} required`,
           errorCode: 'MIN_PURCHASE_NOT_MET'
         };
-      }
-
-      // Check applicable products/categories
-      if (discountCode.applicableProducts && discountCode.applicableProducts.length > 0) {
-        const hasApplicableProduct = orderDetails.items.some(item =>
-          discountCode.applicableProducts!.includes(item.productId)
-        );
-        if (!hasApplicableProduct) {
-          return {
-            valid: false,
-            error: 'This discount code does not apply to any items in your cart',
-            errorCode: 'NOT_APPLICABLE_TO_ITEMS'
-          };
-        }
-      }
-
-      if (discountCode.applicableCategories && discountCode.applicableCategories.length > 0) {
-        const hasApplicableCategory = orderDetails.items.some(item =>
-          item.category && discountCode.applicableCategories!.includes(item.category)
-        );
-        if (!hasApplicableCategory) {
-          return {
-            valid: false,
-            error: 'This discount code does not apply to any items in your cart',
-            errorCode: 'NOT_APPLICABLE_TO_ITEMS'
-          };
-        }
       }
 
       // Calculate discount amount
       let discountAmount = 0;
       let appliedTo: 'subtotal' | 'shipping' | 'total' = 'subtotal';
+      const value = parseFloat(discountCode.discountValue.toString());
 
-      switch (discountCode.type) {
+      switch (discountCode.discountType) {
         case 'percentage':
-          discountAmount = (orderDetails.subtotal * discountCode.value) / 100;
+          discountAmount = (orderDetails.subtotal * value) / 100;
           if (discountCode.maxDiscountAmount) {
-            discountAmount = Math.min(discountAmount, discountCode.maxDiscountAmount);
+            const max = parseFloat(discountCode.maxDiscountAmount.toString());
+            discountAmount = Math.min(discountAmount, max);
           }
           appliedTo = 'subtotal';
           break;
 
-        case 'fixed':
-          discountAmount = Math.min(discountCode.value, orderDetails.subtotal);
+        case 'fixed_amount':
+          discountAmount = Math.min(value, orderDetails.subtotal);
           appliedTo = 'subtotal';
           break;
 
-        case 'shipping':
+        case 'shipping': // Assuming schema supports this or mapping appropriately
           discountAmount = orderDetails.shipping;
           appliedTo = 'shipping';
           break;
@@ -189,7 +151,7 @@ export class DiscountCodeService {
         valid: true,
         discount: {
           code: discountCode.code,
-          type: discountCode.type,
+          type: discountCode.discountType === 'fixed_amount' ? 'fixed' : discountCode.discountType as any,
           amount: discountAmount,
           appliedTo
         }
@@ -210,127 +172,17 @@ export class DiscountCodeService {
     try {
       // Increment usage count
       await db
-        .update(discountCodes)
+        .update(promoCodes)
         .set({
-          usageCount: db.$increment(discountCodes.usageCount, 1),
+          usageCount: sql`${promoCodes.usageCount} + 1`,
           updatedAt: new Date()
         })
-        .where(eq(discountCodes.id, discountCodeId));
-
-      // Record in usage history (assuming we have a discountCodeUsage table)
-      // await db.insert(discountCodeUsage).values({
-      //   discountCodeId,
-      //   userId,
-      //   orderId,
-      //   usedAt: new Date()
-      // });
+        .where(eq(promoCodes.id, discountCodeId));
 
       safeLogger.info(`Discount code ${discountCodeId} used by user ${userId} for order ${orderId}`);
     } catch (error) {
       safeLogger.error('Error recording discount usage:', error);
       throw error;
-    }
-  }
-
-  /**
-   * Get user's usage count for a specific discount code
-   */
-  private async getUserDiscountUsageCount(discountCodeId: string, userId: string): Promise<number> {
-    try {
-      // This would query a discountCodeUsage table
-      // For now, return 0 as placeholder
-      // const [result] = await db
-      //   .select({ count: count() })
-      //   .from(discountCodeUsage)
-      //   .where(
-      //     and(
-      //       eq(discountCodeUsage.discountCodeId, discountCodeId),
-      //       eq(discountCodeUsage.userId, userId)
-      //     )
-      //   );
-      // return result?.count || 0;
-
-      return 0;
-    } catch (error) {
-      safeLogger.error('Error getting user discount usage count:', error);
-      return 0;
-    }
-  }
-
-  /**
-   * Create a new discount code (admin function)
-   */
-  async createDiscountCode(data: Omit<DiscountCode, 'id' | 'usageCount' | 'createdAt' | 'updatedAt'>): Promise<DiscountCode> {
-    try {
-      const [newCode] = await db
-        .insert(discountCodes)
-        .values({
-          ...data,
-          code: data.code.toUpperCase(),
-          usageCount: 0
-        })
-        .returning();
-
-      safeLogger.info(`Created discount code: ${newCode.code}`);
-      return newCode as DiscountCode;
-    } catch (error) {
-      safeLogger.error('Error creating discount code:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Deactivate a discount code
-   */
-  async deactivateDiscountCode(codeId: string): Promise<boolean> {
-    try {
-      await db
-        .update(discountCodes)
-        .set({
-          isActive: false,
-          updatedAt: new Date()
-        })
-        .where(eq(discountCodes.id, codeId));
-
-      return true;
-    } catch (error) {
-      safeLogger.error('Error deactivating discount code:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Get active discount codes (for admin panel)
-   */
-  async getActiveDiscountCodes(): Promise<DiscountCode[]> {
-    try {
-      const codes = await db
-        .select()
-        .from(discountCodes)
-        .where(eq(discountCodes.isActive, true));
-
-      return codes as DiscountCode[];
-    } catch (error) {
-      safeLogger.error('Error fetching active discount codes:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Get discount code by ID
-   */
-  async getDiscountCodeById(id: string): Promise<DiscountCode | null> {
-    try {
-      const [code] = await db
-        .select()
-        .from(discountCodes)
-        .where(eq(discountCodes.id, id))
-        .limit(1);
-
-      return code as DiscountCode || null;
-    } catch (error) {
-      safeLogger.error('Error fetching discount code:', error);
-      return null;
     }
   }
 }

@@ -254,6 +254,7 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         // Initialize timestamps
         lastResetDay = block.timestamp / 1 days;
         lastPriceUpdate = block.timestamp;
+        lastCharityDisbursementDay = block.timestamp;
         
         // Initialize default pricing tiers
         _addPricingTier(100000 * 1e18, 500); // 100k LDAO: 5% discount

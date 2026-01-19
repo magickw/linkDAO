@@ -62,6 +62,7 @@ export class RedisRateLimiter {
    * Create rate limit middleware
    */
   createMiddleware(config: RateLimitConfig) {
+    const self = this;
     const {
       windowMs,
       maxRequests,
@@ -82,12 +83,12 @@ export class RedisRateLimiter {
         let current: number;
         let resetTime: number;
 
-        if (this.isConnected && this.client) {
+        if (self.isConnected && self.client) {
           // Use Redis for distributed rate limiting
-          const multi = this.client.multi();
+          const multi = self.client.multi();
           multi.incr(key);
           multi.pExpire(key, windowMs);
-          multi.pTtl(key);
+          multi.pTTL(key);
 
           const results = await multi.exec();
           current = results[0] as number;
@@ -125,9 +126,7 @@ export class RedisRateLimiter {
         if (current > maxRequests) {
           safeLogger.warn(`Rate limit exceeded for ${key}: ${current}/${maxRequests}`);
           res.status(429).json(
-            apiResponse.error(message, 429, {
-              retryAfter: Math.ceil((resetTime - now) / 1000)
-            })
+            apiResponse.error(`${message}. Retry after ${Math.ceil((resetTime - now) / 1000)}s`, 429)
           );
           return;
         }
@@ -140,9 +139,9 @@ export class RedisRateLimiter {
               (skipSuccessfulRequests && res.statusCode < 400) ||
               (skipFailedRequests && res.statusCode >= 400);
 
-            if (shouldSkip && isConnected && client) {
+            if (shouldSkip && self.isConnected && self.client) {
               // Decrement count
-              client.decr(key).catch((err) => {
+              self.client.decr(key).catch((err) => {
                 safeLogger.error('Failed to decrement rate limit:', err);
               });
             }
