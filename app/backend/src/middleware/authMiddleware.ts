@@ -1,9 +1,8 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
 import { eq } from 'drizzle-orm';
 import { users } from '../db/schema';
+import { db } from '../db'; // Use shared database connection
 import { ApiResponse } from '../utils/apiResponse';
 import { tokenRevocationService } from '../services/tokenRevocationService';
 import { getRequiredEnv, isDevelopment } from '../utils/envValidation';
@@ -99,45 +98,45 @@ export const authMiddleware: RequestHandler = async (req: Request, res: Response
     let userRecord: any = null;
     if (decoded.userId) {
       try {
-        const connectionString = process.env.DATABASE_URL!;
-        const sql = postgres(connectionString, { ssl: 'require' });
-        const db = drizzle(sql);
+        if (db) { // Check if db is initialized
+          const userResult = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, decoded.userId))
+            .limit(1);
 
-        const userResult = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, decoded.userId))
-          .limit(1);
+          if (userResult.length > 0) {
+            userRecord = userResult[0];
+            userRole = userRecord.role || 'user';
+            userEmail = userRecord.email;
+            userPermissions = (userRecord.permissions as string[]) || [];
+            isAdmin = ['admin', 'super_admin', 'moderator', 'support', 'analyst'].includes(userRole);
 
-        if (userResult.length > 0) {
-          userRecord = userResult[0];
-          userRole = userRecord.role || 'user';
-          userEmail = userRecord.email;
-          userPermissions = (userRecord.permissions as string[]) || [];
-          isAdmin = ['admin', 'super_admin', 'moderator', 'support', 'analyst'].includes(userRole);
+            // Block wallet-only authentication for employees for sensitive operations
+            // but allow basic access with a flag to indicate they need to upgrade auth
+            const isEmployee = userRecord.isEmployee;
+            const hasPasswordHash = !!userRecord.passwordHash;
+            const needsAuthUpgrade = isEmployee && !hasPasswordHash;
 
-          // Block wallet-only authentication for employees for sensitive operations
-          // but allow basic access with a flag to indicate they need to upgrade auth
-          const isEmployee = userRecord.isEmployee;
-          const hasPasswordHash = !!userRecord.passwordHash;
-          const needsAuthUpgrade = isEmployee && !hasPasswordHash;
+            // Check if this is a sensitive operation that requires upgraded auth
+            const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+            const sensitivePrefixes = [
+              '/api/admin',
+              '/api/employees',
+              '/api/auth/change-password',
+              '/api/auth/update'
+            ];
 
-          // Check if this is a sensitive operation that requires upgraded auth
-          const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
-          const sensitivePrefixes = [
-            '/api/admin',
-            '/api/employees',
-            '/api/auth/change-password',
-            '/api/auth/update'
-          ];
+            const isSensitiveOperation = isMutation && sensitivePrefixes.some(prefix =>
+              req.path.startsWith(prefix)
+            );
 
-          const isSensitiveOperation = isMutation && sensitivePrefixes.some(prefix =>
-            req.path.startsWith(prefix)
-          );
-
-          if (needsAuthUpgrade && isSensitiveOperation) {
-            return ApiResponse.unauthorized(res, 'Employees must use email and password authentication for sensitive operations');
+            if (needsAuthUpgrade && isSensitiveOperation) {
+              return ApiResponse.unauthorized(res, 'Employees must use email and password authentication for sensitive operations');
+            }
           }
+        } else {
+          console.warn('Database connection not available in authMiddleware');
         }
       } catch (dbError) {
         console.error('Database error when fetching user details:', dbError);

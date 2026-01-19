@@ -57,7 +57,7 @@ export class DexSwapService {
 
   constructor() {
     this.baseUrl = ENV_CONFIG.BACKEND_URL || 'http://localhost:10000';
-    this.enabled = process.env.NEXT_PUBLIC_ENABLE_DEX === 'true';
+    this.enabled = process.env.NEXT_PUBLIC_ENABLE_DEX === 'true' || process.env.NEXT_PUBLIC_ENABLE_DEX_TRADING === 'true';
     this.oneInchApiKey = process.env.NEXT_PUBLIC_ONEINCH_API_KEY || '';
     this.uniswapEnabled = process.env.NEXT_PUBLIC_ENABLE_UNISWAP === 'true';
   }
@@ -265,7 +265,7 @@ export class DexSwapService {
 
     try {
       // Get swap quote
-      const quote = await this.getSwapQuote(params, params.publicClient.chain.id);
+      const quote = await this.getSwapQuote(params, params.publicClient.chain?.id || 1);
       if (!quote) {
         return {
           success: false,
@@ -312,7 +312,7 @@ export class DexSwapService {
       const amountOutMinWei = parseUnits(quote.amountOutMin, params.tokenOut.decimals);
 
       const response = await fetch(
-        `https://api.1inch.dev/swap/v6.0/${params.publicClient.chain.id}/swap`,
+        `https://api.1inch.dev/swap/v6.0/${params.publicClient.chain?.id || 1}/swap`,
         {
           method: 'GET',
           headers: {
@@ -333,16 +333,18 @@ export class DexSwapService {
       const data = await response.json();
 
       // Execute transaction using wallet client
-      const hash = await params.walletClient.sendTransaction({
+      const txParams = {
         to: data.to as `0x${string}`,
         data: data.data as `0x${string}`,
         value: BigInt(data.value || '0'),
-        from: params.walletAddress as `0x${string}`,
+        account: params.walletAddress as `0x${string}`,
         gas: data.gas ? BigInt(data.gas) : undefined,
-        gasPrice: data.gasPrice ? BigInt(data.gasPrice) : undefined,
-        maxFeePerGas: data.maxFeePerGas ? BigInt(data.maxFeePerGas) : undefined,
-        maxPriorityFeePerGas: data.maxPriorityFeePerGas ? BigInt(data.maxPriorityFeePerGas) : undefined
-      });
+        ...(data.gasPrice ? { gasPrice: BigInt(data.gasPrice) } : {}),
+        ...(data.maxFeePerGas ? { maxFeePerGas: BigInt(data.maxFeePerGas) } : {}),
+        ...(data.maxPriorityFeePerGas ? { maxPriorityFeePerGas: BigInt(data.maxPriorityFeePerGas) } : {})
+      };
+
+      const hash = await params.walletClient.sendTransaction(txParams as any);
 
       // Wait for transaction confirmation
       await params.publicClient.waitForTransactionReceipt({ hash });
@@ -387,7 +389,7 @@ export class DexSwapService {
             amountOutMin: amountOutMinWei.toString(),
             recipient: params.recipient || params.walletAddress,
             slippageTolerance: params.slippageTolerance,
-            chainId: params.publicClient.chain.id
+            chainId: params.publicClient.chain?.id || 1
           }),
           signal: AbortSignal.timeout(30000)
         }
@@ -450,7 +452,7 @@ export class DexSwapService {
             amountOutMin: quote.amountOutMin,
             recipient: params.recipient || params.walletAddress,
             slippageTolerance: params.slippageTolerance,
-            chainId: params.publicClient.chain.id
+            chainId: params.publicClient.chain?.id || 1
           }),
           signal: AbortSignal.timeout(30000)
         }
@@ -504,13 +506,15 @@ export class DexSwapService {
       );
 
       if (!response.ok) {
+        // Silently fall back to default tokens if endpoint doesn't exist
         return this.getDefaultTokens(chainId);
       }
 
       const data = await response.json();
       return data.tokens || this.getDefaultTokens(chainId);
     } catch (error) {
-      console.error('Failed to get popular tokens:', error);
+      // Endpoint likely doesn't exist yet, so we just use default tokens
+      // console.warn('Using default tokens (API unavailable)');
       return this.getDefaultTokens(chainId);
     }
   }

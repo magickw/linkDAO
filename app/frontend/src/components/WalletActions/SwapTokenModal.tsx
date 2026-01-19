@@ -120,10 +120,11 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
         setIsLoading(true);
         setError('');
 
+        // Get real token addresses from wallet data
+        const fromTokenAddress = fromTokenData.contractAddress || '0x0000000000000000000000000000000000000000'; // ETH/native token
+        const toTokenAddress = toTokenData.contractAddress || '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'; // USDC as fallback
+
         try {
-          // Get real token addresses from wallet data
-          const fromTokenAddress = fromTokenData.contractAddress || '0x0000000000000000000000000000000000000000'; // ETH/native token
-          const toTokenAddress = toTokenData.contractAddress || '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'; // USDC as fallback
 
           const quoteResponse = await dexSwapService.getSwapQuote({
             tokenIn: {
@@ -154,16 +155,52 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
           setPriceImpact(quoteResponse.priceImpact.toString());
         } catch (err) {
           console.error('Error fetching swap quote:', err);
-          setError('Failed to get exchange rate. Using mock data.');
+          setError('Failed to get live quote. Using estimated rate.');
 
-          // Fallback to mock calculation
-          const rate = fromTokenData.valueUSD / toTokenData.valueUSD;
-          setExchangeRate(rate);
+          try {
+            // Fallback: Try to calculate rate from wallet prices or service
+            let fromPrice = 0;
+            let toPrice = 0;
 
-          if (debouncedFromAmount) {
-            const estimated = parseFloat(debouncedFromAmount) * rate;
-            setToAmount(estimated.toFixed(6));
+            // 1. Try to get prices from service
+            const [p1, p2] = await Promise.all([
+              dexSwapService.getTokenPrice(fromTokenAddress, selectedChainId),
+              dexSwapService.getTokenPrice(toTokenAddress, selectedChainId)
+            ]);
+
+            if (p1) fromPrice = p1;
+            if (p2) toPrice = p2;
+
+            // 2. If service failed, try to derive from wallet data
+            if (!fromPrice && fromTokenData.balance > 0) {
+              fromPrice = fromTokenData.valueUSD / fromTokenData.balance;
+            }
+            if (!toPrice && toTokenData.balance > 0) {
+              toPrice = toTokenData.valueUSD / toTokenData.balance;
+            }
+
+            // Calculate rate if we have valid prices
+            if (fromPrice > 0 && toPrice > 0) {
+              const rate = fromPrice / toPrice;
+              setExchangeRate(rate);
+
+              if (debouncedFromAmount) {
+                const estimated = parseFloat(debouncedFromAmount) * rate;
+                setToAmount(estimated.toFixed(6));
+              }
+              // Clear the critical error since we have a fallback, but keep a warning
+              setError('Using estimated exchange rate (live quote failed).');
+            } else {
+              setExchangeRate(0);
+              setToAmount('');
+              setError('Failed to get exchange rate.');
+            }
+          } catch (fallbackErr) {
+            console.error('Fallback calculation failed:', fallbackErr);
+            setExchangeRate(0);
+            setToAmount('');
           }
+
         } finally {
           setIsLoading(false);
         }
