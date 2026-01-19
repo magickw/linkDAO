@@ -73,24 +73,27 @@ router.post('/checkout', async (req, res, next) => {
 
             // Set standard x402 WWW-Authenticate header required by the client
             res.setHeader(
-                'WWW-Authenticate', 
+                'WWW-Authenticate',
                 `x402 scheme="exact", price="${orderAmount}", network="eip155:84532", payTo="${PAY_TO_ADDRESS}", token="USDC"`
             );
 
-            // Return 402 Payment Required with payment instructions
+            // Return 402 Payment Required with standardized x402 format
             return res.status(402).json({
-                success: false,
-                error: 'Payment Required',
-                paymentRequired: true,
-                paymentDetails: {
-                    scheme: 'exact',
-                    price: orderAmount,
-                    network: 'eip155:84532', // Base Sepolia
-                    payTo: PAY_TO_ADDRESS,
-                    token: 'USDC',
-                    description: `Payment for Order ${orderId}`
+                error: {
+                    code: 'PAYMENT_REQUIRED',
+                    message: 'Payment required to complete checkout'
                 },
-                message: 'Please complete payment to proceed with checkout'
+                payment: {
+                    scheme: 'exact',
+                    amount: orderAmount,
+                    currency: 'USDC',
+                    network: 'eip155:11155111', // Sepolia
+                    recipient: PAY_TO_ADDRESS,
+                    metadata: {
+                        orderId,
+                        description: `Payment for Order ${orderId}`
+                    }
+                }
             });
         }
 

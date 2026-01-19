@@ -48,16 +48,34 @@ const getRpcUrl = (chainId: number) => {
 export const getChainRpcUrl = (chainId: number) => {
   switch (chainId) {
     case base.id:
+      if (process.env.NEXT_PUBLIC_ALCHEMY_API_KEY) {
+        return `https://base-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`;
+      }
       return process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
     case baseSepolia.id:
+      if (process.env.NEXT_PUBLIC_ALCHEMY_API_KEY) {
+        return `https://base-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`;
+      }
       return process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org';
     case mainnet.id:
+      if (process.env.NEXT_PUBLIC_INFURA_API_KEY) {
+        return `https://mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_API_KEY}`;
+      }
+      if (process.env.NEXT_PUBLIC_ALCHEMY_API_KEY) {
+        return `https://eth-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`;
+      }
       return process.env.NEXT_PUBLIC_MAINNET_RPC_URL || 'https://eth.llamarpc.com';
     case polygon.id:
       return process.env.NEXT_PUBLIC_POLYGON_RPC_URL || 'https://polygon.llamarpc.com';
     case arbitrum.id:
       return process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL || 'https://arbitrum.llamarpc.com';
     case sepolia.id:
+      if (process.env.NEXT_PUBLIC_INFURA_API_KEY) {
+        return `https://sepolia.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_API_KEY}`;
+      }
+      if (process.env.NEXT_PUBLIC_ALCHEMY_API_KEY) {
+        return `https://eth-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`;
+      }
       return process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
     default:
       return 'https://eth.llamarpc.com';
