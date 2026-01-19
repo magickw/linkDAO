@@ -978,6 +978,45 @@ export class MessagingController {
     }
   }
 
+  // Update group settings
+  async updateGroupSettings(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = req.user?.address;
+      if (!userAddress) {
+        res.status(401).json(apiResponse.error('Authentication required', 401));
+        return;
+      }
+
+      const { id } = req.params;
+      const { name, description, avatar, isPublic } = req.body;
+
+      const result = await messagingService.updateGroupSettings({
+        conversationId: id,
+        userAddress,
+        settings: {
+          name,
+          description,
+          avatar,
+          isPublic
+        }
+      });
+
+      if (!result.success) {
+        res.status(400).json(apiResponse.error((result as any).message, 400));
+        return;
+      }
+
+      res.json(apiResponse.success(result.data, 'Group settings updated successfully'));
+    } catch (error) {
+      safeLogger.error('Error updating group settings:', error);
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to update group settings'));
+      }
+    }
+  }
+
   // Upload message attachment (images, documents, etc.)
   async uploadAttachment(req: Request, res: Response): Promise<void> {
     try {

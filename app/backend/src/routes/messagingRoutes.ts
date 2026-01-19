@@ -301,6 +301,22 @@ router.post('/groups', csrfProtection,
   messagingController.createGroupConversation
 );
 
+// Update group settings
+router.put('/conversations/:id/settings', csrfProtection,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      name: { type: 'string', optional: true, maxLength: 100 },
+      description: { type: 'string', optional: true, maxLength: 500 },
+      avatar: { type: 'string', optional: true, maxLength: 500 },
+      isPublic: { type: 'boolean', optional: true }
+    }
+  }),
+  messagingController.updateGroupSettings
+);
+
 // Upload message attachment (images, documents, etc.)
 router.post('/attachments',
   csrfProtection,

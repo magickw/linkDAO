@@ -9,6 +9,10 @@ import Layout from '@/components/Layout';
 import { ipfsUploadService } from '@/services/ipfsUploadService';
 import ShippingConfigurationForm, { type ShippingConfiguration } from '@/components/Marketplace/Seller/ShippingConfigurationForm';
 import SizeSelector from '@/components/Marketplace/SizeSelector';
+import { SpecificationEditor } from '@/components/Marketplace/Seller/SpecificationEditor';
+import { SizeConfigurationSystem } from '@/components/Marketplace/Seller/SizeConfigurationSystem';
+import { SpecificationPreview } from '@/components/Marketplace/Seller/SpecificationPreview';
+import { validateSpecifications } from '@/components/Marketplace/Seller/specificationValidator';
 import {
   Upload,
   X,
@@ -59,7 +63,35 @@ interface EnhancedFormData {
   // Shipping
   shipping?: ShippingConfiguration;
 
-  // Product Specifications
+  // Product Specifications (new comprehensive system)
+  specs: {
+    weight?: {
+      value: number;
+      unit: 'g' | 'kg' | 'oz' | 'lbs';
+    };
+    dimensions?: {
+      length: number;
+      width: number;
+      height: number;
+      unit: 'mm' | 'cm' | 'm' | 'in' | 'ft';
+    };
+    attributes: { key: string; value: string }[];
+  };
+
+  // Size Configuration
+  sizeConfig: {
+    system: 'apparel_standard' | 'simple_variants' | 'matrix' | 'dimensions' | 'technical' | 'range_based' | 'volume_capacity' | 'none';
+    selectedSizes: string[];
+    matrix?: {
+      rows: string[];
+      cols: string[];
+      selected: string[];
+    };
+    chart?: any;
+    customVariants?: string[];
+  };
+
+  // Legacy specifications for backward compatibility
   specifications?: {
     weight?: {
       value: number;
@@ -251,6 +283,28 @@ const EditListingPage: React.FC = () => {
     inventory: 1,
     unlimitedInventory: false,
     escrowEnabled: true,
+    // New comprehensive specification system
+    specs: {
+      weight: {
+        value: 0,
+        unit: 'g'
+      },
+      dimensions: {
+        length: 0,
+        width: 0,
+        height: 0,
+        unit: 'cm'
+      },
+      attributes: []
+    },
+    sizeConfig: {
+      system: 'none',
+      selectedSizes: [],
+      matrix: undefined,
+      chart: undefined,
+      customVariants: undefined
+    },
+    // Legacy specifications for backward compatibility
     specifications: {
       weight: {
         value: 0,
@@ -280,10 +334,100 @@ const EditListingPage: React.FC = () => {
   const [ethPrice, setEthPrice] = useState<number>(2400); // Mock ETH price
   const [newTag, setNewTag] = useState('');
   const [initialLoading, setInitialLoading] = useState(true);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
   // State for field-specific errors
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [categories, setCategories] = useState<CategoryInfo[]>([]);
+
+  // Auto-save draft to localStorage
+  useEffect(() => {
+    if (!id || typeof id !== 'string' || initialLoading) return;
+
+    const saveDraft = () => {
+      try {
+        const draftData = {
+          formData,
+          existingImages,
+          primaryImageIndex,
+          savedAt: new Date().toISOString()
+        };
+        localStorage.setItem(`listing_draft_${id}`, JSON.stringify(draftData));
+        setLastSavedAt(new Date());
+        console.log('[EDIT] Draft auto-saved');
+      } catch (error) {
+        console.error('[EDIT] Failed to save draft:', error);
+      }
+    };
+
+    // Auto-save every 30 seconds if there are unsaved changes
+    const intervalId = setInterval(() => {
+      if (hasUnsavedChanges) {
+        saveDraft();
+      }
+    }, 30000);
+
+    // Save draft on unmount if there are unsaved changes
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        saveDraft();
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [id, formData, existingImages, primaryImageIndex, hasUnsavedChanges, initialLoading]);
+
+  // Load draft from localStorage on mount
+  useEffect(() => {
+    if (!id || typeof id !== 'string' || initialLoading) return;
+
+    try {
+      const draftJson = localStorage.getItem(`listing_draft_${id}`);
+      if (draftJson) {
+        const draft = JSON.parse(draftJson);
+        const savedTime = new Date(draft.savedAt);
+        const timeSinceSave = Date.now() - savedTime.getTime();
+
+        // Only restore draft if it's less than 24 hours old
+        if (timeSinceSave < 24 * 60 * 60 * 1000) {
+          const shouldRestore = window.confirm(
+            `We found an unsaved draft from ${savedTime.toLocaleTimeString()}. Would you like to restore it?`
+          );
+
+          if (shouldRestore) {
+            setFormData(draft.formData);
+            setExistingImages(draft.existingImages || []);
+            setPrimaryImageIndex(draft.primaryImageIndex || 0);
+            setHasUnsavedChanges(true);
+            addToast('Draft restored successfully', 'success');
+          } else {
+            // Clear the draft if user doesn't want to restore
+            localStorage.removeItem(`listing_draft_${id}`);
+          }
+        } else {
+          // Clear old drafts
+          localStorage.removeItem(`listing_draft_${id}`);
+        }
+      }
+    } catch (error) {
+      console.error('[EDIT] Failed to load draft:', error);
+    }
+  }, [id, initialLoading, addToast]);
+
+  // Track changes to enable auto-save
+  useEffect(() => {
+    if (!initialLoading) {
+      setHasUnsavedChanges(true);
+    }
+  }, [formData, images, existingImages, primaryImageIndex, initialLoading]);
 
   // Load existing listing data and categories
   useEffect(() => {
@@ -364,7 +508,21 @@ const EditListingPage: React.FC = () => {
           inventory: (listing as any).inventory || listing.inventory || 1,
           unlimitedInventory: ((listing as any).inventory || listing.inventory || 1) >= 999999,
           escrowEnabled: listing.escrowEnabled ?? true,
-          // Use specifications from transformed data (extracted from metadata)
+          // Preserve new comprehensive specification system from metadata
+          specs: (listing.metadata as any)?.specs || {
+            weight: { value: 0, unit: 'g' },
+            dimensions: { length: 0, width: 0, height: 0, unit: 'cm' },
+            attributes: []
+          },
+          // Preserve size configuration from metadata
+          sizeConfig: (listing.metadata as any)?.sizeConfig || {
+            system: 'none',
+            selectedSizes: [],
+            matrix: undefined,
+            chart: undefined,
+            customVariants: undefined
+          },
+          // Use specifications from transformed data (extracted from metadata) for backward compatibility
           specifications: listing.specifications || {
             weight: { value: 0, unit: 'g' },
             dimensions: { length: 0, width: 0, height: 0, unit: 'cm' }
@@ -842,6 +1000,27 @@ const EditListingPage: React.FC = () => {
       return;
     }
 
+    // Confirm if there are unsaved changes
+    if (!hasUnsavedChanges) {
+      addToast('No changes to save', 'info');
+      return;
+    }
+
+    // Additional confirmation for significant changes
+    const hasPriceChange = formData.price !== (formData as any).originalPrice;
+    const hasInventoryChange = formData.inventory !== (formData as any).originalInventory;
+
+    if (hasPriceChange || hasInventoryChange) {
+      const confirmMessage = hasPriceChange
+        ? 'You are changing the price. This will affect all future purchasers.'
+        : 'You are changing the inventory. This will affect stock availability.';
+      
+      const confirmed = window.confirm(`${confirmMessage}\n\nDo you want to continue?`);
+      if (!confirmed) {
+        return;
+      }
+    }
+
     try {
       setLoading(true);
 
@@ -856,6 +1035,13 @@ const EditListingPage: React.FC = () => {
         if (!shippingValid) {
           const firstError = Object.values(shippingErrors)[0];
           throw new Error(firstError || 'Shipping configuration is required for physical items');
+        }
+
+        // Validate specifications for physical items
+        const specValidation = validateSpecifications(formData.specs, formData.sizeConfig, formData.category);
+        if (!specValidation.isValid) {
+          const errorMessages = specValidation.errors.map(e => e.message).join('\n');
+          throw new Error(`Specification validation failed:\n${errorMessages}`);
         }
       }
 
@@ -902,7 +1088,22 @@ const EditListingPage: React.FC = () => {
         shipping: formData.itemType === 'PHYSICAL' ? formData.shipping : undefined,
         specifications: formData.specifications,
         variants: formData.variants, // Include size variants
-        // Note: Some fields are not part of the SellerListing interface but may be used by the backend
+        // Preserve and update metadata with new specification system
+        metadata: {
+          itemType: formData.itemType,
+          condition: formData.condition,
+          listingType: formData.listingType,
+          escrowEnabled: formData.escrowEnabled,
+          royalty: formData.royalty,
+          primaryImageIndex: 0, // Primary is now always first after reordering
+          seoTitle: formData.seoTitle || formData.title,
+          seoDescription: formData.seoDescription || formData.description.substring(0, 160),
+          // New comprehensive specification system
+          specs: formData.specs,
+          sizeConfig: formData.sizeConfig,
+          // Legacy specifications for backward compatibility
+          specifications: formData.specifications
+        }
       };
 
       console.log('[EDIT] Calling sellerService.updateListing with:', { id, listingData });
@@ -915,6 +1116,11 @@ const EditListingPage: React.FC = () => {
         const result = await sellerService.updateListing(id, listingData as any);
         console.log('[EDIT] Update successful:', result);
         addToast('🎉 Listing updated successfully!', 'success');
+
+        // Clear the draft after successful save
+        localStorage.removeItem(`listing_draft_${id}`);
+        setHasUnsavedChanges(false);
+        setLastSavedAt(null);
 
         // Navigation timeout to ensure toast is visible
         setTimeout(() => {
@@ -1063,7 +1269,21 @@ const EditListingPage: React.FC = () => {
               Back to Dashboard
             </button>
             <h1 className="text-3xl font-bold text-white">Edit Product Listing</h1>
-            <p className="text-white/70 mt-2">Update your product details, pricing, and media</p>
+            <div className="flex items-center gap-4 mt-2">
+              <p className="text-white/70">Update your product details, pricing, and media</p>
+              {hasUnsavedChanges && (
+                <span className="flex items-center text-amber-400 text-sm">
+                  <AlertCircle className="mr-1" size={16} />
+                  Unsaved changes
+                </span>
+              )}
+              {lastSavedAt && !hasUnsavedChanges && (
+                <span className="flex items-center text-green-400 text-sm">
+                  <Check className="mr-1" size={16} />
+                  All changes saved
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Progress indicator */}
