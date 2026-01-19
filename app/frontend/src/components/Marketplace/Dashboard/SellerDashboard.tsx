@@ -17,6 +17,7 @@ import { OptimizedImage } from '../../Performance/OptimizedImageLoader';
 import { PromoCodesManager } from '../PromoCodes/PromoCodesManager';
 import { SellerOrdersTab } from './SellerOrdersTab';
 import { SellerDashboardLayout } from './SellerDashboardLayout';
+import FulfillmentDashboardPage from '../../../pages/seller/fulfillment-dashboard';
 
 interface SellerDashboardProps {
   mockWalletAddress?: string;
@@ -686,6 +687,12 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
 
             {activeTab === 'orders' && (
               <SellerOrdersTab isActive={activeTab === 'orders'} />
+            )}
+
+            {activeTab === 'fulfillment' && (
+              <div className="-m-6">
+                <FulfillmentDashboardPage />
+              </div>
             )}
 
             {activeTab === 'returns' && (

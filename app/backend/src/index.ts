@@ -220,6 +220,15 @@ setTimeout(async () => {
   } catch (err) {
     console.warn('⚠️ Tracking poller service failed to start:', err);
   }
+
+  // Start order automation jobs
+  try {
+    const { initializeAutomationJobs } = await import('./jobs/orderAutomationJobs');
+    initializeAutomationJobs();
+    console.log('✅ Order automation jobs initialized');
+  } catch (err) {
+    console.warn('⚠️ Order automation jobs failed to start:', err);
+  }
 }, 2000); // Slight delay to allow other services to initialize first
 
 // Validate security configuration on startup
@@ -973,6 +982,12 @@ import customerExperienceRoutes from './routes/customerExperienceRoutes';
 // Import communication manager routes
 import communicationManagerRoutes from './routes/communicationManagerRoutes';
 
+// Import fulfillment enhancement routes
+import fulfillmentMetricsRoutes from './routes/fulfillmentMetricsRoutes';
+import orderAutomationRoutes from './routes/orderAutomationRoutes';
+import shippingIntegrationRoutes from './routes/shippingIntegrationRoutes';
+import fulfillmentDashboardRoutes from './routes/fulfillmentDashboardRoutes';
+
 // Import leaderboard and treasury routes
 import leaderboardRoutes from './routes/leaderboardRoutes';
 import treasuryRoutes from './routes/treasuryRoutes';
@@ -1250,6 +1265,12 @@ app.use('/api/seller-performance', sellerPerformanceRoutes);
 // Seller analytics routes
 app.use('/api/seller-analytics', sellerAnalyticsRoutes);
 
+// Fulfillment enhancement routes
+app.use('/api/seller/metrics', fulfillmentMetricsRoutes);
+app.use('/api', orderAutomationRoutes);
+app.use('/api/shipping', shippingIntegrationRoutes);
+app.use('/api/seller/fulfillment', fulfillmentDashboardRoutes);
+
 // Use member behavior routes
 app.use('/api/member-behavior', memberBehaviorRoutes);
 
@@ -1472,7 +1493,7 @@ httpServer.listen(PORT, () => {
         }
       } else {
         const reason = isRenderFree ? 'Render free tier' :
-          isMemoryCritical ? 'memory critical (<512MB)' : 
+          isMemoryCritical ? 'memory critical (<512MB)' :
             isResourceConstrained ? 'resource constraints' :
               'manual disable';
         console.log(`⚠️ WebSocket service disabled (${reason}) to conserve memory`);

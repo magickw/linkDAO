@@ -2,6 +2,7 @@ import React from 'react';
 import {
   LayoutDashboard,
   Package,
+  Truck,
   RotateCcw,
   MessageSquare,
   Store,
@@ -19,6 +20,7 @@ import {
 const iconMap = {
   LayoutDashboard,
   Package,
+  Truck,
   RotateCcw,
   MessageSquare,
   Store,

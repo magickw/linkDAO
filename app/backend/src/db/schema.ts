@@ -1364,13 +1364,85 @@ export const trackingRecords = pgTable("tracking_records", {
   labelUrl: text("label_url"),
   trackingData: text("tracking_data"), // Full JSON response
   events: text("events"),
-  // New lifecycle fields
   deliveryEstimateUpdatedAt: timestamp("delivery_estimate_updated_at"),
   exceptionType: varchar("exception_type", { length: 64 }),
   exceptionDetails: text("exception_details"),
   createdAt: timestamp("created_at").defaultNow(),
   lastUpdated: timestamp("last_updated").defaultNow(),
 });
+
+// Fulfillment Metrics (for performance tracking)
+export const fulfillmentMetrics = pgTable("fulfillment_metrics", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  sellerId: uuid("seller_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  avgTimeToShipHours: decimal("avg_time_to_ship_hours", { precision: 10, scale: 2 }),
+  avgDeliveryTimeHours: decimal("avg_delivery_time_hours", { precision: 10, scale: 2 }),
+  onTimeRate: decimal("on_time_rate", { precision: 5, scale: 2 }),
+  fulfillmentRate: decimal("fulfillment_rate", { precision: 5, scale: 2 }),
+  exceptionRate: decimal("exception_rate", { precision: 5, scale: 2 }),
+  totalOrders: integer("total_orders").default(0),
+  completedOrders: integer("completed_orders").default(0),
+  disputedOrders: integer("disputed_orders").default(0),
+  cancelledOrders: integer("cancelled_orders").default(0),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  sellerIdx: index("idx_fulfillment_metrics_seller").on(t.sellerId),
+  periodIdx: index("idx_fulfillment_metrics_period").on(t.periodStart, t.periodEnd),
+  uniquePeriod: unique("uq_fulfillment_metrics_seller_period").on(t.sellerId, t.periodStart, t.periodEnd)
+}));
+
+// Shipping Labels (for carrier integration)
+export const shippingLabels = pgTable("shipping_labels", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id").notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  easypostShipmentId: varchar("easypost_shipment_id", { length: 255 }),
+  easypostTrackerId: varchar("easypost_tracker_id", { length: 255 }),
+  trackingNumber: varchar("tracking_number", { length: 255 }),
+  carrier: varchar("carrier", { length: 100 }),
+  service: varchar("service", { length: 100 }),
+  labelUrl: text("label_url"),
+  trackingUrl: text("tracking_url"),
+  postageLabelPdfUrl: text("postage_label_pdf_url"),
+  rateAmount: decimal("rate_amount", { precision: 10, scale: 2 }),
+  rateCurrency: varchar("rate_currency", { length: 10 }).default('USD'),
+  status: varchar("status", { length: 50 }).default('created'),
+  fromAddress: jsonb("from_address"),
+  toAddress: jsonb("to_address"),
+  parcelInfo: jsonb("parcel_info"),
+  trackingEvents: jsonb("tracking_events"),
+  createdAt: timestamp("created_at").defaultNow(),
+  purchasedAt: timestamp("purchased_at"),
+  shippedAt: timestamp("shipped_at"),
+  deliveredAt: timestamp("delivered_at"),
+  lastTrackingUpdate: timestamp("last_tracking_update"),
+}, (t) => ({
+  orderIdx: index("idx_shipping_labels_order").on(t.orderId),
+  trackingIdx: index("idx_shipping_labels_tracking").on(t.trackingNumber),
+  statusIdx: index("idx_shipping_labels_status").on(t.status)
+}));
+
+// Order Automation Logs (for audit trail)
+export const orderAutomationLogs = pgTable("order_automation_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id").notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  ruleName: varchar("rule_name", { length: 255 }).notNull(),
+  actionTaken: varchar("action_taken", { length: 255 }).notNull(),
+  previousStatus: varchar("previous_status", { length: 50 }),
+  newStatus: varchar("new_status", { length: 50 }),
+  triggeredBy: varchar("triggered_by", { length: 100 }).default('system'),
+  success: boolean("success").default(true),
+  errorMessage: text("error_message"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  orderIdx: index("idx_automation_logs_order").on(t.orderId),
+  createdIdx: index("idx_automation_logs_created").on(t.createdAt),
+  ruleIdx: index("idx_automation_logs_rule").on(t.ruleName)
+}));
 
 // System alerts configuration
 export const alert_configurations = pgTable("alert_configurations", {

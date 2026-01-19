@@ -366,339 +366,340 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
                 </div>
               </Listbox>
 
-            {/* Network switch indicator */}
-            {needsNetworkSwitch && (
-              <div className="mt-2 flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                <span className="text-xs text-amber-700 dark:text-amber-300">
-                  Will auto-switch from {getChainName(currentChainId)} to {selectedNetwork.name}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* From Token */}
-          <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-            <div className="flex justify-between items-center mb-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">From</label>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                Balance on {selectedNetwork.name}: {maxAmount.toFixed(4)}
-              </span>
-            </div>
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <Listbox value={fromToken} onChange={setFromToken}>
-                  <div className="relative">
-                    <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white dark:bg-gray-700 py-3 pl-3 pr-10 text-left border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent sm:text-sm">
-                      <span className="flex items-center truncate">
-                        {(() => {
-                          const logo = getTokenLogoWithFallback(fromToken);
-                          return logo ? (
-                            <img src={logo} alt={fromToken} className="mr-2 h-5 w-5 rounded-full" />
-                          ) : (
-                            <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-xs font-bold text-primary-600 dark:text-primary-400">
-                              {fromToken.slice(0, 1)}
-                            </div>
-                          );
-                        })()}
-                        <span className="block truncate text-gray-900 dark:text-gray-100">{fromToken}</span>
-                      </span>
-                      <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                        <ChevronDown className="h-5 w-5 text-gray-400" aria-hidden="true" />
-                      </span>
-                    </Listbox.Button>
-                    <Transition
-                      as={Fragment}
-                      leave="transition ease-in duration-100"
-                      leaveFrom="opacity-100"
-                      leaveTo="opacity-0"
-                    >
-                      <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50">
-                        {tokens.map((token) => (
-                          <Listbox.Option
-                            key={token.symbol}
-                            className={({ active }) =>
-                              `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-900 dark:text-primary-100' : 'text-gray-900 dark:text-gray-100'
-                              }`
-                            }
-                            value={token.symbol}
-                          >
-                            {({ selected }) => (
-                              <>
-                                <span className="flex items-center truncate">
-                                  {(() => {
-                                    const logo = getTokenLogoWithFallback(token.symbol);
-                                    return logo ? (
-                                      <img src={logo} alt={token.symbol} className="mr-2 h-5 w-5 rounded-full" />
-                                    ) : (
-                                      <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-[10px] font-bold text-gray-600 dark:text-gray-300">
-                                        {token.symbol.slice(0, 1)}
-                                      </div>
-                                    );
-                                  })()}
-                                  <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
-                                    {token.symbol}
-                                  </span>
-                                </span>
-                                {selected ? (
-                                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-600 dark:text-primary-400">
-                                    <Check className="h-5 w-5" aria-hidden="true" />
-                                  </span>
-                                ) : null}
-                              </>
-                            )}
-                          </Listbox.Option>
-                        ))}
-                      </Listbox.Options>
-                    </Transition>
-                  </div>
-                </Listbox>
-              </div>
-              <div className="flex-1 relative">
-                <input
-                  type="number"
-                  value={fromAmount}
-                  onChange={(e) => handleFromAmountChange(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-                <button
-                  onClick={() => handleFromAmountChange(maxAmount.toString())}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-primary-600 dark:text-primary-400 text-sm font-medium hover:underline"
-                >
-                  MAX
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Swap Button */}
-          <div className="flex justify-center">
-            <button
-              onClick={handleSwapTokens}
-              className="p-2 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-full hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-              </svg>
-            </button>
-          </div>
-
-          {/* To Token */}
-          <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-            <div className="flex justify-between items-center mb-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">To</label>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                ~{toAmount || '0.00'}
-              </span>
-            </div>
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <Listbox value={toToken} onChange={setToToken}>
-                  <div className="relative">
-                    <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white dark:bg-gray-700 py-3 pl-3 pr-10 text-left border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent sm:text-sm">
-                      <span className="flex items-center truncate">
-                        {(() => {
-                          const logo = getTokenLogoWithFallback(toToken);
-                          return logo ? (
-                            <img src={logo} alt={toToken} className="mr-2 h-5 w-5 rounded-full" />
-                          ) : (
-                            <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-xs font-bold text-primary-600 dark:text-primary-400">
-                              {toToken.slice(0, 1)}
-                            </div>
-                          );
-                        })()}
-                        <span className="block truncate text-gray-900 dark:text-gray-100">{toToken}</span>
-                      </span>
-                      <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                        <ChevronDown className="h-5 w-5 text-gray-400" aria-hidden="true" />
-                      </span>
-                    </Listbox.Button>
-                    <Transition
-                      as={Fragment}
-                      leave="transition ease-in duration-100"
-                      leaveFrom="opacity-100"
-                      leaveTo="opacity-0"
-                    >
-                      <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50">
-                        {/* Show tokens from wallet first */}
-                        {tokens
-                          .filter(token => token.symbol !== fromToken)
-                          .map((token) => (
-                            <Listbox.Option
-                              key={`${token.symbol}-${token.contractAddress}`}
-                              className={({ active }) =>
-                                `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-900 dark:text-primary-100' : 'text-gray-900 dark:text-gray-100'
-                                }`
-                              }
-                              value={token.symbol}
-                            >
-                              {({ selected }) => (
-                                <>
-                                  <span className="flex items-center truncate">
-                                    {(() => {
-                                      const logo = getTokenLogoWithFallback(token.symbol);
-                                      return logo ? (
-                                        <img src={logo} alt={token.symbol} className="mr-2 h-5 w-5 rounded-full" />
-                                      ) : (
-                                        <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-[10px] font-bold text-gray-600 dark:text-gray-300">
-                                          {token.symbol.slice(0, 1)}
-                                        </div>
-                                      );
-                                    })()}
-                                    <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
-                                      {token.symbol}
-                                    </span>
-                                  </span>
-                                  {selected ? (
-                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-600 dark:text-primary-400">
-                                      <Check className="h-5 w-5" aria-hidden="true" />
-                                    </span>
-                                  ) : null}
-                                </>
-                              )}
-                            </Listbox.Option>
-                          ))}
-                        {/* Add popular tokens not in wallet */}
-                        {popularTokens
-                          .filter(token =>
-                            !tokens.some(t => t.symbol === token.symbol) &&
-                            token.symbol !== fromToken
-                          )
-                          .map((token) => (
-                            <Listbox.Option
-                              key={`${token.symbol}-${token.address}`}
-                              className={({ active }) =>
-                                `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-900 dark:text-primary-100' : 'text-gray-900 dark:text-gray-100'
-                                }`
-                              }
-                              value={token.symbol}
-                            >
-                              {({ selected }) => (
-                                <>
-                                  <span className="flex items-center truncate">
-                                    {(() => {
-                                      const logo = getTokenLogoWithFallback(token.symbol);
-                                      return logo ? (
-                                        <img src={logo} alt={token.symbol} className="mr-2 h-5 w-5 rounded-full" />
-                                      ) : (
-                                        <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-[10px] font-bold text-gray-600 dark:text-gray-300">
-                                          {token.symbol.slice(0, 1)}
-                                        </div>
-                                      );
-                                    })()}
-                                    <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
-                                      {token.symbol}
-                                    </span>
-                                  </span>
-                                  {selected ? (
-                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-600 dark:text-primary-400">
-                                      <Check className="h-5 w-5" aria-hidden="true" />
-                                    </span>
-                                  ) : null}
-                                </>
-                              )}
-                            </Listbox.Option>
-                          ))}
-                      </Listbox.Options>
-                    </Transition>
-                  </div>
-                </Listbox>
-              </div>
-              <div className="flex-1">
-                <input
-                  type="text"
-                  value={toAmount}
-                  readOnly
-                  placeholder="0.00"
-                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Exchange Rate and Slippage */}
-          <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl text-sm">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-gray-600 dark:text-gray-400">Exchange Rate</span>
-              <span className="font-medium text-gray-900 dark:text-white">
-                {exchangeRate > 0 ? `1 ${fromToken} = ${exchangeRate.toFixed(6)} ${toToken}` : 'Loading...'}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600 dark:text-gray-400">Slippage Tolerance</span>
-              <select
-                value={slippage}
-                onChange={(e) => setSlippage(parseFloat(e.target.value))}
-                className="p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                {DEFAULT_SLIPPAGE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {priceImpact && (
-              <div className="flex justify-between items-center mt-2">
-                <span className="text-gray-600 dark:text-gray-400">Price Impact</span>
-                <span className={`font-medium ${parseFloat(priceImpact) > 5 ? 'text-red-500' : 'text-green-500'}`}>
-                  {priceImpact}%
-                </span>
-              </div>
-            )}
-            {gasEstimate && (
-              <div className="flex justify-between items-center mt-2">
-                <span className="text-gray-600 dark:text-gray-400">Estimated Gas</span>
-                <span className="font-medium text-gray-900 dark:text-white">
-                  {gasEstimate}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
-              <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-sm text-red-700 dark:text-red-200">{error}</p>
-            </div>
-          )}
-
-          {/* Swap Button */}
-          <button
-            onClick={handleSwap}
-            disabled={isLoading || isSwitching || !fromAmount || !toAmount}
-            className="w-full py-3.5 px-4 bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
-          >
-            {isSwitching ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Switching Network...
-              </>
-            ) : isLoading ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                {needsNetworkSwitch && (
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {/* Network switch indicator */}
+              {needsNetworkSwitch && (
+                <div className="mt-2 flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
+                  <span className="text-xs text-amber-700 dark:text-amber-300">
+                    Will auto-switch from {getChainName(currentChainId)} to {selectedNetwork.name}
+                  </span>
+                </div>
+              )}
+
+              {/* From Token */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">From</label>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    Balance on {selectedNetwork.name}: {maxAmount.toFixed(4)}
+                  </span>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <Listbox value={fromToken} onChange={setFromToken}>
+                      <div className="relative">
+                        <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white dark:bg-gray-700 py-3 pl-3 pr-10 text-left border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent sm:text-sm">
+                          <span className="flex items-center truncate">
+                            {(() => {
+                              const logo = getTokenLogoWithFallback(fromToken);
+                              return logo ? (
+                                <img src={logo} alt={fromToken} className="mr-2 h-5 w-5 rounded-full" />
+                              ) : (
+                                <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-xs font-bold text-primary-600 dark:text-primary-400">
+                                  {fromToken.slice(0, 1)}
+                                </div>
+                              );
+                            })()}
+                            <span className="block truncate text-gray-900 dark:text-gray-100">{fromToken}</span>
+                          </span>
+                          <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                            <ChevronDown className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                          </span>
+                        </Listbox.Button>
+                        <Transition
+                          as={Fragment}
+                          leave="transition ease-in duration-100"
+                          leaveFrom="opacity-100"
+                          leaveTo="opacity-0"
+                        >
+                          <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50">
+                            {tokens.map((token) => (
+                              <Listbox.Option
+                                key={token.symbol}
+                                className={({ active }) =>
+                                  `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-900 dark:text-primary-100' : 'text-gray-900 dark:text-gray-100'
+                                  }`
+                                }
+                                value={token.symbol}
+                              >
+                                {({ selected }) => (
+                                  <>
+                                    <span className="flex items-center truncate">
+                                      {(() => {
+                                        const logo = getTokenLogoWithFallback(token.symbol);
+                                        return logo ? (
+                                          <img src={logo} alt={token.symbol} className="mr-2 h-5 w-5 rounded-full" />
+                                        ) : (
+                                          <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                                            {token.symbol.slice(0, 1)}
+                                          </div>
+                                        );
+                                      })()}
+                                      <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                                        {token.symbol}
+                                      </span>
+                                    </span>
+                                    {selected ? (
+                                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-600 dark:text-primary-400">
+                                        <Check className="h-5 w-5" aria-hidden="true" />
+                                      </span>
+                                    ) : null}
+                                  </>
+                                )}
+                              </Listbox.Option>
+                            ))}
+                          </Listbox.Options>
+                        </Transition>
+                      </div>
+                    </Listbox>
+                  </div>
+                  <div className="flex-1 relative">
+                    <input
+                      type="number"
+                      value={fromAmount}
+                      onChange={(e) => handleFromAmountChange(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                    <button
+                      onClick={() => handleFromAmountChange(maxAmount.toString())}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-primary-600 dark:text-primary-400 text-sm font-medium hover:underline"
+                    >
+                      MAX
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Swap Button */}
+              <div className="flex justify-center">
+                <button
+                  onClick={handleSwapTokens}
+                  className="p-2 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-full hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* To Token */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">To</label>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    ~{toAmount || '0.00'}
+                  </span>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <Listbox value={toToken} onChange={setToToken}>
+                      <div className="relative">
+                        <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white dark:bg-gray-700 py-3 pl-3 pr-10 text-left border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent sm:text-sm">
+                          <span className="flex items-center truncate">
+                            {(() => {
+                              const logo = getTokenLogoWithFallback(toToken);
+                              return logo ? (
+                                <img src={logo} alt={toToken} className="mr-2 h-5 w-5 rounded-full" />
+                              ) : (
+                                <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-xs font-bold text-primary-600 dark:text-primary-400">
+                                  {toToken.slice(0, 1)}
+                                </div>
+                              );
+                            })()}
+                            <span className="block truncate text-gray-900 dark:text-gray-100">{toToken}</span>
+                          </span>
+                          <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                            <ChevronDown className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                          </span>
+                        </Listbox.Button>
+                        <Transition
+                          as={Fragment}
+                          leave="transition ease-in duration-100"
+                          leaveFrom="opacity-100"
+                          leaveTo="opacity-0"
+                        >
+                          <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50">
+                            {/* Show tokens from wallet first */}
+                            {tokens
+                              .filter(token => token.symbol !== fromToken)
+                              .map((token) => (
+                                <Listbox.Option
+                                  key={`${token.symbol}-${token.contractAddress}`}
+                                  className={({ active }) =>
+                                    `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-900 dark:text-primary-100' : 'text-gray-900 dark:text-gray-100'
+                                    }`
+                                  }
+                                  value={token.symbol}
+                                >
+                                  {({ selected }) => (
+                                    <>
+                                      <span className="flex items-center truncate">
+                                        {(() => {
+                                          const logo = getTokenLogoWithFallback(token.symbol);
+                                          return logo ? (
+                                            <img src={logo} alt={token.symbol} className="mr-2 h-5 w-5 rounded-full" />
+                                          ) : (
+                                            <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                                              {token.symbol.slice(0, 1)}
+                                            </div>
+                                          );
+                                        })()}
+                                        <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                                          {token.symbol}
+                                        </span>
+                                      </span>
+                                      {selected ? (
+                                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-600 dark:text-primary-400">
+                                          <Check className="h-5 w-5" aria-hidden="true" />
+                                        </span>
+                                      ) : null}
+                                    </>
+                                  )}
+                                </Listbox.Option>
+                              ))}
+                            {/* Add popular tokens not in wallet */}
+                            {popularTokens
+                              .filter(token =>
+                                !tokens.some(t => t.symbol === token.symbol) &&
+                                token.symbol !== fromToken
+                              )
+                              .map((token) => (
+                                <Listbox.Option
+                                  key={`${token.symbol}-${token.address}`}
+                                  className={({ active }) =>
+                                    `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-900 dark:text-primary-100' : 'text-gray-900 dark:text-gray-100'
+                                    }`
+                                  }
+                                  value={token.symbol}
+                                >
+                                  {({ selected }) => (
+                                    <>
+                                      <span className="flex items-center truncate">
+                                        {(() => {
+                                          const logo = getTokenLogoWithFallback(token.symbol);
+                                          return logo ? (
+                                            <img src={logo} alt={token.symbol} className="mr-2 h-5 w-5 rounded-full" />
+                                          ) : (
+                                            <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                                              {token.symbol.slice(0, 1)}
+                                            </div>
+                                          );
+                                        })()}
+                                        <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                                          {token.symbol}
+                                        </span>
+                                      </span>
+                                      {selected ? (
+                                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-600 dark:text-primary-400">
+                                          <Check className="h-5 w-5" aria-hidden="true" />
+                                        </span>
+                                      ) : null}
+                                    </>
+                                  )}
+                                </Listbox.Option>
+                              ))}
+                          </Listbox.Options>
+                        </Transition>
+                      </div>
+                    </Listbox>
+                  </div>
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      value={toAmount}
+                      readOnly
+                      placeholder="0.00"
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Exchange Rate and Slippage */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl text-sm">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-600 dark:text-gray-400">Exchange Rate</span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {exchangeRate > 0 ? `1 ${fromToken} = ${exchangeRate.toFixed(6)} ${toToken}` : 'Loading...'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 dark:text-gray-400">Slippage Tolerance</span>
+                  <select
+                    value={slippage}
+                    onChange={(e) => setSlippage(parseFloat(e.target.value))}
+                    className="p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    {DEFAULT_SLIPPAGE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {priceImpact && (
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="text-gray-600 dark:text-gray-400">Price Impact</span>
+                    <span className={`font-medium ${parseFloat(priceImpact) > 5 ? 'text-red-500' : 'text-green-500'}`}>
+                      {priceImpact}%
+                    </span>
+                  </div>
                 )}
-                {needsNetworkSwitch ? `Switch & Swap` : 'Swap Tokens'}
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                </svg>
-              </>
-            )}
-          </button>
+                {gasEstimate && (
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="text-gray-600 dark:text-gray-400">Estimated Gas</span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {gasEstimate}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
+                  <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-sm text-red-700 dark:text-red-200">{error}</p>
+                </div>
+              )}
+
+              {/* Swap Button */}
+              <button
+                onClick={handleSwap}
+                disabled={isLoading || isSwitching || !fromAmount || !toAmount}
+                className="w-full py-3.5 px-4 bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
+              >
+                {isSwitching ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Switching Network...
+                  </>
+                ) : isLoading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    {needsNetworkSwitch && (
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    )}
+                    {needsNetworkSwitch ? `Switch & Swap` : 'Swap Tokens'}
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                    </svg>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

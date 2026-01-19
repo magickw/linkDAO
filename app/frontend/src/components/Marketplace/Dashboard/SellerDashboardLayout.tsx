@@ -65,6 +65,7 @@ export function SellerDashboardLayout({
       label: 'SALES',
       items: [
         { id: 'orders', label: 'Orders', icon: 'Package', badge: pendingOrdersCount > 0 ? pendingOrdersCount : undefined },
+        { id: 'fulfillment', label: 'Fulfillment', icon: 'Truck' },
         { id: 'returns', label: 'Returns & Refunds', icon: 'RotateCcw' },
         { id: 'messaging', label: 'Messages', icon: 'MessageSquare', badge: unreadMessagesCount > 0 ? unreadMessagesCount : undefined },
       ],
