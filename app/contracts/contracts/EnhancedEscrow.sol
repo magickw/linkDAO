@@ -858,10 +858,9 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
             address winner = buyerWins ? escrow.buyer : escrow.seller;
             (bool sent, ) = payable(winner).call{value: bondAmount}("");
             require(sent, "Failed to transfer forfeited bond");
-            emit DisputeBondForfeited(escrowId, initiator, bondAmount, winner);
         }
     }
-    }
+
 
     function _updateReputationOnSuccess(address buyer, address seller) internal {
         DetailedReputationScore storage buyerScore = detailedReputationScores[buyer];

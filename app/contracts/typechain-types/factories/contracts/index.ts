@@ -13,6 +13,7 @@ export * as optimized from "./optimized";
 export * as proxy from "./proxy";
 export * as registry from "./registry";
 export * as security from "./security";
+export * as test from "./test";
 export { BridgeValidator__factory } from "./BridgeValidator__factory";
 export { BurnToDonate__factory } from "./BurnToDonate__factory";
 export { CharityGovernance__factory } from "./CharityGovernance__factory";

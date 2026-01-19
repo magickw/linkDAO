@@ -25,14 +25,15 @@ describe("LDAOTreasury - Charity Functions", function () {
 
     // Deploy Mock USDC
     const MockERC20Factory = await ethers.getContractFactory("MockERC20");
-    usdcToken = (await MockERC20Factory.deploy("USDC", "USDC")) as MockERC20;
+    usdcToken = (await MockERC20Factory.deploy("USDC", "USDC", 6)) as MockERC20;
     await usdcToken.waitForDeployment();
 
     // Deploy MultiSigWallet
     const MultiSigWalletFactory = await ethers.getContractFactory("MultiSigWallet");
     multiSigWallet = (await MultiSigWalletFactory.deploy(
       [owner.address],
-      1
+      1,
+      0 // timeDelay
     )) as MultiSigWallet;
     await multiSigWallet.waitForDeployment();
 
@@ -40,6 +41,8 @@ describe("LDAOTreasury - Charity Functions", function () {
     const GovernanceFactory = await ethers.getContractFactory("Governance");
     governance = (await GovernanceFactory.deploy(
       await ldaoToken.getAddress(),
+      owner.address, // Mock ReputationSystem
+      owner.address, // Mock Treasury
       await multiSigWallet.getAddress()
     )) as Governance;
     await governance.waitForDeployment();
@@ -49,8 +52,9 @@ describe("LDAOTreasury - Charity Functions", function () {
     treasury = (await TreasuryFactory.deploy(
       await ldaoToken.getAddress(),
       await usdcToken.getAddress(),
-      multiSigWallet.address as any,
-      await governance.getAddress()
+      await multiSigWallet.getAddress(),
+      await governance.getAddress(),
+      owner.address // Mock price feed
     )) as LDAOTreasury;
     await treasury.waitForDeployment();
 
@@ -70,10 +74,10 @@ describe("LDAOTreasury - Charity Functions", function () {
         "A test charity organization",
         "QmTestHash"
       );
-      
+
       const receipt = await proposalTx.wait();
       const event = receipt?.events?.find(e => e.event === "CharityVerificationProposalCreated");
-      
+
       expect(event).to.not.be.undefined;
       expect(event?.args?.charityAddress).to.equal(charity.address);
       expect(event?.args?.name).to.equal("Test Charity");
@@ -92,7 +96,7 @@ describe("LDAOTreasury - Charity Functions", function () {
 
       // Vote
       await treasury.connect(user1).voteCharityVerification(proposalId, true);
-      
+
       const proposal = await treasury.charityVerificationProposals(proposalId);
       expect(proposal.votesFor).to.be.gt(0);
     });
@@ -172,27 +176,27 @@ describe("LDAOTreasury - Charity Functions", function () {
 
     it("Should disburse funds to verified charity", async function () {
       const disbursementAmount = ethers.parseEther("1000");
-      
+
       const tx = await treasury.disburseCharityFunds(
         charity.address,
         disbursementAmount,
         "Test donation"
       );
-      
+
       const receipt = await tx.wait();
       const event = receipt?.events?.find(e => e.event === "CharityDisbursement");
-      
+
       expect(event).to.not.be.undefined;
       expect(event?.args?.recipient).to.equal(charity.address);
       expect(event?.args?.amount).to.equal(disbursementAmount);
-      
+
       const charityBalance = await ldaoToken.balanceOf(charity.address);
       expect(charityBalance).to.equal(disbursementAmount);
     });
 
     it("Should reject disbursement to unverified charity", async function () {
       const unverifiedCharity = user3;
-      
+
       await expect(
         treasury.disburseCharityFunds(
           unverifiedCharity.address,
@@ -204,7 +208,7 @@ describe("LDAOTreasury - Charity Functions", function () {
 
     it("Should enforce minimum donation amount", async function () {
       const smallAmount = ethers.parseEther("50"); // Below minimum of 100
-      
+
       await expect(
         treasury.disburseCharityFunds(
           charity.address,
@@ -216,7 +220,7 @@ describe("LDAOTreasury - Charity Functions", function () {
 
     it("Should enforce maximum disbursement limit", async function () {
       const largeAmount = ethers.parseEther("200000"); // Above max of 100k
-      
+
       await expect(
         treasury.disburseCharityFunds(
           charity.address,
@@ -230,14 +234,14 @@ describe("LDAOTreasury - Charity Functions", function () {
       const dailyLimit = await treasury.dailyCharityDisbursementLimit();
       const firstAmount = dailyLimit / 2;
       const secondAmount = dailyLimit / 2 + ethers.parseEther("1");
-      
+
       // First disbursement should succeed
       await treasury.disburseCharityFunds(
         charity.address,
         firstAmount,
         "First donation"
       );
-      
+
       // Second disbursement should fail
       await expect(
         treasury.disburseCharityFunds(
@@ -250,7 +254,7 @@ describe("LDAOTreasury - Charity Functions", function () {
 
     it("Should create and execute charity disbursement proposal", async function () {
       const disbursementAmount = ethers.parseEther("50000");
-      
+
       // Create proposal
       const proposalTx = await treasury.proposeCharityDisbursement(
         charity.address,
@@ -282,17 +286,17 @@ describe("LDAOTreasury - Charity Functions", function () {
       const totalSupply = await ldaoToken.totalSupply();
       const maxAllocation = totalSupply / 10; // 10% of total supply
       const newAllocation = maxAllocation / 2; // 5% of total supply
-      
+
       await treasury.updateCharityFundAllocation(newAllocation);
-      
+
       const fund = await treasury.getCharityFund();
       expect(fund.availableBalance).to.equal(newAllocation);
     });
 
     it("Should reject allocation above 10% of total supply", async function () {
       const totalSupply = await ldaoToken.totalSupply();
-      const excessiveAllocation = totalSupply / 5; // 20% of total supply
-      
+      const excessiveAllocation = totalSupply / 5n; // 20% of total supply
+
       await expect(
         treasury.updateCharityFundAllocation(excessiveAllocation)
       ).to.be.revertedWith("Allocation cannot exceed 10% of total supply");
@@ -301,9 +305,9 @@ describe("LDAOTreasury - Charity Functions", function () {
     it("Should reject reduction by more than 50%", async function () {
       const currentAllocation = ethers.parseEther("100000");
       await treasury.updateCharityFundAllocation(currentAllocation);
-      
-      const reducedAllocation = currentAllocation / 3; // 66% reduction
-      
+
+      const reducedAllocation = currentAllocation / 3n; // 66% reduction
+
       await expect(
         treasury.updateCharityFundAllocation(reducedAllocation)
       ).to.be.revertedWith("Cannot reduce by more than 50%");
@@ -313,13 +317,13 @@ describe("LDAOTreasury - Charity Functions", function () {
       const newVotingPeriod = 14 * 24 * 60 * 60; // 14 days
       const newQuorum = ethers.parseEther("2000000");
       const newThreshold = 75; // 75%
-      
+
       await treasury.updateCharityGovernanceParams(
         newVotingPeriod,
         newQuorum,
         newThreshold
       );
-      
+
       expect(await treasury.charityVotingPeriod()).to.equal(newVotingPeriod);
       expect(await treasury.charityQuorum()).to.equal(newQuorum);
       expect(await treasury.charityApprovalThreshold()).to.equal(newThreshold);
@@ -327,7 +331,7 @@ describe("LDAOTreasury - Charity Functions", function () {
 
     it("Should reject invalid governance parameters", async function () {
       const invalidVotingPeriod = 12 * 60 * 60; // 12 hours (too short)
-      
+
       await expect(
         treasury.updateCharityGovernanceParams(
           invalidVotingPeriod,
@@ -343,7 +347,7 @@ describe("LDAOTreasury - Charity Functions", function () {
       // Fast forward 91 days
       await ethers.provider.send("evm_increaseTime", [91 * 24 * 60 * 60]);
       await ethers.provider.send("evm_mine");
-      
+
       await treasury.verifyCharity(charity.address, true);
       expect(await treasury.isCharityVerified(charity.address)).to.be.true;
     });
@@ -352,7 +356,7 @@ describe("LDAOTreasury - Charity Functions", function () {
       // Only 10 days passed (less than 90)
       await ethers.provider.send("evm_increaseTime", [10 * 24 * 60 * 60]);
       await ethers.provider.send("evm_mine");
-      
+
       await expect(
         treasury.verifyCharity(charity.address, true)
       ).to.be.revertedWith("Emergency verification time-locked");

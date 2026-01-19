@@ -51,7 +51,8 @@ describe("Cross-Chain Escrow Functionality", function () {
     const EnhancedEscrow = await ethers.getContractFactory("EnhancedEscrow");
     enhancedEscrow = await EnhancedEscrow.deploy(
       await ldaoToken.getAddress(),
-      await governance.getAddress()
+      await governance.getAddress(),
+      owner.address // platformArbiter
     );
     await enhancedEscrow.waitForDeployment();
 
@@ -71,8 +72,9 @@ describe("Cross-Chain Escrow Functionality", function () {
     // Create an escrow
     const listingId = 1;
     const amount = ethers.parseEther("10");
-    const deliveryDeadline = Math.floor(Date.now() / 1000) + 86400; // 1 day from now
-    
+    const latestBlock = await ethers.provider.getBlock('latest');
+    const deliveryDeadline = (latestBlock?.timestamp || Math.floor(Date.now() / 1000)) + 86400; // 1 day from now (block time)
+
     await enhancedEscrow.connect(addr1).createEscrow(
       listingId,
       addr2.address,

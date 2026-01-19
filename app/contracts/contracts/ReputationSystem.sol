@@ -350,7 +350,7 @@ contract ReputationSystem is ReentrancyGuard, Ownable {
         ReputationScore storage score = reputationScores[user];
         
         // Calculate new average rating
-        uint256 totalRating = score.averageRating * score.reviewCount + (rating * 100);
+        uint256 totalRating = score.averageRating * score.reviewCount + (uint256(rating) * 100);
         score.reviewCount++;
         score.averageRating = totalRating / score.reviewCount;
         

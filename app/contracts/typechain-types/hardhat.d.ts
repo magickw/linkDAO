@@ -390,6 +390,14 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ISubDAO__factory>;
     getContractFactory(
+      name: "IEnhancedEscrow",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IEnhancedEscrow__factory>;
+    getContractFactory(
+      name: "MaliciousEscrowReceiver",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.MaliciousEscrowReceiver__factory>;
+    getContractFactory(
       name: "IX402PaymentHandler",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IX402PaymentHandler__factory>;
@@ -873,6 +881,16 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.ISubDAO>;
     getContractAt(
+      name: "IEnhancedEscrow",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IEnhancedEscrow>;
+    getContractAt(
+      name: "MaliciousEscrowReceiver",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.MaliciousEscrowReceiver>;
+    getContractAt(
       name: "IX402PaymentHandler",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -1265,6 +1283,14 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ISubDAO>;
     deployContract(
+      name: "IEnhancedEscrow",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IEnhancedEscrow>;
+    deployContract(
+      name: "MaliciousEscrowReceiver",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MaliciousEscrowReceiver>;
+    deployContract(
       name: "IX402PaymentHandler",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IX402PaymentHandler>;
@@ -1747,6 +1773,16 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ISubDAO>;
+    deployContract(
+      name: "IEnhancedEscrow",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IEnhancedEscrow>;
+    deployContract(
+      name: "MaliciousEscrowReceiver",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MaliciousEscrowReceiver>;
     deployContract(
       name: "IX402PaymentHandler",
       args: any[],

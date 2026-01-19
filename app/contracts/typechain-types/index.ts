@@ -194,6 +194,10 @@ export type { CharitySubDAOFactory } from "./contracts/SubDAOFactory.sol/Charity
 export { CharitySubDAOFactory__factory } from "./factories/contracts/SubDAOFactory.sol/CharitySubDAOFactory__factory";
 export type { ISubDAO } from "./contracts/SubDAOFactory.sol/ISubDAO";
 export { ISubDAO__factory } from "./factories/contracts/SubDAOFactory.sol/ISubDAO__factory";
+export type { IEnhancedEscrow } from "./contracts/test/MaliciousEscrowReceiver.sol/IEnhancedEscrow";
+export { IEnhancedEscrow__factory } from "./factories/contracts/test/MaliciousEscrowReceiver.sol/IEnhancedEscrow__factory";
+export type { MaliciousEscrowReceiver } from "./contracts/test/MaliciousEscrowReceiver.sol/MaliciousEscrowReceiver";
+export { MaliciousEscrowReceiver__factory } from "./factories/contracts/test/MaliciousEscrowReceiver.sol/MaliciousEscrowReceiver__factory";
 export type { IX402PaymentHandler } from "./contracts/TipRouter.sol/IX402PaymentHandler";
 export { IX402PaymentHandler__factory } from "./factories/contracts/TipRouter.sol/IX402PaymentHandler__factory";
 export type { TipRouter } from "./contracts/TipRouter.sol/TipRouter";

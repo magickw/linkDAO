@@ -25,6 +25,8 @@ import type * as registry from "./registry";
 export type { registry };
 import type * as security from "./security";
 export type { security };
+import type * as test from "./test";
+export type { test };
 export type { BridgeValidator } from "./BridgeValidator";
 export type { BurnToDonate } from "./BurnToDonate";
 export type { CharityGovernance } from "./CharityGovernance";
