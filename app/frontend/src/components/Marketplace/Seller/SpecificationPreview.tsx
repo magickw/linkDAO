@@ -36,7 +36,7 @@ export const SpecificationPreview: React.FC<SpecificationPreviewProps> = ({
       {/* Weight & Dimensions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Weight */}
-        {specs.weight && (
+        {specs.weight && specs.weight.value !== undefined && specs.weight.unit && (
           <div className="bg-white/5 rounded-lg p-4 border border-white/10">
             <div className="flex items-center gap-2 mb-3">
               <Weight className="w-4 h-4 text-indigo-400" />
@@ -60,7 +60,11 @@ export const SpecificationPreview: React.FC<SpecificationPreviewProps> = ({
         )}
 
         {/* Dimensions */}
-        {specs.dimensions && (
+        {specs.dimensions &&
+         specs.dimensions.length !== undefined &&
+         specs.dimensions.width !== undefined &&
+         specs.dimensions.height !== undefined &&
+         specs.dimensions.unit && (
           <div className="bg-white/5 rounded-lg p-4 border border-white/10">
             <div className="flex items-center gap-2 mb-3">
               <Ruler className="w-4 h-4 text-indigo-400" />

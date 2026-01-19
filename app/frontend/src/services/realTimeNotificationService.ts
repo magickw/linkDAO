@@ -1,6 +1,6 @@
-import { 
-  RealTimeNotification, 
-  NotificationCategory, 
+import {
+  RealTimeNotification,
+  NotificationCategory,
   NotificationPriority,
   NotificationQueue,
   NotificationSettings,
@@ -23,7 +23,7 @@ class RealTimeNotificationService {
   private db: IDBDatabase | null = null;
   private isPolling = false;
   private lastPollTime: Date = new Date();
-  
+
   private listeners: Map<string, Set<Function>> = new Map();
   private notificationQueue: NotificationQueue = {
     online: [],
@@ -126,7 +126,7 @@ class RealTimeNotificationService {
       try {
         // Use Socket.IO client instead of raw WebSocket
         const wsUrl = ENV_CONFIG.WS_URL || 'ws://localhost:10000';
-        
+
         this.socket = io(wsUrl, {
           path: '/socket.io/',
           transports: ['websocket', 'polling'],
@@ -154,10 +154,10 @@ class RealTimeNotificationService {
           const errorMsg = error.message || 'Socket.IO connection error';
           console.error('[RealTimeNotification] Socket.IO error:', errorMsg);
           this.emit('connection', { status: 'error', error: errorMsg });
-          
+
           // Start polling fallback on connection error
           this.startPollingFallback();
-          
+
           if (this.reconnectAttempts === 0) {
             // Don't reject, just resolve and fall back to polling
             // reject(new Error(errorMsg));
@@ -228,10 +228,10 @@ class RealTimeNotificationService {
   // Polling Fallback Implementation
   private startPollingFallback(): void {
     if (this.isPolling) return;
-    
+
     console.log('[RealTimeNotification] Starting polling fallback');
     this.isPolling = true;
-    
+
     pollingService.startPolling('notifications', async () => {
       await this.checkNewNotifications();
     }, { interval: 30000, runImmediately: true });
@@ -239,7 +239,7 @@ class RealTimeNotificationService {
 
   private stopPollingFallback(): void {
     if (!this.isPolling) return;
-    
+
     console.log('[RealTimeNotification] Stopping polling fallback');
     pollingService.stopPolling('notifications');
     this.isPolling = false;
@@ -249,7 +249,7 @@ class RealTimeNotificationService {
     try {
       // 1. Fetch unread count to see if we missed anything
       const unreadCount = await notificationService.getUnreadCount();
-      
+
       // 2. Fetch latest notifications
       const response = await notificationService.getNotifications({
         limit: 10,
@@ -257,14 +257,14 @@ class RealTimeNotificationService {
       });
 
       // 3. Process new notifications
-      const newNotifications = response.notifications.filter(n => 
+      const newNotifications = response.notifications.filter(n =>
         new Date(n.createdAt).getTime() > this.lastPollTime.getTime()
       );
 
       if (newNotifications.length > 0) {
         console.log(`[RealTimeNotification] Polling found ${newNotifications.length} new notifications`);
         this.lastPollTime = new Date();
-        
+
         // Convert AppNotification to RealTimeNotification format if needed
         // Assuming they are compatible or mapping is handled
         newNotifications.forEach(n => {
@@ -280,7 +280,7 @@ class RealTimeNotificationService {
             actionUrl: n.actionUrl,
             priority: n.priority as NotificationPriority || NotificationPriority.NORMAL,
             data: n.data,
-            urgency: 'normal' // Default for polled items
+            urgency: NotificationUrgency.TIMELY // Default for polled items
           };
           this.handleNotification(rtNotification);
         });
@@ -309,7 +309,7 @@ class RealTimeNotificationService {
     // Check if notifications are enabled for this category
     const settings = this.getSettings();
     const categorySettings = settings.categories[notification.category];
-    
+
     if (!categorySettings.enabled) {
       return;
     }
@@ -357,9 +357,9 @@ class RealTimeNotificationService {
 
   private addToBatch(notification: RealTimeNotification): void {
     this.pendingBatch.push(notification);
-    
+
     const settings = this.getSettings();
-    
+
     // Process batch if it reaches max size
     if (this.pendingBatch.length >= settings.maxBatchSize) {
       this.processBatch();
@@ -376,7 +376,7 @@ class RealTimeNotificationService {
 
     const batch = [...this.pendingBatch];
     this.pendingBatch = [];
-    
+
     if (this.batchTimeout) {
       clearTimeout(this.batchTimeout);
       this.batchTimeout = null;
@@ -384,10 +384,10 @@ class RealTimeNotificationService {
 
     // Group by category for better UX
     const groupedNotifications = this.groupNotificationsByCategory(batch);
-    
+
     // Emit batch
     this.emit('notification_batch', groupedNotifications);
-    
+
     // Process individual notifications
     batch.forEach(notification => {
       this.emit('notification', notification);
@@ -446,7 +446,7 @@ class RealTimeNotificationService {
     };
 
     const desktopNotification = new Notification(notification.title, options);
-    
+
     desktopNotification.onclick = () => {
       window.focus();
       if (notification.actionUrl) {
@@ -563,11 +563,11 @@ class RealTimeNotificationService {
       // Fallback to localStorage if IndexedDB is not available
       const offlineNotifications = [...this.notificationQueue.offline];
       this.notificationQueue.offline = [];
-      
+
       offlineNotifications.forEach(notification => {
         this.handleNotification(notification);
       });
-      
+
       this.saveQueueToStorage();
       this.emit('offline_sync', { count: offlineNotifications.length });
       return;
@@ -576,7 +576,7 @@ class RealTimeNotificationService {
     try {
       // Get offline notifications from IndexedDB
       const offlineNotifications = await this.getStoredNotifications('offline');
-      
+
       // Process each notification with retry logic
       for (const notification of offlineNotifications) {
         try {
@@ -586,10 +586,10 @@ class RealTimeNotificationService {
           await this.moveToFailedQueue(notification);
         }
       }
-      
+
       // Clear offline queue after processing
       await this.clearStoredNotifications('offline');
-      
+
       this.emit('offline_sync', { count: offlineNotifications.length });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -600,7 +600,7 @@ class RealTimeNotificationService {
   private async processNotificationWithRetry(notification: RealTimeNotification & { retryCount?: number }): Promise<void> {
     const maxRetries = 3;
     const retryCount = notification.retryCount || 0;
-    
+
     try {
       this.handleNotification(notification);
     } catch (error) {
@@ -618,19 +618,19 @@ class RealTimeNotificationService {
 
   private async moveToFailedQueue(notification: RealTimeNotification): Promise<void> {
     if (!this.db) return;
-    
+
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(['failed'], 'readwrite');
       const store = transaction.objectStore('failed');
-      
+
       const failedNotification = {
         ...notification,
         failedAt: new Date(),
         retryCount: (notification as any).retryCount || 0
       };
-      
+
       const request = store.add(failedNotification);
-      
+
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
@@ -666,10 +666,10 @@ class RealTimeNotificationService {
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([storeName], 'readwrite');
       const store = transaction.objectStore(storeName);
-      
+
       // Clear existing notifications
       const clearRequest = store.clear();
-      
+
       clearRequest.onsuccess = () => {
         // Add all notifications
         notifications.forEach(notification => {
@@ -677,7 +677,7 @@ class RealTimeNotificationService {
         });
         resolve();
       };
-      
+
       clearRequest.onerror = () => reject(clearRequest.error);
     });
   }
@@ -760,12 +760,12 @@ class RealTimeNotificationService {
   updateSettings(settings: Partial<NotificationSettings>): void {
     const currentSettings = this.getSettings();
     const newSettings = { ...currentSettings, ...settings };
-    
+
     if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
       this.emit('settings_updated', newSettings);
       return;
     }
-    
+
     try {
       localStorage.setItem('notification_settings', JSON.stringify(newSettings));
       this.emit('settings_updated', newSettings);
@@ -785,13 +785,13 @@ class RealTimeNotificationService {
 
     const now = new Date();
     const currentTime = now.getHours() * 60 + now.getMinutes();
-    
+
     const [startHour, startMin] = settings.quietHours.start.split(':').map(Number);
     const [endHour, endMin] = settings.quietHours.end.split(':').map(Number);
-    
+
     const startTime = startHour * 60 + startMin;
     const endTime = endHour * 60 + endMin;
-    
+
     if (startTime <= endTime) {
       return currentTime >= startTime && currentTime <= endTime;
     } else {
@@ -833,7 +833,7 @@ class RealTimeNotificationService {
     if (typeof window === 'undefined' || typeof document === 'undefined') {
       return;
     }
-    
+
     // Handle page visibility changes
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {
@@ -884,15 +884,9 @@ class RealTimeNotificationService {
   }
 
   getConnectionStatus(): string {
-    if (!this.ws) return 'disconnected';
-    
-    switch (this.ws.readyState) {
-      case WebSocket.CONNECTING: return 'connecting';
-      case WebSocket.OPEN: return 'connected';
-      case WebSocket.CLOSING: return 'disconnecting';
-      case WebSocket.CLOSED: return 'disconnected';
-      default: return 'unknown';
-    }
+    if (!this.socket) return 'disconnected';
+
+    return this.socket.connected ? 'connected' : 'disconnected';
   }
 }
 

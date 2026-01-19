@@ -184,6 +184,89 @@ class OrderNotificationService {
     this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   }
 
+  /**
+   * Setup listener for real-time notifications
+   * This bridges the gap between the generic real-time notification service
+   * and the specific order notification service
+   */
+  public setupRealTimeListener(): void {
+    // Listen for all notifications
+    realTimeNotificationService.on('notification', (notification: RealTimeNotification) => {
+      this.handleRealTimeNotification(notification);
+    });
+  }
+
+  /**
+   * Handle incoming real-time notification
+   */
+  private handleRealTimeNotification(notification: RealTimeNotification): void {
+    // Map category to order event
+    const event = this.mapCategoryToEvent(notification.category);
+
+    if (event) {
+      // Extract data from metadata
+      const data = this.mapMetadataToOrderData(notification.metadata);
+
+      if (data) {
+        // Emit to local listeners
+        this.emitNotification(event, data);
+      }
+    }
+  }
+
+  /**
+   * Map notification category to order event
+   */
+  private mapCategoryToEvent(category: NotificationCategory): OrderNotificationEvent | null {
+    switch (category) {
+      case NotificationCategory.ORDER_CREATED:
+        return 'order_created';
+      case NotificationCategory.ORDER_CONFIRMED:
+        return 'order_confirmed';
+      case NotificationCategory.ORDER_PROCESSING:
+        return 'order_processing';
+      case NotificationCategory.ORDER_SHIPPED:
+        return 'order_shipped';
+      case NotificationCategory.ORDER_DELIVERED:
+        return 'order_delivered';
+      case NotificationCategory.ORDER_CANCELLED:
+        return 'order_cancelled';
+      case NotificationCategory.ORDER_REFUNDED:
+        return 'order_refunded';
+      case NotificationCategory.ORDER_DISPUTED:
+        return 'order_disputed';
+      case NotificationCategory.DELIVERY_CONFIRMED:
+        return 'delivery_confirmed';
+      case NotificationCategory.PAYMENT_RECEIVED:
+        return 'payment_received';
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Map notification metadata to order notification data
+   */
+  private mapMetadataToOrderData(metadata: any): OrderNotificationData | null {
+    if (!metadata || !metadata.orderId) return null;
+
+    return {
+      orderId: metadata.orderId,
+      orderNumber: metadata.orderNumber || metadata.orderId, // Fallback
+      buyerAddress: metadata.buyerAddress || '',
+      sellerAddress: metadata.sellerAddress || '',
+      productTitle: metadata.productTitle || 'Order',
+      productImage: metadata.productImage,
+      amount: metadata.amount || 0,
+      currency: metadata.currency || 'USD',
+      trackingNumber: metadata.trackingNumber,
+      trackingUrl: metadata.trackingUrl,
+      cancellationReason: metadata.cancellationReason,
+      refundAmount: metadata.refundAmount,
+      estimatedDelivery: metadata.estimatedDelivery
+    };
+  }
+
   static getInstance(): OrderNotificationService {
     if (!OrderNotificationService.instance) {
       OrderNotificationService.instance = new OrderNotificationService();
@@ -405,8 +488,8 @@ class OrderNotificationService {
     if (typeof window === 'undefined') return '';
 
     let token = localStorage.getItem('token') ||
-                localStorage.getItem('authToken') ||
-                localStorage.getItem('auth_token');
+      localStorage.getItem('authToken') ||
+      localStorage.getItem('auth_token');
 
     if (!token) {
       try {
@@ -449,3 +532,10 @@ export interface OrderNotification {
 // Export singleton instance
 export const orderNotificationService = OrderNotificationService.getInstance();
 export default orderNotificationService;
+
+// Import here to avoid circular dependency issues during initialization
+import realTimeNotificationService from './realTimeNotificationService';
+import { NotificationCategory, type RealTimeNotification } from '../types/realTimeNotifications';
+
+// Initialize the bridge
+orderNotificationService['setupRealTimeListener']();

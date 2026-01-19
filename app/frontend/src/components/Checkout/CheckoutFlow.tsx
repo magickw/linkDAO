@@ -511,11 +511,12 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       console.table(cartState.items.map(i => ({ id: i.id, title: i.title, price: i.price.fiat })));
 
       // Determine payment path
+      const isX402 = selectedPaymentMethod.method.type === PaymentMethodType.X402;
       const isCrypto = selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE;
 
       let result;
 
-      if (isCrypto) {
+      if (isX402) {
         // x402 Protocol Flow
         // 1. Create Checkout Session to get Order ID and finalize totals
         console.log('🔄 Creating checkout session...');
@@ -590,8 +591,13 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
           paymentPath: 'crypto',
           transactionId: paymentData.data.paymentVerified ? 'x402-signed' : 'pending'
         };
+      } else if (isCrypto) {
+        // Standard Crypto Payment Flow (USDC, ETH, etc.)
+        console.log('💎 Processing standard crypto payment...');
+        result = await checkoutService.processPrioritizedCheckout(request);
       } else {
-        // Legacy Fiat Flow
+        // Fiat (Stripe) Flow
+        console.log('💳 Processing fiat payment...');
         result = await checkoutService.processPrioritizedCheckout(request);
       }
 
