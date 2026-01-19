@@ -266,9 +266,21 @@ export class MessagingController {
         });
 
         if (conversationDetails) {
-          // Parse participants and notify each one
-          // participants is already parsed by Drizzle ORM (JSONB type)
-          const participants = conversationDetails.participants as string[];
+          // Parse participants safely
+          // participants is usually parsed by Drizzle ORM (JSONB type) but can be a string in some cases
+          let participants: string[];
+          if (typeof conversationDetails.participants === 'string') {
+            try {
+              participants = JSON.parse(conversationDetails.participants);
+            } catch (e) {
+              safeLogger.warn(`Failed to parse participants JSON for conversation ${id}`, e);
+              participants = [];
+            }
+          } else if (Array.isArray(conversationDetails.participants)) {
+            participants = conversationDetails.participants as string[];
+          } else {
+            participants = [];
+          }
 
           // Send to conversation room for all participants
           wsService.sendToConversation(id, 'new_message', {
@@ -338,8 +350,20 @@ export class MessagingController {
       // Emit WebSocket event for read receipts
       const wsService = getWebSocketService();
       if (wsService && conversationDetails) {
-        // participants is already parsed by Drizzle ORM (JSONB type)
-        const participants = conversationDetails.participants as string[];
+        // Parse participants safely
+        let participants: string[];
+        if (typeof conversationDetails.participants === 'string') {
+          try {
+            participants = JSON.parse(conversationDetails.participants);
+          } catch (e) {
+            safeLogger.warn(`Failed to parse participants JSON for conversation ${id}`, e);
+            participants = [];
+          }
+        } else if (Array.isArray(conversationDetails.participants)) {
+          participants = conversationDetails.participants as string[];
+        } else {
+          participants = [];
+        }
 
         // Send read receipt to conversation room
         wsService.sendToConversation(id, 'message_read', {

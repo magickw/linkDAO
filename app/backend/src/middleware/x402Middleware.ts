@@ -15,6 +15,8 @@ export const resourceServer = new x402ResourceServer(facilitatorClient);
 resourceServer.register('eip155:84532', new ExactEvmScheme());
 // Base Mainnet (8453)
 resourceServer.register('eip155:8453', new ExactEvmScheme());
+// Sepolia (11155111)
+resourceServer.register('eip155:11155111', new ExactEvmScheme());
 
 // Receiving address (Treasury)
 // Receiving address (Treasury)

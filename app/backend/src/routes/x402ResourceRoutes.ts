@@ -74,7 +74,7 @@ router.post('/checkout', async (req, res, next) => {
             // Set standard x402 WWW-Authenticate header required by the client
             res.setHeader(
                 'WWW-Authenticate',
-                `x402 scheme="exact", price="${orderAmount}", network="eip155:84532", payTo="${PAY_TO_ADDRESS}", token="USDC"`
+                `x402 scheme="exact", price="${orderAmount}", network="eip155:11155111", payTo="${PAY_TO_ADDRESS}", token="USDC"`
             );
 
             // Return 402 Payment Required with standardized x402 format
