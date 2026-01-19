@@ -457,23 +457,25 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
     function _finalizeDeliveryConfirmation(uint256 escrowId, string memory deliveryInfo) internal {
         Escrow storage escrow = escrows[escrowId];
         
-        // Check time-lock if applicable
+        // CHECKS: Validate time-lock if applicable
         if (escrow.timeLockExpiry > 0) {
             require(block.timestamp >= escrow.timeLockExpiry, "Time lock not expired");
         }
         
+        // EFFECTS: Update all state BEFORE external calls
         escrow.deliveryInfo = deliveryInfo;
         escrow.status = EscrowStatus.DELIVERY_CONFIRMED;
         escrow.resolvedAt = block.timestamp;
         
-        // Release funds to seller
-        _releaseFunds(escrowId, escrow.seller);
-        
-        // Update reputation scores
+        // Update reputation scores (state changes only, no external calls)
         _updateReputationOnSuccess(escrow.buyer, escrow.seller);
         
+        // Emit events before external calls
         emit DeliveryConfirmed(escrowId, deliveryInfo);
         emit EscrowResolved(escrowId, EscrowStatus.DELIVERY_CONFIRMED, escrow.seller);
+        
+        // INTERACTIONS: External calls LAST
+        _releaseFunds(escrowId, escrow.seller);
     }
 
     /**
@@ -801,22 +803,30 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
 
         bool buyerWins = escrow.votesForBuyer > escrow.votesForSeller;
 
+        // EFFECTS: Update all state BEFORE external calls
         if (buyerWins) {
             escrow.status = EscrowStatus.RESOLVED_BUYER_WINS;
-            _releaseFunds(escrowId, escrow.buyer);
-            _updateReputationOnDispute(escrow.buyer, escrow.seller, true);
         } else {
             escrow.status = EscrowStatus.RESOLVED_SELLER_WINS;
-            _releaseFunds(escrowId, escrow.seller);
-            _updateReputationOnDispute(escrow.buyer, escrow.seller, false);
         }
 
         escrow.resolvedAt = block.timestamp;
+        
+        // Update reputation (state changes only, no external calls)
+        _updateReputationOnDispute(escrow.buyer, escrow.seller, buyerWins);
 
-        // Handle dispute bond distribution
-        _handleDisputeBondDistribution(escrowId, buyerWins);
-
+        // Emit event before external calls
         emit EscrowResolved(escrowId, escrow.status, buyerWins ? escrow.buyer : escrow.seller);
+
+        // INTERACTIONS: External calls LAST
+        if (buyerWins) {
+            _releaseFunds(escrowId, escrow.buyer);
+        } else {
+            _releaseFunds(escrowId, escrow.seller);
+        }
+
+        // Handle dispute bond distribution (contains external calls)
+        _handleDisputeBondDistribution(escrowId, buyerWins);
     }
 
     /**
@@ -833,6 +843,11 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
         bool initiatorWon = (initiator == escrow.buyer && buyerWins) ||
                            (initiator == escrow.seller && !buyerWins);
 
+        // EFFECTS: Clear bond data BEFORE external calls to prevent reentrancy
+        disputeBonds[escrowId] = 0;
+        disputeInitiator[escrowId] = address(0);
+
+        // INTERACTIONS: External calls LAST
         if (initiatorWon) {
             // Refund bond to winner (dispute initiator)
             (bool sent, ) = payable(initiator).call{value: bondAmount}("");
@@ -845,9 +860,7 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
             require(sent, "Failed to transfer forfeited bond");
             emit DisputeBondForfeited(escrowId, initiator, bondAmount, winner);
         }
-
-        // Clear bond data
-        disputeBonds[escrowId] = 0;
+    }
     }
 
     function _updateReputationOnSuccess(address buyer, address seller) internal {

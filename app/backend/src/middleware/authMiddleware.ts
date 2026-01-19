@@ -5,6 +5,9 @@ import postgres from 'postgres';
 import { eq } from 'drizzle-orm';
 import { users } from '../db/schema';
 import { ApiResponse } from '../utils/apiResponse';
+import { tokenRevocationService } from '../services/tokenRevocationService';
+import { getRequiredEnv, isDevelopment } from '../utils/envValidation';
+import { safeLogger } from '../utils/safeLogger';
 
 export interface AuthenticatedUser {
   address: string;
@@ -42,25 +45,37 @@ export const authMiddleware: RequestHandler = async (req: Request, res: Response
   try {
     let decoded: any;
 
-    // Support development tokens
-    if (process.env.NODE_ENV === 'development' && token.startsWith('dev_session_')) {
-      // Parse development session token: dev_session_<walletAddress>_<timestamp>
-      const parts = token.split('_');
-      if (parts.length >= 4) {
-        const walletAddress = parts[2]; // walletAddress is parts[2]
-        decoded = {
-          walletAddress: walletAddress,
-          address: walletAddress,
-          userId: `user_${walletAddress}`,
-          id: `user_${walletAddress}`,
-          timestamp: parseInt(parts[3]) || Date.now()
-        };
-      } else {
-        throw new Error('Invalid development token format');
+    // Verify JWT token - no development bypass for security
+    const jwtSecret = isDevelopment()
+      ? (process.env.JWT_SECRET || 'development-secret-key-change-in-production')
+      : getRequiredEnv('JWT_SECRET');
+
+    decoded = jwt.verify(token, jwtSecret) as any;
+
+    // Check token expiration (JWT library already validates exp, but we double-check)
+    if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+      throw new Error('Token has expired');
+    }
+
+    // Check if token is revoked (if jti claim exists)
+    if (decoded.jti) {
+      const isRevoked = await tokenRevocationService.isTokenRevoked(decoded.jti);
+      if (isRevoked) {
+        safeLogger.warn(`[AuthMiddleware] Revoked token attempted: ${decoded.jti}`);
+        throw new Error('Token has been revoked');
       }
-    } else {
-      // Verify JWT token for production
-      decoded = jwt.verify(token, process.env.JWT_SECRET || 'development-secret-key-change-in-production') as any;
+    }
+
+    // Check if all user tokens are revoked (e.g., after password change)
+    if (decoded.userId && decoded.iat) {
+      const areUserTokensRevoked = await tokenRevocationService.areUserTokensRevoked(
+        decoded.userId,
+        decoded.iat * 1000
+      );
+      if (areUserTokensRevoked) {
+        safeLogger.warn(`[AuthMiddleware] User tokens revoked: ${decoded.userId}`);
+        throw new Error('All user tokens have been revoked. Please sign in again.');
+      }
     }
 
     // Get user role and other details from database
@@ -100,26 +115,26 @@ export const authMiddleware: RequestHandler = async (req: Request, res: Response
           userEmail = userRecord.email;
           userPermissions = (userRecord.permissions as string[]) || [];
           isAdmin = ['admin', 'super_admin', 'moderator', 'support', 'analyst'].includes(userRole);
-                
+
           // Block wallet-only authentication for employees for sensitive operations
           // but allow basic access with a flag to indicate they need to upgrade auth
           const isEmployee = userRecord.isEmployee;
           const hasPasswordHash = !!userRecord.passwordHash;
           const needsAuthUpgrade = isEmployee && !hasPasswordHash;
-          
+
           // Check if this is a sensitive operation that requires upgraded auth
           const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
           const sensitivePrefixes = [
             '/api/admin',
-            '/api/employees', 
+            '/api/employees',
             '/api/auth/change-password',
             '/api/auth/update'
           ];
-          
-          const isSensitiveOperation = isMutation && sensitivePrefixes.some(prefix => 
+
+          const isSensitiveOperation = isMutation && sensitivePrefixes.some(prefix =>
             req.path.startsWith(prefix)
           );
-          
+
           if (needsAuthUpgrade && isSensitiveOperation) {
             return ApiResponse.unauthorized(res, 'Employees must use email and password authentication for sensitive operations');
           }
@@ -128,7 +143,7 @@ export const authMiddleware: RequestHandler = async (req: Request, res: Response
         console.error('Database error when fetching user details:', dbError);
       }
     }
-                
+
     // Override role for configured admin address
     if (isConfiguredAdmin) {
       // Ensure configured admin has a database record
@@ -138,7 +153,7 @@ export const authMiddleware: RequestHandler = async (req: Request, res: Response
           'Admin account must be initialized before use'
         );
       }
-      
+
       userRole = 'super_admin';
       isAdmin = true;
       // Grant all permissions to configured admin
@@ -162,7 +177,7 @@ export const authMiddleware: RequestHandler = async (req: Request, res: Response
         'governance.verify'
       ];
     }
-    
+
     // Determine needsAuthUpgrade based on user record
     const userNeedsAuthUpgrade = userRecord?.isEmployee && !userRecord?.passwordHash;
 

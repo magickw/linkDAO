@@ -975,6 +975,430 @@ class UnifiedMessagingService {
     }
   }
 
+  // ==================== CONVERSATION MANAGEMENT ====================
+
+  /**
+   * Search conversations by query and filters
+   */
+  async searchConversations(
+    query: string,
+    filter?: {
+      type?: string;
+      hasUnread?: boolean;
+      isArchived?: boolean;
+      isPinned?: boolean;
+      participantAddress?: string;
+    }
+  ): Promise<Conversation[]> {
+    try {
+      const params = new URLSearchParams();
+      if (query) params.append('q', query);
+      if (filter?.type) params.append('type', filter.type);
+      if (filter?.hasUnread !== undefined) params.append('hasUnread', filter.hasUnread.toString());
+      if (filter?.isArchived !== undefined) params.append('isArchived', filter.isArchived.toString());
+      if (filter?.isPinned !== undefined) params.append('isPinned', filter.isPinned.toString());
+      if (filter?.participantAddress) params.append('participant', filter.participantAddress);
+
+      const response = await this.makeRequest(`/api/conversations/search?${params}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to search conversations: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return (data.conversations || []).map((c: any) => this.transformConversation(c));
+    } catch (error) {
+      console.error('[UnifiedMessaging] Error searching conversations:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Search messages within conversations
+   */
+  async searchMessages(
+    searchQuery: {
+      query: string;
+      conversationId?: string;
+      fromAddress?: string;
+      contentType?: string;
+      startDate?: Date;
+      endDate?: Date;
+    }
+  ): Promise<Array<{ message: Message; conversation: Conversation; snippet?: string }>> {
+    try {
+      const response = await this.makeRequest('/api/messages/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(searchQuery)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to search messages: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return (data.results || []).map((result: any) => ({
+        message: this.transformMessage(result.message),
+        conversation: this.transformConversation(result.conversation),
+        snippet: result.snippet
+      }));
+    } catch (error) {
+      console.error('[UnifiedMessaging] Error searching messages:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Archive a conversation
+   */
+  async archiveConversation(conversationId: string, currentUserAddress?: string, reason?: string): Promise<boolean> {
+    try {
+      const response = await this.makeRequest(`/api/conversations/${conversationId}/archive`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason })
+      });
+
+      if (response.ok) {
+        const conversation = this.conversationsCache.get(conversationId);
+        if (conversation) {
+          conversation.metadata = { ...conversation.metadata, isArchived: true };
+          this.emitEvent('conversation_updated', { conversation });
+        }
+      }
+
+      return response.ok;
+    } catch (error) {
+      console.error('[UnifiedMessaging] Error archiving conversation:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Unarchive a conversation
+   */
+  async unarchiveConversation(conversationId: string, currentUserAddress?: string): Promise<boolean> {
+    try {
+      const response = await this.makeRequest(`/api/conversations/${conversationId}/unarchive`, {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        const conversation = this.conversationsCache.get(conversationId);
+        if (conversation) {
+          conversation.metadata = { ...conversation.metadata, isArchived: false };
+          this.emitEvent('conversation_updated', { conversation });
+        }
+      }
+
+      return response.ok;
+    } catch (error) {
+      console.error('[UnifiedMessaging] Error unarchiving conversation:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Delete a conversation
+   */
+  async deleteConversation(conversationId: string, currentUserAddress?: string, deleteForEveryone: boolean = false): Promise<boolean> {
+    try {
+      const response = await this.makeRequest(`/api/conversations/${conversationId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deleteForEveryone })
+      });
+
+      if (response.ok) {
+        this.conversationsCache.delete(conversationId);
+        this.messagesCache.delete(conversationId);
+      }
+
+      return response.ok;
+    } catch (error) {
+      console.error('[UnifiedMessaging] Error deleting conversation:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Pin/unpin a conversation
+   */
+  async toggleConversationPin(conversationId: string, currentUserAddress?: string, isPinned?: boolean): Promise<boolean> {
+    try {
+      const response = await this.makeRequest(`/api/conversations/${conversationId}/pin`, {
+        method: isPinned ? 'POST' : 'DELETE'
+      });
+
+      if (response.ok) {
+        const conversation = this.conversationsCache.get(conversationId);
+        if (conversation) {
+          conversation.metadata = { ...conversation.metadata, isPinned };
+          this.emitEvent('conversation_updated', { conversation });
+        }
+      }
+
+      return response.ok;
+    } catch (error) {
+      console.error('[UnifiedMessaging] Error toggling conversation pin:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Mute/unmute a conversation
+   */
+  async toggleConversationMute(
+    conversationId: string,
+    currentUserAddress?: string,
+    isMuted?: boolean,
+    muteUntil?: Date
+  ): Promise<boolean> {
+    try {
+      const response = await this.makeRequest(`/api/conversations/${conversationId}/mute`, {
+        method: isMuted ? 'POST' : 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ muteUntil })
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('[UnifiedMessaging] Error toggling conversation mute:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Update conversation settings
+   */
+  async updateConversationSettings(
+    conversationId: string,
+    settings: Partial<ConversationSettings>,
+    currentUserAddress?: string
+  ): Promise<boolean> {
+    try {
+      const response = await this.makeRequest(`/api/conversations/${conversationId}/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('[UnifiedMessaging] Error updating conversation settings:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get conversation settings
+   */
+  async getConversationSettings(conversationId: string, currentUserAddress?: string): Promise<ConversationSettings | null> {
+    try {
+      const response = await this.makeRequest(`/api/conversations/${conversationId}/settings`);
+
+      if (!response.ok) {
+        return null;
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('[UnifiedMessaging] Error getting conversation settings:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Set custom title for a conversation
+   */
+  async setConversationTitle(conversationId: string, title: string): Promise<boolean> {
+    try {
+      const response = await this.makeRequest(`/api/conversations/${conversationId}/title`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title })
+      });
+
+      if (response.ok) {
+        const conversation = this.conversationsCache.get(conversationId);
+        if (conversation) {
+          conversation.metadata = { ...conversation.metadata, title };
+          this.emitEvent('conversation_updated', { conversation });
+        }
+      }
+
+      return response.ok;
+    } catch (error) {
+      console.error('[UnifiedMessaging] Error setting conversation title:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Block a user
+   */
+  async blockUser(userAddress: string, reason?: string): Promise<boolean> {
+    try {
+      const response = await this.makeRequest('/api/users/block', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blockedAddress: userAddress, reason })
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('[UnifiedMessaging] Error blocking user:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Unblock a user
+   */
+  async unblockUser(userAddress: string): Promise<boolean> {
+    try {
+      const response = await this.makeRequest('/api/users/unblock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blockedAddress: userAddress })
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('[UnifiedMessaging] Error unblocking user:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get list of blocked users
+   */
+  async getBlockedUsers(): Promise<string[]> {
+    try {
+      const response = await this.makeRequest('/api/users/blocked');
+
+      if (!response.ok) {
+        return [];
+      }
+
+      const data = await response.json();
+      return data.blockedUsers || [];
+    } catch (error) {
+      console.error('[UnifiedMessaging] Error getting blocked users:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Add participant to group conversation
+   */
+  async addParticipant(conversationId: string, userAddress: string): Promise<boolean> {
+    try {
+      const response = await this.makeRequest(`/api/conversations/${conversationId}/participants`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userAddress })
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('[UnifiedMessaging] Error adding participant:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Remove participant from group conversation
+   */
+  async removeParticipant(conversationId: string, userAddress: string): Promise<boolean> {
+    try {
+      const response = await this.makeRequest(`/api/conversations/${conversationId}/participants/${userAddress}`, {
+        method: 'DELETE'
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('[UnifiedMessaging] Error removing participant:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Leave a group conversation
+   */
+  async leaveConversation(conversationId: string): Promise<boolean> {
+    try {
+      const response = await this.makeRequest(`/api/conversations/${conversationId}/leave`, {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        this.conversationsCache.delete(conversationId);
+        this.messagesCache.delete(conversationId);
+      }
+
+      return response.ok;
+    } catch (error) {
+      console.error('[UnifiedMessaging] Error leaving conversation:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Clear conversation history
+   */
+  async clearConversationHistory(
+    conversationId: string,
+    currentUserAddress?: string,
+    deleteForEveryone: boolean = false
+  ): Promise<boolean> {
+    try {
+      const response = await this.makeRequest(`/api/conversations/${conversationId}/clear`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deleteForEveryone })
+      });
+
+      if (response.ok) {
+        this.messagesCache.delete(conversationId);
+      }
+
+      return response.ok;
+    } catch (error) {
+      console.error('[UnifiedMessaging] Error clearing conversation history:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Export conversation to various formats
+   */
+  async exportConversation(
+    conversationId: string,
+    format: 'json' | 'txt' | 'pdf' = 'json',
+    currentUserAddress?: string,
+    options?: { includeMedia?: boolean }
+  ): Promise<Blob | null> {
+    try {
+      const params = new URLSearchParams({
+        format,
+        includeMedia: options?.includeMedia ? 'true' : 'false'
+      });
+
+      const response = await this.makeRequest(`/api/conversations/${conversationId}/export?${params}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to export conversation: ${response.statusText}`);
+      }
+
+      return await response.blob();
+    } catch (error) {
+      console.error('[UnifiedMessaging] Error exporting conversation:', error);
+      return null;
+    }
+  }
+
   // ==================== EVENT SYSTEM ====================
 
   /**

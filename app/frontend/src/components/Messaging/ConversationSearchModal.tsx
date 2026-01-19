@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Conversation, ConversationFilter, MessageSearchResult } from '../../types/messaging';
-import { ConversationManagementService } from '../../services/conversationManagementService';
+import { unifiedMessagingService } from '../../services/unifiedMessagingService';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ConversationSearchModalProps {
@@ -23,8 +23,6 @@ export const ConversationSearchModal: React.FC<ConversationSearchModalProps> = (
   const [isLoading, setIsLoading] = useState(false);
   const [filters, setFilters] = useState<ConversationFilter>({});
 
-  const conversationService = ConversationManagementService.getInstance();
-
   // Debounced search
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -45,14 +43,14 @@ export const ConversationSearchModal: React.FC<ConversationSearchModalProps> = (
     setIsLoading(true);
     try {
       if (searchType === 'conversations') {
-        const results = await conversationService.searchConversations(
+        const results = await unifiedMessagingService.searchConversations(
           searchQuery,
           filters,
           currentUserAddress
         );
         setConversations(results);
       } else {
-        const results = await conversationService.searchMessages(
+        const results = await unifiedMessagingService.searchMessages(
           {
             query: searchQuery,
             limit: 50,

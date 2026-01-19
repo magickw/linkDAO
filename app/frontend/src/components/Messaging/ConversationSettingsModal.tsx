@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Conversation, ConversationSettings, GroupConversation } from '../../types/messaging';
-import { ConversationManagementService } from '../../services/conversationManagementService';
+import { unifiedMessagingService } from '../../services/unifiedMessagingService';
 
 interface ConversationSettingsModalProps {
   isOpen: boolean;
@@ -27,8 +27,6 @@ export const ConversationSettingsModal: React.FC<ConversationSettingsModalProps>
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'general' | 'privacy' | 'members'>('general');
 
-  const conversationService = ConversationManagementService.getInstance();
-
   useEffect(() => {
     if (isOpen) {
       loadSettings();
@@ -37,7 +35,7 @@ export const ConversationSettingsModal: React.FC<ConversationSettingsModalProps>
 
   const loadSettings = async () => {
     try {
-      const currentSettings = await conversationService.getConversationSettings(
+      const currentSettings = await unifiedMessagingService.getConversationSettings(
         conversation.id,
         currentUserAddress
       );
@@ -63,7 +61,7 @@ export const ConversationSettingsModal: React.FC<ConversationSettingsModalProps>
         muteUntil: muteUntil ? new Date(muteUntil) : undefined,
       };
 
-      const success = await conversationService.updateConversationSettings(
+      const success = await unifiedMessagingService.updateConversationSettings(
         conversation.id,
         updatedSettings,
         currentUserAddress
@@ -85,8 +83,8 @@ export const ConversationSettingsModal: React.FC<ConversationSettingsModalProps>
     
     try {
       const success = newArchivedState
-        ? await conversationService.archiveConversation(conversation.id, currentUserAddress)
-        : await conversationService.unarchiveConversation(conversation.id, currentUserAddress);
+        ? await unifiedMessagingService.archiveConversation(conversation.id, currentUserAddress)
+        : await unifiedMessagingService.unarchiveConversation(conversation.id, currentUserAddress);
 
       if (success) {
         setSettings(prev => ({ ...prev, archived: newArchivedState }));
@@ -100,7 +98,7 @@ export const ConversationSettingsModal: React.FC<ConversationSettingsModalProps>
     const newPinnedState = !settings.pinned;
     
     try {
-      const success = await conversationService.toggleConversationPin(
+      const success = await unifiedMessagingService.toggleConversationPin(
         conversation.id,
         currentUserAddress,
         newPinnedState
@@ -118,7 +116,7 @@ export const ConversationSettingsModal: React.FC<ConversationSettingsModalProps>
     const newMutedState = !settings.muteUntil;
     
     try {
-      const success = await conversationService.toggleConversationMute(
+      const success = await unifiedMessagingService.toggleConversationMute(
         conversation.id,
         currentUserAddress,
         newMutedState,
@@ -139,7 +137,7 @@ export const ConversationSettingsModal: React.FC<ConversationSettingsModalProps>
   const handleDeleteConversation = async () => {
     if (window.confirm('Are you sure you want to delete this conversation? This action cannot be undone.')) {
       try {
-        const success = await conversationService.deleteConversation(
+        const success = await unifiedMessagingService.deleteConversation(
           conversation.id,
           currentUserAddress,
           false
@@ -158,7 +156,7 @@ export const ConversationSettingsModal: React.FC<ConversationSettingsModalProps>
   const handleClearHistory = async () => {
     if (window.confirm('Are you sure you want to clear the conversation history? This action cannot be undone.')) {
       try {
-        const success = await conversationService.clearConversationHistory(
+        const success = await unifiedMessagingService.clearConversationHistory(
           conversation.id,
           currentUserAddress,
           false
@@ -175,7 +173,7 @@ export const ConversationSettingsModal: React.FC<ConversationSettingsModalProps>
 
   const handleExportConversation = async () => {
     try {
-      const blob = await conversationService.exportConversation(
+      const blob = await unifiedMessagingService.exportConversation(
         conversation.id,
         'json',
         currentUserAddress,
