@@ -216,7 +216,7 @@ export default function Wallet() {
 
     // Open integrated token swap modal instead of external redirect
     const selectedToken = availableTokens.find(t => t.symbol === assetName);
-    
+
     if (selectedToken) {
       setShowTokenSwapModal(true);
       setSwapTokenIn(selectedToken);
@@ -673,6 +673,27 @@ export default function Wallet() {
                     <div className="relative mt-1">
                       <Listbox.Button className="relative w-full cursor-default rounded-md bg-white dark:bg-gray-700 py-3 pl-3 pr-10 text-left border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm shadow-sm">
                         <span className="flex items-center truncate text-gray-900 dark:text-white">
+                          {(() => {
+                            const networkIconMap: Record<number, string> = {
+                              1: '/networks/ethereum.png',
+                              8453: '/networks/base.png',
+                              137: '/networks/polygon.png',
+                              42161: '/networks/arbitrum.png',
+                              11155111: '/networks/ethereum.png',
+                              84532: '/networks/base.png',
+                            };
+                            const icon = networkIconMap[selectedChainId];
+                            return icon ? (
+                              <img
+                                src={icon}
+                                alt={SUPPORTED_CHAINS.find(c => c.chainId === selectedChainId)?.name}
+                                className="mr-2 h-5 w-5 rounded-full object-contain"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                            ) : null;
+                          })()}
                           <span className="block truncate">
                             {SUPPORTED_CHAINS.find(c => c.chainId === selectedChainId)?.name}
                             {selectedChainId === chainId ? ' (Connected)' : ''}
@@ -700,8 +721,31 @@ export default function Wallet() {
                             >
                               {({ selected }) => (
                                 <>
-                                  <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
-                                    {chainItem.name} {chainItem.chainId === chainId ? '(Connected)' : ''}
+                                  <span className="flex items-center truncate">
+                                    {(() => {
+                                      const networkIconMap: Record<number, string> = {
+                                        1: '/networks/ethereum.png',
+                                        8453: '/networks/base.png',
+                                        137: '/networks/polygon.png',
+                                        42161: '/networks/arbitrum.png',
+                                        11155111: '/networks/ethereum.png',
+                                        84532: '/networks/base.png',
+                                      };
+                                      const icon = networkIconMap[chainItem.chainId];
+                                      return icon ? (
+                                        <img
+                                          src={icon}
+                                          alt={chainItem.name}
+                                          className="mr-2 h-5 w-5 rounded-full object-contain"
+                                          onError={(e) => {
+                                            (e.target as HTMLImageElement).style.display = 'none';
+                                          }}
+                                        />
+                                      ) : null;
+                                    })()}
+                                    <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                                      {chainItem.name} {chainItem.chainId === chainId ? '(Connected)' : ''}
+                                    </span>
                                   </span>
                                   {selected ? (
                                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-600 dark:text-primary-400">
@@ -923,7 +967,7 @@ export default function Wallet() {
           )}
         </div>
       </div>
-      
+
       {/* Integrated Token Swap Modal */}
       <TokenSwapModal
         isOpen={showTokenSwapModal}

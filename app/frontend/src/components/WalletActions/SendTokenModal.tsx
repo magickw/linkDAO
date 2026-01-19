@@ -56,7 +56,7 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
   const [recipient, setRecipient] = useState('');
   const [error, setError] = useState('');
   const [selectedChainId, setSelectedChainId] = useState<number>(currentChainId);
-  
+
   // Local Wallet State
   const [isLocalWallet, setIsLocalWallet] = useState(false);
   const [password, setPassword] = useState('');
@@ -64,12 +64,12 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
 
   // Define available networks with icons
   const networks = [
-    { id: 1, name: 'Ethereum', symbol: 'ETH', explorer: 'https://etherscan.io', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png' },
-    { id: 8453, name: 'Base', symbol: 'ETH', explorer: 'https://basescan.org', icon: 'https://raw.githubusercontent.com/base-org/brand-kit/main/logo/symbol/Base_Symbol_Blue.png' },
-    { id: 137, name: 'Polygon', symbol: 'MATIC', explorer: 'https://polygonscan.com', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png' },
-    { id: 42161, name: 'Arbitrum', symbol: 'ETH', explorer: 'https://arbiscan.io', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png' },
-    { id: 11155111, name: 'Sepolia', symbol: 'ETH', explorer: 'https://sepolia.etherscan.io', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png' },
-    { id: 84532, name: 'Base Sepolia', symbol: 'ETH', explorer: 'https://sepolia.basescan.org', icon: 'https://raw.githubusercontent.com/base-org/brand-kit/main/logo/symbol/Base_Symbol_Blue.png' },
+    { id: 1, name: 'Ethereum', symbol: 'ETH', explorer: 'https://etherscan.io', icon: '/networks/ethereum.png' },
+    { id: 8453, name: 'Base', symbol: 'ETH', explorer: 'https://basescan.org', icon: '/networks/base.png' },
+    { id: 137, name: 'Polygon', symbol: 'MATIC', explorer: 'https://polygonscan.com', icon: '/networks/polygon.png' },
+    { id: 42161, name: 'Arbitrum', symbol: 'ETH', explorer: 'https://arbiscan.io', icon: '/networks/arbitrum.png' },
+    { id: 11155111, name: 'Sepolia', symbol: 'ETH', explorer: 'https://sepolia.etherscan.io', icon: '/networks/ethereum.png' },
+    { id: 84532, name: 'Base Sepolia', symbol: 'ETH', explorer: 'https://sepolia.basescan.org', icon: '/networks/base.png' },
   ];
 
   const selectedNetwork = networks.find(network => network.id === selectedChainId) || networks[0];
@@ -555,8 +555,8 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
           {/* Gas Estimation & Simulation */}
           {estimateParams && !needsNetworkSwitch && !isLocalWallet && (
             <div className={`p-3 rounded-lg text-sm border ${gasError
-                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+              ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+              : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
               }`}>
               <div className="flex items-center justify-between">
                 <span className="font-medium text-gray-700 dark:text-gray-300">Transaction Simulation:</span>

@@ -60,23 +60,55 @@ export const setupDevEnvironment = () => {
       'eth_getFilterChanges',
       'Failed to create Mainnet provider',
       'unsupported protocol',
-      'JsonRpcProvider failed to detect network and cannot start up',
+      'JsonRpcProvider failed to detect network',
       'Request failed, not caching error response',
-      'Failed to parse payment requirements',
-      'Failed to connect to x402 checkout endpoint',
-      'Failed to get token info: Smart contract interaction failed',
-      'MetaMask - RPC Error: Internal JSON-RPC error',
-      'Rate limit exceeded for CoinGecko ETH',
-      'No gas price API keys configured',
-      'Payment method prioritization failed',
-      'Request already pending, waiting for result',
-      'Request failed with status 404',
-      'Authentication failed (401)',
-      'Request failed with status 403',
+      // WebSocket errors
+      'WebSocket connection to',
+      'WebSocket connection failed',
+      'WebSocket connection timeout',
+      'WebSocket is closed before the connection is established',
+      'transport close',
+      'websocket error',
+      'Socket.IO error',
+      'Socket.IO disconnected',
+      // Backend 503 errors (service unavailable)
+      'Failed to load resource: the server responded with a status of 503',
+      'api.linkdao.io/api/communities/my-communities',
+      'api.linkdao.io/health',
       'api.linkdao.io/api/products',
-      'api.linkdao.io/api/user/addresses',
-      'api.linkdao.io/api/user/payment-methods',
-      'api.linkdao.io/api/x402/checkout'
+      'api.linkdao.io/communities/',
+      // Backend 404 errors (not found)
+      'Failed to load resource: the server responded with a status of 404',
+      '/_next/data/',
+      '/blog.json',
+      // Backend 400 errors (bad request - often from expired filters)
+      'Failed to load resource: the server responded with a status of 400',
+      '@app/contracts/artifacts/contracts/BurnToDonate.sol/BurnToDonate.dbg.json',
+      'filter not found',
+      'eth_getFilterChanges',
+      // Proxy errors
+      'Failed to create Mainnet provider: Error: server response 405',
+      '/api/proxy?target=',
+      // ENS resolution errors
+      'Failed to resolve ENS name',
+      'Resolution failed',
+      // Network offline errors
+      '[UnifiedMessaging] Network offline',
+      // Reconnection errors
+      'WebSocket reconnecting',
+      'WebSocket reconnection failed',
+      'Switching to polling mode',
+      // Service worker cache errors
+      'Cache first strategy failed',
+      'Cache operation failed',
+      // Request pending warnings
+      'Request already pending, waiting for result',
+      'coingecko_prices_ethereum',
+      // DEX discovery status
+      'DEX discovery is disabled',
+      // Polling fallback messages
+      'Starting polling fallback mode',
+      'Stopped polling fallback mode'
     ];
 
     if (suppressedErrors.some(error => message.includes(error))) {

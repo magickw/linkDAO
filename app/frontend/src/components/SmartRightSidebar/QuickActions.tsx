@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { EnhancedWalletData, QuickAction, TokenBalance } from '../../types/wallet';
 import { useNetworkSwitch } from '../../hooks/useNetworkSwitch';
+import { getTokenLogoWithFallback } from '@/utils/tokenLogoUtils';
 
 interface QuickActionsProps {
   walletData: EnhancedWalletData | null;
@@ -367,8 +368,24 @@ const QuickActions = React.memo(function QuickActions({
               .map((token, idx) => (
                 <div key={`${token.symbol}-${idx}`} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {/* Token Icon Placeholder or Image */}
-                    <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                    {/* Token Icon with Logo Support */}
+                    {(() => {
+                      const logo = getTokenLogoWithFallback(token.symbol);
+                      return logo ? (
+                        <img
+                          src={logo}
+                          alt={token.symbol}
+                          className="w-6 h-6 rounded-full"
+                          onError={(e) => {
+                            // Fallback to initials if image fails to load
+                            (e.target as HTMLImageElement).style.display = 'none';
+                            const fallback = (e.target as HTMLImageElement).nextElementSibling;
+                            if (fallback) fallback.classList.remove('hidden');
+                          }}
+                        />
+                      ) : null;
+                    })()}
+                    <div className={`w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-600 dark:text-gray-300 ${getTokenLogoWithFallback(token.symbol) ? 'hidden' : ''}`}>
                       {token.symbol[0]}
                     </div>
                     <div>
