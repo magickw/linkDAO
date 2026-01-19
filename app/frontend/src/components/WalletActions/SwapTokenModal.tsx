@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Fragment } from 'react';
 import { TokenBalance } from '../../types/wallet';
 import { useToast } from '@/context/ToastContext';
-import { dexService } from '@/services/dexService';
+import { dexSwapService } from '@/services/dexSwapService';
 import { formatUnits, parseUnits } from 'ethers';
 import { GasFeeService } from '@/services/gasFeeService';
 import { usePublicClient } from 'wagmi';
@@ -11,6 +11,7 @@ import { useNetworkSwitch, CHAIN_NAMES } from '../../hooks/useNetworkSwitch';
 import { Listbox, Transition } from '@headlessui/react';
 import { Check, ChevronDown } from 'lucide-react';
 import { getTokenLogoWithFallback } from '@/utils/tokenLogoUtils';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface SwapTokenModalProps {
   isOpen: boolean;
@@ -18,6 +19,13 @@ interface SwapTokenModalProps {
   tokens: TokenBalance[];
   onSwap: (fromToken: string, toToken: string, amount: number) => Promise<void>;
 }
+
+// Helper to estimate decimals since TokenBalance might miss it
+const getDecimals = (symbol: string) => {
+  if (['USDC', 'USDT'].includes(symbol)) return 6;
+  if (['WBTC'].includes(symbol)) return 8;
+  return 18;
+};
 
 export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: SwapTokenModalProps) {
   const { addToast } = useToast();
@@ -37,6 +45,9 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
   const [priceImpact, setPriceImpact] = useState<string | null>(null);
   const [popularTokens, setPopularTokens] = useState<TokenInfo[]>([]);
   const [selectedChainId, setSelectedChainId] = useState<number>(currentChainId);
+
+  // Debounce the input amount to prevent excessive API calls
+  const debouncedFromAmount = useDebounce(fromAmount, 800);
 
   // Define available networks for swapping
   const networks = [
@@ -87,7 +98,7 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
   useEffect(() => {
     const fetchPopularTokens = async () => {
       try {
-        const popular = await dexService.getPopularTokens(selectedChainId);
+        const popular = await dexSwapService.getPopularTokens(selectedChainId);
         setPopularTokens(popular);
       } catch (err) {
         console.error('Failed to fetch popular tokens:', err);
@@ -101,36 +112,46 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
     }
   }, [isOpen, selectedChainId]);
 
-  // Get real exchange rate from DEX
+  // Get real exchange rate from DEX using debounced input
   useEffect(() => {
-    if (fromTokenData && toTokenData && fromAmount) {
+    // Only fetch if we have valid inputs and debounced amount
+    if (fromTokenData && toTokenData && debouncedFromAmount && parseFloat(debouncedFromAmount) > 0) {
       const fetchQuote = async () => {
+        setIsLoading(true);
+        setError('');
+
         try {
           // Get real token addresses from wallet data
           const fromTokenAddress = fromTokenData.contractAddress || '0x0000000000000000000000000000000000000000'; // ETH/native token
           const toTokenAddress = toTokenData.contractAddress || '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'; // USDC as fallback
 
-          const quoteResponse = await dexService.getSwapQuote({
-            tokenInAddress: fromTokenAddress,
-            tokenOutAddress: toTokenAddress,
-            amountIn: parseFloat(fromAmount),
-            slippageTolerance: slippage,
-            chainId: selectedChainId
-          });
+          const quoteResponse = await dexSwapService.getSwapQuote({
+            tokenIn: {
+              address: fromTokenAddress,
+              symbol: fromTokenData.symbol,
+              name: fromTokenData.name,
+              decimals: getDecimals(fromTokenData.symbol)
+            },
+            tokenOut: {
+              address: toTokenAddress,
+              symbol: toTokenData.symbol,
+              name: toTokenData.name,
+              decimals: getDecimals(toTokenData.symbol)
+            },
+            amountIn: debouncedFromAmount,
+            slippageTolerance: slippage
+          }, selectedChainId);
 
-          // Check if the response is successful
-          if (!quoteResponse || !quoteResponse.success || !quoteResponse.data) {
+          if (!quoteResponse) {
             throw new Error('Failed to get swap quote');
           }
 
-          const quote = quoteResponse.data.quote;
-
           // Calculate exchange rate
-          const rate = parseFloat(quote.amountOut) / parseFloat(quote.amountIn);
+          const rate = parseFloat(quoteResponse.amountOut) / parseFloat(quoteResponse.amountIn);
           setExchangeRate(rate);
-          setToAmount(quote.amountOut);
-          setGasEstimate(quote.gasEstimate);
-          setPriceImpact(quote.priceImpact);
+          setToAmount(quoteResponse.amountOut);
+          setGasEstimate(quoteResponse.gasEstimate);
+          setPriceImpact(quoteResponse.priceImpact.toString());
         } catch (err) {
           console.error('Error fetching swap quote:', err);
           setError('Failed to get exchange rate. Using mock data.');
@@ -139,19 +160,21 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
           const rate = fromTokenData.valueUSD / toTokenData.valueUSD;
           setExchangeRate(rate);
 
-          if (fromAmount) {
-            const estimated = parseFloat(fromAmount) * rate;
+          if (debouncedFromAmount) {
+            const estimated = parseFloat(debouncedFromAmount) * rate;
             setToAmount(estimated.toFixed(6));
           }
+        } finally {
+          setIsLoading(false);
         }
       };
 
       fetchQuote();
-    } else {
+    } else if (!debouncedFromAmount) {
       setExchangeRate(0);
       setToAmount('');
     }
-  }, [fromToken, toToken, fromAmount, fromTokenData, toTokenData, slippage]);
+  }, [fromToken, toToken, debouncedFromAmount, fromTokenData, toTokenData, slippage, selectedChainId]);
 
   // Handle network change
   const handleNetworkChange = async (newChainId: number) => {
@@ -170,8 +193,8 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
 
       // Validate both tokens
       await Promise.all([
-        dexService.validateToken(fromTokenAddress),
-        dexService.validateToken(toTokenAddress)
+        dexSwapService.validateToken(fromTokenAddress, selectedChainId),
+        dexSwapService.validateToken(toTokenAddress, selectedChainId)
       ]);
 
       return true;
