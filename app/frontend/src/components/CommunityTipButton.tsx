@@ -3,8 +3,18 @@ import { createPortal } from 'react-dom';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
 import { communityWeb3Service } from '@/services/communityWeb3Service';
-import { getEnabledNetworks, NETWORKS } from '@/config/web3Config';
+import { getEnabledNetworks, NETWORKS, NetworkConfig } from '@/config/web3Config';
 import { FeedService } from '@/services/feedService';
+import { getTokenLogoWithFallback } from '@/utils/tokenLogoUtils';
+
+// Network icon mapping
+const NETWORK_ICONS: Record<number, string> = {
+  1: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+  11155111: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+  8453: 'https://raw.githubusercontent.com/base-org/brand-kit/main/logo/symbol/Base_Symbol_Blue.png',
+  84532: 'https://raw.githubusercontent.com/base-org/brand-kit/main/logo/symbol/Base_Symbol_Blue.png',
+  137: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png',
+};
 
 interface CommunityTipButtonProps {
   postId: string;
@@ -178,47 +188,89 @@ export default function CommunityTipButton({
             </div>
 
             {/* Network Selection */}
-            <div className="mb-4">
+            <div className="mb-4 relative">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Network
               </label>
-              <select
-                value={selectedNetwork.chainId}
-                onChange={(e) => {
-                  const network = enabledNetworks.find(n => n.chainId === Number(e.target.value));
-                  if (network) setSelectedNetwork(network);
-                }}
-                className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-shadow"
-                disabled={isTipping}
-              >
-                {enabledNetworks.map((network) => (
-                  <option key={network.chainId} value={network.chainId}>
-                    {network.name}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={selectedNetwork.chainId}
+                  onChange={(e) => {
+                    const network = enabledNetworks.find(n => n.chainId === Number(e.target.value));
+                    if (network) setSelectedNetwork(network);
+                  }}
+                  className="w-full px-3 py-2.5 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-shadow appearance-none"
+                  disabled={isTipping}
+                >
+                  {enabledNetworks.map((network) => (
+                    <option key={network.chainId} value={network.chainId}>
+                      {network.name} ({network.nativeCurrency.symbol})
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                  {NETWORK_ICONS[selectedNetwork.chainId] ? (
+                    <img
+                      src={NETWORK_ICONS[selectedNetwork.chainId]}
+                      alt={selectedNetwork.name}
+                      className="w-5 h-5 rounded-full object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                      }}
+                    />
+                  ) : null}
+                  <div className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs font-bold text-primary-600 dark:text-primary-400 hidden">
+                    {selectedNetwork.nativeCurrency.symbol.slice(0, 1)}
+                  </div>
+                </div>
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                  <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
             </div>
 
             {/* Token Selection */}
-            <div className="mb-5">
+            <div className="mb-5 relative">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Token
               </label>
-              <select
-                value={selectedToken.symbol}
-                onChange={(e) => {
-                  const token = SUPPORTED_TOKENS.find(t => t.symbol === e.target.value);
-                  if (token) setSelectedToken(token);
-                }}
-                className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-shadow"
-                disabled={isTipping}
-              >
-                {SUPPORTED_TOKENS.map((token) => (
-                  <option key={token.symbol} value={token.symbol}>
-                    {token.name} ({token.symbol})
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={selectedToken.symbol}
+                  onChange={(e) => {
+                    const token = SUPPORTED_TOKENS.find(t => t.symbol === e.target.value);
+                    if (token) setSelectedToken(token);
+                  }}
+                  className="w-full px-3 py-2.5 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-shadow appearance-none"
+                  disabled={isTipping}
+                >
+                  {SUPPORTED_TOKENS.map((token) => (
+                    <option key={token.symbol} value={token.symbol}>
+                      {token.name} ({token.symbol})
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                  {(() => {
+                    const logo = getTokenLogoWithFallback(selectedToken.symbol);
+                    return logo ? (
+                      <img src={logo} alt={selectedToken.symbol} className="w-5 h-5 rounded-full" />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs font-bold text-primary-600 dark:text-primary-400">
+                        {selectedToken.symbol.slice(0, 1)}
+                      </div>
+                    );
+                  })()}
+                </div>
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                  <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
             </div>
 
             {/* Quick Amount Buttons */}

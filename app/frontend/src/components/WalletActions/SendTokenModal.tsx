@@ -154,10 +154,12 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
       }
     }
 
-    if (tokens && tokens.length > 0 && !initialToken) {
+    // Only set a default token if no token is currently selected
+    // This allows users to freely choose any token without being forced to a default
+    if (tokens && tokens.length > 0 && !initialToken && !selectedTokenSymbol) {
       setSelectedTokenSymbol(tokens[0].symbol);
     }
-  }, [isOpen, tokens, initialToken]);
+  }, [isOpen, tokens, initialToken, selectedTokenSymbol]);
 
   // Reset state on close
   useEffect(() => {
@@ -348,8 +350,12 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
                                   className="mr-2 h-5 w-5 rounded-full object-contain"
                                   onError={(e) => {
                                     (e.target as HTMLImageElement).style.display = 'none';
+                                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
                                   }}
                                 />
+                                <div className="mr-2 hidden h-5 w-5 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-xs font-bold text-primary-600 dark:text-primary-400">
+                                  {network.symbol.slice(0, 1)}
+                                </div>
                                 <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
                                   {network.name}
                                 </span>

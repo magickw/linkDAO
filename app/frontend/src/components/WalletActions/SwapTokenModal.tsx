@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Fragment } from 'react';
 import { TokenBalance } from '../../types/wallet';
 import { useToast } from '@/context/ToastContext';
 import { dexService } from '@/services/dexService';
@@ -8,6 +8,9 @@ import { usePublicClient } from 'wagmi';
 import { DEFAULT_SLIPPAGE_OPTIONS, DEFAULT_SLIPPAGE } from '@/types/dex';
 import { TokenInfo } from '@/types/dex';
 import { useNetworkSwitch, CHAIN_NAMES } from '../../hooks/useNetworkSwitch';
+import { Listbox, Transition } from '@headlessui/react';
+import { Check, ChevronDown } from 'lucide-react';
+import { getTokenLogoWithFallback } from '@/utils/tokenLogoUtils';
 
 interface SwapTokenModalProps {
   isOpen: boolean;
@@ -37,12 +40,12 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
 
   // Define available networks for swapping
   const networks = [
-    { id: 1, name: 'Ethereum', symbol: 'ETH', explorer: 'https://etherscan.io' },
-    { id: 8453, name: 'Base', symbol: 'ETH', explorer: 'https://basescan.org' },
-    { id: 137, name: 'Polygon', symbol: 'MATIC', explorer: 'https://polygonscan.com' },
-    { id: 42161, name: 'Arbitrum', symbol: 'ETH', explorer: 'https://arbiscan.io' },
-    { id: 11155111, name: 'Sepolia', symbol: 'ETH', explorer: 'https://sepolia.etherscan.io' },
-    { id: 84532, name: 'Base Sepolia', symbol: 'ETH', explorer: 'https://sepolia.basescan.org' },
+    { id: 1, name: 'Ethereum', symbol: 'ETH', explorer: 'https://etherscan.io', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png' },
+    { id: 8453, name: 'Base', symbol: 'ETH', explorer: 'https://basescan.org', icon: 'https://raw.githubusercontent.com/base-org/brand-kit/main/logo/symbol/Base_Symbol_Blue.png' },
+    { id: 137, name: 'Polygon', symbol: 'MATIC', explorer: 'https://polygonscan.com', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png' },
+    { id: 42161, name: 'Arbitrum', symbol: 'ETH', explorer: 'https://arbiscan.io', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png' },
+    { id: 11155111, name: 'Sepolia', symbol: 'ETH', explorer: 'https://sepolia.etherscan.io', icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png' },
+    { id: 84532, name: 'Base Sepolia', symbol: 'ETH', explorer: 'https://sepolia.basescan.org', icon: 'https://raw.githubusercontent.com/base-org/brand-kit/main/logo/symbol/Base_Symbol_Blue.png' },
   ];
 
   const selectedNetwork = networks.find(network => network.id === selectedChainId) || networks[0];
@@ -289,29 +292,79 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
               Network
             </label>
             <div className="relative">
-              <select
-                value={selectedChainId}
-                onChange={(e) => handleNetworkChange(Number(e.target.value))}
-                disabled={isSwitching}
-                className="w-full p-3 pl-10 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent appearance-none disabled:opacity-50"
-              >
-                {networks.map((network) => (
-                  <option key={network.id} value={network.id}>
-                    {network.name} ({network.symbol})
-                  </option>
-                ))}
-              </select>
-              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                <div className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs font-bold text-primary-600 dark:text-primary-400">
-                  {selectedNetwork.symbol.slice(0, 1)}
+              <Listbox value={selectedNetwork} onChange={(val) => handleNetworkChange(val.id)} disabled={isSwitching}>
+                <div className="relative mt-1">
+                  <Listbox.Button className="relative w-full cursor-default rounded-xl bg-white dark:bg-gray-700 py-3 pl-3 pr-10 text-left border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent sm:text-sm">
+                    <span className="flex items-center truncate">
+                      <img
+                        src={selectedNetwork.icon}
+                        alt={selectedNetwork.name}
+                        className="mr-2 h-5 w-5 rounded-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                          (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                      <div className="mr-2 hidden h-5 w-5 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-xs font-bold text-primary-600 dark:text-primary-400">
+                        {selectedNetwork.symbol.slice(0, 1)}
+                      </div>
+                      <span className="block truncate text-gray-900 dark:text-gray-100">{selectedNetwork.name}</span>
+                    </span>
+                    <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                      <ChevronDown
+                        className="h-5 w-5 text-gray-400"
+                        aria-hidden="true"
+                      />
+                    </span>
+                  </Listbox.Button>
+                  <Transition
+                    as={Fragment}
+                    leave="transition ease-in duration-100"
+                    leaveFrom="opacity-100"
+                    leaveTo="opacity-0"
+                  >
+                    <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50">
+                      {networks.map((network, networkIdx) => (
+                        <Listbox.Option
+                          key={networkIdx}
+                          className={({ active }) =>
+                            `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-900 dark:text-primary-100' : 'text-gray-900 dark:text-gray-100'
+                            }`
+                          }
+                          value={network}
+                        >
+                          {({ selected }) => (
+                            <>
+                              <span className="flex items-center truncate">
+                                <img
+                                  src={network.icon}
+                                  alt={network.name}
+                                  className="mr-2 h-5 w-5 rounded-full object-contain"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                                  }}
+                                />
+                                <div className="mr-2 hidden h-5 w-5 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-xs font-bold text-primary-600 dark:text-primary-400">
+                                  {network.symbol.slice(0, 1)}
+                                </div>
+                                <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                                  {network.name}
+                                </span>
+                              </span>
+                              {selected ? (
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-600 dark:text-primary-400">
+                                  <Check className="h-5 w-5" aria-hidden="true" />
+                                </span>
+                              ) : null}
+                            </>
+                          )}
+                        </Listbox.Option>
+                      ))}
+                    </Listbox.Options>
+                  </Transition>
                 </div>
-              </div>
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
+              </Listbox>
 
             {/* Network switch indicator */}
             {needsNetworkSwitch && (
@@ -335,17 +388,74 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
               </span>
             </div>
             <div className="flex gap-3">
-              <select
-                value={fromToken}
-                onChange={(e) => setFromToken(e.target.value)}
-                className="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              >
-                {tokens.map((token) => (
-                  <option key={token.symbol} value={token.symbol}>
-                    {token.symbol}
-                  </option>
-                ))}
-              </select>
+              <div className="flex-1">
+                <Listbox value={fromToken} onChange={setFromToken}>
+                  <div className="relative">
+                    <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white dark:bg-gray-700 py-3 pl-3 pr-10 text-left border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent sm:text-sm">
+                      <span className="flex items-center truncate">
+                        {(() => {
+                          const logo = getTokenLogoWithFallback(fromToken);
+                          return logo ? (
+                            <img src={logo} alt={fromToken} className="mr-2 h-5 w-5 rounded-full" />
+                          ) : (
+                            <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-xs font-bold text-primary-600 dark:text-primary-400">
+                              {fromToken.slice(0, 1)}
+                            </div>
+                          );
+                        })()}
+                        <span className="block truncate text-gray-900 dark:text-gray-100">{fromToken}</span>
+                      </span>
+                      <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                        <ChevronDown className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                      </span>
+                    </Listbox.Button>
+                    <Transition
+                      as={Fragment}
+                      leave="transition ease-in duration-100"
+                      leaveFrom="opacity-100"
+                      leaveTo="opacity-0"
+                    >
+                      <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50">
+                        {tokens.map((token) => (
+                          <Listbox.Option
+                            key={token.symbol}
+                            className={({ active }) =>
+                              `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-900 dark:text-primary-100' : 'text-gray-900 dark:text-gray-100'
+                              }`
+                            }
+                            value={token.symbol}
+                          >
+                            {({ selected }) => (
+                              <>
+                                <span className="flex items-center truncate">
+                                  {(() => {
+                                    const logo = getTokenLogoWithFallback(token.symbol);
+                                    return logo ? (
+                                      <img src={logo} alt={token.symbol} className="mr-2 h-5 w-5 rounded-full" />
+                                    ) : (
+                                      <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                                        {token.symbol.slice(0, 1)}
+                                      </div>
+                                    );
+                                  })()}
+                                  <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                                    {token.symbol}
+                                  </span>
+                                </span>
+                                {selected ? (
+                                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-600 dark:text-primary-400">
+                                    <Check className="h-5 w-5" aria-hidden="true" />
+                                  </span>
+                                ) : null}
+                              </>
+                            )}
+                          </Listbox.Option>
+                        ))}
+                      </Listbox.Options>
+                    </Transition>
+                  </div>
+                </Listbox>
+              </div>
               <div className="flex-1 relative">
                 <input
                   type="number"
@@ -385,31 +495,118 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
               </span>
             </div>
             <div className="flex gap-3">
-              <select
-                value={toToken}
-                onChange={(e) => setToToken(e.target.value)}
-                className="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              >
-                {/* Show tokens from wallet first, then popular tokens */}
-                {tokens
-                  .filter(token => token.symbol !== fromToken)
-                  .map((token) => (
-                    <option key={`${token.symbol}-${token.contractAddress}`} value={token.symbol}>
-                      {token.symbol} ({token.balance.toFixed(4)})
-                    </option>
-                  ))}
-                {/* Add popular tokens not in wallet */}
-                {popularTokens
-                  .filter(token =>
-                    !tokens.some(t => t.symbol === token.symbol) &&
-                    token.symbol !== fromToken
-                  )
-                  .map((token) => (
-                    <option key={`${token.symbol}-${token.address}`} value={token.symbol}>
-                      {token.symbol}
-                    </option>
-                  ))}
-              </select>
+              <div className="flex-1">
+                <Listbox value={toToken} onChange={setToToken}>
+                  <div className="relative">
+                    <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white dark:bg-gray-700 py-3 pl-3 pr-10 text-left border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent sm:text-sm">
+                      <span className="flex items-center truncate">
+                        {(() => {
+                          const logo = getTokenLogoWithFallback(toToken);
+                          return logo ? (
+                            <img src={logo} alt={toToken} className="mr-2 h-5 w-5 rounded-full" />
+                          ) : (
+                            <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30 text-xs font-bold text-primary-600 dark:text-primary-400">
+                              {toToken.slice(0, 1)}
+                            </div>
+                          );
+                        })()}
+                        <span className="block truncate text-gray-900 dark:text-gray-100">{toToken}</span>
+                      </span>
+                      <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                        <ChevronDown className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                      </span>
+                    </Listbox.Button>
+                    <Transition
+                      as={Fragment}
+                      leave="transition ease-in duration-100"
+                      leaveFrom="opacity-100"
+                      leaveTo="opacity-0"
+                    >
+                      <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-800 py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50">
+                        {/* Show tokens from wallet first */}
+                        {tokens
+                          .filter(token => token.symbol !== fromToken)
+                          .map((token) => (
+                            <Listbox.Option
+                              key={`${token.symbol}-${token.contractAddress}`}
+                              className={({ active }) =>
+                                `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-900 dark:text-primary-100' : 'text-gray-900 dark:text-gray-100'
+                                }`
+                              }
+                              value={token.symbol}
+                            >
+                              {({ selected }) => (
+                                <>
+                                  <span className="flex items-center truncate">
+                                    {(() => {
+                                      const logo = getTokenLogoWithFallback(token.symbol);
+                                      return logo ? (
+                                        <img src={logo} alt={token.symbol} className="mr-2 h-5 w-5 rounded-full" />
+                                      ) : (
+                                        <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                                          {token.symbol.slice(0, 1)}
+                                        </div>
+                                      );
+                                    })()}
+                                    <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                                      {token.symbol}
+                                    </span>
+                                  </span>
+                                  {selected ? (
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-600 dark:text-primary-400">
+                                      <Check className="h-5 w-5" aria-hidden="true" />
+                                    </span>
+                                  ) : null}
+                                </>
+                              )}
+                            </Listbox.Option>
+                          ))}
+                        {/* Add popular tokens not in wallet */}
+                        {popularTokens
+                          .filter(token =>
+                            !tokens.some(t => t.symbol === token.symbol) &&
+                            token.symbol !== fromToken
+                          )
+                          .map((token) => (
+                            <Listbox.Option
+                              key={`${token.symbol}-${token.address}`}
+                              className={({ active }) =>
+                                `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-900 dark:text-primary-100' : 'text-gray-900 dark:text-gray-100'
+                                }`
+                              }
+                              value={token.symbol}
+                            >
+                              {({ selected }) => (
+                                <>
+                                  <span className="flex items-center truncate">
+                                    {(() => {
+                                      const logo = getTokenLogoWithFallback(token.symbol);
+                                      return logo ? (
+                                        <img src={logo} alt={token.symbol} className="mr-2 h-5 w-5 rounded-full" />
+                                      ) : (
+                                        <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                                          {token.symbol.slice(0, 1)}
+                                        </div>
+                                      );
+                                    })()}
+                                    <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                                      {token.symbol}
+                                    </span>
+                                  </span>
+                                  {selected ? (
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary-600 dark:text-primary-400">
+                                      <Check className="h-5 w-5" aria-hidden="true" />
+                                    </span>
+                                  ) : null}
+                                </>
+                              )}
+                            </Listbox.Option>
+                          ))}
+                      </Listbox.Options>
+                    </Transition>
+                  </div>
+                </Listbox>
+              </div>
               <div className="flex-1">
                 <input
                   type="text"
