@@ -180,9 +180,9 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
       );
 
       // Create a map of methods with costs for the dynamic engine
-      const methodsWithCosts = costResults.results.map((costEstimate, index) => ({
-        method: context.availablePaymentMethods[index],
-        costEstimate: costEstimate,
+      const methodsWithCosts = costResults.results.map((result) => ({
+        method: result.method,
+        costEstimate: result.costEstimate,
         priority: 0, // Placeholder
         availabilityStatus: AvailabilityStatus.AVAILABLE, // Placeholder
         userPreferenceScore: 0, // Placeholder

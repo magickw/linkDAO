@@ -1703,7 +1703,7 @@ class EnhancedAuthService {
       if (typeof window === 'undefined' || !window.indexedDB) {
         return reject(new Error('IndexedDB not supported'));
       }
-      const request = window.indexedDB.open('OfflineData', 2);
+      const request = window.indexedDB.open('OfflineData', 4);
 
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve(request.result);

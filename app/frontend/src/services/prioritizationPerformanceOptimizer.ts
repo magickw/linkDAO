@@ -72,9 +72,9 @@ export class PrioritizationPerformanceOptimizer {
     methods: PaymentMethod[],
     userContext: UserContext,
     transactionAmount: number
-  ): Promise<ParallelProcessingResult<CostEstimate>> {
+  ): Promise<ParallelProcessingResult<{ method: PaymentMethod; costEstimate: CostEstimate }>> {
     const startTime = performance.now();
-    const results: CostEstimate[] = [];
+    const results: { method: PaymentMethod; costEstimate: CostEstimate }[] = [];
     const errors: Error[] = [];
     let cacheHits = 0;
     let cacheMisses = 0;
@@ -130,7 +130,7 @@ export class PrioritizationPerformanceOptimizer {
         const cached = await intelligentCacheService.getCachedPrioritizationResult(cacheKey);
         if (cached) {
           cacheHits++;
-          return cached;
+          return { method: task.method, costEstimate: cached as CostEstimate };
         }
 
         cacheMisses++;
@@ -145,7 +145,7 @@ export class PrioritizationPerformanceOptimizer {
         // Cache the result
         await intelligentCacheService.cachePrioritizationResult(cacheKey, costEstimate);
 
-        return costEstimate;
+        return { method: task.method, costEstimate };
       } catch (error) {
         errors.push(error as Error);
         return null;
@@ -517,10 +517,10 @@ export class PrioritizationPerformanceOptimizer {
           request.transactionAmount
         );
 
-        return request.methods.map((method, index) => ({
-          method,
-          priority: this.getMethodPriority(method.type),
-          costEstimate: costResults.results[index] || {
+        return request.methods.map((method, index) => {
+          // Find the matching cost result for this method
+          const matchingResult = costResults.results.find(r => r.method.type === method.type);
+          const costEstimate = matchingResult ? matchingResult.costEstimate : {
             totalCost: request.transactionAmount,
             baseCost: request.transactionAmount,
             gasFee: 0,
@@ -532,12 +532,18 @@ export class PrioritizationPerformanceOptimizer {
               networkFee: 0,
               platformFee: 0
             }
-          },
-          availabilityStatus: AvailabilityStatus.AVAILABLE,
-          userPreferenceScore: 0.7,
-          recommendationReason: 'Standard option',
-          totalScore: 0.7
-        }));
+          };
+
+          return {
+            method,
+            priority: this.getMethodPriority(method.type),
+            costEstimate,
+            availabilityStatus: AvailabilityStatus.AVAILABLE,
+            userPreferenceScore: 0.7,
+            recommendationReason: 'Standard option',
+            totalScore: 0.7
+          };
+        });
       })
     );
   }

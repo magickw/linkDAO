@@ -623,6 +623,102 @@ class AuthController {
   }
 
   /**
+   * Refresh authentication token
+   * POST /api/auth/refresh
+   */
+  async refreshToken(req: Request, res: Response) {
+    try {
+      const { refreshToken } = req.body;
+
+      if (!refreshToken) {
+        return errorResponse(res, 'MISSING_REFRESH_TOKEN', 'Refresh token is required', 400);
+      }
+
+      // Verify token signature
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret) {
+        throw new Error('JWT_SECRET not configured');
+      }
+
+      let decoded: any;
+      try {
+        decoded = jwt.verify(refreshToken, jwtSecret);
+      } catch (jwtError) {
+        return errorResponse(res, 'INVALID_REFRESH_TOKEN', 'Invalid or expired refresh token', 401);
+      }
+
+      // Check database for active session
+      const sessionRecord = await db
+        .select()
+        .from(authSessions)
+        .where(eq(authSessions.refreshToken, refreshToken))
+        .limit(1);
+
+      if (sessionRecord.length === 0 || !sessionRecord[0].isActive) {
+        return errorResponse(res, 'INVALID_SESSION', 'Session invalid or expired', 401);
+      }
+
+      // Check if expired in DB (double check)
+      if (new Date() > sessionRecord[0].refreshExpiresAt) {
+        return errorResponse(res, 'SESSION_EXPIRED', 'Refresh token expired', 401);
+      }
+
+      const session = sessionRecord[0];
+      const walletAddress = session.walletAddress;
+
+      // Generate new tokens
+      const newSessionToken = jwt.sign(
+        {
+          userId: decoded.userId,
+          walletAddress: walletAddress,
+          timestamp: Date.now()
+        },
+        jwtSecret,
+        { expiresIn: '24h' }
+      );
+
+      const newRefreshToken = jwt.sign(
+        {
+          userId: decoded.userId,
+          walletAddress: walletAddress,
+          type: 'refresh',
+          timestamp: Date.now()
+        },
+        jwtSecret,
+        { expiresIn: '7d' }
+      );
+
+      // Update session in DB
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+      await db
+        .update(authSessions)
+        .set({
+          sessionToken: newSessionToken,
+          refreshToken: newRefreshToken,
+          expiresAt: expiresAt,
+          refreshExpiresAt: refreshExpiresAt,
+          lastUsedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(authSessions.id, session.id));
+
+      safeLogger.info('Session refreshed successfully', { walletAddress });
+
+      successResponse(res, {
+        token: newSessionToken,
+        refreshToken: newRefreshToken,
+        expiresIn: '24h'
+      });
+
+    } catch (error) {
+      safeLogger.error('Refresh token error:', error);
+      errorResponse(res, 'REFRESH_ERROR', 'Failed to refresh token', 500);
+    }
+  }
+
+  /**
    * Logout user
    * POST /api/auth/logout
    */
