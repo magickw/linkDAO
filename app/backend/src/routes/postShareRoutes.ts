@@ -23,6 +23,7 @@ router.get('/:shareId', async (req: Request, res: Response) => {
 
     // Validate share ID format
     if (!isValidShareId(shareId)) {
+      console.warn(`[PostShareRoutes] Invalid Share ID format: ${shareId}`);
       return res.status(404).json({
         success: false,
         error: 'Invalid Share ID format'
@@ -33,6 +34,7 @@ router.get('/:shareId', async (req: Request, res: Response) => {
     const resolution = await unifiedShareResolver.resolve(shareId);
 
     if (!resolution) {
+      console.warn(`[PostShareRoutes] Content not found for Share ID: ${shareId}`);
       return res.status(404).json({
         success: false,
         error: 'Content not found'

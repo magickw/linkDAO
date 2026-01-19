@@ -68,11 +68,40 @@ class NotificationService {
 
       const data = await response.json();
 
+      // Validate data structure
+      if (!data || !Array.isArray(data.notifications)) {
+        console.error('Invalid notifications data received:', data);
+        return {
+          notifications: [],
+          unreadCount: 0,
+          totalCount: 0,
+          hasMore: false
+        };
+      }
+
       return {
-        notifications: data.notifications.map(this.transformNotification),
-        unreadCount: data.unreadCount,
-        totalCount: data.totalCount,
-        hasMore: data.hasMore
+        notifications: data.notifications.map((notification: any) => {
+          try {
+            return this.transformNotification(notification);
+          } catch (error) {
+            console.error('Error transforming notification:', notification, error);
+            // Return a minimal valid notification to prevent complete failure
+            return {
+              id: notification.id || 'unknown',
+              type: notification.type || 'system',
+              category: 'system_alert',
+              title: 'Notification',
+              message: notification.message || 'Unable to display notification',
+              data: {},
+              priority: 'low',
+              isRead: notification.isRead || false,
+              createdAt: new Date(notification.createdAt || Date.now())
+            };
+          }
+        }),
+        unreadCount: data.unreadCount || 0,
+        totalCount: data.totalCount || 0,
+        hasMore: data.hasMore || false
       };
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -586,23 +615,24 @@ class NotificationService {
         metadata = typeof data.metadata === 'string' ? JSON.parse(data.metadata) : data.metadata;
       } catch (e) {
         console.warn('Failed to parse notification metadata:', e);
+        metadata = {};
       }
     }
 
     return {
-      id: data.id,
-      type: data.type,
+      id: data.id || 'unknown',
+      type: data.type || 'system',
       category: category,
       title: data.title || metadata.title || 'Notification',
-      message: data.message,
-      data: data.data,
+      message: data.message || (typeof data.message === 'object' ? JSON.stringify(data.message) : String(data.message)),
+      data: data.data || {},
       fromAddress: data.fromAddress,
       fromName: data.fromName,
       avatarUrl: data.avatarUrl,
       actionUrl: data.actionUrl || metadata.actionUrl,
       priority: data.priority || metadata.priority || 'medium',
-      isRead: data.isRead,
-      createdAt: new Date(data.createdAt),
+      isRead: data.isRead || false,
+      createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
       expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined,
     };
   }

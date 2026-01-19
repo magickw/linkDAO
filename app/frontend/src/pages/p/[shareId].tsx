@@ -44,11 +44,19 @@ export default function StatusSharePage() {
                 const response = await fetch(`/api/p/${shareId}`);
 
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
+                    let errorMessage = 'Failed to load status';
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.error || errorData.message || errorMessage;
+                    } catch (e) {
+                        // If JSON parsing fails, use status text
+                        errorMessage = response.statusText || `Error ${response.status}`;
+                    }
+                    
                     if (response.status === 404) {
-                        setError(errorData.error || 'Status not found');
+                        setError(errorMessage || 'Status not found');
                     } else {
-                        setError(errorData.error || 'Failed to load status');
+                        setError(errorMessage);
                     }
                     setIsLoading(false);
                     return;
@@ -125,7 +133,7 @@ export default function StatusSharePage() {
             return;
         }
         try {
-            await StatusService.reactToStatus(postId, address, 'upvote', '1');
+            await StatusService.addReaction(postId, 'upvote', 1);
             addToast('Upvoted!', 'success');
         } catch (error) {
             console.error('Error upvoting:', error);
@@ -143,7 +151,7 @@ export default function StatusSharePage() {
             return;
         }
         try {
-            await StatusService.reactToStatus(postId, address, 'downvote', '1');
+            await StatusService.addReaction(postId, 'downvote', 1);
             addToast('Downvoted!', 'success');
         } catch (error) {
             console.error('Error downvoting:', error);
@@ -161,7 +169,7 @@ export default function StatusSharePage() {
             return;
         }
         try {
-            await StatusService.reactToStatus(postId, address, reactionType, String(amount || 1));
+            await StatusService.addReaction(postId, reactionType, amount || 1);
             addToast(`Reacted with ${reactionType}!`, 'success');
         } catch (error) {
             console.error('Error reacting:', error);
@@ -180,7 +188,7 @@ export default function StatusSharePage() {
         }
         if (!status) return;
         try {
-            await StatusService.tipStatus(postId, address, status.author, token, amount);
+            await StatusService.sendTip(postId, parseFloat(amount), token);
             addToast(`Tipped ${amount} ${token}!`, 'success');
         } catch (error) {
             console.error('Error tipping:', error);

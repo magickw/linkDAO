@@ -39,7 +39,10 @@ const getRpcUrl = (chainId: number) => {
   const targetUrl = getChainRpcUrl(chainId);
   // Always route through our backend proxy for consistent behavior across environments
   // and to avoid CORS issues with providers like Alchemy
-  return `/api/proxy?target=${encodeURIComponent(targetUrl)}`;
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/api/proxy?target=${encodeURIComponent(targetUrl)}`;
+  }
+  return targetUrl;
 };
 
 export const getChainRpcUrl = (chainId: number) => {

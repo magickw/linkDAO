@@ -135,6 +135,10 @@ export default function Home() {
   // Initialize WebSocket instance without auto-connecting
   const webSocket = useWebSocket(webSocketConfig);
 
+  // Store webSocket in a ref to avoid dependency issues in useEffect
+  const webSocketRef = useRef(webSocket);
+  webSocketRef.current = webSocket;
+
   // Track WebSocket connection status to avoid multiple connections
   const wsConnectedRef = useRef(false);
 
@@ -144,6 +148,10 @@ export default function Home() {
 
   // Simple flag to prevent multiple simultaneous updates
   const isUpdating = useRef(false);
+
+  // Store timeout IDs for cleanup
+  const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const disconnectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     console.log('[HomePage] WebSocket connection useEffect triggered, isConnected:', isConnected);
@@ -165,7 +173,7 @@ export default function Home() {
 
       // Then defer WebSocket connection establishment separately with requestIdleCallback
       if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        window.requestIdleCallback(() => {
+        const idleCallbackId = window.requestIdleCallback(() => {
           // Check if we're still on the home page and not navigating away
           if (window.location.pathname !== '/') {
             console.log('[HomePage] Not on home page anymore, skipping WebSocket connection');
@@ -173,8 +181,9 @@ export default function Home() {
             return;
           }
 
-          if (isConnected && webSocket && !webSocket.isConnected) {
-            if (webSocket.connectionState && webSocket.connectionState.status === 'connecting') {
+          const ws = webSocketRef.current;
+          if (isConnected && ws && !ws.isConnected) {
+            if (ws.connectionState && ws.connectionState.status === 'connecting') {
               console.log('[HomePage] WebSocket already connecting, skipping');
               isUpdating.current = false;
               return;
@@ -182,7 +191,7 @@ export default function Home() {
 
             console.log('[HomePage] Attempting WebSocket connection during idle time...');
             // Connect WebSocket only after wallet is connected and page has stabilized
-            webSocket.connect().then(() => {
+            ws.connect().then(() => {
               console.log('[HomePage] WebSocket connected successfully');
             }).catch((error) => {
               console.error('[HomePage] WebSocket connection failed:', error);
@@ -193,9 +202,13 @@ export default function Home() {
             isUpdating.current = false;
           }
         }, { timeout: 5000 }); // Fallback timeout if idle callback doesn't fire
+
+        return () => {
+          window.cancelIdleCallback(idleCallbackId);
+        };
       } else {
         // Fallback for browsers without requestIdleCallback
-        setTimeout(() => {
+        connectionTimeoutRef.current = setTimeout(() => {
           // Check if we're still on the home page and not navigating away
           if (window.location.pathname !== '/') {
             console.log('[HomePage] Not on home page anymore, skipping WebSocket connection');
@@ -203,8 +216,9 @@ export default function Home() {
             return;
           }
 
-          if (isConnected && webSocket && !webSocket.isConnected) {
-            if (webSocket.connectionState && webSocket.connectionState.status === 'connecting') {
+          const ws = webSocketRef.current;
+          if (isConnected && ws && !ws.isConnected) {
+            if (ws.connectionState && ws.connectionState.status === 'connecting') {
               console.log('[HomePage] WebSocket already connecting, skipping');
               isUpdating.current = false;
               return;
@@ -212,7 +226,7 @@ export default function Home() {
 
             console.log('[HomePage] Attempting WebSocket connection with timeout...');
             // Connect WebSocket only after wallet is connected and page has stabilized
-            webSocket.connect().then(() => {
+            ws.connect().then(() => {
               console.log('[HomePage] WebSocket connected successfully');
             }).catch((error) => {
               console.error('[HomePage] WebSocket connection failed:', error);
@@ -226,6 +240,11 @@ export default function Home() {
       }
 
       return () => {
+        // Clean up connection timeout
+        if (connectionTimeoutRef.current) {
+          clearTimeout(connectionTimeoutRef.current);
+          connectionTimeoutRef.current = null;
+        }
         // DON'T disconnect WebSocket when leaving the page - let it persist for better UX
         // Only reset the local reference
         wsConnectedRef.current = false;
@@ -236,22 +255,36 @@ export default function Home() {
       setIsConnectionStabilized(false);
       // Only disconnect WebSocket when wallet is disconnected (not on page navigation)
       // Use setTimeout to ensure disconnection doesn't block navigation
-      if (webSocket && typeof webSocket.disconnect === 'function') {
-        const shouldDisconnect = webSocket.connectionState?.mode !== 'disabled' && webSocket.isConnected;
+      const ws = webSocketRef.current;
+      if (ws && typeof ws.disconnect === 'function') {
+        const shouldDisconnect = ws.connectionState?.mode !== 'disabled' && ws.isConnected;
 
         if (shouldDisconnect) {
           console.log('[HomePage] Scheduling WebSocket disconnection...');
-          setTimeout(() => {
-            // Double check inside timeout to be safe
-            if (webSocket.connectionState?.mode !== 'disabled') {
-              webSocket.disconnect();
+          // Use setTimeout to ensure disconnection doesn't block navigation
+          disconnectionTimeoutRef.current = setTimeout(() => {
+            const currentWs = webSocketRef.current;
+            if (currentWs && currentWs.connectionState?.mode !== 'disabled') {
+              currentWs.disconnect();
               wsConnectedRef.current = false; // Reset connection status
             }
           }, 0);
         }
       }
     }
-  }, [isConnected, webSocket]);
+
+    return () => {
+      // Clean up all timeouts
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = null;
+      }
+      if (disconnectionTimeoutRef.current) {
+        clearTimeout(disconnectionTimeoutRef.current);
+        disconnectionTimeoutRef.current = null;
+      }
+    };
+  }, [isConnected]);
 
 
 
@@ -306,9 +339,10 @@ export default function Home() {
   // Subscribe to feed updates when connected with proper cleanup
   useEffect(() => {
     // Only subscribe if connected and WebSocket should be active
-    if (webSocket.isConnected && address && !wsSubscribedRef.current) {
+    const ws = webSocketRef.current;
+    if (ws.isConnected && address && !wsSubscribedRef.current) {
       // Subscribe to global feed updates
-      const subscriptionId = webSocket.subscribe('feed', 'all', {
+      const subscriptionId = ws.subscribe('feed', 'all', {
         eventTypes: ['feed_update', 'new_post']
       });
       wsSubscribedRef.current = true;
@@ -325,23 +359,33 @@ export default function Home() {
         }
       };
 
-      webSocket.on('feed_update', handleFeedUpdate);
+      ws.on('feed_update', handleFeedUpdate);
+
+      const unsubscribeTimeoutId = setTimeout(() => {
+        // This timeout is for cleanup only, no action needed here
+      }, 0);
 
       return () => {
-        webSocket.off('feed_update', handleFeedUpdate);
+        ws.off('feed_update', handleFeedUpdate);
+        clearTimeout(unsubscribeTimeoutId);
         // Unsubscribe when cleaning up
         if (subscriptionId) {
           // Use setTimeout to ensure unsubscribe happens after event handlers are removed
-          setTimeout(() => {
+          const cleanupTimeoutId = setTimeout(() => {
             if (isMounted.current) {
-              webSocket.unsubscribe(subscriptionId);
+              const currentWs = webSocketRef.current;
+              if (currentWs) {
+                currentWs.unsubscribe(subscriptionId);
+              }
             }
           }, 0);
+          // Store the cleanup timeout ID for cleanup
+          return () => clearTimeout(cleanupTimeoutId);
         }
         wsSubscribedRef.current = false;
       };
     }
-  }, [webSocket, address, addToast, debouncedRefresh, isMounted]);
+  }, [address, addToast, debouncedRefresh, isMounted, isConnected]);
 
   // Cleanup effect when leaving home page
   useEffect(() => {

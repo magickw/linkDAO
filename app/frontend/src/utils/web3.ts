@@ -908,10 +908,14 @@ export async function getMainnetProvider() {
   
   try {
     const network = ethers.Network.from(1);
-    // Use our backend proxy to avoid CORS issues
-    const proxiedRpc = `/api/proxy?target=${encodeURIComponent(mainnetRpc)}`;
     
-    const provider = new ethers.JsonRpcProvider(proxiedRpc, network, {
+    // Check if we're in the browser and need to use the proxy
+    const shouldUseProxy = typeof window !== 'undefined';
+    const rpcUrl = shouldUseProxy 
+      ? `${window.location.origin}/api/proxy?target=${encodeURIComponent(mainnetRpc)}`
+      : mainnetRpc;
+    
+    const provider = new ethers.JsonRpcProvider(rpcUrl, network, {
       staticNetwork: true,
       polling: false
     });
