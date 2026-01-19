@@ -81,7 +81,7 @@ export const ProductCardSkeleton: React.FC = () => {
       <View style={styles.cardContent}>
         <Skeleton width="80%" height={16} />
         <Skeleton width="60%" height={14} />
-        <Skeleton width={40%" height={18} style={styles.price} />
+        <Skeleton width="40%" height={18} style={styles.price} />
       </View>
     </View>
   );

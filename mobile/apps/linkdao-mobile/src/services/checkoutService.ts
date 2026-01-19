@@ -4,6 +4,11 @@
  */
 
 import { apiClient } from './apiClient';
+import { 
+  AddressValidationResult, 
+  DiscountValidationResult, 
+  CheckoutRecommendation 
+} from '../types/checkout';
 
 export interface CheckoutSessionParams {
     items: any[];
@@ -12,9 +17,10 @@ export interface CheckoutSessionParams {
 
 export interface ProcessCheckoutParams {
     sessionId: string;
-    paymentMethod: 'crypto' | 'fiat';
+    paymentMethod: string;
     paymentDetails: any;
     shippingAddress: any;
+    discountCode?: string;
 }
 
 class CheckoutService {
@@ -69,7 +75,7 @@ class CheckoutService {
     }
 
     /**
-     * Validate checkout data
+     * Validate checkout data (Legacy)
      */
     async validateCheckout(data: any) {
         try {
@@ -80,7 +86,85 @@ class CheckoutService {
             return { valid: false, errors: [{ message: 'Validation failed' }] };
         }
     }
+
+    /**
+     * Validate address using the new service
+     */
+    async validateAddress(address: any): Promise<AddressValidationResult> {
+        try {
+            const response = await apiClient.post('/api/checkout/validate-address', { address });
+            if (response.data && response.data.success) {
+                return response.data.data;
+            }
+            throw new Error(response.data.message || 'Address validation failed');
+        } catch (error: any) {
+            console.error('[Checkout] Error validating address:', error);
+            return {
+                isValid: false,
+                confidence: 'low',
+                errors: [error.message || 'Address validation service unavailable'],
+                warnings: []
+            };
+        }
+    }
+
+    /**
+     * Apply discount code
+     */
+    async applyDiscount(code: string, cartTotal: number, items: any[]): Promise<DiscountValidationResult> {
+        try {
+            const response = await apiClient.post('/api/checkout/discount', { 
+                code, 
+                cartTotal,
+                items 
+            });
+            
+            if (response.data && response.data.success) {
+                return {
+                    isValid: true,
+                    discountAmount: response.data.data.amount,
+                    newTotal: response.data.data.newTotal,
+                    code
+                };
+            }
+            
+            return {
+                isValid: false,
+                discountAmount: 0,
+                newTotal: cartTotal,
+                code,
+                error: response.data.message || 'Invalid discount code'
+            };
+        } catch (error: any) {
+            console.error('[Checkout] Error applying discount:', error);
+            return {
+                isValid: false,
+                discountAmount: 0,
+                newTotal: cartTotal,
+                code,
+                error: error.response?.data?.message || error.message || 'Failed to apply discount'
+            };
+        }
+    }
+
+    /**
+     * Get payment method recommendation
+     */
+    async getPaymentRecommendation(params: any): Promise<CheckoutRecommendation | null> {
+        try {
+            const response = await apiClient.post('/api/hybrid-payment/recommend-path', params);
+            if (response.data && response.data.success) {
+                // Transform if necessary, or return as is if types match
+                return response.data.data; 
+            }
+            return null;
+        } catch (error) {
+            console.error('[Checkout] Error getting recommendation:', error);
+            return null;
+        }
+    }
 }
+
 
 export const checkoutService = new CheckoutService();
 export default checkoutService;

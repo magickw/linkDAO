@@ -1,17 +1,20 @@
 /**
  * Checkout Screen
  * Complete the purchase with payment flow
+ * Updated to use Reducer pattern and new backend services
  */
 
-import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { useEffect, useReducer, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { cartStore } from '../../src/store';
 import { useAuthStore } from '../../src/store';
 import { checkoutService } from '../../src/services/checkoutService';
-import { taxService, TaxCalculationResult } from '../../src/services/taxService';
+import { taxService } from '../../src/services/taxService';
+import { checkoutReducer, initialCheckoutState } from '../../src/reducers/checkoutReducer';
+import { PaymentMethodType } from '../../src/types/checkout';
 
 export default function CheckoutScreen() {
   const router = useRouter();
@@ -22,56 +25,77 @@ export default function CheckoutScreen() {
   const syncWithBackend = cartStore((state) => state.syncWithBackend);
   const getTotalPrice = cartStore((state) => state.getTotalPrice);
 
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'crypto' | 'fiat'>('crypto');
-  const [processing, setProcessing] = useState(false);
-  const [taxCalculation, setTaxCalculation] = useState<TaxCalculationResult | null>(null);
-  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
-  const [loadingAddresses, setLoadingAddresses] = useState(false);
-  const [shippingAddress, setShippingAddress] = useState({
-    fullName: user?.displayName || '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    country: 'United States',
-  });
+  const [state, dispatch] = useReducer(checkoutReducer, initialCheckoutState);
+  
+  // Local state for inputs to avoid too many dispatches on typing
+  const [discountInput, setDiscountInput] = useState('');
 
   const subtotal = getTotalPrice();
-  const shipping = 0;
+  const shipping = 0 as number; // In a real app, this would come from shipping service
   
+  // Load initial data
   useEffect(() => {
     loadSavedAddresses();
   }, []);
 
   const loadSavedAddresses = async () => {
     try {
-      setLoadingAddresses(true);
+      dispatch({ type: 'SET_LOADING_SAVED_DATA', payload: true });
       const addresses = await checkoutService.getSavedAddresses();
-      setSavedAddresses(addresses);
+      dispatch({ type: 'SET_SAVED_ADDRESSES', payload: addresses });
     } catch (error) {
       console.error('Error loading saved addresses:', error);
     } finally {
-      setLoadingAddresses(false);
+      dispatch({ type: 'SET_LOADING_SAVED_DATA', payload: false });
     }
   };
 
   const handleSelectSavedAddress = (addr: any) => {
-    setShippingAddress({
-      fullName: `${addr.firstName} ${addr.lastName}`,
-      address: addr.addressLine1,
+    const formattedAddress = {
+      firstName: addr.firstName,
+      lastName: addr.lastName,
+      email: user?.email || '', // Assuming email is available or user enters it
+      address1: addr.addressLine1,
+      address2: addr.addressLine2,
       city: addr.city,
       state: addr.state,
       zipCode: addr.postalCode,
-      country: addr.country === 'US' ? 'United States' : addr.country,
-    });
+      country: addr.country === 'US' ? 'United States' : addr.country, // Normalize if needed
+      phone: addr.phoneNumber
+    };
+
+    dispatch({ type: 'SET_SHIPPING_ADDRESS', payload: formattedAddress });
+    dispatch({ type: 'SELECT_SAVED_ADDRESS', payload: addr.id });
+    
+    // Validate address with new service
+    validateAddress(formattedAddress);
+  };
+
+  const validateAddress = async (address: any) => {
+    const result = await checkoutService.validateAddress(address);
+    if (!result.isValid) {
+      // Show warning but don't block if user insists? 
+      // For now, just setting errors
+      const errors: Record<string, string> = {};
+      result.errors.forEach((err, idx) => {
+        errors[`address_error_${idx}`] = err;
+      });
+      dispatch({ type: 'SET_SHIPPING_ERRORS', payload: errors });
+    } else {
+       dispatch({ type: 'CLEAR_ERRORS' });
+       if (result.normalizedAddress) {
+         // Could offer to update to normalized address
+         // dispatch({ type: 'SET_SHIPPING_ADDRESS', payload: result.normalizedAddress });
+       }
+    }
   };
 
   // Calculate tax when address or items change
   useEffect(() => {
-    if (shippingAddress.country && items.length > 0) {
+    if (state.shippingAddress.country && items.length > 0) {
       calculateTax();
     }
-  }, [shippingAddress.country, shippingAddress.state, items]);
+  }, [state.shippingAddress.country, state.shippingAddress.state, state.shippingAddress.zipCode, items]);
 
   const calculateTax = async () => {
     try {
@@ -85,32 +109,65 @@ export default function CheckoutScreen() {
       const result = await taxService.calculateTax(
         taxableItems,
         {
-          country: shippingAddress.country === 'United States' ? 'US' : shippingAddress.country,
-          state: shippingAddress.state,
-          city: shippingAddress.city,
-          postalCode: shippingAddress.zipCode,
-          line1: shippingAddress.address
+          country: state.shippingAddress.country === 'United States' ? 'US' : state.shippingAddress.country,
+          state: state.shippingAddress.state,
+          city: state.shippingAddress.city,
+          postalCode: state.shippingAddress.zipCode,
+          line1: state.shippingAddress.address1
         },
         shipping
       );
-      setTaxCalculation(result);
+      dispatch({ type: 'SET_TAX_CALCULATION', payload: result });
     } catch (error) {
       console.error('Tax calculation error:', error);
     }
   };
 
-  const tax = taxCalculation?.taxAmount || subtotal * 0.08;
-  const total = subtotal + tax + shipping;
+  const handleApplyDiscount = async () => {
+    if (!discountInput.trim()) return;
+
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      const result = await checkoutService.applyDiscount(
+        discountInput, 
+        subtotal, 
+        items.map(item => ({ id: item.id, price: item.price, quantity: item.quantity }))
+      );
+
+      if (result.isValid) {
+        dispatch({ 
+          type: 'APPLY_DISCOUNT', 
+          payload: { amount: result.discountAmount, code: result.code } 
+        });
+        Alert.alert('Success', `Discount code applied! Saved $${result.discountAmount.toFixed(2)}`);
+      } else {
+        dispatch({ type: 'SET_DISCOUNT_ERROR', payload: result.error || 'Invalid code' });
+        Alert.alert('Invalid Code', result.error || 'This discount code cannot be used.');
+      }
+    } catch (error) {
+      dispatch({ type: 'SET_DISCOUNT_ERROR', payload: 'Failed to apply discount' });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  };
+
+  const tax = state.taxCalculation?.taxAmount || 0;
+  const total = subtotal + tax + shipping - state.discountAmount;
 
   const handlePlaceOrder = async () => {
-    // Validate shipping address
-    if (!shippingAddress.fullName || !shippingAddress.address ||
-      !shippingAddress.city || !shippingAddress.state || !shippingAddress.zipCode) {
+    // Basic validation
+    if (!state.shippingAddress.firstName || !state.shippingAddress.address1 ||
+      !state.shippingAddress.city || !state.shippingAddress.state || !state.shippingAddress.zipCode) {
       Alert.alert('Incomplete Address', 'Please fill in all shipping address fields.');
       return;
     }
 
-    setProcessing(true);
+    if (!state.selectedPaymentMethod) {
+       Alert.alert('Payment Method', 'Please select a payment method.');
+       return;
+    }
+
+    dispatch({ type: 'SET_PROCESSING', payload: true });
 
     try {
       // 1. Sync cart with backend
@@ -127,18 +184,21 @@ export default function CheckoutScreen() {
           price: item.price,
           quantity: item.quantity
         })),
-        shippingAddress
+        shippingAddress: state.shippingAddress
       });
 
+      dispatch({ type: 'SET_SESSION_ID', payload: checkoutSession.sessionId });
+
       // 3. Process checkout
-      const result = await checkoutService.processCheckout({
+      await checkoutService.processCheckout({
         sessionId: checkoutSession.sessionId,
-        paymentMethod: selectedPaymentMethod,
+        paymentMethod: state.selectedPaymentMethod.method.type,
         paymentDetails: {
           walletAddress: user?.address, // Assuming user.address exists on AuthUser
           // Add token details if needed for crypto
         },
-        shippingAddress
+        shippingAddress: state.shippingAddress,
+        discountCode: state.discountCode
       });
 
       // Clear cart
@@ -160,29 +220,52 @@ export default function CheckoutScreen() {
         ]
       );
     } catch (error: any) {
-      Alert.alert(
-        'Payment Failed',
-        error.message || 'There was an error processing your payment. Please try again.'
-      );
+      const errorMessage = error.message || 'There was an error processing your payment. Please try again.';
+      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      Alert.alert('Payment Failed', errorMessage);
     } finally {
-      setProcessing(false);
+      dispatch({ type: 'SET_PROCESSING', payload: false });
     }
   };
 
+  // Simplified payment methods for UI (map to full types in reducer)
   const paymentMethods = [
     {
-      id: 'crypto',
-      name: 'Crypto Wallet',
-      icon: 'wallet-outline',
-      description: 'Pay with your connected wallet',
+      id: PaymentMethodType.STABLECOIN_USDC,
+      name: 'USDC (Crypto)',
+      icon: 'logo-usd',
+      description: 'Pay with USDC',
     },
     {
-      id: 'fiat',
+      id: PaymentMethodType.FIAT_STRIPE,
       name: 'Credit Card',
       icon: 'card-outline',
       description: 'Pay with credit or debit card',
     },
   ];
+
+  const selectPaymentMethod = (id: PaymentMethodType) => {
+      // Create a dummy PrioritizedPaymentMethod object for now to satisfy types
+      // In a real implementation, we would call getPaymentRecommendation to get this
+      const method = {
+          method: {
+              id: id,
+              type: id,
+              name: id === PaymentMethodType.STABLECOIN_USDC ? 'USDC' : 'Credit Card',
+              description: '',
+              enabled: true,
+              supportedNetworks: [1]
+          },
+          priority: 1,
+          costEstimate: { totalCost: 0, baseCost: 0, gasFee: 0, estimatedTime: 0, confidence: 1, currency: 'USD' },
+          availabilityStatus: 'available' as any,
+          userPreferenceScore: 1,
+          recommendationReason: 'User selection',
+          totalScore: 1
+      };
+      
+      dispatch({ type: 'SET_PAYMENT_METHOD', payload: method });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -197,14 +280,17 @@ export default function CheckoutScreen() {
 
       <ScrollView style={styles.content}>
         {/* Saved Addresses */}
-        {savedAddresses.length > 0 && (
+        {state.savedAddresses.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Use Saved Address</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.savedAddressesScroll}>
-              {savedAddresses.map((addr) => (
+              {state.savedAddresses.map((addr) => (
                 <TouchableOpacity 
                   key={addr.id} 
-                  style={styles.savedAddressCard}
+                  style={[
+                      styles.savedAddressCard, 
+                      state.selectedSavedAddress === addr.id && styles.savedAddressCardSelected
+                  ]}
                   onPress={() => handleSelectSavedAddress(addr)}
                 >
                   <Text style={styles.savedAddressName}>{addr.firstName} {addr.lastName}</Text>
@@ -221,12 +307,22 @@ export default function CheckoutScreen() {
           <Text style={styles.sectionTitle}>Shipping Address</Text>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Full Name</Text>
+            <Text style={styles.inputLabel}>First Name</Text>
             <TextInput
               style={styles.input}
-              placeholder="John Doe"
-              value={shippingAddress.fullName}
-              onChangeText={(text) => setShippingAddress({ ...shippingAddress, fullName: text })}
+              placeholder="John"
+              value={state.shippingAddress.firstName}
+              onChangeText={(text) => dispatch({ type: 'SET_SHIPPING_ADDRESS', payload: { firstName: text } })}
+            />
+          </View>
+
+           <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Last Name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Doe"
+              value={state.shippingAddress.lastName}
+              onChangeText={(text) => dispatch({ type: 'SET_SHIPPING_ADDRESS', payload: { lastName: text } })}
             />
           </View>
 
@@ -235,8 +331,8 @@ export default function CheckoutScreen() {
             <TextInput
               style={styles.input}
               placeholder="123 Main St"
-              value={shippingAddress.address}
-              onChangeText={(text) => setShippingAddress({ ...shippingAddress, address: text })}
+              value={state.shippingAddress.address1}
+              onChangeText={(text) => dispatch({ type: 'SET_SHIPPING_ADDRESS', payload: { address1: text } })}
             />
           </View>
 
@@ -246,8 +342,8 @@ export default function CheckoutScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="New York"
-                value={shippingAddress.city}
-                onChangeText={(text) => setShippingAddress({ ...shippingAddress, city: text })}
+                value={state.shippingAddress.city}
+                onChangeText={(text) => dispatch({ type: 'SET_SHIPPING_ADDRESS', payload: { city: text } })}
               />
             </View>
 
@@ -256,8 +352,8 @@ export default function CheckoutScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="NY"
-                value={shippingAddress.state}
-                onChangeText={(text) => setShippingAddress({ ...shippingAddress, state: text })}
+                value={state.shippingAddress.state}
+                onChangeText={(text) => dispatch({ type: 'SET_SHIPPING_ADDRESS', payload: { state: text } })}
               />
             </View>
           </View>
@@ -267,8 +363,8 @@ export default function CheckoutScreen() {
             <TextInput
               style={styles.input}
               placeholder="10001"
-              value={shippingAddress.zipCode}
-              onChangeText={(text) => setShippingAddress({ ...shippingAddress, zipCode: text })}
+              value={state.shippingAddress.zipCode}
+              onChangeText={(text) => dispatch({ type: 'SET_SHIPPING_ADDRESS', payload: { zipCode: text } })}
               keyboardType="number-pad"
             />
           </View>
@@ -278,10 +374,18 @@ export default function CheckoutScreen() {
             <TextInput
               style={styles.input}
               placeholder="United States"
-              value={shippingAddress.country}
-              onChangeText={(text) => setShippingAddress({ ...shippingAddress, country: text })}
+              value={state.shippingAddress.country}
+              onChangeText={(text) => dispatch({ type: 'SET_SHIPPING_ADDRESS', payload: { country: text } })}
             />
           </View>
+          
+          {Object.keys(state.shippingErrors).length > 0 && (
+              <View style={styles.errorContainer}>
+                  {Object.values(state.shippingErrors).map((err, i) => (
+                      <Text key={i} style={styles.errorText}>{err}</Text>
+                  ))}
+              </View>
+          )}
         </View>
 
         {/* Payment Method */}
@@ -293,20 +397,20 @@ export default function CheckoutScreen() {
               key={method.id}
               style={[
                 styles.paymentMethod,
-                selectedPaymentMethod === method.id && styles.paymentMethodSelected,
+                state.selectedPaymentMethod?.method.type === method.id && styles.paymentMethodSelected,
               ]}
-              onPress={() => setSelectedPaymentMethod(method.id as any)}
+              onPress={() => selectPaymentMethod(method.id)}
             >
               <View style={styles.paymentMethodLeft}>
                 <Ionicons
                   name={method.icon as any}
                   size={24}
-                  color={selectedPaymentMethod === method.id ? '#3b82f6' : '#6b7280'}
+                  color={state.selectedPaymentMethod?.method.type === method.id ? '#3b82f6' : '#6b7280'}
                 />
                 <View style={styles.paymentMethodInfo}>
                   <Text style={[
                     styles.paymentMethodName,
-                    selectedPaymentMethod === method.id && styles.paymentMethodNameSelected,
+                    state.selectedPaymentMethod?.method.type === method.id && styles.paymentMethodNameSelected,
                   ]}>
                     {method.name}
                   </Text>
@@ -317,9 +421,9 @@ export default function CheckoutScreen() {
               </View>
               <View style={[
                 styles.radioButton,
-                selectedPaymentMethod === method.id && styles.radioButtonSelected,
+                state.selectedPaymentMethod?.method.type === method.id && styles.radioButtonSelected,
               ]}>
-                {selectedPaymentMethod === method.id && (
+                {state.selectedPaymentMethod?.method.type === method.id && (
                   <View style={styles.radioButtonInner} />
                 )}
               </View>
@@ -327,7 +431,7 @@ export default function CheckoutScreen() {
           ))}
 
           {/* Crypto Wallet Info */}
-          {selectedPaymentMethod === 'crypto' && (
+          {state.selectedPaymentMethod?.method.type === PaymentMethodType.STABLECOIN_USDC && (
             <View style={styles.walletInfo}>
               <Ionicons name="information-circle" size={16} color="#3b82f6" />
               <Text style={styles.walletInfoText}>
@@ -335,6 +439,33 @@ export default function CheckoutScreen() {
               </Text>
             </View>
           )}
+        </View>
+
+        {/* Discount Code */}
+        <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Discount Code</Text>
+            <View style={styles.discountContainer}>
+                <TextInput
+                    style={styles.discountInput}
+                    placeholder="Enter code"
+                    value={discountInput}
+                    onChangeText={setDiscountInput}
+                    autoCapitalize="characters"
+                />
+                <TouchableOpacity style={styles.applyButton} onPress={handleApplyDiscount}>
+                    <Text style={styles.applyButtonText}>Apply</Text>
+                </TouchableOpacity>
+            </View>
+            {state.discountAmount > 0 && (
+                <Text style={styles.discountSuccess}>
+                    Code {state.discountCode} applied: -${state.discountAmount.toFixed(2)}
+                </Text>
+            )}
+             {state.discountError && (
+                <Text style={styles.errorText}>
+                    {state.discountError}
+                </Text>
+            )}
         </View>
 
         {/* Order Summary */}
@@ -372,16 +503,23 @@ export default function CheckoutScreen() {
 
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>
-              Tax {taxCalculation ? `(${(taxCalculation.taxRate * 100).toFixed(1)}%)` : '(8%)'}
+              Tax {state.taxCalculation ? `(${(state.taxCalculation.taxRate * 100).toFixed(1)}%)` : '(est.)'}
             </Text>
             <Text style={styles.summaryValue}>${tax.toFixed(2)}</Text>
           </View>
+          
+          {state.discountAmount > 0 && (
+            <View style={styles.summaryRow}>
+                <Text style={[styles.summaryLabel, { color: '#10b981' }]}>Discount</Text>
+                <Text style={[styles.summaryValue, { color: '#10b981' }]}>-${state.discountAmount.toFixed(2)}</Text>
+            </View>
+          )}
 
           <View style={styles.divider} />
 
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>${total.toFixed(2)}</Text>
+            <Text style={styles.totalValue}>${Math.max(0, total).toFixed(2)}</Text>
           </View>
         </View>
 
@@ -392,15 +530,15 @@ export default function CheckoutScreen() {
       <View style={styles.bottomBar}>
         <View style={styles.totalContainer}>
           <Text style={styles.totalText}>Total</Text>
-          <Text style={styles.totalAmount}>${total.toFixed(2)}</Text>
+          <Text style={styles.totalAmount}>${Math.max(0, total).toFixed(2)}</Text>
         </View>
         <TouchableOpacity
-          style={[styles.placeOrderButton, processing && styles.placeOrderButtonDisabled]}
+          style={[styles.placeOrderButton, state.processing && styles.placeOrderButtonDisabled]}
           onPress={handlePlaceOrder}
-          disabled={processing}
+          disabled={state.processing}
         >
-          {processing ? (
-            <Text style={styles.placeOrderButtonText}>Processing...</Text>
+          {state.processing ? (
+            <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.placeOrderButtonText}>Place Order</Text>
           )}
@@ -461,6 +599,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     marginRight: 12,
+  },
+  savedAddressCardSelected: {
+      borderColor: '#3b82f6',
+      backgroundColor: '#eff6ff',
   },
   savedAddressName: {
     fontSize: 15,
@@ -671,4 +813,45 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#ffffff',
   },
+  errorContainer: {
+      marginTop: 8,
+      padding: 8,
+      backgroundColor: '#fee2e2',
+      borderRadius: 8,
+  },
+  errorText: {
+      fontSize: 12,
+      color: '#dc2626',
+  },
+  discountContainer: {
+      flexDirection: 'row',
+      marginBottom: 8,
+  },
+  discountInput: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: '#d1d5db',
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      fontSize: 15,
+      color: '#1f2937',
+      marginRight: 8,
+  },
+  applyButton: {
+      backgroundColor: '#374151',
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      justifyContent: 'center',
+  },
+  applyButtonText: {
+      color: '#ffffff',
+      fontWeight: '600',
+      fontSize: 14,
+  },
+  discountSuccess: {
+      color: '#10b981',
+      fontSize: 14,
+      marginTop: 4,
+  }
 });
