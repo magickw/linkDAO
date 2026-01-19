@@ -92,6 +92,7 @@
     "@aws-sdk/client-s3": "^3.922.0",
     "@coinbase/cdp-sdk": "^1.40.1",
     "@coinbase/onchainkit": "^1.1.2",
+    "@easypost/api": "^7.7.2",
     "@nestjs/common": "^11.1.8",
     "@swc/cli": "^0.7.9",
     "@swc/core": "^1.15.7",
