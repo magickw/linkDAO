@@ -646,7 +646,8 @@ function OrderDetailsModal({ order, onClose, onCancelOrder, canCancel, isCancell
                     },
                     // These would ideally come from the seller profile extended data
                     registrationNumber: 'Ref: ' + (order.seller?.walletAddress?.substring(0, 8) || ''),
-                    email: 'seller@linkdao.io' // Placeholder or derived
+                    email: 'seller@linkdao.io', // Placeholder or derived
+                    walletAddress: order.seller?.walletAddress
                 },
 
                 // Construct Recipient (Buyer) Info
@@ -659,7 +660,8 @@ function OrderDetailsModal({ order, onClose, onCancelOrder, canCancel, isCancell
                         postalCode: order.shippingAddress?.postalCode || order.buyer?.address?.postalCode || '',
                         country: order.shippingAddress?.country || order.buyer?.address?.country || 'N/A'
                     },
-                    phone: order.shippingAddress?.phone
+                    phone: order.shippingAddress?.phone,
+                    walletAddress: order.buyer?.walletAddress
                 },
 
                 items: (order.items || []).map(item => ({

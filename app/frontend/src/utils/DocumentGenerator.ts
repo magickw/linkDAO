@@ -60,27 +60,54 @@ export class DocumentGenerator {
         doc.setFillColor(this.colors.primary[0], this.colors.primary[1], this.colors.primary[2]);
         doc.rect(0, 0, pageWidth, 40, 'F');
 
-        // Title
+        // Title (Top Left)
         doc.setFontSize(24);
         doc.setTextColor(255, 255, 255);
-        doc.text(this.data.type.replace('_', ' '), 15, 25);
+        doc.text(this.data.type.replace('_', ' '), 15, 20);
 
-        // Status Badge (if needed)
+        // Order # (Below Title)
+        doc.setFontSize(12);
+        doc.setTextColor(220, 220, 220); // Slightly dimmed white
+        doc.text(`${this.data.type === 'INVOICE' ? 'Invoice' : 'Order'} #: ${this.data.documentNumber}`, 15, 30);
+
+        // Status Badge (Right)
         doc.setFontSize(10);
+        doc.setTextColor(255, 255, 255);
         doc.text(this.data.status, pageWidth - 15, 25, { align: 'right' });
+
+        // Date (Top Right, below status)
+        doc.text(`Date: ${this.data.date.toLocaleDateString()}`, pageWidth - 15, 30, { align: 'right' });
     }
 
     private addCompanyInfo(): void {
         const doc = this.doc;
         const pageWidth = doc.internal.pageSize.getWidth();
-        let y = 50;
+        let y = 60; // Increased spacing from header
+
+        // Helper to formatting address
+        const formatAddress = (addr: any) => {
+            const lines: string[] = [];
+            // Only show street if it's not "N/A" and not empty
+            if (addr.street && addr.street !== 'N/A') lines.push(addr.street);
+
+            const cityStateZip = [
+                addr.city !== 'N/A' ? addr.city : '',
+                addr.state !== 'N/A' ? addr.state : '',
+                addr.postalCode
+            ].filter(Boolean).join(', ');
+
+            if (cityStateZip.replace(/, /g, '').length > 0) lines.push(cityStateZip);
+
+            if (addr.country !== 'N/A') lines.push(addr.country);
+            return lines;
+        };
 
         // Sender (Left)
         doc.setFontSize(10);
         doc.setTextColor(this.colors.lightText[0], this.colors.lightText[1], this.colors.lightText[2]);
         doc.text('FROM:', 15, y);
 
-        y += 5;
+        y += 6;
         doc.setFontSize(11);
         doc.setTextColor(this.colors.text[0], this.colors.text[1], this.colors.text[2]);
         doc.setFont('helvetica', 'bold');
@@ -88,32 +115,41 @@ export class DocumentGenerator {
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
-        y += 5;
-        doc.text(this.data.sender.address.street, 15, y);
-        y += 5;
-        doc.text(`${this.data.sender.address.city}, ${this.data.sender.address.state} ${this.data.sender.address.postalCode}`, 15, y);
-        y += 5;
-        doc.text(this.data.sender.address.country, 15, y);
+
+        const senderAddrLines = formatAddress(this.data.sender.address);
+        senderAddrLines.forEach(line => {
+            y += 5;
+            doc.text(line, 15, y);
+        });
+
+        // Wallet Address (Prominent)
+        if (this.data.sender.walletAddress) {
+            y += 6;
+            doc.setTextColor(this.colors.accent[0], this.colors.accent[1], this.colors.accent[2]);
+            doc.setFontSize(9);
+            // Shorten: 0x1234...5678
+            const wallet = this.data.sender.walletAddress;
+            const shortWallet = wallet.length > 12 ? `${wallet.substring(0, 6)}...${wallet.substring(wallet.length - 4)}` : wallet;
+            doc.text(`Wallet: ${shortWallet}`, 15, y);
+            doc.setTextColor(this.colors.text[0], this.colors.text[1], this.colors.text[2]); // Reset color
+        }
 
         if (this.data.sender.registrationNumber) {
             y += 5;
-            doc.text(`Reg #: ${this.data.sender.registrationNumber}`, 15, y);
-        }
-        if (this.data.sender.taxId) {
-            y += 5;
-            doc.text(`Tax ID: ${this.data.sender.taxId}`, 15, y);
+            doc.setTextColor(this.colors.lightText[0], this.colors.lightText[1], this.colors.lightText[2]);
+            doc.setFontSize(8);
+            doc.text(`Reg: ${this.data.sender.registrationNumber}`, 15, y);
         }
 
-
-        // Recipient (Right Side, aligned similarly)
-        y = 50;
+        // Recipient (Right Side)
+        y = 60; // Reset Y
         const rightColX = pageWidth / 2 + 10;
 
         doc.setFontSize(10);
         doc.setTextColor(this.colors.lightText[0], this.colors.lightText[1], this.colors.lightText[2]);
         doc.text('TO:', rightColX, y);
 
-        y += 5;
+        y += 6;
         doc.setFontSize(11);
         doc.setTextColor(this.colors.text[0], this.colors.text[1], this.colors.text[2]);
         doc.setFont('helvetica', 'bold');
@@ -121,22 +157,22 @@ export class DocumentGenerator {
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
-        y += 5;
-        doc.text(this.data.recipient.address.street, rightColX, y);
-        y += 5;
-        doc.text(`${this.data.recipient.address.city}, ${this.data.recipient.address.state} ${this.data.recipient.address.postalCode}`, rightColX, y);
-        y += 5;
-        doc.text(this.data.recipient.address.country, rightColX, y);
 
-        // Document Meta Data (Top Right below header)
-        const metaY = 50;
-        const metaX = pageWidth - 15;
+        const recipientAddrLines = formatAddress(this.data.recipient.address);
+        recipientAddrLines.forEach(line => {
+            y += 5;
+            doc.text(line, rightColX, y);
+        });
 
-        doc.setFontSize(10);
-        doc.text(`${this.data.type === 'INVOICE' ? 'Invoice' : 'Order'} #: ${this.data.documentNumber}`, metaX, metaY, { align: 'right' });
-        doc.text(`Date: ${this.data.date.toLocaleDateString()}`, metaX, metaY + 5, { align: 'right' });
-        if (this.data.dueDate) {
-            doc.text(`Due Date: ${this.data.dueDate.toLocaleDateString()}`, metaX, metaY + 10, { align: 'right' });
+        // Buyer Wallet Address
+        if (this.data.recipient.walletAddress) {
+            y += 6;
+            doc.setTextColor(this.colors.accent[0], this.colors.accent[1], this.colors.accent[2]);
+            doc.setFontSize(9);
+            const wallet = this.data.recipient.walletAddress;
+            const shortWallet = wallet.length > 12 ? `${wallet.substring(0, 6)}...${wallet.substring(wallet.length - 4)}` : wallet;
+            doc.text(`Wallet: ${shortWallet}`, rightColX, y);
+            doc.setTextColor(this.colors.text[0], this.colors.text[1], this.colors.text[2]);
         }
     }
 

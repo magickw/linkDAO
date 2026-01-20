@@ -15,6 +15,7 @@ export interface CompanyInfo {
     email?: string;
     website?: string;
     phone?: string;
+    walletAddress?: string; // e.g. 0x...
 }
 
 export interface BankDetails {
