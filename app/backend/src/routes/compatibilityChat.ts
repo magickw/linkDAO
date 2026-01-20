@@ -513,11 +513,8 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
             // 2. Send to individual participants
             if (participants && Array.isArray(participants) && participants.length > 0) {
               (participants as string[]).forEach((p: string) => {
-                  wsService.sendToUser(p, 'new_message', broadcastMsg);
-                });
-              }
-            } catch (e) {
-              safeLogger.error('[compatibilityChat] Error fetching participants for DB WS broadcast', e);
+                wsService.sendToUser(p, 'new_message', broadcastMsg);
+              });
             }
           } else {
             safeLogger.warn('[compatibilityChat] WebSocket service not available');

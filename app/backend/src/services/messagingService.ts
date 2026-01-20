@@ -498,10 +498,28 @@ export class MessagingService {
     const { conversationId, fromAddress, content, encryptedContent, encryptionMetadata } = data;
 
     safeLogger.info(`[MessagingService] sendMessage called for conversation ${conversationId} from ${fromAddress}`);
+
+    // VALIDATION: Ensure fromAddress is present
+    if (!fromAddress) {
+      safeLogger.error('[MessagingService] sendMessage failed: fromAddress is undefined or null');
+      return {
+        success: false,
+        message: 'Sender address (fromAddress) is required'
+      };
+    }
+
     try {
       // Check if user is participant
-      const conversation = await this.getConversationDetails({ conversationId, userAddress: fromAddress });
+      let conversation;
+      try {
+        conversation = await this.getConversationDetails({ conversationId, userAddress: fromAddress });
+      } catch (error) {
+        safeLogger.error(`[MessagingService] Failed to get conversation details for ${conversationId}:`, error);
+        throw error;
+      }
+
       if (!conversation) {
+        safeLogger.warn(`[MessagingService] Conversation ${conversationId} not found or user ${fromAddress} not a participant`);
         return {
           success: false,
           message: 'Conversation not found or access denied'
@@ -549,23 +567,28 @@ export class MessagingService {
         };
       }
 
-      const newMessage = await db
-        .insert(chatMessages)
-        .values({
-          conversationId,
-          senderAddress: fromAddress,
-          content: messageContent,
-          messageType: sanitizedMessage.messageType || 'text',
-          encryptionMetadata: data.encryptionMetadata || null,
-          replyToId: data.replyToId,
-          attachments: sanitizedMessage.attachments || [], // Default to empty array for JSONB
-          sentAt: new Date()
-        })
-        .returning();
+      // DB OPERATION: Insert Message
+      let newMessage;
+      try {
+        newMessage = await db
+          .insert(chatMessages)
+          .values({
+            conversationId,
+            senderAddress: fromAddress,
+            content: messageContent,
+            messageType: sanitizedMessage.messageType || 'text',
+            encryptionMetadata: data.encryptionMetadata || null,
+            replyToId: data.replyToId,
+            attachments: sanitizedMessage.attachments || [], // Default to empty array for JSONB
+            sentAt: new Date()
+          })
+          .returning();
+      } catch (dbError) {
+        safeLogger.error(`[MessagingService] Database error inserting message into ${conversationId} for sender ${fromAddress}:`, dbError);
+        throw new Error('Failed to save message to database');
+      }
 
-      // Update conversation last activity and last message
-      // Wrap in try-catch to avoid failing the whole message send if conversation table 
-      // is missing some of the newer columns in production
+      // DB OPERATION: Update Conversation
       try {
         await db
           .update(conversations)
@@ -576,7 +599,7 @@ export class MessagingService {
           })
           .where(eq(conversations.id, conversationId));
       } catch (updateError) {
-        safeLogger.warn(`Failed to update conversation metadata for ${conversationId}:`, updateError);
+        safeLogger.warn(`[MessagingService] Failed to update conversation metadata for ${conversationId}:`, updateError);
         // Continue anyway as the message was successfully saved
       }
 
@@ -641,20 +664,24 @@ export class MessagingService {
           });
 
           // Send real-time notification via WebSocket
-          const wsService = getWebSocketService();
-          if (wsService) {
-            wsService.sendToUser(participant, 'notification:new', {
-              id: `msg_${newMessage[0].id}`,
-              type: isMentioned ? 'mention' : 'message',
-              category: isMentioned ? 'comment_mention' : 'direct_message',
-              title: notificationData.title,
-              message: notificationData.message,
-              data: notificationData.data,
-              fromAddress: fromAddress,
-              priority: 'medium',
-              isRead: false,
-              createdAt: new Date()
-            });
+          try {
+            const wsService = getWebSocketService();
+            if (wsService) {
+              wsService.sendToUser(participant, 'notification:new', {
+                id: `msg_${newMessage[0].id}`,
+                type: isMentioned ? 'mention' : 'message',
+                category: isMentioned ? 'comment_mention' : 'direct_message',
+                title: notificationData.title,
+                message: notificationData.message,
+                data: notificationData.data,
+                fromAddress: fromAddress,
+                priority: 'medium',
+                isRead: false,
+                createdAt: new Date()
+              });
+            }
+          } catch (wsError) {
+            safeLogger.error(`[MessagingService] WebSocket notification failed for participant ${participant}:`, wsError);
           }
 
           safeLogger.info(`Message notification sent to ${participant} for conversation ${conversationId}`);
