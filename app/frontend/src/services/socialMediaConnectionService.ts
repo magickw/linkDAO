@@ -3,6 +3,8 @@
  * Handles OAuth connections to social media platforms (Twitter, Facebook, LinkedIn, Threads)
  */
 
+import { enhancedAuthService } from './enhancedAuthService';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
   'http://localhost:10000';
@@ -62,47 +64,10 @@ export interface RefreshTokenResponse {
 }
 
 /**
- * Get auth token from localStorage
- */
-const getAuthToken = async (): Promise<string | null> => {
-  if (typeof window === 'undefined') return null;
-
-  // First check localStorage (legacy)
-  const localStorageToken = localStorage.getItem('linkdao_access_token') ||
-         localStorage.getItem('token') ||
-         localStorage.getItem('authToken') ||
-         localStorage.getItem('auth_token');
-
-  if (localStorageToken) return localStorageToken;
-
-  // Then check IndexedDB (service worker storage)
-  try {
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open('OfflineData', 4);
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result);
-    });
-
-    const tokenRecord = await new Promise<any>((resolve, reject) => {
-      const transaction = db.transaction(['authTokens'], 'readonly');
-      const store = transaction.objectStore('authTokens');
-      const request = store.get('current');
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result);
-    });
-
-    return tokenRecord?.value || null;
-  } catch (error) {
-    console.error('Error getting auth token from IndexedDB:', error);
-    return null;
-  }
-};
-
-/**
  * Get headers with authentication
  */
 const getAuthHeaders = async (): Promise<HeadersInit> => {
-  const token = await getAuthToken();
+  const token = enhancedAuthService.getToken();
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };

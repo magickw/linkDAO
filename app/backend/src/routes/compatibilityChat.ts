@@ -367,6 +367,16 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
   const userAddress = (req as any).user?.address || (req as any).userId;
   let fromAddress = req.body?.senderAddress || req.body?.fromAddress || userAddress;
 
+  // Debug logging for authentication
+  console.log('[compatibilityChat] Authentication info:', {
+    userAddress,
+    bodySenderAddress: req.body?.senderAddress,
+    bodyFromAddress: req.body?.fromAddress,
+    finalFromAddress: fromAddress,
+    hasUser: !!(req as any).user,
+    userObject: (req as any).user
+  });
+
   // Normalize address to lowercase
   if (fromAddress && typeof fromAddress === 'string') {
     fromAddress = fromAddress.toLowerCase();
@@ -378,41 +388,83 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
     console.error('[compatibilityChat] POST message - conversationId is undefined or empty');
     return res.status(400).json({ error: 'valid conversation_id required' });
   }
-  if (!fromAddress || !content) {
-    return res.status(400).json({ error: 'senderAddress/fromAddress and content required' });
+  if (!fromAddress) {
+    console.error('[compatibilityChat] POST message - fromAddress is undefined or empty', {
+      userAddress,
+      body: req.body,
+      user: (req as any).user
+    });
+    return res.status(401).json({ error: 'Authentication required - no sender address found' });
+  }
+  if (!content) {
+    return res.status(400).json({ error: 'content required' });
   }
 
   if (hasDb) {
     try {
       // Verify conversation exists
       const conversationExists = await db.select({ id: conversations.id }).from(conversations).where(eq(conversations.id, conversationId)).limit(1);
-      
+
       if (conversationExists.length === 0) {
         return res.status(404).json({ error: 'Conversation not found' });
       }
 
       // Insert message into database
-      const inserted = await db.insert(chatMessages).values({
-        conversationId: conversationId,
-        senderAddress: fromAddress,
-        content,
-        sentAt: new Date(),
-      }).returning();
+      let created;
+      try {
+        const inserted = await db.insert(chatMessages).values({
+          conversationId: conversationId,
+          senderAddress: fromAddress,
+          content,
+          sentAt: new Date(),
+        }).returning();
 
-      const created = inserted[0];
-      safeLogger.info('[compatibilityChat] Message created successfully', { messageId: created.id });
+        created = inserted[0];
+        safeLogger.info('[compatibilityChat] Message created successfully', { messageId: created.id, conversationId });
+      } catch (insertError) {
+        safeLogger.error('[compatibilityChat] Failed to insert message', {
+          error: insertError,
+          errorMessage: insertError instanceof Error ? insertError.message : 'Unknown error',
+          errorStack: insertError instanceof Error ? insertError.stack : undefined,
+          conversationId,
+          fromAddress,
+          contentLength: content?.length
+        });
+        throw insertError;
+      }
 
       // read current unreadCount then update conversation
-      const convRows = await db.select({ unreadCount: conversations.unreadCount }).from(conversations).where(eq(conversations.id, conversationId)).limit(1);
-      const currentUnread = convRows[0]?.unreadCount ?? 0;
+      let currentUnread = 0;
+      try {
+        const convRows = await db.select({ unreadCount: conversations.unreadCount }).from(conversations).where(eq(conversations.id, conversationId)).limit(1);
+        currentUnread = convRows[0]?.unreadCount ?? 0;
+      } catch (selectError) {
+        safeLogger.error('[compatibilityChat] Failed to select conversation for unread count', {
+          error: selectError,
+          errorMessage: selectError instanceof Error ? selectError.message : 'Unknown error',
+          conversationId
+        });
+        // Continue with default value
+      }
 
-      await db.update(conversations).set({
-        lastMessageId: created.id,
-        lastActivity: new Date(),
-        unreadCount: Number(currentUnread) + 1,
-      }).where(eq(conversations.id, conversationId));
+      try {
+        await db.update(conversations).set({
+          lastMessageId: created.id,
+          lastActivity: new Date(),
+          unreadCount: Number(currentUnread) + 1,
+        }).where(eq(conversations.id, conversationId));
 
-      safeLogger.info('[compatibilityChat] Conversation updated', { conversationId, newUnreadCount: Number(currentUnread) + 1 });
+        safeLogger.info('[compatibilityChat] Conversation updated', { conversationId, newUnreadCount: Number(currentUnread) + 1 });
+      } catch (updateError) {
+        safeLogger.error('[compatibilityChat] Failed to update conversation', {
+          error: updateError,
+          errorMessage: updateError instanceof Error ? updateError.message : 'Unknown error',
+          errorStack: updateError instanceof Error ? updateError.stack : undefined,
+          conversationId,
+          lastMessageId: created.id
+        });
+        // Don't throw here - the message was created successfully, just the update failed
+      }
 
       // Broadcast message to WebSocket clients (non-blocking)
       setImmediate(async () => {
@@ -422,28 +474,45 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
 
           if (wsService) {
             // We need participants to broadcast to
+            let participants: any = [];
             try {
               const dbConv = await db.select({ participants: conversations.participants }).from(conversations).where(eq(conversations.id, conversationId)).limit(1);
-              const participants = dbConv.length > 0 ? dbConv[0].participants : [];
+              participants = dbConv.length > 0 ? dbConv[0].participants : [];
+            } catch (participantError) {
+              safeLogger.error('[compatibilityChat] Failed to fetch participants for broadcast', {
+                error: participantError,
+                errorMessage: participantError instanceof Error ? participantError.message : 'Unknown error',
+                conversationId
+              });
+              // Continue with empty participants array
+            }
 
-              const broadcastMsg = {
-                id: String(created.id),
-                conversationId: String(created.conversationId ?? conversationId),
-                fromAddress: String(created.senderAddress ?? ''),
-                content: String(created.content ?? ''),
-                timestamp: (created.sentAt instanceof Date ? created.sentAt.toISOString() : String(created.sentAt)),
-                contentType: 'text',
-                deliveryStatus: 'sent'
-              };
+            const broadcastMsg = {
+              id: String(created.id),
+              conversationId: String(created.conversationId ?? conversationId),
+              fromAddress: String(created.senderAddress ?? ''),
+              content: String(created.content ?? ''),
+              timestamp: (created.sentAt instanceof Date ? created.sentAt.toISOString() : String(created.sentAt)),
+              contentType: 'text',
+              deliveryStatus: 'sent'
+            };
 
-              safeLogger.info('[compatibilityChat] Broadcasting message', { conversationId, participantCount: (participants as string[] | undefined)?.length ?? 0 });
+            safeLogger.info('[compatibilityChat] Broadcasting message', { conversationId, participantCount: (participants as string[] | undefined)?.length ?? 0 });
 
-              // 1. Send to conversation room
+            // 1. Send to conversation room
+            try {
               wsService.sendToConversation(conversationId, 'new_message', broadcastMsg);
+            } catch (broadcastError) {
+              safeLogger.error('[compatibilityChat] Failed to broadcast to conversation room', {
+                error: broadcastError,
+                errorMessage: broadcastError instanceof Error ? broadcastError.message : 'Unknown error',
+                conversationId
+              });
+            }
 
-              // 2. Send to individual participants
-              if (participants && Array.isArray(participants) && participants.length > 0) {
-                (participants as string[]).forEach((p: string) => {
+            // 2. Send to individual participants
+            if (participants && Array.isArray(participants) && participants.length > 0) {
+              (participants as string[]).forEach((p: string) => {
                   wsService.sendToUser(p, 'new_message', broadcastMsg);
                 });
               }
