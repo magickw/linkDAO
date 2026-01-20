@@ -290,7 +290,8 @@ export async function getProvider() {
             : envRpc;
 
           // Correct way to initialize JsonRpcProvider in ethers v6 with static network
-          const network = ethers.Network.from(chainId);
+          // Create network object directly to avoid detection issues
+          const network = new ethers.Network(chainId === 1 ? 'mainnet' : 'sepolia', chainId);
           const provider = new ethers.JsonRpcProvider(proxiedRpc, network, {
             staticNetwork: true,
             polling: false
@@ -323,9 +324,10 @@ export async function getProvider() {
         const proxiedRpcUrl = (typeof window !== 'undefined')
           ? `${window.location.origin}/api/proxy?target=${encodeURIComponent(rpcUrl)}`
           : rpcUrl;
-        
+
         // Correct way to initialize JsonRpcProvider in ethers v6 with static network
-        const network = ethers.Network.from(chainId);
+        // Create network object directly to avoid detection issues
+        const network = new ethers.Network(chainId === 1 ? 'mainnet' : 'sepolia', chainId);
         const provider = new ethers.JsonRpcProvider(proxiedRpcUrl, network, {
           staticNetwork: true,
           polling: false
@@ -357,7 +359,8 @@ export async function getProvider() {
       'https://rpc.ankr.com/eth_sepolia'
     ];
 
-    const network = ethers.Network.from(11155111);
+    // Create network object directly to avoid detection issues
+    const network = new ethers.Network('sepolia', 11155111);
     
     for (const rpc of fallbackRpcs) {
       try {
@@ -905,21 +908,22 @@ export async function getMainnetProvider() {
   if (cachedMainnetProvider) return cachedMainnetProvider;
 
   const mainnetRpc = process.env.NEXT_PUBLIC_MAINNET_RPC_URL || 'https://eth.llamarpc.com';
-  
+
   try {
-    const network = ethers.Network.from(1);
-    
+    // Create network object directly to avoid detection issues
+    const network = new ethers.Network('mainnet', 1);
+
     // Check if we're in the browser and need to use the proxy
     const shouldUseProxy = typeof window !== 'undefined';
-    const rpcUrl = shouldUseProxy 
+    const rpcUrl = shouldUseProxy
       ? `${window.location.origin}/api/proxy?target=${encodeURIComponent(mainnetRpc)}`
       : mainnetRpc;
-    
+
     const provider = new ethers.JsonRpcProvider(rpcUrl, network, {
       staticNetwork: true,
       polling: false
     });
-    
+
     await provider.getBlockNumber();
     cachedMainnetProvider = provider;
     return provider;
@@ -927,7 +931,9 @@ export async function getMainnetProvider() {
     console.warn('Failed to create Mainnet provider:', error);
     // Fallback to direct public RPC if proxy fails
     try {
-      const provider = new ethers.JsonRpcProvider(mainnetRpc, ethers.Network.from(1), {
+      // Create network object directly to avoid detection issues
+      const network = new ethers.Network('mainnet', 1);
+      const provider = new ethers.JsonRpcProvider(mainnetRpc, network, {
         staticNetwork: true
       });
       cachedMainnetProvider = provider;

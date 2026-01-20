@@ -64,27 +64,53 @@ export interface RefreshTokenResponse {
 /**
  * Get auth token from localStorage
  */
-const getAuthToken = (): string | null => {
+const getAuthToken = async (): Promise<string | null> => {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('linkdao_access_token') ||
+
+  // First check localStorage (legacy)
+  const localStorageToken = localStorage.getItem('linkdao_access_token') ||
          localStorage.getItem('token') ||
          localStorage.getItem('authToken') ||
          localStorage.getItem('auth_token');
+
+  if (localStorageToken) return localStorageToken;
+
+  // Then check IndexedDB (service worker storage)
+  try {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open('OfflineData', 4);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+    });
+
+    const tokenRecord = await new Promise<any>((resolve, reject) => {
+      const transaction = db.transaction(['authTokens'], 'readonly');
+      const store = transaction.objectStore('authTokens');
+      const request = store.get('current');
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+    });
+
+    return tokenRecord?.value || null;
+  } catch (error) {
+    console.error('Error getting auth token from IndexedDB:', error);
+    return null;
+  }
 };
 
 /**
  * Get headers with authentication
  */
-const getAuthHeaders = (): HeadersInit => {
-  const token = getAuthToken();
+const getAuthHeaders = async (): Promise<HeadersInit> => {
+  const token = await getAuthToken();
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
-  
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  
+
   return headers;
 };
 
@@ -101,7 +127,7 @@ export const initiateOAuth = async (
       `${API_BASE_URL}/api/social-media/connect/${platform}`,
       {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: await getAuthHeaders(),
         credentials: 'include',
       }
     );
@@ -133,7 +159,7 @@ export const getConnections = async (): Promise<GetConnectionsResponse> => {
       `${API_BASE_URL}/api/social-media/connections`,
       {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers: await getAuthHeaders(),
         credentials: 'include',
       }
     );
@@ -168,7 +194,7 @@ export const getConnectionStatus = async (
       `${API_BASE_URL}/api/social-media/connections/${platform}`,
       {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers: await getAuthHeaders(),
         credentials: 'include',
       }
     );
@@ -203,7 +229,7 @@ export const disconnectPlatform = async (
       `${API_BASE_URL}/api/social-media/connections/${platform}`,
       {
         method: 'DELETE',
-        headers: getAuthHeaders(),
+        headers: await getAuthHeaders(),
         credentials: 'include',
       }
     );
@@ -238,7 +264,7 @@ export const refreshToken = async (
       `${API_BASE_URL}/api/social-media/connections/${platform}/refresh`,
       {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: await getAuthHeaders(),
         credentials: 'include',
       }
     );

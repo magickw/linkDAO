@@ -2217,13 +2217,29 @@ async function syncReactions() {
 // IndexedDB helpers for offline data and action queue
 async function openDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('OfflineData', 4);
+    let request;
 
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
+    try {
+      request = indexedDB.open('OfflineData', 4);
+    } catch (error) {
+      console.error('Error opening IndexedDB:', error);
+      reject(error);
+      return;
+    }
+
+    request.onerror = () => {
+      console.error('IndexedDB open error:', request.error);
+      reject(request.error);
+    };
+
+    request.onsuccess = () => {
+      console.log('IndexedDB opened successfully, version:', request.result.version);
+      resolve(request.result);
+    };
 
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
+      console.log('IndexedDB upgrade needed, old version:', event.oldVersion, 'new version:', event.newVersion);
 
       if (!db.objectStoreNames.contains('posts')) {
         db.createObjectStore('posts', { keyPath: 'id', autoIncrement: true });
@@ -2242,6 +2258,10 @@ async function openDB() {
       if (!db.objectStoreNames.contains('authTokens')) {
         db.createObjectStore('authTokens', { keyPath: 'id' });
       }
+    };
+
+    request.onblocked = () => {
+      console.warn('IndexedDB open blocked - another connection is open');
     };
   });
 }

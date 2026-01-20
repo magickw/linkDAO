@@ -108,7 +108,7 @@ export class WebSocketClientService {
 
         this.setupSocketEventHandlers();
 
-        this.socket.on('connect', () => {
+        this.socket.on('connect', async () => {
           console.log('WebSocket connected');
           this.connectionState = {
             status: 'connected',
@@ -116,16 +116,16 @@ export class WebSocketClientService {
             reconnectAttempts: 0
           };
           this.emit('connection_state_changed', this.connectionState);
-          
+
           // Authenticate
-          this.authenticate();
-          
+          await this.authenticate();
+
           // Start heartbeat
           this.startHeartbeat();
-          
+
           // Process queued messages
           this.processMessageQueue();
-          
+
           if (!resolved) {
             resolved = true;
             originalResolve();
@@ -258,7 +258,7 @@ export class WebSocketClientService {
       this.emit('connection_state_changed', this.connectionState);
       
       // Re-authenticate after reconnection
-      this.authenticate();
+      await this.authenticate();
       
       // Restore subscriptions
       this.restoreSubscriptions();
@@ -301,10 +301,46 @@ export class WebSocketClientService {
     }, this.config.reconnectDelay * this.connectionState.reconnectAttempts); // Exponential backoff
   }
 
-  private authenticate(): void {
-    if (this.socket?.connected && this.config.walletAddress) {
+  private async authenticate(): Promise<void> {
+    if (!this.socket?.connected) return;
+
+    // Get auth token from localStorage or IndexedDB
+    let token: string | null = null;
+
+    // Try localStorage first
+    token = localStorage.getItem('linkdao_access_token') ||
+           localStorage.getItem('token') ||
+           localStorage.getItem('authToken') ||
+           localStorage.getItem('auth_token');
+
+    // If not in localStorage, try IndexedDB
+    if (!token) {
+      try {
+        const db = await new Promise<IDBDatabase>((resolve, reject) => {
+          const request = indexedDB.open('OfflineData', 4);
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => resolve(request.result);
+        });
+
+        const tokenRecord = await new Promise<any>((resolve, reject) => {
+          const transaction = db.transaction(['authTokens'], 'readonly');
+          const store = transaction.objectStore('authTokens');
+          const request = store.get('current');
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => resolve(request.result);
+        });
+
+        token = tokenRecord?.value || null;
+      } catch (error) {
+        console.error('Error getting auth token from IndexedDB:', error);
+      }
+    }
+
+    // Send authentication with token and wallet address
+    if (this.config.walletAddress) {
       this.socket.emit('authenticate', {
         walletAddress: this.config.walletAddress,
+        token: token,
         reconnecting: this.isReconnecting
       });
     }
