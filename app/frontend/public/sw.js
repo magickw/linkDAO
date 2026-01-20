@@ -245,18 +245,18 @@ self.addEventListener('activate', (event) => {
       // Clear marketplace API cache to prevent serving stale 503 responses
       caches.open(DYNAMIC_CACHE).then(cache => {
         return Promise.all([
-          cache.delete(request => request.url.includes('/api/marketplace/listings')).catch(() => {}),
-          cache.delete(request => request.url.includes('/api/marketplace/listings/categories')).catch(() => {}),
-          cache.delete(request => request.url.includes('/api/marketplace/seller')).catch(() => {})
-        ]).catch(() => {});
-      }).catch(() => {}),
+          cache.delete(request => request.url.includes('/api/marketplace/listings')).catch(() => { }),
+          cache.delete(request => request.url.includes('/api/marketplace/listings/categories')).catch(() => { }),
+          cache.delete(request => request.url.includes('/api/marketplace/seller')).catch(() => { })
+        ]).catch(() => { });
+      }).catch(() => { }),
       // Clear ALL API cache entries to start fresh
       caches.open(API_CACHE).then(cache => {
         return cache.keys().then(keys => {
           console.log('SW: Clearing', keys.length, 'cached API responses');
           return Promise.all(keys.map(key => cache.delete(key)));
         });
-      }).catch(() => {})
+      }).catch(() => { })
     ]).then(() => {
       return self.clients.claim();
     })
@@ -378,7 +378,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  
+
 
   // Bypass Google Fonts (opaque responses) to avoid noisy errors in dev
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
@@ -405,11 +405,11 @@ self.addEventListener('fetch', (event) => {
 
           for (let attempt = 0; attempt <= maxRetries; attempt++) {
             try {
-                    if (attempt > 0) {
-                      console.debug(`SW: Retry attempt ${attempt} for:`, request.url);
-                      // Wait before retry (exponential backoff)
-                      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-                    }
+              if (attempt > 0) {
+                console.debug(`SW: Retry attempt ${attempt} for:`, request.url);
+                // Wait before retry (exponential backoff)
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+              }
               const response = await fetch(request.url, {
                 method: request.method,
                 headers: request.headers,
@@ -614,7 +614,7 @@ async function networkFirst(request, cacheName) {
   const isBlockchainAPI = url.hostname.includes('etherscan.io') || url.hostname.includes('basescan.org') || url.hostname.includes('bscscan.com');
   // EXCLUDE image requests from coalescing to prevent loading issues
   const isImageRequest = isImage(request);
-  
+
   if (pendingRequests.has(requestKey) && !isCriticalRequest(request) && !isCommunityAPI && !isMarketplaceAPI && !isBlockchainAPI && !isImageRequest) {
     console.debug('Request already pending, coalescing:', requestKey);
     try {
@@ -761,13 +761,13 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
     const isApiRequest = url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth');
     const token = await getAuthToken();
     const isAuthRequest = isApiRequest && !!token;
-    
+
     if (isApiRequest) {
-        if (token) {
-            const headers = new Headers(request.headers);
-            headers.append('Authorization', `Bearer ${token}`);
-            fetchRequest = new Request(request, { headers });
-        }
+      if (token) {
+        const headers = new Headers(request.headers);
+        headers.append('Authorization', `Bearer ${token}`);
+        fetchRequest = new Request(request, { headers });
+      }
     }
 
     const isCoinGeckoRequest = url.hostname.includes('api.coingecko.com');
@@ -994,13 +994,13 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
     // requestKey is already available from arguments
 
     // Check if this is a network-level error (e.g., "Failed to fetch", DNS issues, connection refused)
-    const isNetworkError = error.name === 'TypeError' && 
-                          (error.message.includes('Failed to fetch') || 
-                           error.message.includes('NetworkError') || 
-                           error.message.includes('network') || 
-                           error.message.includes('fetch') ||
-                           error.message.includes('connection') ||
-                           error.message.includes('aborted'));
+    const isNetworkError = error.name === 'TypeError' &&
+      (error.message.includes('Failed to fetch') ||
+        error.message.includes('NetworkError') ||
+        error.message.includes('network') ||
+        error.message.includes('fetch') ||
+        error.message.includes('connection') ||
+        error.message.includes('aborted'));
 
     // Handle WebSocket connection failures
     if (url.pathname.includes('socket.io')) {
@@ -1108,7 +1108,7 @@ async function cacheResponseWithTTL(request, response, cacheName, ttl) {
       console.log('Skipping cache for error response on endpoint with skipCacheOnError:', request.url);
       return; // Don't cache error responses for endpoints with skipCacheOnError
     }
-    
+
     const cache = await caches.open(cacheName);
     const now = Date.now();
 
@@ -1188,24 +1188,25 @@ async function updateCacheInBackground(request, cacheName, requestKey) {
   }
 
   // Skip if recently updated
-      if (lastUpdate && (now - lastUpdate) < throttleTime) {
-        return; // Silently skip
-      }
-  
-      // Update timestamp
-      backgroundUpdateTimestamps.set(requestKey, now);
-  
-      try {
-        const networkResponse = await fetch(request);
-  
-        if (networkResponse.ok) {
-          const cacheConfig = getAPICacheConfig(request);
-          await cacheResponseWithTTL(request, networkResponse, cacheName, cacheConfig.ttl);
-          console.debug('Background cache update successful for:', requestKey);
-        }
-      } catch (error) {
-        console.debug('Background cache update failed:', error);
-      }}
+  if (lastUpdate && (now - lastUpdate) < throttleTime) {
+    return; // Silently skip
+  }
+
+  // Update timestamp
+  backgroundUpdateTimestamps.set(requestKey, now);
+
+  try {
+    const networkResponse = await fetch(request);
+
+    if (networkResponse.ok) {
+      const cacheConfig = getAPICacheConfig(request);
+      await cacheResponseWithTTL(request, networkResponse, cacheName, cacheConfig.ttl);
+      console.debug('Background cache update successful for:', requestKey);
+    }
+  } catch (error) {
+    console.debug('Background cache update failed:', error);
+  }
+}
 
 // Get cached response with fallback mechanisms
 async function getCachedResponse(request, cacheName) {
@@ -1515,7 +1516,7 @@ async function generatePlaceholderPNG(width, height, text, backgroundColor) {
   // Create a canvas element
   const canvas = new OffscreenCanvas(width, height);
   const ctx = canvas.getContext('2d');
-  
+
   if (!ctx) {
     // Fallback to SVG if canvas is not available
     return generatePlaceholderSVG(width, height, text, backgroundColor);
@@ -1536,7 +1537,7 @@ async function generatePlaceholderPNG(width, height, text, backgroundColor) {
 
   // Convert to PNG blob
   const blob = await canvas.convertToBlob('image/png');
-  
+
   return new Response(blob, {
     status: 200,
     headers: {
@@ -1639,7 +1640,7 @@ function getCircuitBreakerState(serviceKey) {
 
   // Get service-specific configuration
   const config = SERVICE_CIRCUIT_BREAKER_CONFIGS[serviceKey] || SERVICE_CIRCUIT_BREAKER_CONFIGS.default;
-  
+
   const now = Date.now();
 
   // Check if circuit should transition from OPEN to HALF_OPEN
@@ -1775,7 +1776,7 @@ function isImage(request) {
   const isImageFile = url.pathname.match(/\.(png|jpg|jpeg|gif|svg|webp|avif)$/);
   const isMarketplaceImage = url.pathname.includes('/_next/image') && url.searchParams.has('url');
   const isPlaceholdImage = url.hostname.includes('placehold.co');
-  
+
   return isImageFile || isMarketplaceImage || isPlaceholdImage;
 }
 
@@ -1806,7 +1807,7 @@ function isNavigation(request) {
   if (request.mode === 'navigate') {
     return true;
   }
-  
+
   // Check if it's a GET request for HTML content
   if (request.method === 'GET') {
     const acceptHeader = request.headers.get('accept');
@@ -1814,43 +1815,43 @@ function isNavigation(request) {
       return true;
     }
   }
-  
+
   // Additional check for navigation-like requests
   const url = new URL(request.url);
-  
+
   // CRITICAL FIXES: Always treat specific routes as navigation
   if (url.pathname === '/' || url.pathname === '/index.html') {
     return true;
   }
-  
+
   if (url.pathname === '/profile' || url.pathname.startsWith('/profile/')) {
     return true;
   }
-  
+
   if (url.pathname === '/communities' || url.pathname.startsWith('/communities/')) {
     return true;
   }
-  
+
   if (url.pathname === '/marketplace' || url.pathname.startsWith('/marketplace/')) {
     return true;
   }
-  
+
   if (url.pathname === '/governance' || url.pathname.startsWith('/governance/')) {
     return true;
   }
-  
+
   if (url.pathname === '/dashboard' || url.pathname.startsWith('/dashboard/')) {
     return true;
   }
-  
+
   if (url.pathname === '/settings' || url.pathname.startsWith('/settings/')) {
     return true;
   }
-  
+
   if (url.pathname === '/notifications' || url.pathname.startsWith('/notifications/')) {
     return true;
   }
-  
+
   // If it's a GET request to a path that looks like a page (no file extension except for known static assets)
   if (!url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|avif)$/i)) {
     // And it's not an API request
@@ -1858,7 +1859,7 @@ function isNavigation(request) {
       return true;
     }
   }
-  
+
   return false;
 }
 
@@ -1868,34 +1869,34 @@ function isEnhancedNavigation(request) {
   if (isNavigation(request)) {
     return true;
   }
-  
+
   // Additional checks for edge cases that might still block navigation
   const url = new URL(request.url);
-  
+
   // Check for navigation to Next.js dynamic routes
   if (request.destination === 'document' && request.mode === 'same-origin') {
     return true;
   }
-  
+
   return false;
 }
 
 // Global error handlers to catch extension-related errors
 self.addEventListener('error', (event) => {
   // Suppress extension-related errors that don't affect functionality
-  if (event.error && event.error.message && 
-      (event.error.message.includes('Invalid frameId for foreground frameId') ||
-       event.error.message.includes('No tab with id') ||
-       event.error.message.includes('background-redux-new.js') ||
-       event.error.message.includes('chrome.runtime.sendMessage') ||
-       event.error.message.includes('Assign to read only property') ||
-       event.error.message.includes('_eventsCount') ||
-       event.error.message.includes('Unchecked runtime.lastError') ||
-       event.error.message.includes('Cannot create item with duplicate id') ||
-       event.error.message.includes('Cannot find menu item with id') ||
-       event.error.message.includes('LastPass') ||
-       event.error.message.includes('chrome-extension') ||
-       event.error.message.includes('contentPage.js'))) {
+  if (event.error && event.error.message &&
+    (event.error.message.includes('Invalid frameId for foreground frameId') ||
+      event.error.message.includes('No tab with id') ||
+      event.error.message.includes('background-redux-new.js') ||
+      event.error.message.includes('chrome.runtime.sendMessage') ||
+      event.error.message.includes('Assign to read only property') ||
+      event.error.message.includes('_eventsCount') ||
+      event.error.message.includes('Unchecked runtime.lastError') ||
+      event.error.message.includes('Cannot create item with duplicate id') ||
+      event.error.message.includes('Cannot find menu item with id') ||
+      event.error.message.includes('LastPass') ||
+      event.error.message.includes('chrome-extension') ||
+      event.error.message.includes('contentPage.js'))) {
     // Don't log these extension errors to avoid console spam
     event.preventDefault();
     return;
@@ -1905,19 +1906,19 @@ self.addEventListener('error', (event) => {
 self.addEventListener('unhandledrejection', (event) => {
   // Suppress extension-related promise rejections
   const reason = event.reason?.message || event.reason?.toString() || '';
-  if (reason && 
-      (reason.includes('Invalid frameId for foreground frameId') ||
-       reason.includes('No tab with id') ||
-       reason.includes('background-redux-new.js') ||
-       reason.includes('chrome.runtime.sendMessage') ||
-       reason.includes('Assign to read only property') ||
-       reason.includes('_eventsCount') ||
-       reason.includes('Unchecked runtime.lastError') ||
-       reason.includes('Cannot create item with duplicate id') ||
-       reason.includes('Cannot find menu item with id') ||
-       reason.includes('LastPass') ||
-       reason.includes('chrome-extension') ||
-       reason.includes('contentPage.js'))) {
+  if (reason &&
+    (reason.includes('Invalid frameId for foreground frameId') ||
+      reason.includes('No tab with id') ||
+      reason.includes('background-redux-new.js') ||
+      reason.includes('chrome.runtime.sendMessage') ||
+      reason.includes('Assign to read only property') ||
+      reason.includes('_eventsCount') ||
+      reason.includes('Unchecked runtime.lastError') ||
+      reason.includes('Cannot create item with duplicate id') ||
+      reason.includes('Cannot find menu item with id') ||
+      reason.includes('LastPass') ||
+      reason.includes('chrome-extension') ||
+      reason.includes('contentPage.js'))) {
     // Don't log these extension errors to avoid console spam
     event.preventDefault();
     return;
@@ -2190,7 +2191,7 @@ async function syncReactions() {
         // Retrieve auth token from storage
         const token = await getAuthToken();
         const authHeader = token ? `Bearer ${token}` : '';
-        
+
         const response = await fetch(`/api/posts/${reaction.postId}/reactions`, {
           method: 'POST',
           headers: {
@@ -2216,7 +2217,7 @@ async function syncReactions() {
 // IndexedDB helpers for offline data and action queue
 async function openDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('OfflineData', 3);
+    const request = indexedDB.open('OfflineData', 4);
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
@@ -2237,7 +2238,7 @@ async function openDB() {
         actionStore.createIndex('timestamp', 'timestamp', { unique: false });
         actionStore.createIndex('type', 'type', { unique: false });
       }
-      
+
       if (!db.objectStoreNames.contains('authTokens')) {
         db.createObjectStore('authTokens', { keyPath: 'id' });
       }
@@ -2256,7 +2257,7 @@ async function getAuthToken() {
     const transaction = db.transaction(['authTokens'], 'readonly');
     const store = transaction.objectStore('authTokens');
     const tokenRecord = await store.get('current');
-    
+
     return tokenRecord ? tokenRecord.value : null;
   } catch (error) {
     console.error('Error getting auth token:', error);

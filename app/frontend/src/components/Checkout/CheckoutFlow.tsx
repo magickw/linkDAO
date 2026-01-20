@@ -42,7 +42,8 @@ import {
   PrioritizationContext,
   PrioritizationResult,
   UserContext,
-  MarketConditions
+  MarketConditions,
+  AvailabilityStatus
 } from '@/types/paymentPrioritization';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useToast } from '@/context/ToastContext';
@@ -1160,18 +1161,52 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
             <div className="text-center py-8">
               <AlertCircle className="w-12 h-12 text-orange-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-white mb-2">
-                Payment Options Unavailable
+                Loading Payment Options
               </h3>
               <p className="text-white/70 mb-4">
-                We're having trouble loading payment options. Please try refreshing the page.
+                We're finalizing your payment options. One moment please...
               </p>
-              <Button
-                variant="outline"
-                onClick={() => window.location.reload()}
-                className="mx-auto"
-              >
-                Refresh Page
-              </Button>
+              {/* Fallback to basic options if loading takes too long */}
+              <div className="mt-6 border-t border-white/10 pt-6">
+                <p className="text-sm text-white/50 mb-4">Taking too long?</p>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    // Manually set basic methods
+                    const basicMethods = await getAvailablePaymentMethods();
+                    if (basicMethods.length > 0) {
+                      const basicPrioritization: PrioritizationResult = {
+                        prioritizedMethods: basicMethods.map((m, i) => ({
+                          method: m,
+                          priority: i + 1,
+                          costEstimate: {
+                            totalCost: parseFloat(cartState.totals.total.fiat),
+                            baseCost: parseFloat(cartState.totals.total.fiat),
+                            gasFee: 0,
+                            estimatedTime: 5,
+                            confidence: 0.5,
+                            currency: 'USD',
+                            breakdown: { amount: parseFloat(cartState.totals.total.fiat) }
+                          },
+                          availabilityStatus: AvailabilityStatus.AVAILABLE,
+                          userPreferenceScore: 0,
+                          recommendationReason: 'Basic fallback',
+                          totalScore: 0.5
+                        })),
+                        defaultMethod: null,
+                        recommendations: [],
+                        warnings: [],
+                        metadata: { calculatedAt: new Date(), processingTimeMs: 0, totalMethodsEvaluated: 0, averageConfidence: 0 }
+                      };
+                      setPrioritizationResult(basicPrioritization);
+                      if (basicMethods.length > 0) handlePaymentMethodSelect(basicPrioritization.prioritizedMethods[0]);
+                    }
+                  }}
+                  className="mx-auto"
+                >
+                  Load Basic Options
+                </Button>
+              </div>
             </div>
           )}
         </div>

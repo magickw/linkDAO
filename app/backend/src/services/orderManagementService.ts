@@ -1,7 +1,7 @@
-import { eq, and, desc, sql, gte, lte, count, or } from 'drizzle-orm';
+import { eq, and, desc, sql, gte, lte, count, or, aliasedTable } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
-import { 
+import {
   orders,
   orderEvents,
   trackingRecords,
@@ -117,6 +117,8 @@ class OrderManagementService {
    */
   async getOrderDetails(orderId: string): Promise<OrderManagementData | null> {
     try {
+      const listingSellers = aliasedTable(sellers, 'listing_seller');
+
       // Get order with related data
       const orderResult = await db
         .select({
@@ -124,9 +126,9 @@ class OrderManagementService {
           listingId: orders.listingId,
           listingTitle: marketplaceListings.title,
           sellerAddress: marketplaceListings.sellerAddress,
-          buyerAddress: sql<string>`buyer_user.wallet_address`,
-          buyerName: sql<string>`buyer_seller.display_name`,
-          sellerName: sql<string>`seller_seller.display_name`,
+          buyerAddress: users.walletAddress,
+          buyerName: users.displayName,
+          sellerName: listingSellers.storeName,
           amount: orders.amount,
           totalAmount: orders.totalAmount,
           currency: orders.currency,
@@ -148,8 +150,7 @@ class OrderManagementService {
         .from(orders)
         .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
         .leftJoin(users, eq(orders.buyerId, users.id))
-        .leftJoin(sellers, eq(sql`buyer_user.wallet_address`, sellers.walletAddress))
-        .leftJoin(sellers, eq(marketplaceListings.sellerAddress, sellers.walletAddress))
+        .leftJoin(listingSellers, eq(marketplaceListings.sellerAddress, listingSellers.walletAddress))
         .where(eq(orders.id, orderId))
         .limit(1);
 
@@ -234,11 +235,12 @@ class OrderManagementService {
     offset: number = 0
   ): Promise<OrderManagementData[]> {
     try {
+      const listingSellers = aliasedTable(sellers, 'listing_seller');
       let whereConditions = [];
 
       // Build role-based conditions
       if (role === 'buyer' || role === 'both') {
-        whereConditions.push(sql`users.wallet_address = ${walletAddress}`);
+        whereConditions.push(eq(users.walletAddress, walletAddress));
       }
       if (role === 'seller' || role === 'both') {
         whereConditions.push(eq(marketplaceListings.sellerAddress, walletAddress));
@@ -250,9 +252,9 @@ class OrderManagementService {
           listingId: orders.listingId,
           listingTitle: marketplaceListings.title,
           sellerAddress: marketplaceListings.sellerAddress,
-          buyerAddress: sql<string>`users.wallet_address`,
-          buyerName: sql<string>`sellers.display_name`,
-          sellerName: sql<string>`sellers.display_name`,
+          buyerAddress: users.walletAddress,
+          buyerName: users.displayName,
+          sellerName: listingSellers.storeName,
           amount: orders.amount,
           totalAmount: orders.totalAmount,
           currency: orders.currency,
@@ -266,8 +268,7 @@ class OrderManagementService {
         .from(orders)
         .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
         .leftJoin(users, eq(orders.buyerId, users.id))
-        .leftJoin(sellers, eq(sql`users.wallet_address`, sellers.walletAddress))
-        .leftJoin(sellers, eq(marketplaceListings.sellerAddress, sellers.walletAddress));
+        .leftJoin(listingSellers, eq(marketplaceListings.sellerAddress, listingSellers.walletAddress));
 
       // Apply role conditions
       if (whereConditions.length === 1) {
@@ -353,12 +354,12 @@ class OrderManagementService {
         orderId: orderId,
         eventType: `STATUS_CHANGED_${newStatus.toUpperCase()}`,
         description: `Order status changed to ${newStatus}${notes ? `: ${notes}` : ''}`,
-        metadata: JSON.stringify({ 
-          previousStatus: order.status, 
-          newStatus, 
-          updatedBy, 
+        metadata: JSON.stringify({
+          previousStatus: order.status,
+          newStatus,
+          updatedBy,
           notes,
-          ...metadata 
+          ...metadata
         }),
         timestamp: new Date(),
       });
@@ -445,11 +446,11 @@ class OrderManagementService {
         .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
         .leftJoin(users, eq(orders.buyerId, users.id))
         .where(
-          walletAddress && role === 'buyer' 
+          walletAddress && role === 'buyer'
             ? sql`users.wallet_address = ${walletAddress}`
             : walletAddress && role === 'seller'
-            ? eq(marketplaceListings.sellerAddress, walletAddress)
-            : sql`1=1`
+              ? eq(marketplaceListings.sellerAddress, walletAddress)
+              : sql`1=1`
         );
 
       const totalOrders = totalOrdersResult[0]?.count || 0;
@@ -464,11 +465,11 @@ class OrderManagementService {
         .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
         .leftJoin(users, eq(orders.buyerId, users.id))
         .where(
-          walletAddress && role === 'buyer' 
+          walletAddress && role === 'buyer'
             ? sql`users.wallet_address = ${walletAddress}`
             : walletAddress && role === 'seller'
-            ? eq(marketplaceListings.sellerAddress, walletAddress)
-            : sql`1=1`
+              ? eq(marketplaceListings.sellerAddress, walletAddress)
+              : sql`1=1`
         )
         .groupBy(orders.status);
 
@@ -490,11 +491,11 @@ class OrderManagementService {
         .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
         .leftJoin(users, eq(orders.buyerId, users.id))
         .where(
-          walletAddress && role === 'buyer' 
+          walletAddress && role === 'buyer'
             ? sql`users.wallet_address = ${walletAddress}`
             : walletAddress && role === 'seller'
-            ? eq(marketplaceListings.sellerAddress, walletAddress)
-            : sql`1=1`
+              ? eq(marketplaceListings.sellerAddress, walletAddress)
+              : sql`1=1`
         )
         .groupBy(orders.paymentMethod);
 
@@ -515,11 +516,11 @@ class OrderManagementService {
         .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
         .leftJoin(users, eq(orders.buyerId, users.id))
         .where(
-          walletAddress && role === 'buyer' 
+          walletAddress && role === 'buyer'
             ? sql`users.wallet_address = ${walletAddress}`
             : walletAddress && role === 'seller'
-            ? eq(marketplaceListings.sellerAddress, walletAddress)
-            : sql`1=1`
+              ? eq(marketplaceListings.sellerAddress, walletAddress)
+              : sql`1=1`
         );
 
       const totalRevenue = revenueResult[0]?.totalRevenue || 0;
@@ -591,7 +592,7 @@ class OrderManagementService {
         .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
         .leftJoin(users, eq(orders.buyerId, users.id))
         .where(
-          role === 'buyer' 
+          role === 'buyer'
             ? sql`users.wallet_address = ${walletAddress}`
             : eq(marketplaceListings.sellerAddress, walletAddress)
         )
@@ -647,35 +648,35 @@ class OrderManagementService {
 
       // Apply filters
       const conditions = [];
-      
+
       if (filters.orderId) {
         conditions.push(eq(orders.id, filters.orderId));
       }
-      
+
       if (filters.buyerAddress) {
         conditions.push(sql`users.wallet_address = ${filters.buyerAddress}`);
       }
-      
+
       if (filters.sellerAddress) {
         conditions.push(eq(marketplaceListings.sellerAddress, filters.sellerAddress));
       }
-      
+
       if (filters.status) {
         conditions.push(eq(orders.status, filters.status));
       }
-      
+
       if (filters.paymentMethod) {
         conditions.push(eq(orders.paymentMethod, filters.paymentMethod));
       }
-      
+
       if (filters.trackingNumber) {
         conditions.push(eq(orders.trackingNumber, filters.trackingNumber));
       }
-      
+
       if (filters.dateFrom) {
         conditions.push(gte(orders.createdAt, new Date(filters.dateFrom)));
       }
-      
+
       if (filters.dateTo) {
         conditions.push(lte(orders.createdAt, new Date(filters.dateTo)));
       }

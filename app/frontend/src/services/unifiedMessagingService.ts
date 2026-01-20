@@ -1958,7 +1958,7 @@ class UnifiedMessagingService {
     // Ensure Content-Type is not manually set for FormData
     const isFormData = options.body instanceof FormData;
 
-    // Build headers in correct order: base headers, auth headers, then allow options to override
+    // Build headers dynamically to always use latest authHeaders
     const buildHeaders = () => ({
       ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...authHeaders,
@@ -1970,23 +1970,43 @@ class UnifiedMessagingService {
       headers: buildHeaders()
     });
 
-    // If 401, try to refresh and retry
-    if (response.status === 401) {
+    // If 401 or 403, try to refresh and retry
+    // Note: Backend returns 403 for invalid tokens, 401 for missing tokens
+    if (response.status === 401 || response.status === 403) {
       try {
-        console.log('[UnifiedMessaging] 401 Unauthorized, refreshing token...');
+        console.log(`[UnifiedMessaging] ${response.status} ${response.statusText}, refreshing token...`);
         const refreshResult = await enhancedAuthService.refreshToken();
 
         if (refreshResult.success) {
-          console.log('[UnifiedMessaging] Token refreshed, retrying request...');
+          console.log('[UnifiedMessaging] Token refreshed successfully, retrying request...');
+
+          // CRITICAL: Get fresh auth headers AFTER refresh
           authHeaders = await enhancedAuthService.getAuthHeaders();
+
+          // Log the actual token for debugging (first 20 chars only)
+          const tokenValue = authHeaders.Authorization?.replace('Bearer ', '').substring(0, 20);
+          console.log('[UnifiedMessaging] New auth token preview:', tokenValue ? `${tokenValue}...` : 'MISSING');
+
+          // Build fresh headers with the new token
+          const retryHeaders = {
+            ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+            ...authHeaders,
+            ...(options.headers as Record<string, string> || {})
+          };
+
+          console.log('[UnifiedMessaging] Retry headers prepared, sending request...');
 
           response = await fetch(`${this.baseUrl}${endpoint}`, {
             ...options,
-            headers: buildHeaders()
+            headers: retryHeaders
           });
+
+          console.log(`[UnifiedMessaging] Retry response: ${response.status} ${response.statusText}`);
+        } else {
+          console.error('[UnifiedMessaging] Token refresh failed:', refreshResult.error);
         }
       } catch (e) {
-        console.error('[UnifiedMessaging] Token refresh failed on 401:', e);
+        console.error('[UnifiedMessaging] Token refresh exception:', e);
       }
     }
 

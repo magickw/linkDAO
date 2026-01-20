@@ -170,6 +170,30 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
         return cached;
       }
 
+      // Defensive check: Ensure availablePaymentMethods exists
+      if (!context.availablePaymentMethods || !Array.isArray(context.availablePaymentMethods) || context.availablePaymentMethods.length === 0) {
+        console.warn('No payment methods available for prioritization, returning empty result');
+        // Return a safe empty result
+        return {
+          prioritizedMethods: [],
+          defaultMethod: null,
+          recommendations: [],
+          warnings: [{
+            type: 'service_unavailable',
+            message: 'No payment methods available',
+            affectedMethods: [],
+            severity: 'high',
+            actionRequired: 'Please refresh the page or try again later'
+          }],
+          metadata: {
+            calculatedAt: new Date(),
+            totalMethodsEvaluated: 0,
+            averageConfidence: 0,
+            processingTimeMs: Date.now() - startTime
+          }
+        };
+      }
+
       // Use performance optimizer for parallel cost calculations with retry logic
       const costResults = await this.withRetry(() =>
         prioritizationPerformanceOptimizer.parallelCostCalculation(

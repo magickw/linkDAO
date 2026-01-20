@@ -134,6 +134,15 @@ export class UnifiedCheckoutService {
         sessionStorage.getItem('token') ||
         sessionStorage.getItem('authToken') ||
         '';
+
+      // Also check cookies as a fallback if not found in storage
+      if (!token && typeof document !== 'undefined') {
+        const cookies = document.cookie.split(';');
+        const tokenCookie = cookies.find(c => c.trim().startsWith('token=') || c.trim().startsWith('auth_token='));
+        if (tokenCookie) {
+          token = tokenCookie.split('=')[1];
+        }
+      }
     }
 
     return token;
@@ -894,8 +903,23 @@ export class UnifiedCheckoutService {
         ...(token && { 'Authorization': `Bearer ${token}` })
       },
       body: JSON.stringify(serializedBody)
-    }); if (!response.ok) {
-      const errorData = await response.json();
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        errorData = { message: errorText || 'Crypto payment failed' };
+      }
+
+      // Handle specific auth errors
+      if (response.status === 401 || response.status === 403) {
+        console.error('Authentication failed during crypto payment:', response.status);
+        throw new Error('Your session has expired. Please refresh the page and log in again to complete your purchase.');
+      }
+
       throw new Error(errorData.message || 'Crypto payment failed');
     }
 
@@ -963,6 +987,13 @@ export class UnifiedCheckoutService {
       } catch (e) {
         errorData = { message: errorText || 'Fiat payment failed' };
       }
+
+      // Handle specific auth errors
+      if (response.status === 401 || response.status === 403) {
+        console.error('Authentication failed during fiat payment:', response.status);
+        throw new Error('Your session has expired. Please refresh the page and log in again to complete your purchase.');
+      }
+
       throw new Error(errorData.message || 'Fiat payment failed');
     }
 

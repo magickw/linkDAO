@@ -66,8 +66,8 @@ export class StablecoinPrioritizationRules {
       name: 'STABLECOIN_OVER_VOLATILE',
       description: 'Stablecoins preferred over volatile assets like ETH',
       priority: 3,
-      condition: (method) => 
-        method.type === PaymentMethodType.STABLECOIN_USDC || 
+      condition: (method) =>
+        method.type === PaymentMethodType.STABLECOIN_USDC ||
         method.type === PaymentMethodType.STABLECOIN_USDT,
       scoreBonus: this.STABLECOIN_VOLATILITY_BONUS
     },
@@ -76,9 +76,9 @@ export class StablecoinPrioritizationRules {
       description: 'Bonus for stablecoins on low-cost networks',
       priority: 4,
       condition: (method, context) => {
-        if (method.type !== PaymentMethodType.STABLECOIN_USDC && 
-            method.type !== PaymentMethodType.STABLECOIN_USDT) return false;
-        
+        if (method.type !== PaymentMethodType.STABLECOIN_USDC &&
+          method.type !== PaymentMethodType.STABLECOIN_USDT) return false;
+
         const networkCondition = this.getNetworkCondition(method, context);
         return networkCondition ? networkCondition.networkCongestion === 'low' : false;
       },
@@ -98,11 +98,20 @@ export class StablecoinPrioritizationRules {
     let usdcFirstApplied = false;
 
     // Create a copy to avoid mutating original array
-    const prioritizedMethods = [...methods];
+    const prioritizedMethods = methods ? [...methods] : [];
+
+    if (prioritizedMethods.length === 0) {
+      return {
+        prioritizedStablecoins: [],
+        appliedRules: [],
+        fallbacksActivated: [],
+        usdcFirstApplied: false
+      };
+    }
 
     // Apply each prioritization rule
     for (const rule of this.prioritizationRules) {
-      const applicableMethods = prioritizedMethods.filter(pm => 
+      const applicableMethods = prioritizedMethods.filter(pm =>
         rule.condition(pm.method, context)
       );
 
@@ -112,7 +121,7 @@ export class StablecoinPrioritizationRules {
         // Apply score bonus to applicable methods
         applicableMethods.forEach(method => {
           method.totalScore = Math.min(1.0, method.totalScore + rule.scoreBonus);
-          
+
           // Update recommendation reason
           if (rule.name === 'USDC_FIRST') {
             method.recommendationReason = 'Recommended: USDC-first prioritization';
@@ -131,7 +140,7 @@ export class StablecoinPrioritizationRules {
     }
 
     // Check for fallback activation
-    const usdcMethods = prioritizedMethods.filter(pm => 
+    const usdcMethods = prioritizedMethods.filter(pm =>
       pm.method.type === PaymentMethodType.STABLECOIN_USDC
     );
 
@@ -178,13 +187,13 @@ export class StablecoinPrioritizationRules {
 
     // Check USDC availability first
     const usdcMethods = stablecoins.filter(m => m.type === PaymentMethodType.STABLECOIN_USDC);
-    const availableUsdc = usdcMethods.filter(method => 
+    const availableUsdc = usdcMethods.filter(method =>
       this.isMethodAvailable(method, context, unavailableReasons)
     );
 
     // Check USDT availability
     const usdtMethods = stablecoins.filter(m => m.type === PaymentMethodType.STABLECOIN_USDT);
-    const availableUsdt = usdtMethods.filter(method => 
+    const availableUsdt = usdtMethods.filter(method =>
       this.isMethodAvailable(method, context, unavailableReasons)
     );
 
@@ -237,7 +246,7 @@ export class StablecoinPrioritizationRules {
     usdcMethods.forEach(method => {
       method.totalScore = Math.min(1.0, method.totalScore + this.USDC_PRIORITY_BONUS);
       method.recommendationReason = 'USDC-first prioritization: Stable value with priority';
-      
+
       if (!method.benefits) method.benefits = [];
       method.benefits.unshift('USDC-first priority');
 
@@ -265,22 +274,22 @@ export class StablecoinPrioritizationRules {
     methods: PrioritizedPaymentMethod[],
     context: PrioritizationContext
   ): PrioritizedPaymentMethod[] {
-    const stablecoinMethods = methods.filter(m => 
+    const stablecoinMethods = methods.filter(m =>
       m.method.type === PaymentMethodType.STABLECOIN_USDC ||
       m.method.type === PaymentMethodType.STABLECOIN_USDT
     );
 
-    const volatileMethods = methods.filter(m => 
+    const volatileMethods = methods.filter(m =>
       m.method.type === PaymentMethodType.NATIVE_ETH
     );
 
     // Apply stablecoin bonus
     stablecoinMethods.forEach(method => {
       method.totalScore = Math.min(1.0, method.totalScore + this.STABLECOIN_VOLATILITY_BONUS);
-      
+
       if (!method.benefits) method.benefits = [];
       method.benefits.push('Stable value advantage');
-      
+
       // Update recommendation reason if not already set by USDC-first
       if (!method.recommendationReason.includes('USDC-first')) {
         method.recommendationReason = 'Recommended: Stable value over volatile assets';
@@ -291,7 +300,7 @@ export class StablecoinPrioritizationRules {
     volatileMethods.forEach(method => {
       if (!method.warnings) method.warnings = [];
       method.warnings.push('Price volatility risk');
-      
+
       // Reduce score slightly for volatility
       method.totalScore = Math.max(0, method.totalScore - 0.05);
     });
@@ -331,7 +340,7 @@ export class StablecoinPrioritizationRules {
     if (method.token) {
       const balance = context.userContext.walletBalances.find(
         b => b.token.address.toLowerCase() === method.token!.address.toLowerCase() &&
-             b.chainId === context.userContext.chainId
+          b.chainId === context.userContext.chainId
       );
 
       if (!balance || balance.balanceUSD < context.transactionAmount) {
@@ -354,10 +363,10 @@ export class StablecoinPrioritizationRules {
       return usdcOptions.reduce((best, current) => {
         const bestNetwork = this.getNetworkCondition(best, context);
         const currentNetwork = this.getNetworkCondition(current, context);
-        
+
         if (!bestNetwork) return current;
         if (!currentNetwork) return best;
-        
+
         return currentNetwork.gasPriceUSD < bestNetwork.gasPriceUSD ? current : best;
       });
     }
@@ -366,10 +375,10 @@ export class StablecoinPrioritizationRules {
     return stablecoins.reduce((best, current) => {
       const bestNetwork = this.getNetworkCondition(best, context);
       const currentNetwork = this.getNetworkCondition(current, context);
-      
+
       if (!bestNetwork) return current;
       if (!currentNetwork) return best;
-      
+
       return currentNetwork.gasPriceUSD < bestNetwork.gasPriceUSD ? current : best;
     });
   }
@@ -383,7 +392,7 @@ export class StablecoinPrioritizationRules {
     usdtMethods.forEach(method => {
       method.totalScore = Math.min(1.0, method.totalScore + 0.15);
       method.recommendationReason = 'Recommended: USDT as USDC fallback';
-      
+
       if (!method.benefits) method.benefits = [];
       method.benefits.push('USDC fallback activation');
     });
@@ -393,7 +402,7 @@ export class StablecoinPrioritizationRules {
     fiatMethods.forEach(method => {
       method.totalScore = Math.min(1.0, method.totalScore + 0.1);
       method.recommendationReason = 'Recommended: Fiat as stablecoin fallback';
-      
+
       if (!method.benefits) method.benefits = [];
       method.benefits.push('Stablecoin fallback option');
     });
@@ -449,14 +458,14 @@ export class StablecoinPrioritizationRules {
     const usdcMethods = stablecoins.filter(m => m.method.type === PaymentMethodType.STABLECOIN_USDC);
     const usdtMethods = stablecoins.filter(m => m.method.type === PaymentMethodType.STABLECOIN_USDT);
 
-    const averageScore = stablecoins.length > 0 
+    const averageScore = stablecoins.length > 0
       ? stablecoins.reduce((sum, m) => sum + m.totalScore, 0) / stablecoins.length
       : 0;
 
-    const topStablecoin = stablecoins.length > 0 
-      ? stablecoins.reduce((best, current) => 
-          current.totalScore > best.totalScore ? current : best
-        ).method.type
+    const topStablecoin = stablecoins.length > 0
+      ? stablecoins.reduce((best, current) =>
+        current.totalScore > best.totalScore ? current : best
+      ).method.type
       : null;
 
     return {
@@ -488,10 +497,10 @@ export class StablecoinPrioritizationRules {
 
     // Check USDC-first implementation
     if (usdcMethods.length > 0 && usdtMethods.length > 0) {
-      const topUsdc = usdcMethods.reduce((best, current) => 
+      const topUsdc = usdcMethods.reduce((best, current) =>
         current.totalScore > best.totalScore ? current : best
       );
-      const topUsdt = usdtMethods.reduce((best, current) => 
+      const topUsdt = usdtMethods.reduce((best, current) =>
         current.totalScore > best.totalScore ? current : best
       );
 
@@ -503,10 +512,10 @@ export class StablecoinPrioritizationRules {
     // Check stablecoin vs volatile asset prioritization
     const volatileMethods = methods.filter(m => m.method.type === PaymentMethodType.NATIVE_ETH);
     if (stablecoins.length > 0 && volatileMethods.length > 0) {
-      const topStablecoin = stablecoins.reduce((best, current) => 
+      const topStablecoin = stablecoins.reduce((best, current) =>
         current.totalScore > best.totalScore ? current : best
       );
-      const topVolatile = volatileMethods.reduce((best, current) => 
+      const topVolatile = volatileMethods.reduce((best, current) =>
         current.totalScore > best.totalScore ? current : best
       );
 
@@ -539,13 +548,13 @@ export class StablecoinPrioritizationRules {
     return {
       applyUsdcFirstRule: (methods: PrioritizedPaymentMethod[], context: PrioritizationContext) =>
         this.implementUsdcFirstLogic(methods, context),
-      
+
       applyStablecoinPreference: (methods: PrioritizedPaymentMethod[], context: PrioritizationContext) =>
         this.addStablecoinPreferenceOverVolatile(methods, context),
-      
+
       createFallbackChain: (methods: PaymentMethod[], context: PrioritizationContext) =>
         this.createStablecoinFallbackChain(methods, context),
-      
+
       validatePrioritization: (methods: PrioritizedPaymentMethod[]) =>
         this.validateStablecoinPrioritization(methods)
     };

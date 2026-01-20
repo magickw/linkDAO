@@ -259,46 +259,75 @@ export class MessagingController {
       // Emit WebSocket event for real-time update
       const wsService = getWebSocketService();
       if (wsService && message.data) {
-        // Get conversation details to find other participants
-        const conversationDetails = await messagingService.getConversationDetails({
-          conversationId: id,
-          userAddress
-        });
-
-        if (conversationDetails) {
-          // Parse participants safely
-          // participants is usually parsed by Drizzle ORM (JSONB type) but can be a string in some cases
-          let participants: string[];
-          if (typeof conversationDetails.participants === 'string') {
-            try {
-              participants = JSON.parse(conversationDetails.participants);
-            } catch (e) {
-              safeLogger.warn(`Failed to parse participants JSON for conversation ${id}`, e);
-              participants = [];
-            }
-          } else if (Array.isArray(conversationDetails.participants)) {
-            participants = conversationDetails.participants as string[];
-          } else {
-            participants = [];
-          }
-
-          // Send to conversation room for all participants
-          wsService.sendToConversation(id, 'new_message', {
-            message: message.data,
+        try {
+          // Get conversation details to find other participants
+          const conversationDetails = await messagingService.getConversationDetails({
             conversationId: id,
-            senderAddress: userAddress
+            userAddress
           });
 
-          // Also send individual notifications to each participant (for notification badge updates)
-          participants.forEach((participant: string) => {
-            if (participant.toLowerCase() !== userAddress.toLowerCase()) {
-              wsService.sendToUser(participant, 'message_notification', {
-                conversationId: id,
-                message: message.data,
-                senderAddress: userAddress
-              }, 'high');
+          if (conversationDetails) {
+            // Parse participants with robust error handling
+            let participants: string[] = [];
+
+            try {
+              if (typeof conversationDetails.participants === 'string') {
+                // Try to parse as JSON
+                try {
+                  const parsed = JSON.parse(conversationDetails.participants);
+                  if (Array.isArray(parsed)) {
+                    participants = parsed.filter((p: any) => typeof p === 'string' && p.trim());
+                  } else {
+                    safeLogger.warn(`Participants JSON is not an array for conversation ${id}:`, typeof parsed);
+                  }
+                } catch (parseError) {
+                  // If JSON parse fails, try comma-separated
+                  const split = conversationDetails.participants.split(',').map((p: string) => p.trim()).filter(Boolean);
+                  if (split.length > 0) {
+                    participants = split;
+                    safeLogger.warn(`Participants parsed as comma-separated for conversation ${id}`);
+                  } else {
+                    safeLogger.warn(`Failed to parse participants for conversation ${id}`, parseError);
+                  }
+                }
+              } else if (Array.isArray(conversationDetails.participants)) {
+                participants = conversationDetails.participants.filter((p: any) => typeof p === 'string' && p.trim());
+              } else if (conversationDetails.participants) {
+                safeLogger.warn(`Unexpected participants type for conversation ${id}:`, typeof conversationDetails.participants);
+              }
+            } catch (participantError) {
+              safeLogger.error(`Error processing participants for conversation ${id}:`, participantError);
             }
-          });
+
+            // Send to conversation room for all participants
+            wsService.sendToConversation(id, 'new_message', {
+              message: message.data,
+              conversationId: id,
+              senderAddress: userAddress
+            });
+
+            // Also send individual notifications to each participant (for notification badge updates)
+            if (participants.length > 0) {
+              participants.forEach((participant: string) => {
+                try {
+                  if (participant && participant.toLowerCase() !== userAddress.toLowerCase()) {
+                    wsService.sendToUser(participant, 'message_notification', {
+                      conversationId: id,
+                      message: message.data,
+                      senderAddress: userAddress
+                    }, 'high');
+                  }
+                } catch (notifyError) {
+                  safeLogger.error(`Failed to send notification to participant ${participant}:`, notifyError);
+                }
+              });
+            } else {
+              safeLogger.warn(`No valid participants found for conversation ${id}, skipping individual notifications`);
+            }
+          }
+        } catch (wsError) {
+          // Don't let WebSocket errors block the message send response
+          safeLogger.error(`WebSocket notification failed for conversation ${id}:`, wsError);
         }
       }
 
@@ -350,38 +379,66 @@ export class MessagingController {
       // Emit WebSocket event for read receipts
       const wsService = getWebSocketService();
       if (wsService && conversationDetails) {
-        // Parse participants safely
-        let participants: string[];
-        if (typeof conversationDetails.participants === 'string') {
+        try {
+          // Parse participants with robust error handling
+          let participants: string[] = [];
+
           try {
-            participants = JSON.parse(conversationDetails.participants);
-          } catch (e) {
-            safeLogger.warn(`Failed to parse participants JSON for conversation ${id}`, e);
-            participants = [];
+            if (typeof conversationDetails.participants === 'string') {
+              // Try to parse as JSON
+              try {
+                const parsed = JSON.parse(conversationDetails.participants);
+                if (Array.isArray(parsed)) {
+                  participants = parsed.filter((p: any) => typeof p === 'string' && p.trim());
+                } else {
+                  safeLogger.warn(`Participants JSON is not an array for conversation ${id}:`, typeof parsed);
+                }
+              } catch (parseError) {
+                // If JSON parse fails, try comma-separated
+                const split = conversationDetails.participants.split(',').map((p: string) => p.trim()).filter(Boolean);
+                if (split.length > 0) {
+                  participants = split;
+                  safeLogger.warn(`Participants parsed as comma-separated for conversation ${id}`);
+                } else {
+                  safeLogger.warn(`Failed to parse participants for conversation ${id}`, parseError);
+                }
+              }
+            } else if (Array.isArray(conversationDetails.participants)) {
+              participants = conversationDetails.participants.filter((p: any) => typeof p === 'string' && p.trim());
+            } else if (conversationDetails.participants) {
+              safeLogger.warn(`Unexpected participants type for conversation ${id}:`, typeof conversationDetails.participants);
+            }
+          } catch (participantError) {
+            safeLogger.error(`Error processing participants for conversation ${id}:`, participantError);
           }
-        } else if (Array.isArray(conversationDetails.participants)) {
-          participants = conversationDetails.participants as string[];
-        } else {
-          participants = [];
+
+          // Send read receipt to conversation room
+          wsService.sendToConversation(id, 'message_read', {
+            conversationId: id,
+            userAddress: userAddress,
+            readAt: new Date().toISOString()
+          });
+
+          // Also send individual notifications to senders so they see their messages were read
+          if (participants.length > 0) {
+            participants.forEach((participant: string) => {
+              try {
+                if (participant && participant.toLowerCase() !== userAddress.toLowerCase()) {
+                  wsService.sendToUser(participant, 'message_read', {
+                    conversationId: id,
+                    readerAddress: userAddress,
+                    readAt: new Date().toISOString()
+                  }, 'low');
+                }
+              } catch (notifyError) {
+                safeLogger.error(`Failed to send read notification to participant ${participant}:`, notifyError);
+              }
+            });
+          }
+        } catch (wsError) {
+          // Don't let WebSocket errors block the mark-as-read response
+          safeLogger.error(`WebSocket read notification failed for conversation ${id}:`, wsError);
         }
-
-        // Send read receipt to conversation room
-        wsService.sendToConversation(id, 'message_read', {
-          conversationId: id,
-          userAddress: userAddress,
-          readAt: new Date().toISOString()
-        });
-
-        // Also send individual notifications to senders so they see their messages were read
-        participants.forEach((participant: string) => {
-          if (participant.toLowerCase() !== userAddress.toLowerCase()) {
-            wsService.sendToUser(participant, 'message_read', {
-              conversationId: id,
-              readerAddress: userAddress,
-              readAt: new Date().toISOString()
-            }, 'low');
-          }
-        });
       }
 
       res.json(apiResponse.success(null, 'Conversation marked as read'));
