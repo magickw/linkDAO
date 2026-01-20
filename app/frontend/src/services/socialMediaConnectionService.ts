@@ -3,7 +3,7 @@
  * Handles OAuth connections to social media platforms (Twitter, Facebook, LinkedIn, Threads)
  */
 
-import { enhancedAuthService } from './enhancedAuthService';
+import { get, post, del } from './globalFetchWrapper';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
@@ -64,22 +64,6 @@ export interface RefreshTokenResponse {
 }
 
 /**
- * Get headers with authentication
- */
-const getAuthHeaders = async (): Promise<HeadersInit> => {
-  const token = enhancedAuthService.getToken();
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  return headers;
-};
-
-/**
  * Initiate OAuth flow for a platform
  * @param platform - The social media platform to connect
  * @returns OAuth authorization URL
@@ -88,22 +72,15 @@ export const initiateOAuth = async (
   platform: SocialPlatform
 ): Promise<OAuthInitiationResponse> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/social-media/connect/${platform}`,
-      {
-        method: 'POST',
-        headers: await getAuthHeaders(),
-        credentials: 'include',
-      }
+    const response = await post<OAuthInitiationResponse>(
+      `${API_BASE_URL}/api/social-media/connect/${platform}`
     );
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || data.message || 'Failed to initiate OAuth');
+    if (!response.success) {
+      throw new Error(response.error || response.data?.message || 'Failed to initiate OAuth');
     }
 
-    return data;
+    return response.data || { success: false, message: 'No data received' };
   } catch (error) {
     console.error(`Error initiating OAuth for ${platform}:`, error);
     return {
@@ -120,22 +97,15 @@ export const initiateOAuth = async (
  */
 export const getConnections = async (): Promise<GetConnectionsResponse> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/social-media/connections`,
-      {
-        method: 'GET',
-        headers: await getAuthHeaders(),
-        credentials: 'include',
-      }
+    const response = await get<GetConnectionsResponse>(
+      `${API_BASE_URL}/api/social-media/connections`
     );
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || data.message || 'Failed to fetch connections');
+    if (!response.success) {
+      throw new Error(response.error || response.data?.message || 'Failed to fetch connections');
     }
 
-    return data;
+    return response.data || { success: false, data: [], message: 'No data received' };
   } catch (error) {
     console.error('Error fetching connections:', error);
     return {
@@ -155,26 +125,19 @@ export const getConnectionStatus = async (
   platform: SocialPlatform
 ): Promise<SocialMediaConnection | null> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/social-media/connections/${platform}`,
-      {
-        method: 'GET',
-        headers: await getAuthHeaders(),
-        credentials: 'include',
-      }
+    const response = await get<{ success: boolean; data: SocialMediaConnection }>(
+      `${API_BASE_URL}/api/social-media/connections/${platform}`
     );
-
-    const data = await response.json();
 
     if (response.status === 404) {
       return null; // No connection exists
     }
 
-    if (!response.ok) {
-      throw new Error(data.error || data.message || 'Failed to fetch connection status');
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to fetch connection status');
     }
 
-    return data.data || null;
+    return response.data?.data || null;
   } catch (error) {
     console.error(`Error fetching connection status for ${platform}:`, error);
     return null;
@@ -190,22 +153,15 @@ export const disconnectPlatform = async (
   platform: SocialPlatform
 ): Promise<DisconnectResponse> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/social-media/connections/${platform}`,
-      {
-        method: 'DELETE',
-        headers: await getAuthHeaders(),
-        credentials: 'include',
-      }
+    const response = await del<DisconnectResponse>(
+      `${API_BASE_URL}/api/social-media/connections/${platform}`
     );
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || data.message || 'Failed to disconnect platform');
+    if (!response.success) {
+      throw new Error(response.error || response.data?.message || 'Failed to disconnect platform');
     }
 
-    return data;
+    return response.data || { success: false, message: 'No data received' };
   } catch (error) {
     console.error(`Error disconnecting ${platform}:`, error);
     return {
@@ -225,22 +181,15 @@ export const refreshToken = async (
   platform: SocialPlatform
 ): Promise<RefreshTokenResponse> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/social-media/connections/${platform}/refresh`,
-      {
-        method: 'POST',
-        headers: await getAuthHeaders(),
-        credentials: 'include',
-      }
+    const response = await post<RefreshTokenResponse>(
+      `${API_BASE_URL}/api/social-media/connections/${platform}/refresh`
     );
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || data.message || 'Failed to refresh token');
+    if (!response.success) {
+      throw new Error(response.error || response.data?.message || 'Failed to refresh token');
     }
 
-    return data;
+    return response.data || { success: false, message: 'No data received' };
   } catch (error) {
     console.error(`Error refreshing token for ${platform}:`, error);
     return {

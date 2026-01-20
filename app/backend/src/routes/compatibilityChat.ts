@@ -401,6 +401,7 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
   }
 
   if (hasDb) {
+    let created: any;
     try {
       // Verify conversation exists
       const conversationExists = await db.select({ id: conversations.id }).from(conversations).where(eq(conversations.id, conversationId)).limit(1);
@@ -410,7 +411,6 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
       }
 
       // Insert message into database
-      let created;
       try {
         const inserted = await db.insert(chatMessages).values({
           conversationId: conversationId,
