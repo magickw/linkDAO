@@ -6,6 +6,7 @@ export class DocumentGenerator {
     private doc: jsPDF;
     private data: DocumentData;
     private options: DocumentOptions;
+    private isGenerated: boolean = false;
 
     // Colors
     private readonly colors = {
@@ -28,6 +29,10 @@ export class DocumentGenerator {
     }
 
     public generate(): jsPDF {
+        if (this.isGenerated) {
+            return this.doc;
+        }
+
         this.addHeader();
         this.addCompanyInfo();
         this.addItemsTable();
@@ -35,10 +40,14 @@ export class DocumentGenerator {
         this.addPaymentInfo();
         this.addFooter();
 
+        this.isGenerated = true;
         return this.doc;
     }
 
     public save(filename?: string): void {
+        if (!this.isGenerated) {
+            this.generate();
+        }
         const name = filename || `${this.data.type.toLowerCase()}-${this.data.documentNumber}.pdf`;
         this.doc.save(name);
     }

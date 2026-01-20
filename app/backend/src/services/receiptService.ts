@@ -68,11 +68,47 @@ export class ReceiptService {
   async getReceiptByOrderId(orderId: string): Promise<any> {
     try {
       const receipts = await databaseService.getReceiptsByOrderId(orderId);
-      return receipts[0] || null;
+      return receipts;
     } catch (error) {
       safeLogger.error('Error fetching receipt:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get a receipt by ID
+   */
+  async getReceiptById(id: string): Promise<any> {
+    try {
+      const receipt = await databaseService.getReceiptById(id);
+      return receipt;
+    } catch (error) {
+      safeLogger.error('Error fetching receipt by ID:', error);
       return null;
     }
+  }
+
+  /**
+   * Get receipts by user address
+   */
+  async getReceiptsByUser(userAddress: string, limit: number, offset: number): Promise<any[]> {
+    try {
+      const receipts = await databaseService.getReceiptsByUser(userAddress, limit, offset);
+      return receipts;
+    } catch (error) {
+      safeLogger.error('Error fetching receipts by user:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Generate receipt PDF URL
+   */
+  async generateReceiptPDF(receiptId: string): Promise<string> {
+    // Mock implementation as backend PDF generation is not fully supported yet
+    // In production this would generate a PDF and upload to S3/IPFS
+    safeLogger.info(`Generating receipt PDF for ${receiptId}`);
+    return `https://api.linkdao.io/receipts/download/${receiptId}.pdf`;
   }
 }
 
