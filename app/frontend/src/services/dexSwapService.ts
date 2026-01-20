@@ -422,7 +422,8 @@ export class DexSwapService {
         to: data.to as `0x${string}`,
         data: data.data as `0x${string}`,
         value: BigInt(data.value || '0'),
-        from: params.walletAddress as `0x${string}`,
+        account: params.walletAddress as `0x${string}`,
+        chain: undefined,
         gas: data.gas ? BigInt(data.gas) : undefined
       });
 
@@ -483,7 +484,8 @@ export class DexSwapService {
         to: data.to as `0x${string}`,
         data: data.data as `0x${string}`,
         value: BigInt(data.value || '0'),
-        from: params.walletAddress as `0x${string}`,
+        account: params.walletAddress as `0x${string}`,
+        chain: undefined,
         gas: data.gas ? BigInt(data.gas) : undefined
       });
 

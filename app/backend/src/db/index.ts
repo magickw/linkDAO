@@ -48,7 +48,7 @@ if (connectionString) {
       const maxConnections = process.env.DB_POOL_MAX
         ? parseInt(process.env.DB_POOL_MAX)
         : (isRenderFree ? 2 : (isRenderPro ? 25 : 15)); // Pro tier: 25, Standard: 15, Free: 2
-      
+
       // Calculate min connections based on max connections for better resource management
       const minConnections = Math.max(1, Math.floor(maxConnections * 0.2)); // 20% of max connections
 
@@ -83,12 +83,12 @@ if (connectionString) {
             safeLogger.debug('Database connection closed');
           }
         },
-        
+
         // Retry configuration for better resilience
         retry_backoff: true,
         retry_max: 3,
         retry_delay: 1000, // 1 second initial delay
-        
+
         // Add connection validation
         debug: process.env.NODE_ENV !== 'production' ? console.log : false,
       };
@@ -131,31 +131,34 @@ if (connectionString) {
       });
 
       // Collect metrics periodically (every 30 seconds)
-      metricsInterval = setInterval(() => {
-        if (client) {
-          // Note: postgres-js doesn't expose connection pool stats directly
-          // We'll estimate based on our tracking
-          const currentMetrics = monitor.getCurrentMetrics();
+      // Skip in test environment to prevent "Cannot log after tests are done" errors
+      if (process.env.NODE_ENV !== 'test') {
+        metricsInterval = setInterval(() => {
+          if (client) {
+            // Note: postgres-js doesn't expose connection pool stats directly
+            // We'll estimate based on our tracking
+            const currentMetrics = monitor.getCurrentMetrics();
 
-          // Log metrics summary every 5 minutes
-          if (currentMetrics.queryCount % 10 === 0) {
-            const summary = monitor.getMetricsSummary();
-            safeLogger.info('📊 Connection Pool Metrics Summary:', {
-              avgUtilization: `${summary.avgUtilization.toFixed(1)}%`,
-              maxUtilization: `${summary.maxUtilization.toFixed(1)}%`,
-              avgQueryDuration: `${summary.avgQueryDuration.toFixed(0)}ms`,
-              totalQueries: summary.totalQueries,
-              totalErrors: summary.totalErrors,
-            });
+            // Log metrics summary every 5 minutes
+            if (currentMetrics.queryCount % 10 === 0) {
+              const summary = monitor.getMetricsSummary();
+              safeLogger.info('📊 Connection Pool Metrics Summary:', {
+                avgUtilization: `${summary.avgUtilization.toFixed(1)}%`,
+                maxUtilization: `${summary.maxUtilization.toFixed(1)}%`,
+                avgQueryDuration: `${summary.avgQueryDuration.toFixed(0)}ms`,
+                totalQueries: summary.totalQueries,
+                totalErrors: summary.totalErrors,
+              });
 
-            // Log recommendations if any
-            const recommendations = monitor.getRecommendations();
-            if (recommendations.length > 0) {
-              safeLogger.info('💡 Performance Recommendations:', recommendations);
+              // Log recommendations if any
+              const recommendations = monitor.getRecommendations();
+              if (recommendations.length > 0) {
+                safeLogger.info('💡 Performance Recommendations:', recommendations);
+              }
             }
           }
-        }
-      }, 30000); // Every 30 seconds
+        }, 30000); // Every 30 seconds
+      }
 
       // Log connection pool configuration in development
       if (process.env.NODE_ENV !== 'production') {
@@ -168,7 +171,7 @@ if (connectionString) {
       }
 
       // Add connection health monitoring for resource-constrained environments
-      if (isResourceConstrained) {
+      if (isResourceConstrained && process.env.NODE_ENV !== 'test') {
         // Test connection periodically and store interval reference for cleanup
         healthCheckInterval = setInterval(async () => {
           try {
@@ -178,7 +181,7 @@ if (connectionString) {
             }
           } catch (error) {
             safeLogger.error('❌ Database health check failed:', error);
-            
+
             // Implement reconnection logic for specific errors
             if (error && typeof error === 'object' && ('code' in error)) {
               const errorCode = (error as any).code;
@@ -192,7 +195,7 @@ if (connectionString) {
                     safeLogger.error('Error closing existing database client:', endError);
                   }
                 }
-                
+
                 // Try to reinitialize the connection
                 try {
                   client = postgres(connectionString, clientConfig);
@@ -212,7 +215,7 @@ if (connectionString) {
 
   } catch (error) {
     safeLogger.error('❌ Failed to establish database connection:', error);
-    
+
     // Try to reconnect with exponential backoff
     if (error && typeof error === 'object' && ('code' in error)) {
       const errorCode = (error as any).code;
@@ -222,7 +225,7 @@ if (connectionString) {
         // Individual services will handle the database unavailability gracefully
       }
     }
-    
+
     client = undefined;
     db = undefined;
   }

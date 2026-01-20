@@ -33,6 +33,7 @@ export interface AuthResponse {
   user?: AuthUser;
   error?: string;
   retryable?: boolean;
+  refreshToken?: string;
 }
 
 export interface SessionData {
@@ -1431,6 +1432,20 @@ class EnhancedAuthService {
       }
     }
     // If sessionData.user.address is undefined or empty, it's likely an initial connection, don't logout
+  }
+
+  /**
+   * Get current session data
+   */
+  getSession(): SessionData | null {
+    return this.sessionData;
+  }
+
+  /**
+   * Get current session data (alias)
+   */
+  getSessionData(): SessionData | null {
+    return this.sessionData;
   }
 
   /**
