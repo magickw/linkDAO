@@ -248,7 +248,7 @@ export class WebSocketClientService {
       this.emit('connection_state_changed', this.connectionState);
     });
 
-    this.socket.on('reconnect', (attemptNumber) => {
+    this.socket.on('reconnect', async (attemptNumber) => {
       console.log('WebSocket reconnected on attempt:', attemptNumber);
       this.connectionState = {
         status: 'connected',
@@ -256,10 +256,10 @@ export class WebSocketClientService {
         reconnectAttempts: attemptNumber
       };
       this.emit('connection_state_changed', this.connectionState);
-      
+
       // Re-authenticate after reconnection
       await this.authenticate();
-      
+
       // Restore subscriptions
       this.restoreSubscriptions();
     });
