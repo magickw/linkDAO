@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { orders, orderEvents, orderAutomationLogs } from '../db/schema';
-import { eq, and, lt, isNull, sql } from 'drizzle-orm';
+import { eq, and, lt, isNull, sql, or, inArray, gt } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { OrderService } from './orderService';
 import { NotificationService } from './notificationService';
@@ -126,8 +126,13 @@ class OrderAutomationService {
                 .select()
                 .from(orders)
                 .where(
-                    sql`status IN ('paid', 'processing', 'shipped', 'delivered') 
-              AND (updated_at > NOW() - INTERVAL '30 days' OR created_at > NOW() - INTERVAL '30 days')`
+                    and(
+                        inArray(orders.status, ['paid', 'processing', 'shipped', 'delivered']),
+                        or(
+                            sql`${orders.updatedAt} > NOW() - INTERVAL '30 days'`,
+                            sql`${orders.createdAt} > NOW() - INTERVAL '30 days'`
+                        )
+                    )
                 );
 
             let processed = 0;

@@ -50,7 +50,9 @@ export default function CommunityPostPage() {
 
                 // Detect if using UUID or Share ID
                 const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(shareId);
-                const endpoint = isUuid ? `/api/posts/${shareId}` : `/api/cp/${shareId}`;
+                const endpoint = isUuid
+                    ? `${process.env.NEXT_PUBLIC_API_URL}/api/posts/${shareId}`
+                    : `${process.env.NEXT_PUBLIC_API_URL}/api/cp/${shareId}`;
 
                 // Fetch post
                 const response = await fetch(endpoint);

@@ -571,7 +571,7 @@ export function transformSellerProfileToUnified(
           daoActivity: sellerProfile.settings?.notifications?.daoActivity ?? true,
           tips: sellerProfile.settings?.notifications?.tips ?? true,
           marketing: sellerProfile.settings?.notifications?.marketing ?? false,
-          system: (sellerProfile.settings?.notifications as any)?.system ?? true,
+          system: sellerProfile.settings?.notifications?.system ?? true,
         },
         privacy: {
           showEmail: sellerProfile.settings?.privacy?.showEmail ?? false,

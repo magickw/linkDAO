@@ -148,18 +148,11 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
   const authHeader = req.headers.authorization;
   const hasJWTAuth = authHeader && authHeader.startsWith('Bearer ');
 
-  // For authenticated requests with JWT, implement double-submit cookie pattern
+  // For authenticated requests with JWT (Bearer token), CSRF protection is implicitly provided
+  // by the requirement of a custom header (Authorization). Browsers do not send custom headers
+  // automatically for cross-site requests, making standard CSRF attacks impossible.
   if (hasJWTAuth) {
-    const csrfCookie = req.cookies?.['csrf-token'];
-    const csrfHeader = req.headers['x-csrf-token'] as string;
-
-    if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
-      safeLogger.warn(`[csrfProtection] Double-submit cookie validation failed for ${req.method} ${req.path}`);
-      ApiResponse.unauthorized(res, 'CSRF validation failed: Token mismatch');
-      return;
-    }
-
-    safeLogger.debug(`[csrfProtection] Authenticated request passed double-submit validation for ${req.method} ${req.path}`);
+    safeLogger.debug(`[csrfProtection] Skipping CSRF check for Bearer auth request: ${req.method} ${req.path}`);
     return next();
   }
 

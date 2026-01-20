@@ -19,6 +19,15 @@ export default function UserPostPage() {
     const { handle, shareId } = router.query;
     const { addToast } = useToast();
 
+    // Guard clause: Prevent 'api' from being treated as a user handle
+    // This avoids collision with API routes if a request slips through
+    useEffect(() => {
+        if (handle === 'api') {
+            setError('Page not found');
+            setIsLoading(false);
+        }
+    }, [handle]);
+
     const [post, setPost] = useState<Status | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
