@@ -343,16 +343,22 @@ export class MessagingService {
       const conversation = conversationResult[0];
 
       // Check permission: 1. Check conversationParticipants table (Phase 5+)
-      const participantCheck = await db
-        .select()
-        .from(conversationParticipants)
-        .where(
-          and(
-            eq(conversationParticipants.conversationId, conversationId),
-            eq(conversationParticipants.walletAddress, normalizedAddress)
+      let participantCheck: any[] = [];
+      try {
+        participantCheck = await db
+          .select()
+          .from(conversationParticipants)
+          .where(
+            and(
+              eq(conversationParticipants.conversationId, conversationId),
+              eq(conversationParticipants.walletAddress, normalizedAddress)
+            )
           )
-        )
-        .limit(1);
+          .limit(1);
+      } catch (dbError) {
+        // Log warning but continue to fallback
+        safeLogger.warn('[MessagingService] Failed to query conversationParticipants (table might be missing), falling back to JSON check', { error: dbError });
+      }
 
       if (participantCheck.length > 0) {
         return conversation;

@@ -192,81 +192,11 @@ export default function SmartRightSidebar({
   const { writeContractAsync: writeContract } = useWriteContract();
 
   const handleSwapToken = useCallback(async (fromToken: string, toToken: string, amount: number) => {
-    try {
-      if (!walletData) throw new Error('Wallet data not available');
-
-      // Get token addresses
-      const fromTokenData = walletData.balances.find(b => b.symbol === fromToken);
-      const toTokenData = walletData.balances.find(b => b.symbol === toToken);
-      const fromTokenAddress = fromTokenData?.contractAddress || '0x0000000000000000000000000000000000000000'; // ETH
-      const toTokenAddress = toTokenData?.contractAddress || '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'; // USDC
-
-      const decimals = fromToken === 'USDC' ? 6 : 18;
-      const amountBigInt = parseAmount(amount.toString(), decimals);
-
-      const routerAddress = paymentRouterAddress[chainId as keyof typeof paymentRouterAddress] as `0x${string}` | undefined;
-      if (!routerAddress) throw new Error(`Payment router address not configured for chain ID: ${chainId}`);
-
-      // If it's a native ETH swap/send, use sendEthPayment write hook
-      if (fromToken === 'ETH') {
-        if (!writeSendEthAsync) throw new Error('ETH write hook not available');
-        await writeSendEthAsync({
-          args: [routerAddress, amountBigInt, `swap:${toToken}`],
-          value: amountBigInt,
-          gas: 300000n,
-          chainId: chainId as keyof typeof paymentRouterAddress
-        });
-        addToast('Swap (ETH) submitted', 'success');
-        try { router.push('/wallet/transactions'); } catch { }
-        return;
-      }
-
-      // For ERC20, check allowance first
-      if (!writeSendTokenAsync) throw new Error('Token write hook not available');
-
-      // We need to use the public client to read allowance efficiently here without extra hooks
-      // Or we can blindly try to approve if we suspect it's needed, but better to check.
-      // For improved UX, we'll assume approval is needed if we can't easily check, 
-      // but ideally we should read it.
-      // Since we can't easily perform a synchronous read here without client, 
-      // we'll proceed with an optimistic approach or a required approval flow.
-
-      // NOTE: In a full implementation, we should use publicClient.readContract() here.
-      // For now, we'll try to execute the swap. If it fails due to allowance, user sees error.
-      // However, to fix the reported issue "swap can happen", we should ideally prompt approval.
-
-      // Let's implement approval using generic writeContract
-      try {
-        addToast('Checking/Requesting token approval...', 'info');
-        await writeContract({
-          address: fromTokenAddress as `0x${string}`,
-          abi: ERC20_ABI,
-          functionName: 'approve',
-          args: [routerAddress, amountBigInt],
-          chainId
-        });
-        addToast('Approval submitted. Waiting for confirmation...', 'success');
-        // In a real app we'd wait for receipt here. For now, we proceed to swap prompt 
-        // which might fail until mined, or we rely on wallet queueing.
-      } catch (e) {
-        console.warn('Approval failed or rejected', e);
-        // Continue to try swap in case allowance was already sufficient
-      }
-
-      await writeSendTokenAsync({
-        args: [fromTokenAddress as `0x${string}`, routerAddress, amountBigInt, `swap:${toToken}`],
-        gas: 500000n,
-        chainId: chainId as keyof typeof paymentRouterAddress
-      });
-      addToast('Swap submitted', 'success');
-      try { router.push('/wallet/transactions'); } catch { }
-      return;
-    } catch (err: any) {
-      console.error('Swap failed', err);
-      addToast(err?.message || 'Swap failed', 'error');
-      throw err;
-    }
-  }, [walletData, parseAmount, chainId, router, addToast, writeSendEthAsync, writeSendTokenAsync, writeContract]);
+    // Logic is now handled internally by SwapTokenModal using dexSwapService.executeSwap
+    // This callback can be used for analytics or refreshing data
+    console.log(`Swap executed: ${amount} ${fromToken} -> ${toToken}`);
+    refresh();
+  }, [refresh]);
 
   const handleStakeToken = useCallback(async (poolId: string, token: string, amount: number) => {
     try {

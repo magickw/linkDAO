@@ -650,6 +650,51 @@ export class DexSwapService {
   }
 
   /**
+   * Get spender address for approval
+   */
+  async getSpenderAddress(chainId: number = 1): Promise<string | null> {
+    if (!this.enabled) return null;
+
+    try {
+      // Try 1inch first
+      if (this.oneInchApiKey) {
+        const response = await fetch(
+          `https://api.1inch.dev/swap/v6.0/${chainId}/approve/spender`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${this.oneInchApiKey}`,
+              'Content-Type': 'application/json'
+            },
+            signal: AbortSignal.timeout(5000)
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          return data.address;
+        }
+      }
+
+      // Fallback for Uniswap/Backend (Router address)
+      // These should ideally be fetched from configuration or API
+      // Using known Universal Router addresses or 0x as placeholders
+      const UNISWAP_ROUTERS: Record<number, string> = {
+        1: '0xE592427A0AEce92De3Edee1F18E0157C05861564', // Uniswap V3 Router
+        137: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
+        42161: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
+        8453: '0x2626664c2603336E57B271c5C0b26F421741e481', // Uniswap V3 Base
+        11155111: '0x3bFA4769FB09e8893f0G2F1b259fb984e469D1e9' // Sepolia placeholder
+      };
+
+      return UNISWAP_ROUTERS[chainId] || null;
+    } catch (error) {
+      console.error('Failed to get spender address:', error);
+      return null;
+    }
+  }
+
+  /**
    * Check if DEX service is available
    */
   async checkHealth(): Promise<boolean> {

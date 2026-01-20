@@ -4,7 +4,8 @@ import { useToast } from '@/context/ToastContext';
 import { dexSwapService } from '@/services/dexSwapService';
 import { formatUnits, parseUnits } from 'ethers';
 import { GasFeeService } from '@/services/gasFeeService';
-import { usePublicClient } from 'wagmi';
+import { usePublicClient, useWalletClient, useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { erc20Abi } from 'viem';
 import { DEFAULT_SLIPPAGE_OPTIONS, DEFAULT_SLIPPAGE } from '@/types/dex';
 import { TokenInfo } from '@/types/dex';
 import { useNetworkSwitch, CHAIN_NAMES } from '../../hooks/useNetworkSwitch';
@@ -17,7 +18,7 @@ interface SwapTokenModalProps {
   isOpen: boolean;
   onClose: () => void;
   tokens: TokenBalance[];
-  onSwap: (fromToken: string, toToken: string, amount: number) => Promise<void>;
+  onSwap?: (fromToken: string, toToken: string, amount: number) => Promise<void>;
 }
 
 // Helper to estimate decimals since TokenBalance might miss it
@@ -30,6 +31,8 @@ const getDecimals = (symbol: string) => {
 export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: SwapTokenModalProps) {
   const { addToast } = useToast();
   const publicClient = usePublicClient();
+  const { data: walletClient } = useWalletClient();
+  const { address } = useAccount();
   const { currentChainId, ensureNetwork, isSwitching, getChainName, supportedChains } = useNetworkSwitch();
 
   const [gasFeeService, setGasFeeService] = useState<GasFeeService | null>(null);
@@ -37,7 +40,9 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
   const [toToken, setToToken] = useState('USDC');
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // General loading state (calculating, fetching)
+  const [isSwapping, setIsSwapping] = useState(false); // Swap transaction pending
+  const [isApproving, setIsApproving] = useState(false); // Approve transaction pending
   const [error, setError] = useState('');
   const [exchangeRate, setExchangeRate] = useState(0);
   const [slippage, setSlippage] = useState(DEFAULT_SLIPPAGE);
@@ -45,6 +50,8 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
   const [priceImpact, setPriceImpact] = useState<string | null>(null);
   const [popularTokens, setPopularTokens] = useState<TokenInfo[]>([]);
   const [selectedChainId, setSelectedChainId] = useState<number>(currentChainId);
+  const [spenderAddress, setSpenderAddress] = useState<string | null>(null);
+  const [approvalHash, setApprovalHash] = useState<`0x${string}` | undefined>(undefined);
 
   // Debounce the input amount to prevent excessive API calls
   const debouncedFromAmount = useDebounce(fromAmount, 800);
@@ -79,6 +86,49 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
   const fromTokenData = tokens.find(t => t.symbol === fromToken);
   const toTokenData = tokens.find(t => t.symbol === toToken);
   const maxAmount = fromTokenData ? getTokenBalanceForChain(fromTokenData, selectedChainId) : 0;
+  const fromTokenAddress = fromTokenData?.contractAddress || '0x0000000000000000000000000000000000000000';
+  const isEth = fromToken === 'ETH' || fromTokenAddress === '0x0000000000000000000000000000000000000000';
+
+  // Read allowance
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
+    address: fromTokenAddress as `0x${string}`,
+    abi: erc20Abi,
+    functionName: 'allowance',
+    args: [address as `0x${string}`, spenderAddress as `0x${string}`],
+    query: {
+      enabled: !!address && !!spenderAddress && !isEth && !!fromTokenAddress,
+    },
+    chainId: selectedChainId
+  });
+
+  // Write contract hook for approval
+  const { writeContractAsync: writeContract } = useWriteContract();
+
+  // Wait for approval receipt
+  const { isLoading: isWaitingForApproval, isSuccess: isApprovalConfirmed } = useWaitForTransactionReceipt({
+    hash: approvalHash,
+    chainId: selectedChainId
+  });
+
+  // Effect to handle approval confirmation
+  useEffect(() => {
+    if (isApprovalConfirmed) {
+      setIsApproving(false);
+      refetchAllowance();
+      addToast('Approval confirmed! You can now swap.', 'success');
+      setApprovalHash(undefined);
+    }
+  }, [isApprovalConfirmed, refetchAllowance, addToast]);
+
+  // Fetch spender address
+  useEffect(() => {
+    const fetchSpender = async () => {
+      if (!dexSwapService) return;
+      const spender = await dexSwapService.getSpenderAddress(selectedChainId);
+      setSpenderAddress(spender);
+    };
+    fetchSpender();
+  }, [selectedChainId]);
 
   // Pre-select current network when modal opens
   useEffect(() => {
@@ -112,7 +162,6 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
     }
   }, [isOpen, selectedChainId]);
 
-  // Get real exchange rate from DEX using debounced input
   // Get real exchange rate from DEX using debounced input
   useEffect(() => {
     // Only fetch if we have valid inputs and debounced amount
@@ -261,6 +310,37 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
     setToAmount('');
   };
 
+  const handleApprove = async () => {
+    if (!fromTokenAddress || !spenderAddress) {
+      setError('Cannot approve: Missing token or spender address');
+      return;
+    }
+
+    setIsApproving(true);
+    setError('');
+
+    try {
+      // Use max uint256 for approval to save gas on future swaps
+      const maxApproval = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
+      
+      const hash = await writeContract({
+        address: fromTokenAddress as `0x${string}`,
+        abi: erc20Abi,
+        functionName: 'approve',
+        args: [spenderAddress as `0x${string}`, maxApproval],
+        chainId: selectedChainId
+      });
+
+      setApprovalHash(hash);
+      addToast('Approval transaction submitted', 'info');
+    } catch (err: any) {
+      console.error('Approval failed:', err);
+      setError(err?.message || 'Approval failed');
+      addToast('Approval failed', 'error');
+      setIsApproving(false);
+    }
+  };
+
   const handleSwap = async () => {
     if (!fromAmount || !toAmount) {
       setError('Please enter an amount');
@@ -274,6 +354,11 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
 
     if (fromToken === toToken) {
       setError('Cannot swap the same token');
+      return;
+    }
+
+    if (!publicClient || !walletClient || !address) {
+      setError('Wallet not connected or client unavailable');
       return;
     }
 
@@ -297,33 +382,76 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
       addToast(`Switched to ${selectedNetwork.name}`, 'success');
     }
 
-    setIsLoading(true);
+    setIsSwapping(true);
 
     try {
-      await onSwap(fromToken, toToken, parseFloat(fromAmount));
+      // Prepare params
+      const fromTokenAddress = fromTokenData?.contractAddress || '0x0000000000000000000000000000000000000000';
+      const toTokenAddress = toTokenData?.contractAddress || '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+
+      // Use dexSwapService execution
+      const result = await dexSwapService.executeSwap({
+        tokenIn: {
+          address: fromTokenAddress,
+          symbol: fromTokenData?.symbol || '',
+          name: fromTokenData?.name || '',
+          decimals: getDecimals(fromTokenData?.symbol || '')
+        },
+        tokenOut: {
+          address: toTokenAddress,
+          symbol: toTokenData?.symbol || '',
+          name: toTokenData?.name || '',
+          decimals: getDecimals(toTokenData?.symbol || '')
+        },
+        amountIn: fromAmount,
+        slippageTolerance: slippage,
+        recipient: address,
+        walletAddress: address,
+        publicClient: publicClient as any, // Cast if needed
+        walletClient: walletClient as any
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || 'Swap execution failed');
+      }
 
       // Construct the explorer URL based on the selected chain
       const explorerUrl = selectedNetwork.explorer;
 
       addToast('Swap transaction submitted successfully!', 'success');
 
+      // Call optional onSwap callback if provided (e.g. for refresh)
+      if (onSwap) {
+        onSwap(fromToken, toToken, parseFloat(fromAmount)).catch(console.error);
+      }
+
       // Ask user if they want to view the transaction on the explorer
-      if (window.confirm(`Swap submitted! Would you like to view it on the blockchain explorer?`)) {
-        window.open(explorerUrl, '_blank', 'noopener,noreferrer');
+      if (result.transactionHash && window.confirm(`Swap submitted! Would you like to view it on the blockchain explorer?`)) {
+        window.open(`${explorerUrl}/tx/${result.transactionHash}`, '_blank', 'noopener,noreferrer');
       }
 
       onClose();
       setFromAmount('');
       setToAmount('');
     } catch (err) {
+      console.error('Swap failed:', err);
       setError(err instanceof Error ? err.message : 'Swap failed');
       addToast('Swap failed: ' + (err instanceof Error ? err.message : 'Unknown error'), 'error');
     } finally {
-      setIsLoading(false);
+      setIsSwapping(false);
     }
   };
 
   if (!isOpen) return null;
+
+  // Determine if approval is needed
+  const needsApproval = !isEth && 
+    allowance !== undefined && 
+    fromAmount && 
+    parseFloat(formatUnits(allowance as bigint, getDecimals(fromToken))) < parseFloat(fromAmount) &&
+    spenderAddress;
+
+  const canSwap = !needsApproval && fromAmount && toAmount && !isLoading && !isSwapping && !isApproving;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -730,36 +858,60 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
                 </div>
               )}
 
-              {/* Swap Button */}
-              <button
-                onClick={handleSwap}
-                disabled={isLoading || isSwitching || !fromAmount || !toAmount}
-                className="w-full py-3.5 px-4 bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
-              >
-                {isSwitching ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Switching Network...
-                  </>
-                ) : isLoading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    {needsNetworkSwitch && (
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                {needsApproval ? (
+                  <button
+                    onClick={handleApprove}
+                    disabled={isLoading || isApproving || isWaitingForApproval}
+                    className="flex-1 py-3.5 px-4 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isApproving || isWaitingForApproval ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Approving...
+                      </>
+                    ) : (
+                      <>
+                        Approve {fromToken}
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </>
                     )}
-                    {needsNetworkSwitch ? `Switch & Swap` : 'Swap Tokens'}
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                    </svg>
-                  </>
-                )}
-              </button>
+                  </button>
+                ) : null}
+
+                <button
+                  onClick={handleSwap}
+                  disabled={isLoading || isSwitching || !fromAmount || !toAmount || needsApproval || isSwapping}
+                  className={`flex-1 py-3.5 px-4 bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2 ${needsApproval ? 'opacity-50' : ''}`}
+                >
+                  {isSwitching ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Switching Network...
+                    </>
+                  ) : isSwapping ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Swapping...
+                    </>
+                  ) : (
+                    <>
+                      {needsNetworkSwitch && (
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      )}
+                      {needsNetworkSwitch ? `Switch & Swap` : 'Swap'}
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
