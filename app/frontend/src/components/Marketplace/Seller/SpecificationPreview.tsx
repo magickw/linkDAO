@@ -18,6 +18,8 @@ export const SpecificationPreview: React.FC<SpecificationPreviewProps> = ({
   category,
   productName = 'Product'
 }) => {
+  if (!specs) return null;
+
   const shippingEstimate = calculateShippingEstimate(specs);
 
   return (
@@ -61,41 +63,41 @@ export const SpecificationPreview: React.FC<SpecificationPreviewProps> = ({
 
         {/* Dimensions */}
         {specs.dimensions &&
-         specs.dimensions.length !== undefined &&
-         specs.dimensions.width !== undefined &&
-         specs.dimensions.height !== undefined &&
-         specs.dimensions.unit && (
-          <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-            <div className="flex items-center gap-2 mb-3">
-              <Ruler className="w-4 h-4 text-indigo-400" />
-              <span className="text-sm font-medium text-white/90">Dimensions</span>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-white/50">Metric (L×W×H)</span>
-                <span className="text-sm text-white font-medium">
-                  {getDimensionsDualDisplay(
-                    specs.dimensions.length,
-                    specs.dimensions.width,
-                    specs.dimensions.height,
-                    specs.dimensions.unit
-                  ).metric}
-                </span>
+          specs.dimensions.length !== undefined &&
+          specs.dimensions.width !== undefined &&
+          specs.dimensions.height !== undefined &&
+          specs.dimensions.unit && (
+            <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+              <div className="flex items-center gap-2 mb-3">
+                <Ruler className="w-4 h-4 text-indigo-400" />
+                <span className="text-sm font-medium text-white/90">Dimensions</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-white/50">Imperial (L×W×H)</span>
-                <span className="text-sm text-white font-medium">
-                  {getDimensionsDualDisplay(
-                    specs.dimensions.length,
-                    specs.dimensions.width,
-                    specs.dimensions.height,
-                    specs.dimensions.unit
-                  ).imperial}
-                </span>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-white/50">Metric (L×W×H)</span>
+                  <span className="text-sm text-white font-medium">
+                    {getDimensionsDualDisplay(
+                      specs.dimensions.length,
+                      specs.dimensions.width,
+                      specs.dimensions.height,
+                      specs.dimensions.unit
+                    ).metric}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-white/50">Imperial (L×W×H)</span>
+                  <span className="text-sm text-white font-medium">
+                    {getDimensionsDualDisplay(
+                      specs.dimensions.length,
+                      specs.dimensions.width,
+                      specs.dimensions.height,
+                      specs.dimensions.unit
+                    ).imperial}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
       </div>
 
       {/* Size Information */}
@@ -105,7 +107,7 @@ export const SpecificationPreview: React.FC<SpecificationPreviewProps> = ({
             <Info className="w-4 h-4 text-indigo-400" />
             <span className="text-sm font-medium text-white/90">Available Sizes</span>
           </div>
-          
+
           {sizeConfig.system === 'apparel_standard' && sizeConfig.selectedSizes && (
             <div className="flex flex-wrap gap-2">
               {sizeConfig.selectedSizes.map(size => (

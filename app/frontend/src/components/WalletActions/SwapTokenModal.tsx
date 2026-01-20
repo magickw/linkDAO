@@ -113,6 +113,7 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
   }, [isOpen, selectedChainId]);
 
   // Get real exchange rate from DEX using debounced input
+  // Get real exchange rate from DEX using debounced input
   useEffect(() => {
     // Only fetch if we have valid inputs and debounced amount
     if (fromTokenData && toTokenData && debouncedFromAmount && parseFloat(debouncedFromAmount) > 0) {
@@ -211,7 +212,8 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
       setExchangeRate(0);
       setToAmount('');
     }
-  }, [fromToken, toToken, debouncedFromAmount, fromTokenData, toTokenData, slippage, selectedChainId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromToken, toToken, debouncedFromAmount, fromTokenData?.contractAddress, fromTokenData?.symbol, toTokenData?.contractAddress, toTokenData?.symbol, slippage, selectedChainId]);
 
   // Handle network change
   const handleNetworkChange = async (newChainId: number) => {

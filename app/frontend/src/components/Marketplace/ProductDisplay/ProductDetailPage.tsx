@@ -142,7 +142,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
       try {
         // Import marketplaceService dynamically to avoid circular dependencies
         const { marketplaceService } = await import('../../../services/marketplaceService');
-        
+
         // Fetch products from the same category, excluding current product
         const listings = await marketplaceService.getMarketplaceListings({
           limit: 8,
@@ -150,12 +150,12 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
           sortBy: 'createdAt',
           sortOrder: 'desc'
         });
-        
+
         // Filter out current product and limit to 4 items
         const related = listings
           .filter((item: any) => item.id !== product.id)
           .slice(0, 4);
-        
+
         setRelatedProducts(related);
       } catch (error) {
         console.error('Error fetching related products:', error);
@@ -347,9 +347,8 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   alt={product.title || 'Product'}
                   width={600}
                   height={384}
-                  className={`w-full h-96 object-contain transition-transform duration-200 ${
-                    isZoomed ? 'scale-150' : 'scale-100'
-                  }`}
+                  className={`w-full h-96 object-contain transition-transform duration-200 ${isZoomed ? 'scale-150' : 'scale-100'
+                    }`}
                   style={isZoomed ? { transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%` } : {}}
                   lazy={false}
                   quality={75}
@@ -394,11 +393,10 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                     <button
                       key={index}
                       onClick={() => setSelectedImage(media.url)}
-                      className={`w-2 h-2 rounded-full transition-all ${
-                        selectedImage === media.url
+                      className={`w-2 h-2 rounded-full transition-all ${selectedImage === media.url
                           ? 'bg-blue-500 w-6'
                           : 'bg-white/30 hover:bg-white/50'
-                      }`}
+                        }`}
                       aria-label={`View image ${index + 1}`}
                     />
                   ))}
@@ -413,9 +411,8 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   <GlassPanel
                     key={index}
                     variant="secondary"
-                    className={`pl-1 pr-3 py-1 cursor-pointer border-2 transition-all ${
-                      selectedImage === media.url ? 'border-blue-500 scale-105' : 'border-transparent hover:border-white/30'
-                    }`}
+                    className={`pl-1 pr-3 py-1 cursor-pointer border-2 transition-all ${selectedImage === media.url ? 'border-blue-500 scale-105' : 'border-transparent hover:border-white/30'
+                      }`}
                     onClick={() => setSelectedImage(media.url)}
                   >
                     <OptimizedImage
@@ -768,7 +765,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               <div className="mb-6">
                 <h3 className="font-medium text-white mb-3">Specifications</h3>
                 <SpecificationPreview
-                  specs={product.metadata?.specs}
+                  specs={product.metadata?.specs || {}}
                   sizeConfig={product.metadata?.sizeConfig}
                   category={product.categoryId}
                 />
@@ -963,7 +960,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
         <div className="mt-8">
           <GlassPanel variant="secondary" className="p-6">
             <h2 className="text-2xl font-bold text-white mb-6">You May Also Like</h2>
-            
+
             {loadingRelated ? (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[1, 2, 3, 4].map((i) => (
@@ -1194,11 +1191,10 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
       {/* Toast Notification */}
       {showToast && (
         <div
-          className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transition-all duration-300 transform ${
-            showToast.type === 'success'
+          className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transition-all duration-300 transform ${showToast.type === 'success'
               ? 'bg-green-600 text-white'
               : 'bg-red-600 text-white'
-          }`}
+            }`}
         >
           <div className="flex items-center gap-2">
             {showToast.type === 'success' ? (

@@ -5,6 +5,8 @@
 
 import { Hash, PublicClient, WalletClient, parseUnits, formatUnits } from 'viem';
 import { ENV_CONFIG } from '@/config/environment';
+import { enhancedAuthService } from './enhancedAuthService';
+import { csrfService } from './csrfService';
 
 export interface Token {
   address: string;
@@ -63,6 +65,27 @@ export class DexSwapService {
   }
 
   /**
+   * Get headers for API requests including Auth and CSRF
+   */
+  private async getHeaders(): Promise<HeadersInit> {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json'
+    };
+
+    // Add Auth token
+    const token = enhancedAuthService.getSession()?.token;
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    // Add CSRF token
+    const csrfHeaders = await csrfService.getCSRFHeaders();
+    Object.assign(headers, csrfHeaders);
+
+    return headers;
+  }
+
+  /**
    * Get a swap quote from multiple DEX aggregators
    */
   async getSwapQuote(
@@ -107,8 +130,7 @@ export class DexSwapService {
     chainId: number
   ): Promise<SwapQuote | null> {
     try {
-      const amountInWei = parseUnits(params.amountIn, params.tokenIn.decimals);
-
+      // 1inch API call remains direct as it uses API Key, not our backend auth
       const response = await fetch(
         `https://api.1inch.dev/swap/v6.0/${chainId}/quote`,
         {
@@ -163,9 +185,7 @@ export class DexSwapService {
         `${this.baseUrl}/api/dex/uniswap/quote`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: await this.getHeaders(),
           body: JSON.stringify({
             tokenIn: params.tokenIn.address,
             tokenOut: params.tokenOut.address,
@@ -215,9 +235,7 @@ export class DexSwapService {
         `${this.baseUrl}/api/dex/quote`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: await this.getHeaders(),
           body: JSON.stringify({
             tokenInAddress: params.tokenIn.address,
             tokenOutAddress: params.tokenOut.address,
@@ -308,9 +326,6 @@ export class DexSwapService {
     quote: SwapQuote
   ): Promise<SwapResult> {
     try {
-      const amountInWei = parseUnits(params.amountIn, params.tokenIn.decimals);
-      const amountOutMinWei = parseUnits(quote.amountOutMin, params.tokenOut.decimals);
-
       const response = await fetch(
         `https://api.1inch.dev/swap/v6.0/${params.publicClient.chain?.id || 1}/swap`,
         {
@@ -379,9 +394,7 @@ export class DexSwapService {
         `${this.baseUrl}/api/dex/uniswap/swap`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: await this.getHeaders(),
           body: JSON.stringify({
             tokenIn: params.tokenIn.address,
             tokenOut: params.tokenOut.address,
@@ -442,9 +455,7 @@ export class DexSwapService {
         `${this.baseUrl}/api/dex/execute`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: await this.getHeaders(),
           body: JSON.stringify({
             tokenInAddress: params.tokenIn.address,
             tokenOutAddress: params.tokenOut.address,
@@ -501,6 +512,8 @@ export class DexSwapService {
       const response = await fetch(
         `${this.baseUrl}/api/dex/popular-tokens?chainId=${chainId}`,
         {
+          // We can try to use auth headers here too, just in case
+          headers: await this.getHeaders(),
           signal: AbortSignal.timeout(10000)
         }
       );
@@ -513,8 +526,8 @@ export class DexSwapService {
       const data = await response.json();
       return data.tokens || this.getDefaultTokens(chainId);
     } catch (error) {
-      // Endpoint likely doesn't exist yet, so we just use default tokens
-      // console.warn('Using default tokens (API unavailable)');
+      // Endpoint likely doesn't exist yet or failed, so we just use default tokens
+      // No console.error to avoid spamming logs
       return this.getDefaultTokens(chainId);
     }
   }
@@ -591,6 +604,7 @@ export class DexSwapService {
       const response = await fetch(
         `${this.baseUrl}/api/dex/validate/${tokenAddress}?chainId=${chainId}`,
         {
+          headers: await this.getHeaders(),
           signal: AbortSignal.timeout(10000)
         }
       );
@@ -602,7 +616,8 @@ export class DexSwapService {
       const data = await response.json();
       return data.token || null;
     } catch (error) {
-      console.error('Token validation error:', error);
+      // Swallow error for cleaner logs (user just sees token not found)
+      // console.error('Token validation error:', error);
       return null;
     }
   }
@@ -615,6 +630,7 @@ export class DexSwapService {
       const response = await fetch(
         `${this.baseUrl}/api/dex/price/${tokenAddress}?chainId=${chainId}`,
         {
+          headers: await this.getHeaders(),
           signal: AbortSignal.timeout(10000)
         }
       );
@@ -626,7 +642,7 @@ export class DexSwapService {
       const data = await response.json();
       return data.price || null;
     } catch (error) {
-      console.error('Token price error:', error);
+      // Swallow error
       return null;
     }
   }
@@ -639,6 +655,7 @@ export class DexSwapService {
       const response = await fetch(
         `${this.baseUrl}/api/dex/health`,
         {
+          headers: await this.getHeaders(),
           signal: AbortSignal.timeout(5000)
         }
       );

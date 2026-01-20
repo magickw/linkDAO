@@ -621,152 +621,84 @@ function OrderDetailsModal({ order, onClose, onCancelOrder, canCancel, isCancell
     const tax = order.taxAmount !== undefined ? order.taxAmount : (order.total - subtotal - shipping);
 
     // Handle invoice download
-    const handleDownloadInvoice = () => {
-        const doc = new jsPDF();
+    const handleDownloadInvoice = async () => {
+        try {
+            // Dynamic import to avoid SSR issues if any, though client-side is fine 
+            const { DocumentGenerator } = await import('@/utils/DocumentGenerator');
 
-        // Helper to format currency
-        const formatCurrency = (amount: number) =>
-            `$${amount.toFixed(2)}`;
+            // Map Order to DocumentData
+            const docData: any = {
+                type: 'PURCHASE_ORDER',
+                documentNumber: order.orderNumber,
+                date: new Date(order.createdAt),
+                status: (order.status || 'PENDING').toUpperCase(),
+                currency: order.currency || 'USD',
 
-        // Helper to format date
-        const formatDate = (date: Date) => new Date(date).toLocaleDateString('en-US', {
-            month: 'long', day: 'numeric', year: 'numeric'
-        });
+                // Construct Sender (Seller) Info
+                sender: {
+                    name: order.seller?.displayName || order.seller?.handle || 'Unknown Seller',
+                    address: {
+                        street: order.seller?.address?.street || 'N/A',
+                        city: order.seller?.address?.city || 'N/A',
+                        state: order.seller?.address?.state || 'N/A',
+                        postalCode: order.seller?.address?.postalCode || '',
+                        country: order.seller?.address?.country || 'N/A'
+                    },
+                    // These would ideally come from the seller profile extended data
+                    registrationNumber: 'Ref: ' + (order.seller?.walletAddress?.substring(0, 8) || ''),
+                    email: 'seller@linkdao.io' // Placeholder or derived
+                },
 
-        // --- Header ---
-        doc.setFontSize(20);
-        doc.text('PURCHASE ORDER', 14, 22);
+                // Construct Recipient (Buyer) Info
+                recipient: {
+                    name: order.buyer?.displayName || order.buyer?.handle || 'Unknown Buyer',
+                    address: {
+                        street: order.shippingAddress?.street || order.shippingAddress?.addressLine1 || order.buyer?.address?.street || 'N/A',
+                        city: order.shippingAddress?.city || order.buyer?.address?.city || 'N/A',
+                        state: order.shippingAddress?.state || order.buyer?.address?.state || 'N/A',
+                        postalCode: order.shippingAddress?.postalCode || order.buyer?.address?.postalCode || '',
+                        country: order.shippingAddress?.country || order.buyer?.address?.country || 'N/A'
+                    },
+                    phone: order.shippingAddress?.phone
+                },
 
-        doc.setFontSize(10);
-        doc.setTextColor(100);
-        doc.text(`Order #: ${order.orderNumber}`, 14, 30);
-        doc.text(`Date Placed: ${formatDate(order.createdAt)}`, 14, 35);
-        doc.text(`Status: ${(order.status || 'pending').toUpperCase()}`, 14, 40);
-        doc.text(`Payment Method: ${order.paymentMethod || 'Crypto'}`, 14, 45);
+                items: (order.items || []).map(item => ({
+                    description: item.productName,
+                    quantity: item.quantity,
+                    unitPrice: item.price,
+                    total: item.total
+                })),
 
-        // --- Seller & Buyer Grid ---
-        const startY = 55;
+                subtotal: subtotal,
+                taxTotal: tax,
+                shippingTotal: shipping,
+                total: order.total,
 
-        // Seller Column
-        doc.setFontSize(11);
-        doc.setTextColor(0);
-        doc.text('SELLER', 14, startY);
-        doc.setFontSize(9);
-        doc.setTextColor(80);
+                note: `Order ID: ${order.id}`,
+                terms: 'Payment is due immediately. LinkDAO acts as the platform provider. Crypto payments are final upon blockchain confirmation.',
 
-        let sellerY = startY + 6;
-        const sellerName = order.seller?.displayName || order.seller?.handle || 'Unknown Seller';
-        doc.text(sellerName, 14, sellerY);
+                paymentDetails: {
+                    method: order.paymentMethod || 'Crypto',
+                    crypto: (!order.paymentMethod || order.paymentMethod === 'Crypto' || order.paymentMethod === 'ETH') ? {
+                        network: 'Ethereum',
+                        currency: order.currency || 'ETH',
+                        address: order.seller?.walletAddress || ''
+                    } : undefined,
+                    creditCard: (order.paymentMethod === 'CREDIT_CARD' || order.paymentMethod === 'Card') ? {
+                        brand: 'Visa', // Placeholder or derive from data if available
+                        last4: '4242'  // Placeholder: In real app, map from order.paymentDetails.last4
+                    } : undefined
+                }
+            };
 
-        if (order.seller?.address) {
-            sellerY += 5;
-            doc.text(order.seller.address.street, 14, sellerY);
-            sellerY += 5;
-            doc.text(`${order.seller.address.city}, ${order.seller.address.state} ${order.seller.address.postalCode}`, 14, sellerY);
-            sellerY += 5;
-            doc.text(order.seller.address.country, 14, sellerY);
+            const generator = new DocumentGenerator(docData);
+            generator.save(`LinkDAO-PO-${order.orderNumber}.pdf`);
+
+        } catch (error) {
+            console.error('Failed to generate PDF:', error);
+            // Fallback or toast
+            toast?.error('Failed to generate invoice');
         }
-        sellerY += 5;
-        doc.text(order.seller?.walletAddress || '', 14, sellerY);
-
-        // Buyer Column
-        doc.setFontSize(11);
-        doc.setTextColor(0);
-        doc.text('BUYER', 105, startY);
-        doc.setFontSize(9);
-        doc.setTextColor(80);
-
-        let buyerY = startY + 6;
-        const buyerName = order.buyer?.displayName || order.buyer?.handle || 'Unknown Buyer';
-        doc.text(buyerName, 105, buyerY);
-
-        // Prefer physical address, fallback to shipping for display
-        const buyerAddress = order.buyer?.address || order.shippingAddress;
-
-        if (buyerAddress) {
-            buyerY += 5;
-            // Handle different structure of shippingAddress vs physicalAddress
-            const street = buyerAddress.street || buyerAddress.addressLine1 || '';
-            const street2 = buyerAddress.addressLine2 || '';
-            const city = buyerAddress.city || '';
-            const state = buyerAddress.state || '';
-            const postalCode = buyerAddress.postalCode || '';
-            const country = buyerAddress.country || '';
-
-            doc.text(street, 105, buyerY);
-            if (street2) {
-                buyerY += 5;
-                doc.text(street2, 105, buyerY);
-            }
-            buyerY += 5;
-            doc.text(`${city}, ${state} ${postalCode}`, 105, buyerY);
-            buyerY += 5;
-            doc.text(country, 105, buyerY);
-        }
-        buyerY += 5;
-        doc.text(order.buyer?.walletAddress || '', 105, buyerY);
-
-
-        // --- Items Table ---
-        const tableY = Math.max(sellerY, buyerY) + 15;
-
-        const tableBody = (order.items || []).map(item => [
-            item.productName,
-            item.quantity.toString(),
-            formatCurrency(item.price),
-            formatCurrency(item.total)
-        ]);
-
-        autoTable(doc, {
-            startY: tableY,
-            head: [['Item', 'Quantity', 'Unit Price', 'Total']],
-            body: tableBody,
-            theme: 'grid',
-            headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-            styles: { fontSize: 9 },
-            columnStyles: {
-                0: { cellWidth: 'auto' }, // Item name
-                1: { cellWidth: 25, halign: 'center' }, // Qty
-                2: { cellWidth: 35, halign: 'right' }, // Price
-                3: { cellWidth: 35, halign: 'right' }, // Total
-            }
-        });
-
-        // --- Summary ---
-        const finalY = (doc as any).lastAutoTable.finalY + 10;
-
-        doc.setFontSize(9);
-        doc.setTextColor(0);
-
-        const summaryX = 140;
-        const currency = order.currency || 'USD';
-
-        doc.text(`Subtotal:`, summaryX, finalY);
-        doc.text(formatCurrency(subtotal), 195, finalY, { align: 'right' });
-
-        doc.text(`Shipping:`, summaryX, finalY + 6);
-        doc.text(formatCurrency(shipping), 195, finalY + 6, { align: 'right' });
-
-        doc.text(`Tax:`, summaryX, finalY + 12);
-        doc.text(formatCurrency(tax), 195, finalY + 12, { align: 'right' });
-
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`TOTAL (${currency}):`, summaryX, finalY + 20);
-        doc.text(formatCurrency(order.total), 195, finalY + 20, { align: 'right' });
-
-        // --- Footer ---
-        const pageHeight = doc.internal.pageSize.getHeight();
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        doc.setTextColor(150);
-        doc.setLineWidth(0.1);
-        doc.line(14, pageHeight - 20, 196, pageHeight - 20);
-        doc.text('Thank you for your business.', 14, pageHeight - 15);
-        doc.text('Generated by LinkDAO', 196, pageHeight - 15, { align: 'right' });
-
-        // Save PDF
-        doc.save(`invoice-${order.orderNumber}.pdf`);
     };
 
     return (
