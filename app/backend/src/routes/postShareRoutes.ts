@@ -35,9 +35,33 @@ router.get('/:shareId', async (req: Request, res: Response) => {
 
     if (!resolution) {
       console.warn(`[PostShareRoutes] Content not found for Share ID: ${shareId}`);
+
+      // DEBUG: Perform raw DB checks to diagnose why resolution failed
+      // This will help us identify if it's a data missing issue or a resolver logic issue
+      let debugInfo: any = {
+        inStatuses: false,
+        inPosts: false,
+        shareId
+      };
+
+      try {
+        const { db } = await import('../db');
+        const { statuses, posts } = await import('../db/schema');
+        const { eq } = await import('drizzle-orm');
+
+        const statusCheck = await db.select({ id: statuses.id }).from(statuses).where(eq(statuses.shareId, shareId)).limit(1);
+        if (statusCheck.length > 0) debugInfo.inStatuses = true;
+
+        const postCheck = await db.select({ id: posts.id }).from(posts).where(eq(posts.shareId, shareId)).limit(1);
+        if (postCheck.length > 0) debugInfo.inPosts = true;
+      } catch (err) {
+        debugInfo.error = 'Failed to run debug checks';
+      }
+
       return res.status(404).json({
         success: false,
-        error: 'Content not found'
+        error: 'Content not found',
+        debug: debugInfo
       });
     }
 

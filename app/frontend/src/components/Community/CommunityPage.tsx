@@ -188,11 +188,25 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
     userAddress: string
   ): Promise<MembershipStatus> => {
     try {
-      const response = await fetch(`/api/communities/${communityId}/membership/${userAddress}`);
+      const response = await fetch(`/api/communities/${communityId}/members/${userAddress}`);
       if (!response.ok) {
         return { isMember: false, canPost: false, canModerate: false };
       }
-      return await response.json();
+      const data = await response.json();
+      
+      // The backend returns membership data with isActive field
+      if (data && data.data) {
+        const membership = data.data;
+        return {
+          isMember: membership.isActive === true,
+          role: membership.role,
+          joinedAt: membership.joinedAt ? new Date(membership.joinedAt) : undefined,
+          canPost: membership.isActive === true,
+          canModerate: ['admin', 'moderator', 'owner'].includes(membership.role)
+        };
+      }
+      
+      return { isMember: false, canPost: false, canModerate: false };
     } catch (error) {
       console.error('Error checking membership:', error);
       return { isMember: false, canPost: false, canModerate: false };
