@@ -60,7 +60,7 @@ export class UnifiedShareResolver {
         // Valid UUIDs are 36 chars (including hyphens)
         if (decodedUuid && decodedUuid.length === 36) {
           safeLogger.info(`[UnifiedShareResolver] shareId ${shareId} not found, trying as decoded UUID: ${decodedUuid}`);
-          
+
           const statusByUuid = await this.resolveStatusById(decodedUuid);
           if (statusByUuid) {
             safeLogger.info(`[UnifiedShareResolver] Resolved status by decoded UUID: ${decodedUuid}`);
@@ -164,7 +164,11 @@ export class UnifiedShareResolver {
       },
       canonicalUrl: `/${handle}/statuses/${item.id}`,
       shareUrl: `/p/${item.shareId}`,
-      data: item,
+      data: {
+        ...item,
+        mediaCids: this.safeParse(item.mediaCids),
+        tags: this.safeParse(item.tags),
+      },
     };
   }
 
@@ -173,7 +177,7 @@ export class UnifiedShareResolver {
    */
   private async resolveCommunityPost(shareId: string): Promise<ShareResolution | null> {
     const db = databaseService.getDatabase();
-    
+
     // First check if it exists
     const basicPost = await db
       .select({ id: posts.id })
@@ -191,7 +195,7 @@ export class UnifiedShareResolver {
    */
   private async resolveCommunityPostById(id: string): Promise<ShareResolution | null> {
     const db = databaseService.getDatabase();
-    
+
     // First check if it exists
     const basicPost = await db
       .select({ id: posts.id })
@@ -206,7 +210,7 @@ export class UnifiedShareResolver {
 
   private async fetchCommunityPostDetails(whereClause: any): Promise<ShareResolution | null> {
     const db = databaseService.getDatabase();
-    
+
     const communityPosts = await db
       .select({
         id: posts.id,
@@ -236,7 +240,42 @@ export class UnifiedShareResolver {
     const post = communityPosts[0];
 
     // Only resolve posts that belong to a community
-    if (!post.communityId) return null;
+    if (!post.communityId) {
+      safeLogger.info(`[UnifiedShareResolver] Resolved post for share ID: ${post.shareId}, but it has no communityId. Treating as standalone post.`);
+
+      const authorHandle = post.authorHandle || post.authorWallet?.slice(0, 8) || 'unknown';
+      const authorName = post.authorName || authorHandle;
+
+      // For standalone posts, we use the /p/ URL as canonical since there's no community context
+      const canonicalUrl = `/p/${post.shareId}`;
+
+      return {
+        type: 'status', // Treat as status for frontend rendering compatibility
+        id: post.id.toString(),
+        shareId: post.shareId,
+        owner: {
+          type: 'user',
+          id: post.authorId,
+          handle: authorHandle,
+          name: authorName,
+        },
+        canonicalUrl,
+        shareUrl: `/p/${post.shareId}`,
+        data: {
+          ...post,
+          id: post.id.toString(), // Ensure ID is string
+          author: post.authorId, // Map authorId to author for frontend compatibility
+          authorHandle,
+          authorName,
+          communityId: null, // Explicitly null
+          isStatus: true, // Flag for frontend
+          // Parse JSON fields
+          mediaCids: this.safeParse(post.mediaCids),
+          tags: this.safeParse(post.tags),
+          mediaUrls: this.safeParse(post.mediaUrls), // Assuming mediaUrls might also be a JSON string
+        },
+      };
+    }
 
     const authorHandle = post.authorHandle || post.authorWallet?.slice(0, 8) || 'unknown';
     const authorName = post.authorName || authorHandle;
@@ -259,10 +298,30 @@ export class UnifiedShareResolver {
       shareUrl: `/cp/${post.shareId}`,
       data: {
         ...post,
+        id: post.id.toString(),
+        author: post.authorId,
         authorHandle,
         authorName,
+        // Parse JSON fields
+        mediaCids: this.safeParse(post.mediaCids),
+        tags: this.safeParse(post.tags),
+        mediaUrls: this.safeParse(post.mediaUrls), // Assuming mediaUrls might also be a JSON string
       },
     };
+  }
+
+  /**
+   * Helper to safe parse JSON string
+   */
+  private safeParse(value: any): any[] {
+    if (!value) return [];
+    if (typeof value === 'object') return value; // Already parsed
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
   }
 
   /**

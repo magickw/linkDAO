@@ -244,7 +244,7 @@ export class PostService {
       // Handle social media cross-posting
       if (input.shareToSocialMedia) {
         const platformsToPost: SocialPlatform[] = [];
-        
+
         for (const [platform, shouldShare] of Object.entries(input.shareToSocialMedia)) {
           if (shouldShare === true && isSupportedPlatform(platform)) {
             platformsToPost.push(platform as SocialPlatform);
@@ -357,6 +357,30 @@ export class PostService {
         safeLogger.warn('Failed to fetch enrichment data for post:', enrichError);
       }
 
+
+      // Fetch community info if available
+      let communityName: string | undefined;
+      let communitySlug: string | undefined;
+
+      if (dbPost.communityId) {
+        try {
+          const communityResult = await db.select({
+            name: schema.communities.name,
+            slug: schema.communities.slug
+          })
+            .from(schema.communities)
+            .where(eq(schema.communities.id, dbPost.communityId))
+            .limit(1);
+
+          if (communityResult.length > 0) {
+            communityName = communityResult[0].name;
+            communitySlug = communityResult[0].slug;
+          }
+        } catch (commError) {
+          safeLogger.warn('Failed to fetch community info:', commError);
+        }
+      }
+
       return {
         id: dbPost.id.toString(),
         author: authorAddress,
@@ -373,7 +397,10 @@ export class PostService {
         shares,
         isRepostedByMe,
         isStatus,
-        isRepost: dbPost.isRepost
+        isRepost: dbPost.isRepost,
+        communityId: dbPost.communityId,
+        communityName,
+        communitySlug
       };
     } catch (error) {
       safeLogger.error('Error getting post by ID:', error);
@@ -415,6 +442,29 @@ export class PostService {
         };
       }
 
+      // Fetch community info if available
+      let communityName: string | undefined;
+      let communitySlug: string | undefined;
+
+      if (dbPost.communityId) {
+        try {
+          const communityResult = await db.select({
+            name: schema.communities.name,
+            slug: schema.communities.slug
+          })
+            .from(schema.communities)
+            .where(eq(schema.communities.id, dbPost.communityId))
+            .limit(1);
+
+          if (communityResult.length > 0) {
+            communityName = communityResult[0].name;
+            communitySlug = communityResult[0].slug;
+          }
+        } catch (commError) {
+          safeLogger.warn('Failed to fetch community info:', commError);
+        }
+      }
+
       return {
         id: dbPost.id.toString(),
         author: author.walletAddress,
@@ -427,7 +477,10 @@ export class PostService {
         createdAt: dbPost.createdAt || new Date(),
         onchainRef: '',
         mediaUrls: dbPost.mediaUrls ? JSON.parse(dbPost.mediaUrls) : [],
-        location: dbPost.location || undefined
+        location: dbPost.location || undefined,
+        communityId: dbPost.communityId,
+        communityName,
+        communitySlug
       };
     } catch (error) {
       safeLogger.error('Error getting post by share ID:', error);

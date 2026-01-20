@@ -24,6 +24,10 @@ export interface Post {
     lat?: number;
     lng?: number;
   };
+  communityId?: string | null;
+  communityName?: string;
+  communitySlug?: string;
+  title?: string;
 }
 
 export interface CreatePostInput {

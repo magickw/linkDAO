@@ -97,11 +97,20 @@ export default function CommunityPostPage() {
                     console.log('[CommunityPostPage] Community slug from URL:', community);
 
                     // Verify the community slug matches the post's community
-                    if (community && postData.communitySlug !== community) {
+                    // Only redirect if we have a valid slug and we are NOT already on the correct path
+                    if (postData.communitySlug && community && postData.communitySlug !== community) {
                         // Redirect to correct canonical URL (ensure encoded segment)
+                        console.log(`[CommunityPostPage] Redirecting to canonical URL: ${postData.communitySlug}`);
                         router.replace(`/communities/${encodeURIComponent(postData.communitySlug)}/posts/${shareId}`);
                         return;
                     }
+
+                    // If we are on /cp/:shareId (no community param) and we have a slug, we might want to redirect too?
+                    // But usually /communities/[slug]/posts/[shareId] page handles that. 
+                    // If this page handles /cp/, community is undefined.
+                    // If community is undefined, we simply render the post without redirecting to avoid loops 
+                    // unless we are sure we want to enforce canonical URL.
+                    // Given the loop issue, safer to render.
 
                     setPost(postData);
                     setShareUrl(`/cp/${shareId}`);
@@ -118,7 +127,9 @@ export default function CommunityPostPage() {
         };
 
         fetchPost();
-    }, [shareId, community, addToast, router]);
+        // Removed 'router' and 'addToast' from dependencies to prevent infinite loops if specific object references change
+        // Added router.pathname or similar if needed, but for now specific values are safer.
+    }, [shareId, community]);
 
     const handleCopyShareLink = () => {
         const url = `${window.location.origin}/cp/${shareId}`;

@@ -365,16 +365,28 @@ export class UnifiedCheckoutService {
       };
 
       // Process the escrow payment
+      // This triggers the wallet signature and execution
       const transaction = await this.cryptoPaymentService.processEscrowPayment(cryptoRequest);
+
+      // Update the order on the backend with the transaction hash
+      // This ensures the backend knows the payment is on the way
+      if (transaction.hash) {
+        try {
+          await this.verifyCryptoTransaction(transaction.id, transaction.hash);
+        } catch (verifyError) {
+          console.warn('Failed to immediately verify transaction with backend:', verifyError);
+          // Non-blocking, the polling mechanism should pick it up later or nextSteps will guide user
+        }
+      }
 
       // Return result based on payment status
       return {
         orderId: request.orderId,
         paymentPath: 'crypto',
         escrowType: 'smart_contract',
-        transactionId: transaction.id,
-        status: 'pending',
-        nextSteps: ['Complete the transaction in your wallet.'],
+        transactionId: transaction.hash || transaction.id,
+        status: 'pending', // Will be 'processing' in processPrioritizedCheckout wrapper
+        nextSteps: ['Transaction submitted. Waiting for confirmation...'],
         estimatedCompletionTime: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
         prioritizationMetadata: {
           selectedMethod: selectedPaymentMethod.method,
@@ -464,7 +476,47 @@ export class UnifiedCheckoutService {
       if (selectedPaymentMethod.method.type === PaymentMethodType.X402) {
         result = await this.processX402Payment(request);
       } else if (paymentPath === 'crypto') {
-        result = await this.processCryptoPayment(request);
+        // Step 4a: Create order on backend first
+        console.log('📝 Creating order on backend...');
+        const backendResult = await this.processCryptoPayment(request);
+
+        // Step 4b: Trigger wallet transaction
+        // We use the orderId from the backend result to ensure consistency
+        console.log('👛 Triggering wallet transaction for order:', backendResult.orderId);
+
+        // Prepare escrow request with backend order ID
+        const escrowRequest = {
+          ...request,
+          orderId: backendResult.orderId
+        };
+
+        try {
+          const transactionResult = await this.processEscrowPayment(escrowRequest);
+
+          // Verify transaction with backend immediately (optional but good for UX)
+          if (transactionResult.transactionId && transactionResult.transactionId !== 'unknown') {
+            // We could verify here or let the polling handle it.
+            // But we should update the result with the transaction ID
+            result = {
+              ...backendResult,
+              transactionId: transactionResult.transactionId,
+              // Update status to processing since we have a tx hash
+              status: 'processing',
+              nextSteps: [
+                'Transaction submitted',
+                'Waiting for blockchain confirmation'
+              ]
+            };
+          } else {
+            result = backendResult;
+          }
+        } catch (walletError) {
+          console.error('Wallet transaction failed:', walletError);
+          // If wallet fails but order created, we should probably tell user to retry payment for that order
+          // But for now, throw error so UI shows "Payment Failed"
+          throw walletError;
+        }
+
       } else {
         result = await this.processFiatPayment(request);
       }
