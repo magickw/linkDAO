@@ -148,7 +148,7 @@ class OrderManagementService {
           createdAt: orders.createdAt,
         })
         .from(orders)
-        .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
+        .leftJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
         .leftJoin(users, eq(orders.buyerId, users.id))
         .leftJoin(listingSellers, eq(marketplaceListings.sellerAddress, listingSellers.walletAddress))
         .where(eq(orders.id, orderId))
@@ -177,7 +177,7 @@ class OrderManagementService {
       return {
         id: order.orderId.toString(),
         listingId: order.listingId?.toString() || '',
-        listingTitle: order.listingTitle || 'Unknown Item',
+        listingTitle: order.listingTitle || 'Item No Longer Available',
         buyerAddress: order.buyerAddress || '',
         sellerAddress: order.sellerAddress || '',
         buyerName: order.buyerName || undefined,
@@ -266,7 +266,7 @@ class OrderManagementService {
           createdAt: orders.createdAt,
         })
         .from(orders)
-        .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
+        .leftJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
         .leftJoin(users, eq(orders.buyerId, users.id))
         .leftJoin(listingSellers, eq(marketplaceListings.sellerAddress, listingSellers.walletAddress));
 
@@ -300,7 +300,7 @@ class OrderManagementService {
         ordersWithDetails.push({
           id: order.orderId.toString(),
           listingId: order.listingId?.toString() || '',
-          listingTitle: order.listingTitle || 'Unknown Item',
+          listingTitle: order.listingTitle || 'Item No Longer Available',
           buyerAddress: order.buyerAddress || '',
           sellerAddress: order.sellerAddress || '',
           buyerName: order.buyerName || undefined,
