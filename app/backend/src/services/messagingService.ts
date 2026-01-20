@@ -262,10 +262,34 @@ export class MessagingService {
         })
         .returning();
 
+      const convId = newConversation[0].id;
+
+      // Populate conversationParticipants table (Phase 5 requirement)
+      // This ensures getConversations (which relies on this table) works correctly
+      try {
+        await db.insert(conversationParticipants).values([
+          {
+            conversationId: convId,
+            walletAddress: normalizedInitiatorAddress,
+            role: 'member',
+            joinedAt: new Date()
+          },
+          {
+            conversationId: convId,
+            walletAddress: normalizedParticipantAddress,
+            role: 'member',
+            joinedAt: new Date()
+          }
+        ]);
+      } catch (partError) {
+        safeLogger.error('Error populating conversationParticipants:', partError);
+        // Continue but log error - self-healing might be needed later
+      }
+
       // Send initial message if provided
       if (initialMessage) {
         await this.sendMessage({
-          conversationId: newConversation[0].id,
+          conversationId: convId,
           fromAddress: normalizedInitiatorAddress,
           content: initialMessage,
           contentType: 'text',
@@ -305,43 +329,64 @@ export class MessagingService {
       // Normalize to lowercase to ensure matching against DB
       const normalizedAddress = userAddress.toLowerCase();
 
-      // Use case-insensitive query to handle legacy data with mixed-case addresses
-      const conversation = await db
+      // Fetch conversation first
+      const conversationResult = await db
         .select()
         .from(conversations)
+        .where(eq(conversations.id, conversationId))
+        .limit(1);
+
+      if (conversationResult.length === 0) {
+        return null;
+      }
+
+      const conversation = conversationResult[0];
+
+      // Check permission: 1. Check conversationParticipants table (Phase 5+)
+      const participantCheck = await db
+        .select()
+        .from(conversationParticipants)
         .where(
           and(
-            eq(conversations.id, conversationId),
-            sql`EXISTS (
-              SELECT 1 
-              FROM jsonb_array_elements_text(${conversations.participants}) 
-              WHERE LOWER(value) = ${normalizedAddress}
-            )`
+            eq(conversationParticipants.conversationId, conversationId),
+            eq(conversationParticipants.walletAddress, normalizedAddress)
           )
         )
         .limit(1);
 
-      if (conversation.length === 0) {
-        // Debug logging to help identify the issue
-        const convoWithoutCheck = await db
-          .select()
-          .from(conversations)
-          .where(eq(conversations.id, conversationId))
-          .limit(1);
-
-        if (convoWithoutCheck.length > 0) {
-          safeLogger.warn('[MessagingService] Conversation found but access denied', {
-            conversationId,
-            participants: convoWithoutCheck[0].participants,
-            userAddress: normalizedAddress,
-            mismatch: 'User address not found in participants (case mismatch?)'
-          });
-        }
-
-        return null;
+      if (participantCheck.length > 0) {
+        return conversation;
       }
 
-      return conversation[0];
+      // Check permission: 2. Check participants JSONB (Legacy / Fallback)
+      // Check in memory to avoid complex SQL issues
+      let hasAccess = false;
+      try {
+        let participants: string[] = [];
+        if (Array.isArray(conversation.participants)) {
+          participants = conversation.participants as string[];
+        } else if (typeof conversation.participants === 'string') {
+          participants = JSON.parse(conversation.participants);
+        }
+
+        if (Array.isArray(participants)) {
+          hasAccess = participants.some((p: string) => p && p.toLowerCase() === normalizedAddress);
+        }
+      } catch (e) {
+        safeLogger.warn('[MessagingService] Error parsing participants JSON', e);
+      }
+
+      if (hasAccess) {
+        return conversation;
+      }
+
+      safeLogger.warn('[MessagingService] Conversation found but access denied', {
+        conversationId,
+        userAddress: normalizedAddress,
+        participants: conversation.participants
+      });
+
+      return null;
     } catch (error) {
       safeLogger.error('Error getting conversation details:', error);
       if (error instanceof Error && error.message.includes('database')) {
