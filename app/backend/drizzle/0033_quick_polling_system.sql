@@ -49,4 +49,15 @@ CREATE INDEX IF NOT EXISTS "idx_poll_votes_option_id" ON "poll_votes"("option_id
 
 -- Add poll_id column to posts table to link posts to polls
 ALTER TABLE "posts" ADD COLUMN IF NOT EXISTS "poll_id" uuid;
-ALTER TABLE "posts" ADD CONSTRAINT "fk_posts_poll_id" FOREIGN KEY ("poll_id") REFERENCES "polls"("id") ON DELETE SET NULL;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.table_constraints 
+        WHERE constraint_name = 'fk_posts_poll_id' 
+        AND table_name = 'posts'
+    ) THEN
+        ALTER TABLE "posts" ADD CONSTRAINT "fk_posts_poll_id" FOREIGN KEY ("poll_id") REFERENCES "polls"("id") ON DELETE SET NULL;
+    END IF;
+END$$;

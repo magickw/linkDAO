@@ -337,6 +337,7 @@ export class MessagingService {
         .limit(1);
 
       if (conversationResult.length === 0) {
+        safeLogger.warn('[MessagingService] Conversation not found in DB', { conversationId });
         return null;
       }
 
@@ -361,14 +362,15 @@ export class MessagingService {
       }
 
       if (participantCheck.length > 0) {
+        safeLogger.debug('[MessagingService] Access granted via conversationParticipants table', { conversationId, userAddress: normalizedAddress });
         return conversation;
       }
 
       // Check permission: 2. Check participants JSONB (Legacy / Fallback)
       // Check in memory to avoid complex SQL issues
       let hasAccess = false;
+      let participants: string[] = [];
       try {
-        let participants: string[] = [];
         if (Array.isArray(conversation.participants)) {
           participants = conversation.participants as string[];
         } else if (typeof conversation.participants === 'string') {
@@ -379,17 +381,19 @@ export class MessagingService {
           hasAccess = participants.some((p: string) => p && p.toLowerCase() === normalizedAddress);
         }
       } catch (e) {
-        safeLogger.warn('[MessagingService] Error parsing participants JSON', e);
+        safeLogger.warn('[MessagingService] Error parsing participants JSON', { error: e, participants: conversation.participants });
       }
 
       if (hasAccess) {
+        safeLogger.debug('[MessagingService] Access granted via participants JSONB', { conversationId, userAddress: normalizedAddress });
         return conversation;
       }
 
       safeLogger.warn('[MessagingService] Conversation found but access denied', {
         conversationId,
         userAddress: normalizedAddress,
-        participants: conversation.participants
+        participantsList: participants,
+        rawParticipants: conversation.participants
       });
 
       return null;
@@ -481,10 +485,10 @@ export class MessagingService {
 
       // Add pagination filters
       if (before && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(before)) {
-        whereConditions.push(lt(chatMessages.sentAt, sql`(SELECT timestamp FROM chat_messages WHERE id = ${before})`));
+        whereConditions.push(lt(chatMessages.sentAt, sql`(SELECT sent_at FROM chat_messages WHERE id = ${before})`));
       }
       if (after && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(after)) {
-        whereConditions.push(gt(chatMessages.sentAt, sql`(SELECT timestamp FROM chat_messages WHERE id = ${after})`));
+        whereConditions.push(gt(chatMessages.sentAt, sql`(SELECT sent_at FROM chat_messages WHERE id = ${after})`));
       }
 
       const conversationMessages = await db.transaction(async (tx) => {

@@ -17,6 +17,12 @@ ALTER TABLE sellers ADD COLUMN IF NOT EXISTS store_description TEXT;
 -- Add verification status for profile completeness
 ALTER TABLE sellers ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;
 
+-- Ensure other required columns exist for the view
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS display_name VARCHAR(255);
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS ens_handle VARCHAR(255);
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS cover_image_url TEXT;
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
 -- Create seller_profiles view for API compatibility (if needed for legacy support)
 CREATE OR REPLACE VIEW seller_profiles AS
 SELECT 
@@ -57,5 +63,3 @@ WHERE onboarding_steps IS NULL;
 --   - GET /api/marketplace/seller/{walletAddress}
 --   - POST /api/marketplace/seller/profile
 --   - GET /api/marketplace/seller/onboarding/{walletAddress}
-</content>
-</invoke>

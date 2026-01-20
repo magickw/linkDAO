@@ -29,7 +29,7 @@ const ProductDetailPageRoute: React.FC = () => {
           setError(null);
 
           // First try to fetch from marketplace service
-          let productData = null;
+          let productData: any = null;
           try {
             console.log('[ProductDetailPage] Calling getListingByIdWithRetry...');
             productData = await marketplaceService.getListingByIdWithRetry(productId);
@@ -243,7 +243,8 @@ const ProductDetailPageRoute: React.FC = () => {
               daoApproved: productData.seller?.daoApproved || false,
               totalSales: productData.seller?.totalSales || 0,
               memberSince: productData.seller?.memberSince || productData.seller?.createdAt || '2023-01-01',
-              responseTime: '< 24 hours' // Default value
+              responseTime: '< 24 hours', // Default value
+              walletAddress: productData.seller?.walletAddress || productData.sellerAddress || productData.sellerId || ''
             };
 
             // Always try to fetch full seller profile for complete information
@@ -255,17 +256,18 @@ const ProductDetailPageRoute: React.FC = () => {
                 if (sellerProfile) {
                   // Prioritize storeName from profile, fallback to existing data
                   const storeName = sellerProfile.storeName || enhancedSeller.name;
-                  const avatarUrl = sellerProfile.profileImageCdn || sellerProfile.profileImageUrl || sellerProfile.avatar;
+                  const avatarUrl = sellerProfile.profileImageCdn || sellerProfile.profilePicture || sellerProfile.profileImageIpfs;
 
                   enhancedSeller = {
                     ...enhancedSeller,
                     name: storeName !== 'Unknown Seller' ? storeName : `Store ${productData.sellerId.substring(0, 8)}`,
                     avatar: avatarUrl || `https://api.dicebear.com/7.x/identicon/svg?seed=${productData.sellerId}&backgroundColor=b6e3f4`,
-                    verified: sellerProfile.isVerified || enhancedSeller.verified,
-                    reputation: sellerProfile.daoReputation?.governanceParticipation || sellerProfile.rating || enhancedSeller.reputation,
-                    daoApproved: sellerProfile.daoApproved || enhancedSeller.daoApproved,
-                    totalSales: sellerProfile.totalSales || enhancedSeller.totalSales,
-                    memberSince: sellerProfile.joinedDate || sellerProfile.createdAt || enhancedSeller.memberSince
+                    verified: sellerProfile.emailVerified || enhancedSeller.verified,
+                    reputation: sellerProfile.daoReputation?.governanceParticipation || sellerProfile.stats?.averageRating || enhancedSeller.reputation,
+                    daoApproved: (sellerProfile.applicationStatus === 'approved') || enhancedSeller.daoApproved,
+                    totalSales: sellerProfile.stats?.totalSales || enhancedSeller.totalSales,
+                    memberSince: sellerProfile.stats?.joinDate || sellerProfile.createdAt || enhancedSeller.memberSince,
+                    walletAddress: sellerProfile.walletAddress || enhancedSeller.walletAddress
                   };
 
                   console.log('Enhanced seller profile:', {
@@ -568,7 +570,8 @@ const ProductDetailPageRoute: React.FC = () => {
                     avatar: product.seller.avatar,
                     verified: product.seller.verified,
                     daoApproved: product.seller.daoApproved,
-                    escrowSupported: product.trust.escrowProtected
+                    escrowSupported: product.trust.escrowProtected,
+                    walletAddress: product.seller.walletAddress
                   },
                   category: product.category,
                   isDigital: product.isNFT || false,
@@ -612,7 +615,8 @@ const ProductDetailPageRoute: React.FC = () => {
                     avatar: product.seller.avatar,
                     verified: product.seller.verified,
                     daoApproved: product.seller.daoApproved,
-                    escrowSupported: product.trust.escrowProtected
+                    escrowSupported: product.trust.escrowProtected,
+                    walletAddress: product.seller.walletAddress
                   },
                   category: product.category,
                   isDigital: product.isNFT || false,

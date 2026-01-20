@@ -38,9 +38,4 @@ BEGIN
   END IF;
 END$$;
 
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='chat_messages' AND column_name='conversation_id') THEN
-    CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_id_timestamp ON chat_messages(conversation_id, timestamp DESC);
-  END IF;
-END$$;
+

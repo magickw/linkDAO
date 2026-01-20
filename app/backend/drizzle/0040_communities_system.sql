@@ -68,8 +68,13 @@ CREATE TABLE IF NOT EXISTS "community_categories" (
 );
 
 -- Add foreign key constraints
-ALTER TABLE "community_members" ADD CONSTRAINT "community_members_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "communities"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
-ALTER TABLE "community_stats" ADD CONSTRAINT "community_stats_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "communities"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+DO $$ BEGIN 
+  ALTER TABLE "community_members" ADD CONSTRAINT "community_members_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "communities"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN 
+  ALTER TABLE "community_stats" ADD CONSTRAINT "community_stats_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "communities"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS "idx_communities_name" ON "communities" ("name");
@@ -107,6 +112,3 @@ ON CONFLICT (slug) DO NOTHING;
 -- Update posts table to reference communities properly
 ALTER TABLE "posts" ADD COLUMN IF NOT EXISTS "community_id" uuid;
 CREATE INDEX IF NOT EXISTS "idx_posts_community_id" ON "posts" ("community_id");
-
--- Add foreign key constraint for posts to communities (optional, since dao field exists)
--- ALTER TABLE "posts" ADD CONSTRAINT "posts_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "communities"("id") ON DELETE SET NULL ON UPDATE NO ACTION;

@@ -4,7 +4,7 @@
 -- Create payment_transactions table for detailed transaction tracking
 CREATE TABLE IF NOT EXISTS payment_transactions (
     id VARCHAR(255) PRIMARY KEY,
-    order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
     payment_method VARCHAR(20) NOT NULL CHECK (payment_method IN ('crypto', 'fiat', 'escrow')),
     transaction_hash VARCHAR(66), -- Blockchain transaction hash
     payment_intent_id VARCHAR(255), -- Stripe PaymentIntent ID
@@ -26,6 +26,28 @@ CREATE TABLE IF NOT EXISTS payment_transactions (
     confirmed_at TIMESTAMP
 );
 
+-- Fix payment_transactions.order_id if it exists as integer
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name = 'payment_transactions' 
+        AND column_name = 'order_id' 
+        AND data_type = 'integer'
+    ) THEN
+        -- Drop FK if exists
+        ALTER TABLE payment_transactions DROP CONSTRAINT IF EXISTS payment_transactions_order_id_fkey;
+        
+        -- Truncate table because integer IDs cannot be converted to UUIDs matching the new orders table
+        TRUNCATE TABLE payment_transactions CASCADE;
+        
+        -- Drop and recreate column
+        ALTER TABLE payment_transactions DROP COLUMN order_id;
+        ALTER TABLE payment_transactions ADD COLUMN order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE;
+    END IF;
+END$$;
+
 -- Create indexes for payment_transactions
 CREATE INDEX IF NOT EXISTS idx_payment_transactions_order_id ON payment_transactions(order_id);
 CREATE INDEX IF NOT EXISTS idx_payment_transactions_payment_method ON payment_transactions(payment_method);
@@ -40,7 +62,7 @@ CREATE INDEX IF NOT EXISTS idx_payment_transactions_confirmed_at ON payment_tran
 CREATE TABLE IF NOT EXISTS payment_receipts (
     id VARCHAR(255) PRIMARY KEY,
     transaction_id VARCHAR(255) NOT NULL REFERENCES payment_transactions(id) ON DELETE CASCADE,
-    order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
     receipt_number VARCHAR(100) NOT NULL UNIQUE,
     payment_method VARCHAR(20) NOT NULL,
     amount DECIMAL(20, 8) NOT NULL,
@@ -52,6 +74,23 @@ CREATE TABLE IF NOT EXISTS payment_receipts (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Fix payment_receipts.order_id if it exists as integer
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name = 'payment_receipts' 
+        AND column_name = 'order_id' 
+        AND data_type = 'integer'
+    ) THEN
+        ALTER TABLE payment_receipts DROP CONSTRAINT IF EXISTS payment_receipts_order_id_fkey;
+        TRUNCATE TABLE payment_receipts CASCADE;
+        ALTER TABLE payment_receipts DROP COLUMN order_id;
+        ALTER TABLE payment_receipts ADD COLUMN order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE;
+    END IF;
+END$$;
+
 -- Create indexes for payment_receipts
 CREATE INDEX IF NOT EXISTS idx_payment_receipts_transaction_id ON payment_receipts(transaction_id);
 CREATE INDEX IF NOT EXISTS idx_payment_receipts_order_id ON payment_receipts(order_id);
@@ -62,7 +101,7 @@ CREATE INDEX IF NOT EXISTS idx_payment_receipts_created_at ON payment_receipts(c
 -- Create order_payment_events table for detailed event tracking
 CREATE TABLE IF NOT EXISTS order_payment_events (
     id SERIAL PRIMARY KEY,
-    order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
     transaction_id VARCHAR(255) REFERENCES payment_transactions(id) ON DELETE SET NULL,
     event_type VARCHAR(50) NOT NULL,
     event_description TEXT NOT NULL,
@@ -71,6 +110,23 @@ CREATE TABLE IF NOT EXISTS order_payment_events (
     event_data JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Fix order_payment_events.order_id if it exists as integer
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name = 'order_payment_events' 
+        AND column_name = 'order_id' 
+        AND data_type = 'integer'
+    ) THEN
+        ALTER TABLE order_payment_events DROP CONSTRAINT IF EXISTS order_payment_events_order_id_fkey;
+        TRUNCATE TABLE order_payment_events CASCADE;
+        ALTER TABLE order_payment_events DROP COLUMN order_id;
+        ALTER TABLE order_payment_events ADD COLUMN order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE;
+    END IF;
+END$$;
 
 -- Create indexes for order_payment_events
 CREATE INDEX IF NOT EXISTS idx_order_payment_events_order_id ON order_payment_events(order_id);

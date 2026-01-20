@@ -16,6 +16,19 @@ CREATE TABLE IF NOT EXISTS "auth_sessions" (
 	"last_used_at" timestamp DEFAULT now()
 );
 
+-- Ensure columns exist
+ALTER TABLE "auth_sessions" ADD COLUMN IF NOT EXISTS "wallet_address" varchar(66);
+ALTER TABLE "auth_sessions" ADD COLUMN IF NOT EXISTS "session_token" varchar(255);
+ALTER TABLE "auth_sessions" ADD COLUMN IF NOT EXISTS "refresh_token" varchar(255);
+ALTER TABLE "auth_sessions" ADD COLUMN IF NOT EXISTS "expires_at" timestamp;
+ALTER TABLE "auth_sessions" ADD COLUMN IF NOT EXISTS "refresh_expires_at" timestamp;
+ALTER TABLE "auth_sessions" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();
+ALTER TABLE "auth_sessions" ADD COLUMN IF NOT EXISTS "updated_at" timestamp DEFAULT now();
+ALTER TABLE "auth_sessions" ADD COLUMN IF NOT EXISTS "is_active" boolean DEFAULT true;
+ALTER TABLE "auth_sessions" ADD COLUMN IF NOT EXISTS "user_agent" text;
+ALTER TABLE "auth_sessions" ADD COLUMN IF NOT EXISTS "ip_address" varchar(45);
+ALTER TABLE "auth_sessions" ADD COLUMN IF NOT EXISTS "last_used_at" timestamp DEFAULT now();
+
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS "idx_auth_sessions_wallet_address" ON "auth_sessions" ("wallet_address");
 CREATE INDEX IF NOT EXISTS "idx_auth_sessions_session_token" ON "auth_sessions" ("session_token");
@@ -35,6 +48,15 @@ CREATE TABLE IF NOT EXISTS "wallet_auth_attempts" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 
+-- Ensure columns exist
+ALTER TABLE "wallet_auth_attempts" ADD COLUMN IF NOT EXISTS "wallet_address" varchar(66);
+ALTER TABLE "wallet_auth_attempts" ADD COLUMN IF NOT EXISTS "attempt_type" varchar(32);
+ALTER TABLE "wallet_auth_attempts" ADD COLUMN IF NOT EXISTS "success" boolean;
+ALTER TABLE "wallet_auth_attempts" ADD COLUMN IF NOT EXISTS "error_message" text;
+ALTER TABLE "wallet_auth_attempts" ADD COLUMN IF NOT EXISTS "ip_address" varchar(45);
+ALTER TABLE "wallet_auth_attempts" ADD COLUMN IF NOT EXISTS "user_agent" text;
+ALTER TABLE "wallet_auth_attempts" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();
+
 -- Create index for auth attempts
 CREATE INDEX IF NOT EXISTS "idx_wallet_auth_attempts_wallet_address" ON "wallet_auth_attempts" ("wallet_address");
 CREATE INDEX IF NOT EXISTS "idx_wallet_auth_attempts_created_at" ON "wallet_auth_attempts" ("created_at");
@@ -50,6 +72,14 @@ CREATE TABLE IF NOT EXISTS "wallet_nonces" (
 	"used" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
+
+-- Ensure columns exist
+ALTER TABLE "wallet_nonces" ADD COLUMN IF NOT EXISTS "wallet_address" varchar(66);
+ALTER TABLE "wallet_nonces" ADD COLUMN IF NOT EXISTS "nonce" varchar(255);
+ALTER TABLE "wallet_nonces" ADD COLUMN IF NOT EXISTS "message" text;
+ALTER TABLE "wallet_nonces" ADD COLUMN IF NOT EXISTS "expires_at" timestamp;
+ALTER TABLE "wallet_nonces" ADD COLUMN IF NOT EXISTS "used" boolean DEFAULT false;
+ALTER TABLE "wallet_nonces" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();
 
 -- Create indexes for nonces
 CREATE INDEX IF NOT EXISTS "idx_wallet_nonces_wallet_address" ON "wallet_nonces" ("wallet_address");
@@ -83,6 +113,8 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS update_auth_sessions_updated_at ON auth_sessions;
 
 CREATE TRIGGER update_auth_sessions_updated_at
     BEFORE UPDATE ON auth_sessions

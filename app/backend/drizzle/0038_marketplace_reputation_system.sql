@@ -20,6 +20,23 @@ CREATE TABLE IF NOT EXISTS "user_reputation" (
   "updated_at" timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
+-- Ensure columns exist
+ALTER TABLE "user_reputation" ADD COLUMN IF NOT EXISTS "wallet_address" varchar(66);
+ALTER TABLE "user_reputation" ADD COLUMN IF NOT EXISTS "reputation_score" numeric(5,2) DEFAULT 0.00;
+ALTER TABLE "user_reputation" ADD COLUMN IF NOT EXISTS "total_transactions" integer DEFAULT 0;
+ALTER TABLE "user_reputation" ADD COLUMN IF NOT EXISTS "positive_reviews" integer DEFAULT 0;
+ALTER TABLE "user_reputation" ADD COLUMN IF NOT EXISTS "negative_reviews" integer DEFAULT 0;
+ALTER TABLE "user_reputation" ADD COLUMN IF NOT EXISTS "neutral_reviews" integer DEFAULT 0;
+ALTER TABLE "user_reputation" ADD COLUMN IF NOT EXISTS "successful_sales" integer DEFAULT 0;
+ALTER TABLE "user_reputation" ADD COLUMN IF NOT EXISTS "successful_purchases" integer DEFAULT 0;
+ALTER TABLE "user_reputation" ADD COLUMN IF NOT EXISTS "disputed_transactions" integer DEFAULT 0;
+ALTER TABLE "user_reputation" ADD COLUMN IF NOT EXISTS "resolved_disputes" integer DEFAULT 0;
+ALTER TABLE "user_reputation" ADD COLUMN IF NOT EXISTS "average_response_time" numeric(10,2) DEFAULT 0.00;
+ALTER TABLE "user_reputation" ADD COLUMN IF NOT EXISTS "completion_rate" numeric(5,2) DEFAULT 100.00;
+ALTER TABLE "user_reputation" ADD COLUMN IF NOT EXISTS "last_calculated" timestamp DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE "user_reputation" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE "user_reputation" ADD COLUMN IF NOT EXISTS "updated_at" timestamp DEFAULT CURRENT_TIMESTAMP;
+
 -- Reputation history for audit purposes
 CREATE TABLE IF NOT EXISTS "reputation_history" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -36,6 +53,18 @@ CREATE TABLE IF NOT EXISTS "reputation_history" (
   FOREIGN KEY ("wallet_address") REFERENCES "user_reputation"("wallet_address") ON DELETE CASCADE
 );
 
+-- Ensure columns exist
+ALTER TABLE "reputation_history" ADD COLUMN IF NOT EXISTS "wallet_address" varchar(66);
+ALTER TABLE "reputation_history" ADD COLUMN IF NOT EXISTS "event_type" varchar(50);
+ALTER TABLE "reputation_history" ADD COLUMN IF NOT EXISTS "score_change" numeric(5,2);
+ALTER TABLE "reputation_history" ADD COLUMN IF NOT EXISTS "previous_score" numeric(5,2);
+ALTER TABLE "reputation_history" ADD COLUMN IF NOT EXISTS "new_score" numeric(5,2);
+ALTER TABLE "reputation_history" ADD COLUMN IF NOT EXISTS "transaction_id" varchar(100);
+ALTER TABLE "reputation_history" ADD COLUMN IF NOT EXISTS "review_id" uuid;
+ALTER TABLE "reputation_history" ADD COLUMN IF NOT EXISTS "description" text;
+ALTER TABLE "reputation_history" ADD COLUMN IF NOT EXISTS "metadata" jsonb;
+ALTER TABLE "reputation_history" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT CURRENT_TIMESTAMP;
+
 -- Reputation calculation triggers and update mechanisms
 CREATE TABLE IF NOT EXISTS "reputation_calculation_rules" (
   "id" serial PRIMARY KEY,
@@ -51,6 +80,18 @@ CREATE TABLE IF NOT EXISTS "reputation_calculation_rules" (
   "updated_at" timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
+-- Ensure columns exist
+ALTER TABLE "reputation_calculation_rules" ADD COLUMN IF NOT EXISTS "rule_name" varchar(100);
+ALTER TABLE "reputation_calculation_rules" ADD COLUMN IF NOT EXISTS "event_type" varchar(50);
+ALTER TABLE "reputation_calculation_rules" ADD COLUMN IF NOT EXISTS "score_impact" numeric(5,2);
+ALTER TABLE "reputation_calculation_rules" ADD COLUMN IF NOT EXISTS "weight_factor" numeric(3,2) DEFAULT 1.00;
+ALTER TABLE "reputation_calculation_rules" ADD COLUMN IF NOT EXISTS "min_threshold" integer DEFAULT 0;
+ALTER TABLE "reputation_calculation_rules" ADD COLUMN IF NOT EXISTS "max_impact" numeric(5,2);
+ALTER TABLE "reputation_calculation_rules" ADD COLUMN IF NOT EXISTS "description" text;
+ALTER TABLE "reputation_calculation_rules" ADD COLUMN IF NOT EXISTS "is_active" boolean DEFAULT true;
+ALTER TABLE "reputation_calculation_rules" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE "reputation_calculation_rules" ADD COLUMN IF NOT EXISTS "updated_at" timestamp DEFAULT CURRENT_TIMESTAMP;
+
 -- Insert default reputation calculation rules
 INSERT INTO "reputation_calculation_rules" ("rule_name", "event_type", "score_impact", "weight_factor", "description") VALUES
 ('positive_review', 'review_received', 2.50, 1.00, 'Positive review received from buyer/seller'),
@@ -63,7 +104,8 @@ INSERT INTO "reputation_calculation_rules" ("rule_name", "event_type", "score_im
 ('fast_response', 'response_time', 0.25, 1.00, 'Fast response time bonus'),
 ('slow_response', 'response_time', -0.50, 1.00, 'Slow response time penalty'),
 ('high_completion_rate', 'completion_rate', 1.50, 1.00, 'High transaction completion rate bonus'),
-('low_completion_rate', 'completion_rate', -2.00, 1.00, 'Low transaction completion rate penalty');
+('low_completion_rate', 'completion_rate', -2.00, 1.00, 'Low transaction completion rate penalty')
+ON CONFLICT (rule_name) DO NOTHING;
 
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS "idx_user_reputation_score" ON "user_reputation"("reputation_score");

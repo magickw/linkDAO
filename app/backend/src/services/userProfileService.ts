@@ -104,10 +104,12 @@ export class UserProfileService {
     // Encrypt address data
     const encryptedAddressData = await encryptAddressData(addressData);
 
+    const normalizedWalletAddress = input.walletAddress.toLowerCase();
+
     // Create user in database with enhanced data
     const db = databaseService.getDatabase();
     const userData = {
-      walletAddress: input.walletAddress,
+      walletAddress: normalizedWalletAddress,
       handle: input.handle,
       displayName: input.displayName, // Public display name
       ens: input.ens || null, // ENS name is public

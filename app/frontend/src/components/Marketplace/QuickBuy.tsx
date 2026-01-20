@@ -405,7 +405,8 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
         avatar: '',
         verified: true,
         daoApproved: false,
-        escrowSupported: true
+        escrowSupported: true,
+        walletAddress: listing.sellerWalletAddress
       },
       category: listing.itemType.toLowerCase(),
       isDigital: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',

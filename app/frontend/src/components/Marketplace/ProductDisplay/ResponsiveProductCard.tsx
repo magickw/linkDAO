@@ -6,7 +6,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-  DualPricing } from '../../../design-system/components/DualPricing';
+  DualPricing
+} from '../../../design-system/components/DualPricing';
 import { StablecoinPricing } from '../../../design-system/components/StablecoinPricing';
 import { TrustIndicators } from '../../../design-system/components/TrustIndicators';
 import { GlassPanel } from '../../../design-system/components/GlassPanel';
@@ -50,6 +51,7 @@ interface Product {
     daoApproved: boolean;
     tier?: 'basic' | 'premium' | 'enterprise';
     onlineStatus?: 'online' | 'offline' | 'away';
+    walletAddress?: string;
     // Enhanced reputation metrics
     reputationMetrics?: {
       overallScore: number;
@@ -124,9 +126,9 @@ interface ResponsiveProductCardProps {
   className?: string;
 }
 
-const OptimizedImage: React.FC<{ 
-  src: string; 
-  alt: string; 
+const OptimizedImage: React.FC<{
+  src: string;
+  alt: string;
   className?: string;
 }> = ({ src, alt, className = '' }) => {
   const [loading, setLoading] = useState(true);
@@ -144,7 +146,7 @@ const OptimizedImage: React.FC<{
   return (
     <div className={`relative overflow-hidden ${className}`}>
       {loading && (
-        <div 
+        <div
           className="absolute inset-0 bg-white/10 animate-pulse rounded-lg"
           style={{
             background: designTokens.glassmorphism.secondary.background,
@@ -152,9 +154,9 @@ const OptimizedImage: React.FC<{
           }}
         />
       )}
-      
+
       {error ? (
-        <div 
+        <div
           className="w-full h-full flex items-center justify-center text-white/60 rounded-lg"
           style={{
             background: designTokens.glassmorphism.secondary.background,
@@ -169,93 +171,92 @@ const OptimizedImage: React.FC<{
           alt={alt}
           onLoad={handleLoad}
           onError={handleError}
-          className={`w-full h-full object-cover transition-opacity duration-300 rounded-lg ${
-            loading ? 'opacity-0' : 'opacity-100'
-          }`}
+          className={`w-full h-full object-cover transition-opacity duration-300 rounded-lg ${loading ? 'opacity-0' : 'opacity-100'
+            }`}
         />
       )}
     </div>
   );
 };
 
-const SellerBadge: React.FC<{ 
-  seller: Product['seller']; 
+const SellerBadge: React.FC<{
+  seller: Product['seller'];
   onClick?: () => void;
   size?: 'sm' | 'md' | 'lg';
-}> = ({ 
-  seller, 
+}> = ({
+  seller,
   onClick,
   size = 'md'
 }) => {
-  // Format reputation score for display
-  const formatReputationScore = (score: number) => {
-    if (score >= 10000) return `${(score / 1000).toFixed(1)}k`;
-    if (score >= 1000) return `${(score / 1000).toFixed(1)}k`;
-    return score.toString();
-  };
+    // Format reputation score for display
+    const formatReputationScore = (score: number) => {
+      if (score >= 10000) return `${(score / 1000).toFixed(1)}k`;
+      if (score >= 1000) return `${(score / 1000).toFixed(1)}k`;
+      return score.toString();
+    };
 
-  // Get reputation tier color
-  const getReputationTierColor = (tier: string) => {
-    switch (tier.toLowerCase()) {
-      case 'platinum': return '#E5E4E2';
-      case 'gold': return '#FFD700';
-      case 'silver': return '#C0C0C0';
-      case 'bronze': return '#CD7F32';
-      default: return '#808080';
-    }
-  };
+    // Get reputation tier color
+    const getReputationTierColor = (tier: string) => {
+      switch (tier.toLowerCase()) {
+        case 'platinum': return '#E5E4E2';
+        case 'gold': return '#FFD700';
+        case 'silver': return '#C0C0C0';
+        case 'bronze': return '#CD7F32';
+        default: return '#808080';
+      }
+    };
 
-  const sizeClasses = {
-    sm: { avatar: 'w-6 h-6', text: 'text-xs', badge: 'text-[10px]' },
-    md: { avatar: 'w-8 h-8', text: 'text-sm', badge: 'text-xs' },
-    lg: { avatar: 'w-10 h-10', text: 'text-base', badge: 'text-sm' },
-  };
+    const sizeClasses = {
+      sm: { avatar: 'w-6 h-6', text: 'text-xs', badge: 'text-[10px]' },
+      md: { avatar: 'w-8 h-8', text: 'text-sm', badge: 'text-xs' },
+      lg: { avatar: 'w-10 h-10', text: 'text-base', badge: 'text-sm' },
+    };
 
-  const classes = sizeClasses[size];
+    const classes = sizeClasses[size];
 
-  return (
-    <motion.div
-      className="flex items-center gap-2 cursor-pointer group"
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick?.();
-      }}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-    >
-      <div className={`${classes.avatar} rounded-full overflow-hidden`}>
-        <OptimizedImage
-          src={seller.avatar}
-          alt={seller.name}
-          className="w-full h-full"
-        />
-      </div>
-      <div>
-        <div className="flex items-center gap-1">
-          <span className={`font-medium text-white group-hover:text-white/80 transition-colors ${classes.text}`}>
-            {seller.name}
-          </span>
-          {seller.verified && <CheckCircle size={12} className="text-green-400" />}
-          {seller.daoApproved && (
-            <AnimatedProductBadge variant="info" size="sm">
-              DAO
-            </AnimatedProductBadge>
-          )}
-          {/* Reputation Score Badge */}
-          {seller.reputationMetrics && (
-            <AnimatedProductBadge variant="warning" size="sm">
-              ⭐ {formatReputationScore(seller.reputationMetrics.overallScore)}
-            </AnimatedProductBadge>
-          )}
+    return (
+      <motion.div
+        className="flex items-center gap-2 cursor-pointer group"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick?.();
+        }}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+      >
+        <div className={`${classes.avatar} rounded-full overflow-hidden`}>
+          <OptimizedImage
+            src={seller.avatar}
+            alt={seller.name}
+            className="w-full h-full"
+          />
         </div>
-        <div className={`flex items-center gap-1 ${classes.text} text-white/60`}>
-          <Star size={12} />
-          <span>{seller.reputation}</span>
+        <div>
+          <div className="flex items-center gap-1">
+            <span className={`font-medium text-white group-hover:text-white/80 transition-colors ${classes.text}`}>
+              {seller.name}
+            </span>
+            {seller.verified && <CheckCircle size={12} className="text-green-400" />}
+            {seller.daoApproved && (
+              <AnimatedProductBadge variant="info" size="sm">
+                DAO
+              </AnimatedProductBadge>
+            )}
+            {/* Reputation Score Badge */}
+            {seller.reputationMetrics && (
+              <AnimatedProductBadge variant="warning" size="sm">
+                ⭐ {formatReputationScore(seller.reputationMetrics.overallScore)}
+              </AnimatedProductBadge>
+            )}
+          </div>
+          <div className={`flex items-center gap-1 ${classes.text} text-white/60`}>
+            <Star size={12} />
+            <span>{seller.reputation}</span>
+          </div>
         </div>
-      </div>
-    </motion.div>
-  );
-};
+      </motion.div>
+    );
+  };
 
 export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
   product,
@@ -328,7 +329,8 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
           seller: {
             id: product.seller.id,
             name: product.seller.name,
-            avatar: product.seller.avatar
+            avatar: product.seller.avatar,
+            walletAddress: product.seller.walletAddress
           },
           category: product.category,
           isDigital: product.category === 'digital' || product.isNFT || false,
@@ -361,7 +363,7 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
   };
 
   // Format shipping information
-  const shippingInfo = [];
+  const shippingInfo: string[] = [];
   if (product.shipping?.freeShipping) {
     shippingInfo.push('Free shipping');
   }
@@ -399,8 +401,8 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
         {...productCardAnimations.hover}
         {...productCardAnimations.tap}
       >
-        <GlassPanel 
-          variant="secondary" 
+        <GlassPanel
+          variant="secondary"
           className="overflow-hidden"
           nftShadow={product.seller.daoApproved ? 'dao' : (product.isNFT ? 'standard' : undefined)}
         >
@@ -424,8 +426,8 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
 
               {/* Seller */}
               <div className="mb-2">
-                <SellerBadge 
-                  seller={product.seller} 
+                <SellerBadge
+                  seller={product.seller}
                   onClick={handleSellerClick}
                   size="sm"
                 />
@@ -505,8 +507,8 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
         {...productCardAnimations.hover}
         {...productCardAnimations.tap}
       >
-        <GlassPanel 
-          variant="secondary" 
+        <GlassPanel
+          variant="secondary"
           className="overflow-hidden"
           nftShadow={product.seller.daoApproved ? 'dao' : (product.isNFT ? 'standard' : undefined)}
         >
@@ -517,7 +519,7 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
               className="w-full h-full"
               useProductDefault={true}
             />
-            
+
             {/* Wishlist button overlay */}
             <motion.button
               className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center"
@@ -551,8 +553,8 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
           <div className="p-4">
             {/* Seller and Trust Indicators */}
             <div className="flex items-center justify-between mb-3">
-              <SellerBadge 
-                seller={product.seller} 
+              <SellerBadge
+                seller={product.seller}
                 onClick={handleSellerClick}
                 size="md"
               />
@@ -646,8 +648,8 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
       {...productCardAnimations.hover}
       {...productCardAnimations.tap}
     >
-      <GlassPanel 
-        variant="secondary" 
+      <GlassPanel
+        variant="secondary"
         className="overflow-hidden"
         nftShadow={product.seller.daoApproved ? 'dao' : (product.isNFT ? 'standard' : undefined)}
       >
@@ -658,7 +660,7 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
             alt={product.title}
             className="w-full h-full"
           />
-          
+
           {/* Wishlist button overlay */}
           <motion.button
             className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center"
@@ -700,8 +702,8 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
 
           {/* Low stock indicator */}
           {product.inventory !== undefined && product.inventory < 5 && product.inventory > 0 && (
-            <AnimatedProductBadge 
-              variant="warning" 
+            <AnimatedProductBadge
+              variant="warning"
               size="sm"
               className="absolute bottom-3 left-3"
             >
@@ -711,8 +713,8 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
 
           {/* Out of stock indicator */}
           {product.inventory !== undefined && product.inventory === 0 && (
-            <AnimatedProductBadge 
-              variant="error" 
+            <AnimatedProductBadge
+              variant="error"
               size="sm"
               className="absolute bottom-3 left-3"
             >
@@ -725,8 +727,8 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
         <div className="p-5">
           {/* Seller and Trust Indicators */}
           <div className="flex items-center justify-between mb-4">
-            <SellerBadge 
-              seller={product.seller} 
+            <SellerBadge
+              seller={product.seller}
               onClick={handleSellerClick}
               size="md"
             />
@@ -811,9 +813,9 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
 
           {/* Engagement metrics */}
           <div className="mb-5">
-            <AnimatedEngagementMetrics 
-              views={product.views || 0} 
-              favorites={product.favorites || 0} 
+            <AnimatedEngagementMetrics
+              views={product.views || 0}
+              favorites={product.favorites || 0}
             />
           </div>
 

@@ -50,12 +50,12 @@ const getProductImage = (product: Product): string => {
   const validImages = images.filter((img: string) => {
     if (!img || typeof img !== 'string') return false;
     return img.startsWith('data:') ||
-           img.startsWith('blob:') ||
-           img.startsWith('http://') ||
-           img.startsWith('https://') ||
-           img.startsWith('/') ||
-           img.startsWith('Qm') ||
-           img.startsWith('baf');
+      img.startsWith('blob:') ||
+      img.startsWith('http://') ||
+      img.startsWith('https://') ||
+      img.startsWith('/') ||
+      img.startsWith('Qm') ||
+      img.startsWith('baf');
   });
 
   return validImages.length > 0 ? validImages[0] : getFallbackImage('product');
@@ -83,6 +83,7 @@ interface Product {
     daoApproved: boolean;
     tier?: 'basic' | 'premium' | 'enterprise';
     onlineStatus?: 'online' | 'offline' | 'away';
+    walletAddress?: string;
     // Enhanced reputation metrics
     reputationMetrics?: {
       overallScore: number;
@@ -418,7 +419,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           avatar: product.seller.avatar,
           verified: product.seller.verified,
           daoApproved: product.seller.daoApproved,
-          escrowSupported: product.trust.escrowProtected
+          escrowSupported: product.trust.escrowProtected,
+          walletAddress: product.seller.walletAddress
         },
         category: product.category,
         isDigital: product.category === 'digital' || product.isNFT || false,
@@ -482,7 +484,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           seller: {
             id: normalizedSellerId,
             name: product.seller.name,
-            avatar: product.seller.avatar
+            avatar: product.seller.avatar,
+            walletAddress: product.seller.walletAddress
           },
           category: product.category,
           isDigital: product.category === 'digital' || product.isNFT || false,
@@ -535,7 +538,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const glowStyle = product.seller.daoApproved ? daoGlowStyle : nftGlowStyle;
 
   // Format shipping information
-  const shippingInfo = [];
+  const shippingInfo: string[] = [];
   if (product.shipping?.freeShipping) {
     shippingInfo.push('Free shipping');
   }
@@ -790,7 +793,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             priority={product.isFeatured ? "high" : "medium"}
             placeholder="skeleton"
             preload={product.isFeatured}
-            useProductDefault={true}
             useProductDefault={true}
           />
 

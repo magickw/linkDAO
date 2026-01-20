@@ -100,13 +100,33 @@ CREATE TABLE IF NOT EXISTS "community_user_referrals" (
 );
 
 -- Add foreign key constraints
-ALTER TABLE "community_treasury_pools" ADD CONSTRAINT "community_treasury_pools_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "communities"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
-ALTER TABLE "community_creator_rewards" ADD CONSTRAINT "community_creator_rewards_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "communities"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
-ALTER TABLE "community_creator_rewards" ADD CONSTRAINT "community_creator_rewards_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "posts"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
-ALTER TABLE "community_staking" ADD CONSTRAINT "community_staking_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "communities"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
-ALTER TABLE "community_staking_rewards" ADD CONSTRAINT "community_staking_rewards_staking_id_community_staking_id_fk" FOREIGN KEY ("staking_id") REFERENCES "community_staking"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
-ALTER TABLE "community_referral_programs" ADD CONSTRAINT "community_referral_programs_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "communities"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
-ALTER TABLE "community_user_referrals" ADD CONSTRAINT "community_user_referrals_program_id_community_referral_programs_id_fk" FOREIGN KEY ("program_id") REFERENCES "community_referral_programs"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+DO $$ BEGIN 
+  ALTER TABLE "community_treasury_pools" ADD CONSTRAINT "community_treasury_pools_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "communities"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN 
+  ALTER TABLE "community_creator_rewards" ADD CONSTRAINT "community_creator_rewards_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "communities"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN 
+  ALTER TABLE "community_creator_rewards" ADD CONSTRAINT "community_creator_rewards_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "posts"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN 
+  ALTER TABLE "community_staking" ADD CONSTRAINT "community_staking_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "communities"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN 
+  ALTER TABLE "community_staking_rewards" ADD CONSTRAINT "community_staking_rewards_staking_id_community_staking_id_fk" FOREIGN KEY ("staking_id") REFERENCES "community_staking"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN 
+  ALTER TABLE "community_referral_programs" ADD CONSTRAINT "community_referral_programs_community_id_communities_id_fk" FOREIGN KEY ("community_id") REFERENCES "communities"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN 
+  ALTER TABLE "community_user_referrals" ADD CONSTRAINT "community_user_referrals_program_id_community_referral_programs_id_fk" FOREIGN KEY ("program_id") REFERENCES "community_referral_programs"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS "idx_community_treasury_pools_community_id" ON "community_treasury_pools" ("community_id");

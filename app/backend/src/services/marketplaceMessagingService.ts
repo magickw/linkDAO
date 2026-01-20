@@ -68,6 +68,10 @@ export class MarketplaceMessagingService {
         .where(eq(users.id, order.sellerId))
         .limit(1);
 
+      // Normalize addresses
+      const buyerAddress = buyer?.walletAddress?.toLowerCase() || '';
+      const sellerAddress = seller?.walletAddress?.toLowerCase() || '';
+
       // Get product details if listingId exists
       let product = null;
       if (order.listingId) {
@@ -81,7 +85,7 @@ export class MarketplaceMessagingService {
       // Create conversation
       const newConversation = await db.insert(conversations).values({
         title: `Order #${orderId} - ${product?.title || 'Product'}`,
-        participants: JSON.stringify([buyer?.walletAddress, seller?.walletAddress]),
+        participants: JSON.stringify([buyerAddress, sellerAddress]),
         conversationType: 'order_support',
         productId: order.listingId || '',
         contextMetadata: JSON.stringify({
@@ -100,14 +104,14 @@ export class MarketplaceMessagingService {
         {
           conversationId: newConversation[0].id,
           userId: order.buyerId,
-          walletAddress: buyer?.walletAddress || '',
+          walletAddress: buyerAddress,
           role: 'buyer',
           joinedAt: new Date()
         },
         {
           conversationId: newConversation[0].id,
           userId: order.sellerId,
-          walletAddress: seller?.walletAddress || '',
+          walletAddress: sellerAddress,
           role: 'seller',
           joinedAt: new Date()
         }

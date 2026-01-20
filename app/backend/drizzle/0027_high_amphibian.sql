@@ -4319,7 +4319,7 @@ CREATE INDEX IF NOT EXISTS "idx_cart_items_unique_cart_product" ON "cart_items" 
 CREATE INDEX IF NOT EXISTS "idx_carts_user_id" ON "carts" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_carts_session_id" ON "carts" USING btree ("session_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_carts_status" ON "carts" USING btree ("status");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_chat_messages_conversation_id_timestamp" ON "chat_messages" USING btree ("conversation_id","timestamp");--> statement-breakpoint
+
 DO $$
 BEGIN
     IF EXISTS (

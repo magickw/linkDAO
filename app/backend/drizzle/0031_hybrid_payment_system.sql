@@ -1,6 +1,9 @@
 -- Hybrid Payment System Schema Enhancement
 -- This migration adds support for both crypto and fiat escrow flows
 
+-- Ensure orders table has updated_at column
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
 -- Add hybrid payment fields to orders table
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS escrow_type VARCHAR(20) DEFAULT 'smart_contract';
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS stripe_payment_intent_id VARCHAR(255);
@@ -34,6 +37,20 @@ CREATE TABLE IF NOT EXISTS payment_path_decisions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Ensure columns exist if table already exists
+ALTER TABLE payment_path_decisions ADD COLUMN IF NOT EXISTS user_address VARCHAR(42) NOT NULL DEFAULT '';
+ALTER TABLE payment_path_decisions ADD COLUMN IF NOT EXISTS recommended_path VARCHAR(10) NOT NULL DEFAULT 'crypto';
+ALTER TABLE payment_path_decisions ADD COLUMN IF NOT EXISTS selected_path VARCHAR(10) NOT NULL DEFAULT 'crypto';
+ALTER TABLE payment_path_decisions ADD COLUMN IF NOT EXISTS decision_reason TEXT;
+ALTER TABLE payment_path_decisions ADD COLUMN IF NOT EXISTS crypto_balance_sufficient BOOLEAN;
+ALTER TABLE payment_path_decisions ADD COLUMN IF NOT EXISTS fiat_methods_available INTEGER DEFAULT 0;
+ALTER TABLE payment_path_decisions ADD COLUMN IF NOT EXISTS user_preference VARCHAR(10);
+ALTER TABLE payment_path_decisions ADD COLUMN IF NOT EXISTS fees_crypto DECIMAL(20, 8);
+ALTER TABLE payment_path_decisions ADD COLUMN IF NOT EXISTS fees_fiat DECIMAL(20, 8);
+ALTER TABLE payment_path_decisions ADD COLUMN IF NOT EXISTS processing_time_crypto VARCHAR(50);
+ALTER TABLE payment_path_decisions ADD COLUMN IF NOT EXISTS processing_time_fiat VARCHAR(50);
+ALTER TABLE payment_path_decisions ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
 -- Create indexes for payment path decisions
 CREATE INDEX IF NOT EXISTS idx_payment_decisions_order_id ON payment_path_decisions(order_id);
 CREATE INDEX IF NOT EXISTS idx_payment_decisions_user_address ON payment_path_decisions(user_address);
@@ -54,6 +71,16 @@ CREATE TABLE IF NOT EXISTS hybrid_payment_events (
     status VARCHAR(20) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Ensure columns exist
+ALTER TABLE hybrid_payment_events ADD COLUMN IF NOT EXISTS event_type VARCHAR(50) NOT NULL DEFAULT 'unknown';
+ALTER TABLE hybrid_payment_events ADD COLUMN IF NOT EXISTS payment_path VARCHAR(10) NOT NULL DEFAULT 'crypto';
+ALTER TABLE hybrid_payment_events ADD COLUMN IF NOT EXISTS escrow_type VARCHAR(20) NOT NULL DEFAULT 'smart_contract';
+ALTER TABLE hybrid_payment_events ADD COLUMN IF NOT EXISTS event_data JSONB;
+ALTER TABLE hybrid_payment_events ADD COLUMN IF NOT EXISTS transaction_hash VARCHAR(66);
+ALTER TABLE hybrid_payment_events ADD COLUMN IF NOT EXISTS stripe_event_id VARCHAR(255);
+ALTER TABLE hybrid_payment_events ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'pending';
+ALTER TABLE hybrid_payment_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 
 -- Create indexes for payment events
 CREATE INDEX IF NOT EXISTS idx_payment_events_order_id ON hybrid_payment_events(order_id);
@@ -78,6 +105,18 @@ CREATE TABLE IF NOT EXISTS stripe_connect_accounts (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Ensure columns exist
+ALTER TABLE stripe_connect_accounts ADD COLUMN IF NOT EXISTS user_address VARCHAR(42);
+ALTER TABLE stripe_connect_accounts ADD COLUMN IF NOT EXISTS stripe_account_id VARCHAR(255);
+ALTER TABLE stripe_connect_accounts ADD COLUMN IF NOT EXISTS account_status VARCHAR(20) DEFAULT 'pending';
+ALTER TABLE stripe_connect_accounts ADD COLUMN IF NOT EXISTS capabilities JSONB;
+ALTER TABLE stripe_connect_accounts ADD COLUMN IF NOT EXISTS requirements JSONB;
+ALTER TABLE stripe_connect_accounts ADD COLUMN IF NOT EXISTS verification_status VARCHAR(20) DEFAULT 'pending';
+ALTER TABLE stripe_connect_accounts ADD COLUMN IF NOT EXISTS payouts_enabled BOOLEAN DEFAULT FALSE;
+ALTER TABLE stripe_connect_accounts ADD COLUMN IF NOT EXISTS charges_enabled BOOLEAN DEFAULT FALSE;
+ALTER TABLE stripe_connect_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE stripe_connect_accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
 -- Create indexes for Stripe accounts
 CREATE INDEX IF NOT EXISTS idx_stripe_accounts_user_address ON stripe_connect_accounts(user_address);
 CREATE INDEX IF NOT EXISTS idx_stripe_accounts_stripe_id ON stripe_connect_accounts(stripe_account_id);
@@ -98,6 +137,18 @@ CREATE TABLE IF NOT EXISTS payment_method_preferences (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Ensure columns exist
+ALTER TABLE payment_method_preferences ADD COLUMN IF NOT EXISTS user_address VARCHAR(42);
+ALTER TABLE payment_method_preferences ADD COLUMN IF NOT EXISTS preferred_method VARCHAR(10) DEFAULT 'auto';
+ALTER TABLE payment_method_preferences ADD COLUMN IF NOT EXISTS crypto_enabled BOOLEAN DEFAULT TRUE;
+ALTER TABLE payment_method_preferences ADD COLUMN IF NOT EXISTS fiat_enabled BOOLEAN DEFAULT TRUE;
+ALTER TABLE payment_method_preferences ADD COLUMN IF NOT EXISTS auto_fallback BOOLEAN DEFAULT TRUE;
+ALTER TABLE payment_method_preferences ADD COLUMN IF NOT EXISTS preferred_crypto_token VARCHAR(10) DEFAULT 'USDC';
+ALTER TABLE payment_method_preferences ADD COLUMN IF NOT EXISTS preferred_fiat_currency VARCHAR(3) DEFAULT 'USD';
+ALTER TABLE payment_method_preferences ADD COLUMN IF NOT EXISTS max_gas_fee_usd DECIMAL(10, 2) DEFAULT 10.00;
+ALTER TABLE payment_method_preferences ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE payment_method_preferences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 
 -- Create indexes for payment preferences
 CREATE INDEX IF NOT EXISTS idx_payment_preferences_user_address ON payment_method_preferences(user_address);

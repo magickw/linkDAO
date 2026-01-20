@@ -2,7 +2,7 @@
 -- This migration creates tables for the workflow automation engine
 
 -- Workflow Templates
-CREATE TABLE workflow_templates (
+CREATE TABLE IF NOT EXISTS workflow_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     description TEXT,
@@ -16,7 +16,7 @@ CREATE TABLE workflow_templates (
 );
 
 -- Workflow Instances (executions of templates)
-CREATE TABLE workflow_instances (
+CREATE TABLE IF NOT EXISTS workflow_instances (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     template_id UUID REFERENCES workflow_templates(id),
     status VARCHAR(50) NOT NULL DEFAULT 'pending', -- 'pending', 'running', 'completed', 'failed', 'cancelled'
@@ -29,7 +29,7 @@ CREATE TABLE workflow_instances (
 );
 
 -- Workflow Steps (individual actions within a workflow)
-CREATE TABLE workflow_steps (
+CREATE TABLE IF NOT EXISTS workflow_steps (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     template_id UUID REFERENCES workflow_templates(id),
     step_order INTEGER NOT NULL,
@@ -42,7 +42,7 @@ CREATE TABLE workflow_steps (
 );
 
 -- Workflow Step Executions (tracking individual step runs)
-CREATE TABLE workflow_step_executions (
+CREATE TABLE IF NOT EXISTS workflow_step_executions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     instance_id UUID REFERENCES workflow_instances(id),
     step_id UUID REFERENCES workflow_steps(id),
@@ -57,7 +57,7 @@ CREATE TABLE workflow_step_executions (
 );
 
 -- Task Assignments (for human tasks in workflows)
-CREATE TABLE workflow_task_assignments (
+CREATE TABLE IF NOT EXISTS workflow_task_assignments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     step_execution_id UUID REFERENCES workflow_step_executions(id),
     assigned_to UUID REFERENCES users(id),
@@ -74,7 +74,7 @@ CREATE TABLE workflow_task_assignments (
 );
 
 -- Workflow Rules (for rule-based automation)
-CREATE TABLE workflow_rules (
+CREATE TABLE IF NOT EXISTS workflow_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     description TEXT,
@@ -89,7 +89,7 @@ CREATE TABLE workflow_rules (
 );
 
 -- Workflow Metrics (for performance tracking)
-CREATE TABLE workflow_metrics (
+CREATE TABLE IF NOT EXISTS workflow_metrics (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     template_id UUID REFERENCES workflow_templates(id),
     instance_id UUID REFERENCES workflow_instances(id),
@@ -101,7 +101,7 @@ CREATE TABLE workflow_metrics (
 );
 
 -- Workflow Escalations
-CREATE TABLE workflow_escalations (
+CREATE TABLE IF NOT EXISTS workflow_escalations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     assignment_id UUID REFERENCES workflow_task_assignments(id),
     escalation_level INTEGER NOT NULL DEFAULT 1,
@@ -114,7 +114,7 @@ CREATE TABLE workflow_escalations (
 );
 
 -- Workflow Notifications
-CREATE TABLE workflow_notifications (
+CREATE TABLE IF NOT EXISTS workflow_notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     workflow_instance_id UUID REFERENCES workflow_instances(id),
     recipient_id UUID REFERENCES users(id),
@@ -128,19 +128,19 @@ CREATE TABLE workflow_notifications (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_workflow_templates_category ON workflow_templates(category);
-CREATE INDEX idx_workflow_templates_trigger_type ON workflow_templates(trigger_type);
-CREATE INDEX idx_workflow_instances_status ON workflow_instances(status);
-CREATE INDEX idx_workflow_instances_template_id ON workflow_instances(template_id);
-CREATE INDEX idx_workflow_instances_priority ON workflow_instances(priority);
-CREATE INDEX idx_workflow_step_executions_instance_id ON workflow_step_executions(instance_id);
-CREATE INDEX idx_workflow_step_executions_status ON workflow_step_executions(status);
-CREATE INDEX idx_workflow_task_assignments_assigned_to ON workflow_task_assignments(assigned_to);
-CREATE INDEX idx_workflow_task_assignments_status ON workflow_task_assignments(status);
-CREATE INDEX idx_workflow_task_assignments_due_date ON workflow_task_assignments(due_date);
-CREATE INDEX idx_workflow_rules_rule_type ON workflow_rules(rule_type);
-CREATE INDEX idx_workflow_metrics_template_id ON workflow_metrics(template_id);
-CREATE INDEX idx_workflow_metrics_recorded_at ON workflow_metrics(recorded_at);
-CREATE INDEX idx_workflow_escalations_assignment_id ON workflow_escalations(assignment_id);
-CREATE INDEX idx_workflow_notifications_recipient_id ON workflow_notifications(recipient_id);
-CREATE INDEX idx_workflow_notifications_status ON workflow_notifications(status);
+CREATE INDEX IF NOT EXISTS idx_workflow_templates_category ON workflow_templates(category);
+CREATE INDEX IF NOT EXISTS idx_workflow_templates_trigger_type ON workflow_templates(trigger_type);
+CREATE INDEX IF NOT EXISTS idx_workflow_instances_status ON workflow_instances(status);
+CREATE INDEX IF NOT EXISTS idx_workflow_instances_template_id ON workflow_instances(template_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_instances_priority ON workflow_instances(priority);
+CREATE INDEX IF NOT EXISTS idx_workflow_step_executions_instance_id ON workflow_step_executions(instance_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_step_executions_status ON workflow_step_executions(status);
+CREATE INDEX IF NOT EXISTS idx_workflow_task_assignments_assigned_to ON workflow_task_assignments(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_workflow_task_assignments_status ON workflow_task_assignments(status);
+CREATE INDEX IF NOT EXISTS idx_workflow_task_assignments_due_date ON workflow_task_assignments(due_date);
+CREATE INDEX IF NOT EXISTS idx_workflow_rules_rule_type ON workflow_rules(rule_type);
+CREATE INDEX IF NOT EXISTS idx_workflow_metrics_template_id ON workflow_metrics(template_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_metrics_recorded_at ON workflow_metrics(recorded_at);
+CREATE INDEX IF NOT EXISTS idx_workflow_escalations_assignment_id ON workflow_escalations(assignment_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_notifications_recipient_id ON workflow_notifications(recipient_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_notifications_status ON workflow_notifications(status);

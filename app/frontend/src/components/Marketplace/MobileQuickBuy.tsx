@@ -116,7 +116,7 @@ export const MobileQuickBuy: React.FC<MobileQuickBuyProps> = ({
 
       const result = await response.json();
       setOrderId(result.orderId);
-      
+
       setCurrentStep('confirmation');
       addToast('Purchase successful!', 'success');
       onSuccess(result.orderId);
@@ -159,7 +159,8 @@ export const MobileQuickBuy: React.FC<MobileQuickBuyProps> = ({
         avatar: '',
         verified: true,
         daoApproved: false,
-        escrowSupported: true
+        escrowSupported: true,
+        walletAddress: listing.sellerWalletAddress
       },
       category: listing.itemType.toLowerCase(),
       isDigital: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
@@ -177,7 +178,7 @@ export const MobileQuickBuy: React.FC<MobileQuickBuyProps> = ({
         safetyScore: 95
       }
     };
-    
+
     cart.addItem(cartProduct);
     addToast('Added to cart!', 'success');
     onSuccess();
@@ -189,15 +190,14 @@ export const MobileQuickBuy: React.FC<MobileQuickBuyProps> = ({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/50"
         onClick={onClose}
       />
-      
+
       {/* Bottom Sheet */}
-      <div className={`relative bg-gray-900 w-full max-w-lg rounded-t-3xl shadow-2xl transition-transform duration-300 ${
-        isExpanded ? 'max-h-[90vh]' : 'max-h-[70vh]'
-      }`}>
+      <div className={`relative bg-gray-900 w-full max-w-lg rounded-t-3xl shadow-2xl transition-transform duration-300 ${isExpanded ? 'max-h-[90vh]' : 'max-h-[70vh]'
+        }`}>
         {/* Drag Handle */}
         <div className="flex justify-center py-2">
           <button
@@ -253,12 +253,11 @@ export const MobileQuickBuy: React.FC<MobileQuickBuyProps> = ({
                 <p className="text-xl font-semibold text-white">{listing.inventory}</p>
               </div>
             </div>
-            
+
             {/* Balance Check */}
             {balance && (
-              <div className={`mt-3 pt-3 border-t border-gray-700 flex justify-between items-center ${
-                canAffordPurchase() ? 'text-green-400' : 'text-red-400'
-              }`}>
+              <div className={`mt-3 pt-3 border-t border-gray-700 flex justify-between items-center ${canAffordPurchase() ? 'text-green-400' : 'text-red-400'
+                }`}>
                 <span className="text-sm">Your Balance</span>
                 <span className="text-sm font-medium">{getUserBalance().toFixed(4)} ETH</span>
               </div>
@@ -336,7 +335,7 @@ export const MobileQuickBuy: React.FC<MobileQuickBuyProps> = ({
                     </>
                   )}
                 </Button>
-                
+
                 <Button
                   variant="outline"
                   onClick={handleAddToCart}
