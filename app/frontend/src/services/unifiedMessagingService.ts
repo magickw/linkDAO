@@ -43,7 +43,7 @@ export type MessagingEvent =
 
 export interface MessagingEventPayload {
   message_received: { message: Message; conversationId: string };
-  message_sent: { message: Message; conversationId: string; tempId?: string };
+  message_sent: { message: Message; conversationId: string; tempId?: string; error?: string };
   message_deleted: { messageId: string; conversationId: string };
   message_edited: { message: Message; conversationId: string };
   conversation_created: { conversation: Conversation };
@@ -161,7 +161,7 @@ class UnifiedMessagingService {
    */
   async initialize(userAddress: string): Promise<void> {
     const normalizedAddress = userAddress.toLowerCase();
-    
+
     if (this.isInitialized && this.currentUserAddress === normalizedAddress) {
       return;
     }
@@ -1815,13 +1815,23 @@ class UnifiedMessagingService {
     const store = transaction.objectStore(CACHE_CONFIG.MESSAGES_STORE);
 
     for (const msg of messages) {
-      store.put({ ...msg, conversationId });
+      if (msg && msg.id) {
+        store.put({ ...msg, conversationId });
+      } else {
+        console.warn('[UnifiedMessaging] Skipping persistence of message without ID:', msg);
+      }
     }
   }
 
   // WebSocket handlers
   private handleWebSocketMessage(data: any): void {
     const message = this.transformMessage(data.message || data);
+
+    if (!message.id) {
+      console.warn('[UnifiedMessaging] Received WebSocket message without ID, ignoring:', data);
+      return;
+    }
+
     const conversationId = data.conversationId || message.conversationId;
 
     // CHECK FOR DUPLICATES / PENDING MESSAGES

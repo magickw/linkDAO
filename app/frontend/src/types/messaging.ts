@@ -46,6 +46,8 @@ export interface Conversation {
     title?: string;
     type: 'direct' | 'group' | 'announcement';
     communityId?: string;
+    isArchived?: boolean;
+    isPinned?: boolean;
   };
 }
 
