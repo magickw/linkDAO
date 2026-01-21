@@ -4,6 +4,7 @@
 
 import { csrfService } from './csrfService';
 import { enhancedAuthService } from './enhancedAuthService';
+import { cartService } from './cartService';
 
 export interface SavedForLaterItem {
     id: string;
@@ -140,6 +141,9 @@ class SavedForLaterService {
 
             // Refresh saved items
             await this.getSavedItems();
+
+            // Refresh cart to show the newly added item
+            await cartService.getCartFromBackend();
         } catch (error) {
             console.error('Error moving item to cart:', error);
             throw error;

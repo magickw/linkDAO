@@ -272,7 +272,35 @@ const CartPage: React.FC = () => {
 
   const handleSaveForLater = async (itemId: string) => {
     try {
-      await savedForLaterService.saveCartItemForLater(itemId);
+      // Check if itemId is a cartItemId (backend reference) or productId
+      const cartItem = cartState.items.find(item => item.id === itemId || item.cartItemId === itemId);
+
+      if (!cartItem) {
+        console.error('Cart item not found:', itemId);
+        return;
+      }
+
+      // If no cartItemId, sync with backend first to get it
+      if (!cartItem.cartItemId) {
+        console.log('No cartItemId found, syncing cart with backend...');
+        // Force sync to get the cartItemId from backend
+        const syncedCart = await (cartService as any).getCartFromBackend();
+        if (syncedCart) {
+          const syncedItem = syncedCart.items.find(item => item.id === itemId);
+          if (syncedItem?.cartItemId) {
+            await savedForLaterService.saveCartItemForLater(syncedItem.cartItemId);
+          } else {
+            console.error('Failed to get cartItemId after sync');
+            return;
+          }
+        } else {
+          console.error('Failed to sync cart with backend');
+          return;
+        }
+      } else {
+        await savedForLaterService.saveCartItemForLater(cartItem.cartItemId);
+      }
+
       // Remove from local cart immediately to update UI and state
       cartService.removeItem(itemId);
     } catch (error) {

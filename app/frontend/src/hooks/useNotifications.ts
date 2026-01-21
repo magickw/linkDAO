@@ -5,14 +5,14 @@ import { notificationService } from '@/services/notificationService';
 import type { NotificationPreferences } from '@/types/notifications';
 
 export const useNotifications = () => {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const [notifications, setNotifications] = useState<SupportNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    if (!user?.address) return;
+    if (!user?.address || !accessToken) return;
 
-    supportNotificationService.connect(user.address);
+    supportNotificationService.connect(accessToken);
 
     const unsubscribe = supportNotificationService.subscribe((newNotifications) => {
       setNotifications(newNotifications);
@@ -23,7 +23,7 @@ export const useNotifications = () => {
       unsubscribe();
       supportNotificationService.disconnect();
     };
-  }, [user]);
+  }, [user, accessToken]);
 
   const markAsRead = (notificationId: string) => {
     supportNotificationService.markAsRead(notificationId);

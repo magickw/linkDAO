@@ -103,7 +103,7 @@ export const ChatNotificationProvider: React.FC<{ children: React.ReactNode }> =
       if (soundEnabled && typeof window !== 'undefined') {
         const audio = new Audio('/sounds/notification.mp3');
         audio.volume = 0.3;
-        audio.play().catch(() => {}); // Ignore errors if audio can't play
+        audio.play().catch(() => { }); // Ignore errors if audio can't play
       }
     } catch (error) {
       // Ignore audio errors
@@ -203,7 +203,7 @@ export const ChatNotificationProvider: React.FC<{ children: React.ReactNode }> =
       socket.on('connect_error', (error) => {
         console.error('[ChatNotifications] Socket.IO connection error:', error.message);
         connectionLockRef.current = false;
-        
+
         reconnectAttemptsRef.current++;
         if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
           updateConnectionState('failed');
@@ -237,15 +237,19 @@ export const ChatNotificationProvider: React.FC<{ children: React.ReactNode }> =
 
       // Listen for chat notifications
       socket.on('new_message', (data) => {
+        // Handle potentially nested message structure from backend
+        const messageData = data.message || data;
+        const senderAddress = data.senderAddress || data.fromAddress || messageData.senderAddress || messageData.fromAddress;
+
         addNotification({
           type: 'new_message',
           title: 'New Message',
-          message: data.content || 'You have a new message',
-          fromAddress: data.fromAddress,
-          fromName: data.fromName,
-          conversationId: data.conversationId,
-          timestamp: new Date(data.timestamp),
-          avatarUrl: data.avatarUrl
+          message: messageData.content || 'You have a new message',
+          fromAddress: senderAddress,
+          fromName: messageData.fromName,
+          conversationId: data.conversationId || messageData.conversationId,
+          timestamp: new Date(messageData.timestamp || messageData.sentAt || data.timestamp || Date.now()),
+          avatarUrl: messageData.avatarUrl
         });
       });
 

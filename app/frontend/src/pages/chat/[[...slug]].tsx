@@ -267,28 +267,43 @@ export default function ChatPage() {
   useEffect(() => {
     if (!isWebSocketConnected || !address) return;
 
-    const handleNewMessage = (message: Message) => {
+    const handleNewMessage = (data: any) => {
+      // Backend sends { message: { ... }, conversationId: ..., senderAddress: ... }
+      // We need to normalize this to match our frontend Message type
+      const messageData = data.message || data;
+
+      const normalizedMessage: Message = {
+        id: messageData.id,
+        conversationId: data.conversationId || messageData.conversationId,
+        fromAddress: data.senderAddress || data.fromAddress || messageData.senderAddress || messageData.fromAddress,
+        content: messageData.content,
+        contentType: messageData.messageType || messageData.contentType || 'text',
+        timestamp: new Date(messageData.sentAt || messageData.timestamp || Date.now()),
+        deliveryStatus: 'delivered',
+        attachments: messageData.attachments || []
+      };
+
       setHasNewMessage(true);
       loadConversations();
 
       // Show browser notification only when:
       // 1. Document is hidden (user is not on the page)
       // 2. The message is not in the currently selected conversation
-      const isInCurrentConversation = selectedConversation?.id === message.conversationId;
-      if (document.hidden && !isInCurrentConversation) {
-        const conversation = hookConversations?.find(conv => conv.id === message.conversationId);
+      const isInCurrentConversation = selectedConversation?.id === normalizedMessage.conversationId;
+      if (typeof document !== 'undefined' && document.hidden && !isInCurrentConversation) {
+        const conversation = hookConversations?.find(conv => conv.id === normalizedMessage.conversationId);
         const toAddress = conversation
-          ? conversation.participants.find(p => p !== message.fromAddress) || ''
+          ? conversation.participants.find(p => p !== normalizedMessage.fromAddress) || ''
           : '';
 
         notificationService.showMessageNotification({
-          id: message.id,
-          fromAddress: message.fromAddress,
+          id: normalizedMessage.id,
+          fromAddress: normalizedMessage.fromAddress,
           toAddress: toAddress,
-          content: message.content,
-          messageType: message.contentType,
-          timestamp: message.timestamp,
-          conversationId: message.conversationId
+          content: normalizedMessage.content,
+          messageType: normalizedMessage.contentType,
+          timestamp: new Date(normalizedMessage.timestamp),
+          conversationId: normalizedMessage.conversationId
         });
       }
 
@@ -640,13 +655,13 @@ export default function ChatPage() {
 
   // Add timeout for loading state to prevent infinite loading when backend is down
   const [loadingTimeout, setLoadingTimeout] = useState(false);
-  
+
   useEffect(() => {
     if (authLoading || conversationsLoading) {
       const timer = setTimeout(() => {
         setLoadingTimeout(true);
       }, 10000); // 10 second timeout
-      
+
       return () => clearTimeout(timer);
     } else {
       setLoadingTimeout(false);
@@ -770,11 +785,11 @@ export default function ChatPage() {
               </h1>
               <div className="flex items-center gap-1">
                 {connectionState.status === 'connected' ? (
-                  <Wifi size={14} className="text-green-500 dark:text-green-400" title="Connected" />
+                  <Wifi size={14} className="text-green-500 dark:text-green-400" />
                 ) : connectionState.status === 'connecting' || connectionState.status === 'reconnecting' ? (
-                  <Loader2 size={14} className="text-yellow-500 dark:text-yellow-400 animate-spin" title="Connecting..." />
+                  <Loader2 size={14} className="text-yellow-500 dark:text-yellow-400 animate-spin" />
                 ) : (
-                  <WifiOff size={14} className="text-red-500 dark:text-red-400" title="Disconnected" />
+                  <WifiOff size={14} className="text-red-500 dark:text-red-400" />
                 )}
               </div>
             </div>
@@ -796,8 +811,8 @@ export default function ChatPage() {
               <button
                 onClick={() => setSidebarTab('messages')}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors ${sidebarTab === 'messages'
-                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
               >
                 <MessageCircle className="w-3.5 h-3.5" />
@@ -806,8 +821,8 @@ export default function ChatPage() {
               <button
                 onClick={() => setSidebarTab('contacts')}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors ${sidebarTab === 'contacts'
-                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
               >
                 <BookUser className="w-3.5 h-3.5" />
@@ -864,7 +879,7 @@ export default function ChatPage() {
                             ) : conversationsError ? (
                               <div className="px-3 py-2 text-xs text-red-500 dark:text-red-400">
                                 {conversationsError}
-                                <button onClick={loadConversations} className="ml-2 text-blue-500 dark:text-blue-400 hover:underline">
+                                <button onClick={() => loadConversations()} className="ml-2 text-blue-500 dark:text-blue-400 hover:underline">
                                   Retry
                                 </button>
                               </div>
@@ -887,8 +902,8 @@ export default function ChatPage() {
                                     key={conversation.id}
                                     onClick={() => handleConversationSelect(conversation)}
                                     className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md mx-1 transition-colors ${isSelected
-                                        ? 'bg-blue-100 dark:bg-gray-700 text-gray-900 dark:text-white'
-                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'
+                                      ? 'bg-blue-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'
                                       }`}
                                   >
                                     <div className="relative flex-shrink-0">

@@ -95,6 +95,7 @@ class CartService {
   private lastSyncTime = 0;
   private syncCooldown = 5000; // 5 seconds cooldown between syncs
   private pendingDeletions: Set<string> = new Set(); // Track items pending deletion to preventing ghosting
+  private cartClearedAt: number | null = null; // Track when cart was intentionally cleared
 
   private constructor() {
     // Load pending deletions from storage to handle page refreshes
@@ -732,6 +733,9 @@ class CartService {
     await this.saveCartState(newState);
     this.notifyListeners(newState);
 
+    // Mark cart as intentionally cleared
+    this.cartClearedAt = Date.now();
+
     // If authenticated, also clear backend cart
     if (this.isAuthenticated) {
       try {
@@ -747,6 +751,9 @@ class CartService {
     const newState = this.getEmptyCartState();
     this.saveCartStateSync(newState);
     this.notifyListeners(newState);
+
+    // Mark cart as intentionally cleared
+    this.cartClearedAt = Date.now();
   }
 
   // Get specific item from cart
@@ -1056,6 +1063,12 @@ class CartService {
     // Prevent duplicate syncs with cooldown
     const now = Date.now();
     if (this.isSyncing || (now - this.lastSyncTime) < this.syncCooldown) {
+      return;
+    }
+
+    // Prevent re-populating cart if it was intentionally cleared within the last 30 seconds
+    if (this.cartClearedAt && (now - this.cartClearedAt) < 30000) {
+      console.log('🛒 Cart was recently cleared, skipping sync to prevent re-population');
       return;
     }
 
