@@ -1112,13 +1112,14 @@ class CartService {
   private mergeCartItems(localItems: CartItem[], backendItems: CartItem[]): CartItem[] {
     // ENFORCE BACKEND SOURCE OF TRUTH
     // We interpret "real data" as what is returned by the backend.
-    // We iterate through backend items and merge local data only if the item matches.
-    // Local items that are NOT in the backend are considered stale/ghosts and are discarded.
+    // However, we must preserve recently added local items that haven't synced yet to avoid "ghosting"
 
     // First filter out any backend items that are currently pending deletion
     const validBackendItems = backendItems.filter(item => !this.pendingDeletions.has(item.id));
+    const validBackendIds = new Set(validBackendItems.map(i => i.id));
 
-    return validBackendItems.map(backendItem => {
+    // Map backend items, preserving local quantity if local update is newer
+    const mergedBackendItems = validBackendItems.map(backendItem => {
       const localItem = localItems.find(i => i.id === backendItem.id);
 
       if (localItem) {
@@ -1137,6 +1138,25 @@ class CartService {
 
       return backendItem;
     });
+
+    // Find local items that are NOT in backend but were added recently (in-flight)
+    const now = Date.now();
+    const RECENT_THRESHOLD = 15000; // 15 seconds grace period for sync
+
+    const pendingLocalItems = localItems.filter(localItem => {
+      if (validBackendIds.has(localItem.id)) return false; // Already handled above
+      
+      const addedTime = new Date(localItem.addedAt).getTime();
+      const isRecent = (now - addedTime) < RECENT_THRESHOLD;
+      
+      if (isRecent) {
+        console.log(`🛒 Preserving recently added item not yet in backend: ${localItem.title} (${localItem.id})`);
+      }
+      
+      return isRecent;
+    });
+
+    return [...mergedBackendItems, ...pendingLocalItems];
   }
 
   private transformBackendCartToState(backendCart: any): CartState {
