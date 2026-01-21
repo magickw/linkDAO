@@ -20,6 +20,7 @@ export interface HybridCheckoutRequest {
   userCountry?: string;
   metadata?: any;
   shippingAddress?: any;
+  shippingCost?: number;
 }
 
 export interface PaymentPathDecision {
@@ -203,7 +204,8 @@ export class HybridPaymentOrchestrator {
       }
 
       // Total charged to Buyer
-      const totalAmount = request.amount + taxAmount + processingFee + (gasFee || 0);
+      const shippingCost = request.shippingCost || 0;
+      const totalAmount = request.amount + taxAmount + processingFee + (gasFee || 0) + shippingCost;
 
       // Total Fees object (informational)
       const fees = {
@@ -211,8 +213,9 @@ export class HybridPaymentOrchestrator {
         platformFee, // Still tracked for seller deduction
         gasFee,
         taxAmount,
+        shippingCost,
         currency: request.currency,
-        totalFees: platformFee + processingFee + (gasFee || 0) + taxAmount
+        totalFees: platformFee + processingFee + (gasFee || 0) + taxAmount + shippingCost
       };
 
       // Generate fallback options
@@ -647,7 +650,7 @@ export class HybridPaymentOrchestrator {
         undefined, // variantId
         request.orderId, // orderId
         pathDecision.fees.taxAmount.toString(),
-        '0', // Shipping cost (needs to be passed in request to be accurate)
+        (pathDecision.fees as any).shippingCost?.toString() || '0', // Shipping cost
         pathDecision.fees.platformFee.toString(),
         [], // Tax breakdown
         request.shippingAddress,

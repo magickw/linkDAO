@@ -19,6 +19,7 @@ export interface UnifiedCheckoutRequest {
   currency: string;
   preferredMethod?: 'crypto' | 'fiat' | 'auto';
   userCountry?: string;
+  shippingCost?: number;
 }
 
 export interface PrioritizedCheckoutRequest extends UnifiedCheckoutRequest {
