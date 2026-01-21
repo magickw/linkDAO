@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  MessageCircle, 
-  Send, 
-  Bot, 
-  User, 
-  X, 
-  Volume2, 
-  VolumeX, 
-  ThumbsUp, 
+import {
+  MessageCircle,
+  Send,
+  Bot,
+  User,
+  X,
+  Volume2,
+  VolumeX,
+  ThumbsUp,
   ThumbsDown,
   Copy,
   RotateCcw
@@ -61,21 +61,30 @@ const AIChatSupport: React.FC = () => {
     setIsSending(true);
 
     try {
-      // Simulate AI response delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call backend API
+      const response = await fetch('/api/ai-chat/message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: userMessage.content }),
+      });
 
-      // Generate AI response based on user input
-      const aiResponse = generateAIResponse(inputValue);
-      
+      if (!response.ok) {
+        throw new Error('Failed to get response');
+      }
+
+      const data = await response.json();
+
       const aiMessage: ChatMessage = {
         id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
         role: 'assistant',
-        content: aiResponse,
-        timestamp: new Date()
+        content: data.response,
+        timestamp: new Date(data.timestamp || Date.now())
       };
 
       setMessages(prev => [...prev, aiMessage]);
-      
+
       // Play sound if enabled
       if (isSoundEnabled) {
         playNotificationSound();
@@ -94,41 +103,7 @@ const AIChatSupport: React.FC = () => {
     }
   };
 
-  const generateAIResponse = (userInput: string): string => {
-    const input = userInput.toLowerCase();
-    
-    // Simple response logic - in a real implementation, this would call an AI API
-    if (input.includes('token') || input.includes('ldao')) {
-      return 'LDAO tokens are the native governance and utility tokens of LinkDAO. You can acquire them through direct purchase, trading on decentralized exchanges, staking, or our Earn-to-Own program. Would you like more specific information about any of these methods?';
-    }
-    
-    if (input.includes('stake') || input.includes('staking')) {
-      return 'To stake LDAO tokens, navigate to the Staking section in your wallet, connect your wallet, and follow the staking interface to lock up your tokens. You\'ll earn rewards proportional to your stake and the platform\'s performance. The minimum staking amount is 10 LDAO tokens.';
-    }
-    
-    if (input.includes('wallet')) {
-      return 'LinkDAO supports all WalletConnect-compatible wallets including MetaMask, Coinbase Wallet, Trust Wallet, and Rainbow. For the best experience, we recommend using a desktop wallet like MetaMask. Make sure you\'re on the official LinkDAO website (https://linkdao.io) before connecting your wallet.';
-    }
-    
-    if (input.includes('marketplace')) {
-      return 'Our marketplace supports ETH, major stablecoins (USDC, USDT, DAI), and other popular cryptocurrencies. All transactions are secured through smart contracts with optional escrow protection. You can list both digital items (NFTs, digital art) and physical items.';
-    }
-    
-    if (input.includes('governance') || input.includes('vote')) {
-      return 'LinkDAO is a decentralized autonomous organization (DAO) governed by LDAO token holders. Each LDAO token represents one vote. You can create proposals for platform changes, and token holders can vote. Proposals with sufficient votes are automatically executed by smart contracts.';
-    }
-    
-    if (input.includes('account')) {
-      return 'You don\'t need to create a traditional account. Simply connect your Web3 wallet (like MetaMask, WalletConnect, or Coinbase Wallet) to get started. Your wallet address becomes your identity on the platform.';
-    }
-    
-    if (input.includes('thank')) {
-      return 'You\'re welcome! Is there anything else I can help you with today?';
-    }
-    
-    // Default response
-    return 'I understand you\'re looking for help with: "' + userInput + '". While I\'m still learning, I can help with common questions about LDAO tokens, staking, wallets, marketplace, and governance. For more complex issues, I recommend contacting our human support team. What specifically would you like to know?';
-  };
+  // Removed generateAIResponse as logic is now handled by backend
 
   const playNotificationSound = () => {
     // In a real implementation, this would play an actual sound
@@ -136,7 +111,7 @@ const AIChatSupport: React.FC = () => {
   };
 
   const handleFeedback = (messageId: string, feedback: 'positive' | 'negative') => {
-    setMessages(prev => prev.map(msg => 
+    setMessages(prev => prev.map(msg =>
       msg.id === messageId ? { ...msg, feedback } : msg
     ));
   };
@@ -207,19 +182,19 @@ const AIChatSupport: React.FC = () => {
                   <h3 className="font-semibold">LinkDAO Support Assistant</h3>
                 </div>
                 <div className="flex space-x-2">
-                  <button 
+                  <button
                     onClick={() => setIsSoundEnabled(!isSoundEnabled)}
                     className="p-1 hover:bg-white hover:bg-opacity-20 rounded"
                   >
                     {isSoundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
                   </button>
-                  <button 
+                  <button
                     onClick={handleRestartConversation}
                     className="p-1 hover:bg-white hover:bg-opacity-20 rounded"
                   >
                     <RotateCcw className="w-5 h-5" />
                   </button>
-                  <button 
+                  <button
                     onClick={() => setIsOpen(false)}
                     className="p-1 hover:bg-white hover:bg-opacity-20 rounded"
                   >
@@ -233,16 +208,15 @@ const AIChatSupport: React.FC = () => {
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
               {messages.map((message) => (
-                <div 
-                  key={message.id} 
+                <div
+                  key={message.id}
                   className={`flex mb-4 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div 
-                    className={`max-w-[80%] rounded-lg p-3 ${
-                      message.role === 'user' 
-                        ? 'bg-blue-600 text-white rounded-br-none' 
+                  <div
+                    className={`max-w-[80%] rounded-lg p-3 ${message.role === 'user'
+                        ? 'bg-blue-600 text-white rounded-br-none'
                         : 'bg-white border border-gray-200 rounded-bl-none shadow-sm'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center mb-1">
                       {message.role === 'assistant' ? (
@@ -258,24 +232,24 @@ const AIChatSupport: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                    
+
                     {message.role === 'assistant' && (
                       <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
                         <div className="flex space-x-2">
-                          <button 
+                          <button
                             onClick={() => handleFeedback(message.id, 'positive')}
                             className={`p-1 rounded ${message.feedback === 'positive' ? 'text-green-600 bg-green-50' : 'text-gray-400 hover:text-green-600'}`}
                           >
                             <ThumbsUp className="w-4 h-4" />
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleFeedback(message.id, 'negative')}
                             className={`p-1 rounded ${message.feedback === 'negative' ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-red-600'}`}
                           >
                             <ThumbsDown className="w-4 h-4" />
                           </button>
                         </div>
-                        <button 
+                        <button
                           onClick={() => handleCopyMessage(message.content)}
                           className="p-1 text-gray-400 hover:text-gray-600"
                         >

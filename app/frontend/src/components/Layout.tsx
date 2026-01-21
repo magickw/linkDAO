@@ -174,7 +174,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  
+
 
   return (
     <>
@@ -338,7 +338,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
           </div>
 
           {/* Mobile Menu */}
-          </header>
+        </header>
 
         <main className={fullWidth ? (isMobile ? "w-full px-0" : "w-full") : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"}>
           {children}
@@ -453,7 +453,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
           </footer>
         )}
 
-        {/* {isConnected && <NotificationSystem />} */}
+        {isConnected && <NotificationSystem />}
 
         {/* Mobile Navigation */}
         <MobileNavigation />

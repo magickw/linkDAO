@@ -53,6 +53,23 @@ export const initializeWebSockets = async (): Promise<boolean> => {
     // Initialize WebSocketManager
     await initializeWebSocketManager(walletAddress);
 
+    // Initialize UnifiedMessagingService (Critical for chat functionality)
+    // Import dynamically to avoid circular dependencies if any
+    const { unifiedMessagingService } = await import('@/services/unifiedMessagingService');
+    const { webSocketManager } = await import('@/services/webSocketManager');
+
+    // Initialize the service with user address
+    await unifiedMessagingService.initialize(walletAddress);
+
+    // Connect access to the WebSocket
+    const primaryConnection = webSocketManager.getPrimaryConnection();
+    if (primaryConnection) {
+      // Cast to any to bypass strict type checking if interfaces slightly mismatch
+      // The WebSocketClientService has the required methods: on, off, send, isConnected
+      unifiedMessagingService.setWebSocketConnection(primaryConnection as any);
+      console.log('UnifiedMessagingService connected to WebSocket');
+    }
+
     isInitialized = true;
     console.log('WebSocketManager initialized successfully');
     return true;

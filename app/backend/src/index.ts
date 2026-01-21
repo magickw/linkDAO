@@ -795,6 +795,10 @@ app.use('/api/communities', communityCommentRoutes);
 // Use messaging routes
 app.use('/api/messaging', messagingRoutes);
 
+// AI Chat Routes
+import aiChatRoutes from './routes/aiChatRoutes';
+app.use('/api/ai-chat', aiChatRoutes);
+
 // Add redirect routes for legacy/alternative chat endpoints that frontend might be trying to access
 // Remove conflicting chat route registrations to prevent 404/500 errors
 // app.use('/api/chat', messagingRoutes);
