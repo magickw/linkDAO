@@ -744,7 +744,7 @@ export class CryptoPaymentService {
     resolutionMethod: number
   ): string {
     // Function signature for createEscrow(uint256,address,address,uint256,uint256,uint8)
-    const functionSignature = '0x' + this.keccak256('createEscrow(uint256,address,address,uint256,uint256,uint8)').slice(0, 8);
+    const functionSignature = this.keccak256('createEscrow(uint256,address,address,uint256,uint256,uint8)');
 
     // Encode parameters (each parameter is 32 bytes)
     const orderIdPadded = orderId.toString(16).padStart(64, '0');

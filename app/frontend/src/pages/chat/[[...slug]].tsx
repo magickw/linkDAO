@@ -660,7 +660,7 @@ export default function ChatPage() {
     if (authLoading || conversationsLoading) {
       const timer = setTimeout(() => {
         setLoadingTimeout(true);
-      }, 10000); // 10 second timeout
+      }, 3000); // 3 second timeout - reduced from 10 seconds to prevent mobile loading issues
 
       return () => clearTimeout(timer);
     } else {
@@ -668,8 +668,8 @@ export default function ChatPage() {
     }
   }, [authLoading, conversationsLoading]);
 
-  // Show loading state with timeout
-  if ((authLoading || conversationsLoading) && !loadingTimeout) {
+  // Show loading state with timeout - only show during auth loading, not conversation loading
+  if (authLoading && !loadingTimeout) {
     return (
       <Layout title="Chat - LinkDAO" fullWidth={true} hideFooter={true}>
         <div className="h-[calc(100vh-80px)] bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
