@@ -163,7 +163,7 @@ export class TaxCalculationService {
       type: 'sales_tax',
       name: 'US Sales Tax (Estimated)',
       appliesToShipping: true,
-      appliesToDigital: false
+      appliesToDigital: true
     });
 
     this.addTaxRate({
