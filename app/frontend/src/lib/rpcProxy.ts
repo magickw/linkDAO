@@ -31,7 +31,7 @@ export interface RpcResponse {
 export async function sendRpcRequest(rpcUrl: string, request: RpcRequest): Promise<RpcResponse> {
   try {
     // Use the Next.js API proxy to avoid CORS issues
-    const proxyUrl = `/api/proxy?target=${encodeURIComponent(rpcUrl)}`;
+    const proxyUrl = `/api/proxy/rpc?target=${encodeURIComponent(rpcUrl)}`;
     
     const response = await fetch(proxyUrl, {
       method: 'POST',

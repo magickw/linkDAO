@@ -9,7 +9,7 @@ const router = Router();
  * Proxies JSON-RPC requests to external nodes to avoid CORS and protect API keys.
  * Used by the frontend to talk to Ethereum nodes via the backend.
  */
-router.all('/', async (req: Request, res: Response) => {
+router.all('/rpc', async (req: Request, res: Response) => {
     const target = req.query.target as string;
 
     if (!target) {

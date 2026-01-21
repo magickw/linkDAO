@@ -88,7 +88,7 @@ export const setupDevEnvironment = () => {
       'eth_getFilterChanges',
       // Proxy errors
       'Failed to create Mainnet provider: Error: server response 405',
-      '/api/proxy?target=',
+      '/api/proxy/rpc?target=',
       // ENS resolution errors
       'Failed to resolve ENS name',
       'Resolution failed',

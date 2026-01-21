@@ -619,7 +619,7 @@ export class OrderController {
         throw new NotFoundError('Order not found or cannot be cancelled');
       }
 
-      return res.status(204).send();
+      return res.status(200).json({ success: true, message: 'Order cancelled successfully' });
     } catch (error: any) {
       if (error instanceof AppError) {
         throw error;
@@ -642,7 +642,7 @@ export class OrderController {
         throw new NotFoundError('Order not found or cannot be refunded');
       }
 
-      return res.status(204).send();
+      return res.status(200).json({ success: true, message: 'Order refunded successfully' });
     } catch (error: any) {
       if (error instanceof AppError) {
         throw error;
@@ -721,7 +721,7 @@ export class OrderController {
     try {
       const { orderId } = req.params;
 
-      const receipts = await receiptService.getReceiptsByOrderId(orderId);
+      const receipts = await receiptService.getReceiptByOrderId(orderId);
 
       if (!receipts || receipts.length === 0) {
         throw new NotFoundError('Receipt not found for this order');

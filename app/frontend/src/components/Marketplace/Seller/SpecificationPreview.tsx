@@ -7,7 +7,7 @@ import { calculateShippingEstimate } from './specificationValidator';
 
 interface SpecificationPreviewProps {
   specs: SpecificationData;
-  sizeConfig: SizeConfig;
+  sizeConfig?: SizeConfig;
   category: string;
   productName?: string;
 }
@@ -101,7 +101,7 @@ export const SpecificationPreview: React.FC<SpecificationPreviewProps> = ({
       </div>
 
       {/* Size Information */}
-      {sizeConfig.system !== 'none' && sizeConfig.system !== 'dimensions' && (
+      {sizeConfig && sizeConfig.system !== 'none' && sizeConfig.system !== 'dimensions' && (
         <div className="bg-white/5 rounded-lg p-4 border border-white/10">
           <div className="flex items-center gap-2 mb-3">
             <Info className="w-4 h-4 text-indigo-400" />
@@ -144,12 +144,12 @@ export const SpecificationPreview: React.FC<SpecificationPreviewProps> = ({
           {/* Size Chart Preview */}
           {sizeConfig.chart && sizeConfig.chart.rows && sizeConfig.chart.rows.length > 0 && (
             <div className="mt-4 pt-4 border-t border-white/10">
-              <p className="text-xs text-white/60 mb-2">Size Chart ({sizeConfig.chart.unit})</p>
+              <p className="text-xs text-white/60 mb-2">Size Chart ({sizeConfig.chart?.unit})</p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-white/10">
-                      {sizeConfig.chart.columns.map((col, idx) => (
+                      {sizeConfig.chart?.columns.map((col, idx) => (
                         <th key={idx} className="px-3 py-2 text-left text-xs text-white/60 uppercase">
                           {col}
                         </th>
@@ -159,7 +159,7 @@ export const SpecificationPreview: React.FC<SpecificationPreviewProps> = ({
                   <tbody>
                     {sizeConfig.chart.rows.map((row, idx) => (
                       <tr key={idx} className="border-b border-white/5 last:border-0">
-                        {sizeConfig.chart.columns.map((col, cIdx) => (
+                        {sizeConfig.chart?.columns.map((col, cIdx) => (
                           <td key={cIdx} className="px-3 py-2 text-white">
                             {row[col]}
                           </td>

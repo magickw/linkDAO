@@ -286,7 +286,7 @@ export async function getProvider() {
 
           // Wrap the RPC URL in our backend proxy to avoid CORS issues (only needed in browser)
           const proxiedRpc = (typeof window !== 'undefined')
-            ? `${window.location.origin}/api/proxy?target=${encodeURIComponent(envRpc)}`
+            ? `${window.location.origin}/api/proxy/rpc?target=${encodeURIComponent(envRpc)}`
             : envRpc;
 
           // Correct way to initialize JsonRpcProvider in ethers v6 with static network
@@ -322,7 +322,7 @@ export async function getProvider() {
       if (rpcUrl) {
         // Wrap the RPC URL in our backend proxy to avoid CORS issues (only needed in browser)
         const proxiedRpcUrl = (typeof window !== 'undefined')
-          ? `${window.location.origin}/api/proxy?target=${encodeURIComponent(rpcUrl)}`
+          ? `${window.location.origin}/api/proxy/rpc?target=${encodeURIComponent(rpcUrl)}`
           : rpcUrl;
 
         // Correct way to initialize JsonRpcProvider in ethers v6 with static network
@@ -366,7 +366,7 @@ export async function getProvider() {
       try {
         console.log(`Trying fallback RPC: ${rpc}`);
         const proxiedRpc = (typeof window !== 'undefined')
-          ? `${window.location.origin}/api/proxy?target=${encodeURIComponent(rpc)}`
+          ? `${window.location.origin}/api/proxy/rpc?target=${encodeURIComponent(rpc)}`
           : rpc;
         const provider = new ethers.JsonRpcProvider(proxiedRpc, network, {
           staticNetwork: true,
@@ -916,7 +916,7 @@ export async function getMainnetProvider() {
     // Check if we're in the browser and need to use the proxy
     const shouldUseProxy = typeof window !== 'undefined';
     const rpcUrl = shouldUseProxy
-      ? `${window.location.origin}/api/proxy?target=${encodeURIComponent(mainnetRpc)}`
+      ? `${window.location.origin}/api/proxy/rpc?target=${encodeURIComponent(mainnetRpc)}`
       : mainnetRpc;
 
     const provider = new ethers.JsonRpcProvider(rpcUrl, network, {
