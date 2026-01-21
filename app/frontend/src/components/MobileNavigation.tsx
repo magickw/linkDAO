@@ -95,7 +95,8 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
     return () => { active = false; };
   }, [address]);
 
-  const navItems: NavItem[] = useMemo(() => ([
+  const navItems: NavItem[] = useMemo(() => {
+  const items = [
     {
       id: 'home',
       label: 'Home',
@@ -111,14 +112,6 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
       path: '/communities'
     },
     {
-      id: 'messaging',
-      label: 'Messages',
-      icon: ChatBubbleLeftRightIcon,
-      iconSolid: ChatBubbleLeftRightIconSolid,
-      path: '/chat',
-      badge: messagesUnread
-    },
-    {
       id: 'marketplace',
       label: 'Marketplace',
       icon: ShoppingBagIcon,
@@ -132,15 +125,31 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
       iconSolid: ClipboardDocumentListIconSolid,
       path: '/governance',
       badge: governancePending
-    },
-    {
+    }
+  ];
+
+  // Only show messaging and settings for authenticated users
+  if (address) {
+    items.splice(2, 0, {
+      id: 'messaging',
+      label: 'Messages',
+      icon: ChatBubbleLeftRightIcon,
+      iconSolid: ChatBubbleLeftRightIconSolid,
+      path: '/chat',
+      badge: messagesUnread
+    });
+
+    items.push({
       id: 'settings',
       label: 'Settings',
       icon: Cog6ToothIcon,
       iconSolid: Cog6ToothIconSolid,
       path: '/settings'
-    }
-  ]), [messagesUnread, governancePending]);
+    });
+  }
+
+  return items;
+}, [messagesUnread, governancePending, address]);
 
   // Handle scroll to show/hide navigation
   useEffect(() => {

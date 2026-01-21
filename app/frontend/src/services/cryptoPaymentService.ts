@@ -163,7 +163,7 @@ export class CryptoPaymentService {
       abi: enhancedEscrowABI,
       functionName: "createEscrow",
       args: [
-        BigInt(orderId),
+        this.uuidToBigInt(orderId),
         recipient as `0x${string}`,
         token.address as `0x${string}`,
         amount,
@@ -175,6 +175,15 @@ export class CryptoPaymentService {
       chain: undefined,
       account: buyerAddress,
     });
+  }
+
+  /**
+   * Convert UUID string to BigInt
+   */
+  private uuidToBigInt(uuid: string): bigint {
+    // Remove hyphens and treat as hex
+    const hex = uuid.replace(/-/g, '');
+    return BigInt(`0x${hex}`);
   }
 
   /**
@@ -694,7 +703,7 @@ export class CryptoPaymentService {
 
     // Encode the function call data
     const escrowData = this.encodeEscrowCallData(
-      BigInt(orderId),
+      this.uuidToBigInt(orderId),
       recipient,
       token.address,
       amount,
