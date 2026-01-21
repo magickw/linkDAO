@@ -88,6 +88,7 @@ export class GasFeeService {
       let gasLimitWithBuffer = (gasEstimate * bufferBigInt) / 100n;
       
       // Ensure gas limit doesn't exceed security or network limits
+      console.log('[GasFeeService] Using enhanced gas estimation logic v2');
       const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
       const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)
       const maxGasLimit = securityMaxGasLimit < networkMaxGasLimit ? securityMaxGasLimit : networkMaxGasLimit;

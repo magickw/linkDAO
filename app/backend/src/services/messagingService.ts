@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { conversations, chatMessages, blockedUsers, messageReadStatus, conversationParticipants, messageReactions } from '../db/schema';
+import { users, conversations, chatMessages, blockedUsers, messageReadStatus, conversationParticipants, messageReactions } from '../db/schema';
 // import { notificationService } from './notificationService';
 import { eq, desc, asc, and, or, like, inArray, sql, gt, lt, isNull, count } from 'drizzle-orm';
 import communityNotificationService from './communityNotificationService';
@@ -55,6 +55,28 @@ interface DecryptMessageData {
 }
 
 export class MessagingService {
+  // Helper method to get user ID from address
+  private async getUserIdByAddress(address: string): Promise<string | null> {
+    if (!address) return null;
+    const normalized = address.toLowerCase();
+
+    // Check cache first
+    const cacheKey = `userid:${normalized}`;
+    const cached = await cacheService.get(cacheKey);
+    if (cached) return cached as string;
+
+    const user = await db.query.users.findFirst({
+      where: eq(users.walletAddress, normalized),
+      columns: { id: true }
+    });
+
+    if (user) {
+      await cacheService.set(cacheKey, user.id, 3600); // Cache for 1 hour
+      return user.id;
+    }
+    return null;
+  }
+
   // MEMORY OPTIMIZATION: Add cache and cleanup tracking
   private lastCleanup: number = Date.now();
   private activeConnections: Map<string, number> = new Map();
@@ -99,6 +121,7 @@ export class MessagingService {
       // Don't throw - allow service to continue even if cleanup fails
     }
   }
+
   // Get user's conversations
   async getConversations(options: GetConversationsOptions) {
     const { userAddress, page, limit } = options;
@@ -152,7 +175,11 @@ export class MessagingService {
             conversationParticipants,
             eq(conversations.id, conversationParticipants.conversationId)
           )
-          .where(eq(conversationParticipants.walletAddress, normalizedAddress))
+          .innerJoin(
+            users,
+            eq(conversationParticipants.userId, users.id)
+          )
+          .where(sql`lower(${users.walletAddress}) = ${normalizedAddress}`)
           .orderBy(desc(conversations.lastActivity))
           .limit(actualLimit)
           .offset(offset);
@@ -267,20 +294,25 @@ export class MessagingService {
       // Populate conversationParticipants table (Phase 5 requirement)
       // This ensures getConversations (which relies on this table) works correctly
       try {
-        await db.insert(conversationParticipants).values([
-          {
-            conversationId: convId,
-            walletAddress: normalizedInitiatorAddress,
-            role: 'member',
-            joinedAt: new Date()
-          },
-          {
-            conversationId: convId,
-            walletAddress: normalizedParticipantAddress,
-            role: 'member',
-            joinedAt: new Date()
-          }
-        ]);
+        const initiatorId = await this.getUserIdByAddress(normalizedInitiatorAddress);
+        const participantId = await this.getUserIdByAddress(normalizedParticipantAddress);
+
+        if (initiatorId && participantId) {
+          await db.insert(conversationParticipants).values([
+            {
+              conversationId: convId,
+              userId: initiatorId,
+              role: 'member',
+              joinedAt: new Date()
+            },
+            {
+              conversationId: convId,
+              userId: participantId,
+              role: 'member',
+              joinedAt: new Date()
+            }
+          ]);
+        }
       } catch (partError) {
         safeLogger.error('Error populating conversationParticipants:', partError);
         // Continue but log error - self-healing might be needed later
@@ -303,14 +335,11 @@ export class MessagingService {
       };
     } catch (error) {
       safeLogger.error('Error starting conversation:', error);
-      if (error instanceof Error) {
-        if (error.message.includes('database') || error.message.includes('connection')) {
-          throw new Error('Messaging service temporarily unavailable. Database connection error.');
-        }
-        // Preserve the original error message for better debugging
-        throw new Error(`Failed to start conversation: ${error.message}`);
+      if (error instanceof Error && error.message.includes('database') || error.message.includes('connection')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
       }
-      throw new Error('Failed to start conversation');
+      // Preserve the original error message for better debugging
+      throw new Error(`Failed to start conversation: ${error.message}`);
     }
   }
 
@@ -346,16 +375,19 @@ export class MessagingService {
       // Check permission: 1. Check conversationParticipants table (Phase 5+)
       let participantCheck: any[] = [];
       try {
-        participantCheck = await db
-          .select()
-          .from(conversationParticipants)
-          .where(
-            and(
-              eq(conversationParticipants.conversationId, conversationId),
-              eq(conversationParticipants.walletAddress, normalizedAddress)
+        const userId = await this.getUserIdByAddress(normalizedAddress);
+        if (userId) {
+          participantCheck = await db
+            .select()
+            .from(conversationParticipants)
+            .where(
+              and(
+                eq(conversationParticipants.conversationId, conversationId),
+                eq(conversationParticipants.userId, userId)
+              )
             )
-          )
-          .limit(1);
+            .limit(1);
+        }
       } catch (dbError) {
         // Log warning but continue to fallback
         safeLogger.warn('[MessagingService] Failed to query conversationParticipants (table might be missing), falling back to JSON check', { error: dbError });
@@ -832,56 +864,16 @@ export class MessagingService {
           .onConflictDoNothing();
       }
 
-      return {
-        success: true,
-        data: null
-      };
-    } catch (error) {
-      safeLogger.error('Error marking conversation as read:', error);
-      if (error instanceof Error && error.message.includes('database')) {
-        throw new Error('Messaging service temporarily unavailable. Database connection error.');
-      }
-      throw new Error('Failed to mark conversation as read');
-    }
-  }
-
-  // Delete conversation
-  async deleteConversation(data: { conversationId: string; userAddress: string }) {
-    const { conversationId, userAddress } = data;
-
-    try {
-      // Check if user is participant
-      const conversation = await this.getConversationDetails({ conversationId, userAddress });
-      if (!conversation) {
-        return {
-          success: false,
-          message: 'Conversation not found or access denied'
-        };
-      }
-
-      // Parse participants from JSON safely
-      let participants: string[];
-      if (typeof conversation.participants === 'string') {
-        participants = JSON.parse(conversation.participants);
-      } else {
-        participants = conversation.participants as unknown as string[];
-      }
-
-      const normalizedUserAddress = userAddress.toLowerCase();
-      const updatedParticipants = participants.filter((p: string) => p !== normalizedUserAddress);
-
-      if (updatedParticipants.length === 0) {
-        // If no participants left, delete the conversation and messages
-        await db.delete(chatMessages).where(eq(chatMessages.conversationId, conversationId));
-        await db.delete(conversations).where(eq(conversations.id, conversationId));
-      } else {
-        // Update participants list
+      // 4. Update conversation participant last_read_at
+      const userId = await this.getUserIdByAddress(userAddress);
+      if (userId) {
         await db
-          .update(conversations)
-          .set({
-            participants: JSON.stringify(updatedParticipants)
-          })
-          .where(eq(conversations.id, conversationId));
+          .update(conversationParticipants)
+          .set({ lastReadAt: new Date() })
+          .where(and(
+            eq(conversationParticipants.conversationId, conversationId),
+            eq(conversationParticipants.userId, userId)
+          ));
       }
 
       return {
@@ -889,104 +881,12 @@ export class MessagingService {
         data: null
       };
     } catch (error) {
-      safeLogger.error('Error deleting conversation:', error);
+      safeLogger.error('Error updating message status:', error);
       if (error instanceof Error && error.message.includes('database')) {
         throw new Error('Messaging service temporarily unavailable. Database connection error.');
       }
-      throw new Error('Failed to delete conversation');
+      throw new Error('Failed to update message status');
     }
-  }
-
-  // Archive conversation
-  async archiveConversation(data: { conversationId: string; userAddress: string }) {
-    const { conversationId, userAddress } = data;
-
-    try {
-      const conversation = await this.getConversationDetails({ conversationId, userAddress });
-      if (!conversation) {
-        return {
-          success: false,
-          message: 'Conversation not found or access denied'
-        };
-      }
-
-      // Get current archived users
-      const archivedBy = JSON.parse(conversation.archivedBy as string || '[]');
-      if (!archivedBy.includes(userAddress)) {
-        archivedBy.push(userAddress);
-
-        await db
-          .update(conversations)
-          .set({ archivedBy: JSON.stringify(archivedBy) })
-          .where(eq(conversations.id, conversationId));
-      }
-
-      return {
-        success: true,
-        data: null
-      };
-    } catch (error) {
-      safeLogger.error('Error archiving conversation:', error);
-      if (error instanceof Error && error.message.includes('database')) {
-        throw new Error('Messaging service temporarily unavailable. Database connection error.');
-      }
-      throw new Error('Failed to archive conversation');
-    }
-  }
-
-  // Unarchive conversation
-  async unarchiveConversation(data: { conversationId: string; userAddress: string }) {
-    const { conversationId, userAddress } = data;
-
-    try {
-      const conversation = await this.getConversationDetails({ conversationId, userAddress });
-      if (!conversation) {
-        return {
-          success: false,
-          message: 'Conversation not found or access denied'
-        };
-      }
-
-      // Get current archived users and remove this user
-      const archivedBy = JSON.parse(conversation.archivedBy as string || '[]');
-      const updatedArchivedBy = archivedBy.filter((addr: string) => addr !== userAddress);
-
-      await db
-        .update(conversations)
-        .set({ archivedBy: JSON.stringify(updatedArchivedBy) })
-        .where(eq(conversations.id, conversationId));
-
-      return {
-        success: true,
-        data: null
-      };
-    } catch (error) {
-      safeLogger.error('Error unarchiving conversation:', error);
-      if (error instanceof Error && error.message.includes('database')) {
-        throw new Error('Messaging service temporarily unavailable. Database connection error.');
-      }
-      throw new Error('Failed to unarchive conversation');
-    }
-  }
-
-  // Encrypt message - Backend doesn't encrypt, just stores encrypted content from frontend
-  async encryptMessage(data: EncryptMessageData) {
-    // Backend should NOT decrypt messages - E2EE principle
-    // Frontend handles encryption, backend just stores encrypted content
-    return {
-      success: true,
-      message: 'Backend stores encrypted content without decrypting - E2EE maintained'
-    };
-  }
-
-  // Decrypt message - Backend doesn't decrypt, maintains E2EE
-  async decryptMessage(data: DecryptMessageData) {
-    // Backend should NOT decrypt messages - E2EE principle
-    // Frontend handles decryption with user's private keys
-    return {
-      success: false,
-      message: 'Backend cannot decrypt messages - E2EE maintained, decrypt on frontend'
-    };
   }
 
   // Update message status (Read Receipts)
@@ -1016,14 +916,15 @@ export class MessagingService {
       const message = messageResult[0];
 
       // 2. Verify participation
-      const participantCheck = await db
+      const userId = await this.getUserIdByAddress(userAddress);
+      const participantCheck = userId ? await db
         .select()
         .from(conversationParticipants)
         .where(and(
           eq(conversationParticipants.conversationId, message.conversationId),
-          eq(conversationParticipants.walletAddress, userAddress.toLowerCase())
+          eq(conversationParticipants.userId, userId)
         ))
-        .limit(1);
+        .limit(1) : [];
 
       if (participantCheck.length === 0) {
         // Fallback for legacy conversations
@@ -1045,16 +946,17 @@ export class MessagingService {
         .onConflictDoNothing();
 
       // 4. Update conversation participant last_read_at
-      await db
-        .update(conversationParticipants)
-        .set({ lastReadAt: new Date() })
-        .where(and(
-          eq(conversationParticipants.conversationId, message.conversationId),
-          eq(conversationParticipants.walletAddress, userAddress.toLowerCase())
-        ));
+      if (userId) {
+        await db
+          .update(conversationParticipants)
+          .set({ lastReadAt: new Date() })
+          .where(and(
+            eq(conversationParticipants.conversationId, message.conversationId),
+            eq(conversationParticipants.userId, userId)
+          ));
+      }
 
       // 5. Emit WebSocket event to sender
-      // Don't notify if user is reading their own message
       if (message.senderAddress.toLowerCase() !== userAddress.toLowerCase()) {
         const wsService = getWebSocketService();
         if (wsService) {
@@ -1073,10 +975,7 @@ export class MessagingService {
       };
     } catch (error) {
       safeLogger.error('Error updating message status:', error);
-      if (error instanceof Error && error.message.includes('database')) {
-        throw new Error('Messaging service temporarily unavailable. Database connection error.');
-      }
-      throw new Error('Failed to update message status');
+      throw error;
     }
   }
 
@@ -1150,7 +1049,7 @@ export class MessagingService {
 
     try {
       this.validateAddress(userAddress);
-      
+
       // PERFORMANCE OPTIMIZATION: Use Full-Text Search
       // Note: This relies on the search_vector column added in phase5 migration
       // We reference the column name directly in SQL to use the GIN index
@@ -1222,14 +1121,18 @@ export class MessagingService {
 
       // 2. Verify access (user must be participant of conversation)
       // Check using conversationParticipants table for speed
-      const participantCheck = await db
-        .select()
-        .from(conversationParticipants)
-        .where(and(
-          eq(conversationParticipants.conversationId, parentMessage.conversationId),
-          eq(conversationParticipants.walletAddress, userAddress.toLowerCase())
-        ))
-        .limit(1);
+      const userId = await this.getUserIdByAddress(userAddress.toLowerCase());
+      let participantCheck: any[] = [];
+      if (userId) {
+        participantCheck = await db
+          .select()
+          .from(conversationParticipants)
+          .where(and(
+            eq(conversationParticipants.conversationId, parentMessage.conversationId),
+            eq(conversationParticipants.userId, userId)
+          ))
+          .limit(1);
+      }
 
       if (participantCheck.length === 0) {
         // Fallback check for old conversations without participants entries (using JSONB)
@@ -1439,17 +1342,23 @@ export class MessagingService {
       }
 
       // Check if adder is a participant with admin/moderator role
-      const adderParticipant = await db
-        .select()
-        .from(conversationParticipants)
-        .where(
-          and(
-            eq(conversationParticipants.conversationId, conversationId),
-            eq(conversationParticipants.walletAddress, adderAddress.toLowerCase()),
-            isNull(conversationParticipants.leftAt)
+      const adderUserId = await this.getUserIdByAddress(adderAddress.toLowerCase());
+      let adderParticipant: any[] = [];
+      if (adderUserId) {
+        adderParticipant = await db
+          .select({
+            role: conversationParticipants.role
+          })
+          .from(conversationParticipants)
+          .where(
+            and(
+              eq(conversationParticipants.conversationId, conversationId),
+              eq(conversationParticipants.userId, adderUserId),
+              isNull(conversationParticipants.leftAt)
+            )
           )
-        )
-        .limit(1);
+          .limit(1);
+      }
 
       if (!adderParticipant.length) {
         return { success: false, message: 'You are not a member of this conversation' };
@@ -1462,28 +1371,37 @@ export class MessagingService {
       }
 
       // Check if new participant is already a member
-      const existingParticipant = await db
-        .select()
-        .from(conversationParticipants)
-        .where(
-          and(
-            eq(conversationParticipants.conversationId, conversationId),
-            eq(conversationParticipants.walletAddress, newParticipantAddress.toLowerCase()),
-            isNull(conversationParticipants.leftAt)
+      const existingParticipantUserId = await this.getUserIdByAddress(newParticipantAddress.toLowerCase());
+      let existingParticipant: any[] = [];
+      if (existingParticipantUserId) {
+        existingParticipant = await db
+          .select()
+          .from(conversationParticipants)
+          .where(
+            and(
+              eq(conversationParticipants.conversationId, conversationId),
+              eq(conversationParticipants.userId, existingParticipantUserId),
+              isNull(conversationParticipants.leftAt)
+            )
           )
-        )
-        .limit(1);
+          .limit(1);
+      }
 
       if (existingParticipant.length) {
         return { success: false, message: 'User is already a participant' };
       }
 
       // Add the participant
+      const newParticipantId = await this.getUserIdByAddress(newParticipantAddress);
+      if (!newParticipantId) {
+        return { success: false, message: 'User not found' };
+      }
+
       const newParticipant = await db
         .insert(conversationParticipants)
         .values({
           conversationId,
-          walletAddress: newParticipantAddress.toLowerCase(),
+          userId: newParticipantId,
           role: role as any,
           joinedAt: new Date()
         })
@@ -1552,17 +1470,23 @@ export class MessagingService {
       }
 
       // Check if remover is a participant
-      const removerParticipant = await db
-        .select()
-        .from(conversationParticipants)
-        .where(
-          and(
-            eq(conversationParticipants.conversationId, conversationId),
-            eq(conversationParticipants.walletAddress, removerAddress.toLowerCase()),
-            isNull(conversationParticipants.leftAt)
+      const removerUserId = await this.getUserIdByAddress(removerAddress.toLowerCase());
+      let removerParticipant: any[] = [];
+      if (removerUserId) {
+        removerParticipant = await db
+          .select({
+            role: conversationParticipants.role
+          })
+          .from(conversationParticipants)
+          .where(
+            and(
+              eq(conversationParticipants.conversationId, conversationId),
+              eq(conversationParticipants.userId, removerUserId),
+              isNull(conversationParticipants.leftAt)
+            )
           )
-        )
-        .limit(1);
+          .limit(1);
+      }
 
       if (!removerParticipant.length) {
         return { success: false, message: 'You are not a member of this conversation' };
@@ -1576,20 +1500,24 @@ export class MessagingService {
         return { success: false, message: 'Only admins can remove other participants' };
       }
 
-      // Mark participant as left
-      await db
-        .update(conversationParticipants)
-        .set({
-          leftAt: new Date(),
-          updatedAt: new Date()
-        })
-        .where(
-          and(
-            eq(conversationParticipants.conversationId, conversationId),
-            eq(conversationParticipants.walletAddress, participantAddress.toLowerCase()),
-            isNull(conversationParticipants.leftAt)
-          )
-        );
+      const participantId = await this.getUserIdByAddress(participantAddress);
+
+      if (participantId) {
+        // Mark participant as left
+        await db
+          .update(conversationParticipants)
+          .set({
+            leftAt: new Date(),
+            updatedAt: new Date()
+          })
+          .where(
+            and(
+              eq(conversationParticipants.conversationId, conversationId),
+              eq(conversationParticipants.userId, participantId),
+              isNull(conversationParticipants.leftAt)
+            )
+          );
+      }
 
       // Update conversation participants list
       const currentParticipants = Array.isArray(conv.participants)
@@ -1636,36 +1564,45 @@ export class MessagingService {
       this.validateAddress(participantAddress);
 
       // Check if updater is admin
-      const updaterParticipant = await db
-        .select()
-        .from(conversationParticipants)
-        .where(
-          and(
-            eq(conversationParticipants.conversationId, conversationId),
-            eq(conversationParticipants.walletAddress, updaterAddress.toLowerCase()),
-            isNull(conversationParticipants.leftAt)
+      const updaterUserId = await this.getUserIdByAddress(updaterAddress.toLowerCase());
+      let updaterParticipant: any[] = [];
+      if (updaterUserId) {
+        updaterParticipant = await db
+          .select({
+            role: conversationParticipants.role
+          })
+          .from(conversationParticipants)
+          .where(
+            and(
+              eq(conversationParticipants.conversationId, conversationId),
+              eq(conversationParticipants.userId, updaterUserId),
+              isNull(conversationParticipants.leftAt)
+            )
           )
-        )
-        .limit(1);
+          .limit(1);
+      }
 
       if (!updaterParticipant.length || updaterParticipant[0].role !== 'admin') {
         return { success: false, message: 'Only admins can update roles' };
       }
 
-      // Update the role
-      await db
-        .update(conversationParticipants)
-        .set({
-          role: newRole,
-          updatedAt: new Date()
-        })
-        .where(
-          and(
-            eq(conversationParticipants.conversationId, conversationId),
-            eq(conversationParticipants.walletAddress, participantAddress.toLowerCase()),
-            isNull(conversationParticipants.leftAt)
-          )
-        );
+      const participantId = await this.getUserIdByAddress(participantAddress);
+      if (participantId) {
+        // Update the role
+        await db
+          .update(conversationParticipants)
+          .set({
+            role: newRole,
+            updatedAt: new Date()
+          })
+          .where(
+            and(
+              eq(conversationParticipants.conversationId, conversationId),
+              eq(conversationParticipants.userId, participantId),
+              isNull(conversationParticipants.leftAt)
+            )
+          );
+      }
 
       return {
         success: true,
@@ -1722,14 +1659,24 @@ export class MessagingService {
       const conversationId = newConversation[0].id;
 
       // Add all participants to conversationParticipants table
-      const participantRecords = uniqueParticipants.map((address, index) => ({
-        conversationId,
-        walletAddress: address,
-        role: index === 0 ? 'admin' : 'member', // Creator is admin
-        joinedAt: new Date()
-      }));
+      const participantRecords: any[] = [];
 
-      await db.insert(conversationParticipants).values(participantRecords);
+      for (let i = 0; i < uniqueParticipants.length; i++) {
+        const addr = uniqueParticipants[i];
+        const uid = await this.getUserIdByAddress(addr);
+        if (uid) {
+          participantRecords.push({
+            conversationId,
+            userId: uid,
+            role: i === 0 ? 'admin' : 'member', // Creator is admin
+            joinedAt: new Date()
+          });
+        }
+      }
+
+      if (participantRecords.length > 0) {
+        await db.insert(conversationParticipants).values(participantRecords);
+      }
 
       return {
         success: true,
@@ -1787,17 +1734,23 @@ export class MessagingService {
       }
 
       // Check if user is an admin
-      const participant = await db
-        .select()
-        .from(conversationParticipants)
-        .where(
-          and(
-            eq(conversationParticipants.conversationId, conversationId),
-            eq(conversationParticipants.walletAddress, userAddress.toLowerCase()),
-            isNull(conversationParticipants.leftAt)
+      const userId = await this.getUserIdByAddress(userAddress.toLowerCase());
+      let participant: any[] = [];
+      if (userId) {
+        participant = await db
+          .select({
+            role: conversationParticipants.role
+          })
+          .from(conversationParticipants)
+          .where(
+            and(
+              eq(conversationParticipants.conversationId, conversationId),
+              eq(conversationParticipants.userId, userId),
+              isNull(conversationParticipants.leftAt)
+            )
           )
-        )
-        .limit(1);
+          .limit(1);
+      }
 
       if (!participant.length || participant[0].role !== 'admin') {
         return { success: false, message: 'Only admins can update group settings' };
@@ -1889,8 +1842,15 @@ export class MessagingService {
 
       // Get all active participants
       const participants = await db
-        .select()
+        .select({
+          address: users.walletAddress,
+          role: conversationParticipants.role,
+          joinedAt: conversationParticipants.joinedAt,
+          isMuted: conversationParticipants.isMuted,
+          notificationsEnabled: conversationParticipants.notificationsEnabled
+        })
         .from(conversationParticipants)
+        .innerJoin(users, eq(conversationParticipants.userId, users.id))
         .where(
           and(
             eq(conversationParticipants.conversationId, conversationId),
@@ -1900,13 +1860,7 @@ export class MessagingService {
 
       return {
         success: true,
-        data: participants.map(p => ({
-          address: p.walletAddress,
-          role: p.role,
-          joinedAt: p.joinedAt,
-          isMuted: p.isMuted,
-          notificationsEnabled: p.notificationsEnabled
-        }))
+        data: participants
       };
     } catch (error) {
       safeLogger.error('Error getting participants with roles:', error);
@@ -2144,17 +2098,22 @@ export class MessagingService {
 
       // For group conversations, check role
       if (conversation[0].conversationType === 'group') {
-        const participant = await db
-          .select()
-          .from(conversationParticipants)
-          .where(
-            and(
-              eq(conversationParticipants.conversationId, conversationId),
-              eq(conversationParticipants.walletAddress, userAddress.toLowerCase()),
-              isNull(conversationParticipants.leftAt)
+        const participantId = await this.getUserIdByAddress(userAddress.toLowerCase());
+        let participant: any[] = [];
+
+        if (participantId) {
+          participant = await db
+            .select({ role: conversationParticipants.role })
+            .from(conversationParticipants)
+            .where(
+              and(
+                eq(conversationParticipants.conversationId, conversationId),
+                eq(conversationParticipants.userId, participantId),
+                isNull(conversationParticipants.leftAt)
+              )
             )
-          )
-          .limit(1);
+            .limit(1);
+        }
 
         if (!participant.length) {
           return { success: false, message: 'Not a member of this conversation' };

@@ -261,7 +261,7 @@ export class OrderService {
         serviceStartedAt,
         isServiceOrder,
         trackingNumber,
-        carrier
+        trackingCarrier: carrier
       });
 
       if (success) {

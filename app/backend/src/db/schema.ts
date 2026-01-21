@@ -4001,7 +4001,6 @@ export const conversationParticipants = pgTable("conversation_participants", {
   id: uuid("id").defaultRandom().primaryKey(),
   conversationId: uuid("conversation_id").references(() => conversations.id, { onDelete: "cascade" }).notNull(),
   userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
-  walletAddress: varchar("wallet_address", { length: 66 }).notNull(),
   role: varchar("role", { length: 32 }).default("member"),
   joinedAt: timestamp("joined_at").defaultNow(),
   leftAt: timestamp("left_at"),
@@ -4014,7 +4013,7 @@ export const conversationParticipants = pgTable("conversation_participants", {
 }, (t) => ({
   conversationIdIdx: index("idx_conversation_participants_conversation_id").on(t.conversationId),
   userIdIdx: index("idx_conversation_participants_user_id").on(t.userId),
-  walletAddressIdx: index("idx_conversation_participants_wallet_address").on(t.walletAddress),
+
   roleIdx: index("idx_conversation_participants_role").on(t.role),
   joinedAtIdx: index("idx_conversation_participants_joined_at").on(t.joinedAt),
   uniqueConversationUser: unique("unique_conversation_user").on(t.conversationId, t.userId),
