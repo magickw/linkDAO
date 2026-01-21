@@ -613,7 +613,15 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       }
 
       if (result.status === 'completed' || result.status === 'processing') {
-        // ... (existing success handling)
+        // Clear cart immediately upon successful payment
+        try {
+          console.log('🛒 Clearing cart after successful order...');
+          await actions.clearCart();
+        } catch (clearCartError) {
+          console.warn('Failed to clear cart after checkout:', clearCartError);
+          // Non-blocking error
+        }
+
         setOrderData(result);
         setCurrentStep('confirmation');
 

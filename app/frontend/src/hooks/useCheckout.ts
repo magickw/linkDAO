@@ -12,7 +12,7 @@ import CheckoutService, {
   PaymentDetails,
   ShippingAddress
 } from '@/services/checkoutService';
-import { CartItem } from '@/services/cartService';
+import { cartService, CartItem } from '@/services/cartService';
 
 interface CheckoutState {
   session: CheckoutSession | null;
@@ -161,6 +161,13 @@ export const useCheckout = (): CheckoutState & CheckoutActions => {
       );
 
       if (result.success) {
+        // Clear cart after successful checkout
+        try {
+          await cartService.clearCart();
+        } catch (cartError) {
+          console.warn('Failed to clear cart after successful checkout:', cartError);
+        }
+
         setState(prev => ({
           ...prev,
           result,

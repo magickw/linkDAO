@@ -178,7 +178,7 @@ export class MonitoringDashboardService {
       severity: 'warning',
       message: (metrics) => `Low throughput: ${metrics.performance.throughput.toFixed(2)} req/s`,
       cooldown: 30,
-      enabled: true
+      enabled: false
     });
   }
 
@@ -229,7 +229,7 @@ export class MonitoringDashboardService {
       const health = await healthMonitoringService.performHealthCheck();
       const systemMetrics = healthMonitoringService.getMetrics();
       const totalSystemMemory = os.totalmem();
-      
+
       const metrics: DashboardMetrics = {
         timestamp: new Date().toISOString(),
         system: {
@@ -282,7 +282,7 @@ export class MonitoringDashboardService {
 
       // Add to history
       this.metricsHistory.push(metrics);
-      
+
       // Trim history to max size
       if (this.metricsHistory.length > this.maxHistorySize) {
         this.metricsHistory = this.metricsHistory.slice(-this.maxHistorySize);
@@ -319,7 +319,7 @@ export class MonitoringDashboardService {
       try {
         if (rule.condition(metrics)) {
           const message = rule.message(metrics);
-          
+
           // Create alert
           const alert: AlertHistory = {
             id: `${ruleId}_${now}`,
@@ -525,7 +525,7 @@ export class MonitoringDashboardService {
     if (timeRange) {
       const startTime = timeRange.start.getTime();
       const endTime = timeRange.end.getTime();
-      
+
       history = history.filter(m => {
         const timestamp = new Date(m.timestamp).getTime();
         return timestamp >= startTime && timestamp <= endTime;
@@ -550,7 +550,7 @@ export class MonitoringDashboardService {
     memoryUsage: Array<{ timestamp: string; value: number }>;
   } {
     const cutoff = Date.now() - (hours * 60 * 60 * 1000);
-    const recentMetrics = this.metricsHistory.filter(m => 
+    const recentMetrics = this.metricsHistory.filter(m =>
       new Date(m.timestamp).getTime() > cutoff
     );
 

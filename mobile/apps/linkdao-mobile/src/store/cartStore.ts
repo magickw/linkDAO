@@ -92,6 +92,10 @@ export const cartStore = create<CartState>()(
 
       clearCart: () => {
         set({ items: [] });
+        // Also clear backend cart if possible
+        cartService.clearCart().catch(err => {
+          console.error('[CartStore] Failed to clear backend cart:', err);
+        });
       },
 
       getTotalPrice: () => {

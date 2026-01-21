@@ -1231,6 +1231,11 @@ class CartService {
       const handleStorageChange = (e: StorageEvent) => {
         if (e.key === 'auth_token' || e.key === 'linkdao_session_data') {
           this.checkAuthStatus();
+        } else if (e.key === this.storageKey) {
+          // Cart updated in another tab, refresh local state
+          console.log('🛒 Cart updated in another tab, refreshing...');
+          const newState = this.getCartStateSync();
+          this.notifyListeners(newState);
         }
       };
 

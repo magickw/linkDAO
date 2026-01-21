@@ -362,6 +362,16 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
         : await checkoutService.processPrioritizedCheckout(request);
 
       if (result.status === 'completed' || result.status === 'processing') {
+        // Remove item from cart if it was there
+        try {
+          if (cart.isInCart(listing.id)) {
+            console.log('🛒 Removing purchased item from cart...');
+            await cart.removeItem(listing.id);
+          }
+        } catch (cartError) {
+          console.warn('Failed to remove item from cart after QuickBuy:', cartError);
+        }
+
         setOrderId(result.orderId);
         setCurrentStep('confirmation');
         addToast('Purchase successful!', 'success');
