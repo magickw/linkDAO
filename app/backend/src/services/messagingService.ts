@@ -171,15 +171,23 @@ export class MessagingService {
             `
           })
           .from(conversations)
-          .innerJoin(
+
+          .leftJoin(
             conversationParticipants,
             eq(conversations.id, conversationParticipants.conversationId)
           )
-          .innerJoin(
+          .leftJoin(
             users,
             eq(conversationParticipants.userId, users.id)
           )
-          .where(sql`lower(${users.walletAddress}) = ${normalizedAddress}`)
+          .where(
+            or(
+              // Match optimization table (if populated)
+              sql`lower(${users.walletAddress}) = ${normalizedAddress}`,
+              // Fallback to JSON containment check (for legacy/unoptimized conversations)
+              sql`${conversations.participants} @> ${JSON.stringify([normalizedAddress])}::jsonb`
+            )
+          )
           .orderBy(desc(conversations.lastActivity))
           .limit(actualLimit)
           .offset(offset);

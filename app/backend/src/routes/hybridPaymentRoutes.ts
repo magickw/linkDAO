@@ -2,6 +2,7 @@ import express from 'express';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { HybridPaymentOrchestrator } from '../services/hybridPaymentOrchestrator';
 import { safeLogger } from '../utils/safeLogger';
+import { serializeBigInt } from '../utils/bigIntSerializer';
 
 const router = express.Router();
 const paymentOrchestrator = new HybridPaymentOrchestrator();
@@ -166,7 +167,9 @@ router.post('/checkout', authMiddleware, async (req, res) => {
       currency, 
       preferredMethod,
       userCountry,
-      paymentMethodDetails 
+      paymentMethodDetails,
+      shippingAddress,
+      shippingCost 
     } = req.body;
 
     // Validate required fields
@@ -187,7 +190,9 @@ router.post('/checkout', authMiddleware, async (req, res) => {
       currency,
       preferredMethod,
       userCountry,
-      metadata: paymentMethodDetails
+      metadata: paymentMethodDetails,
+      shippingAddress,
+      shippingCost: shippingCost ? parseFloat(shippingCost) : 0
     };
 
     // Process checkout with real payment integration
@@ -195,10 +200,10 @@ router.post('/checkout', authMiddleware, async (req, res) => {
 
     res.json({
       success: true,
-      data: {
+      data: serializeBigInt({
         ...checkoutResult,
         estimatedCompletionTime: checkoutResult.estimatedCompletionTime.toISOString()
-      }
+      })
     });
   } catch (error) {
     safeLogger.error('Error processing checkout:', error);

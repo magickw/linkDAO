@@ -310,10 +310,26 @@ export class HybridPaymentOrchestrator {
 
       let result: HybridPaymentResult;
 
-      if (pathDecision.selectedPath === 'crypto') {
-        result = await this.processCryptoEscrowPath(request, pathDecision, orderRecord);
-      } else {
-        result = await this.processFiatEscrowPath(request, pathDecision, orderRecord);
+      try {
+        if (pathDecision.selectedPath === 'crypto') {
+          result = await this.processCryptoEscrowPath(request, pathDecision, orderRecord);
+        } else {
+          result = await this.processFiatEscrowPath(request, pathDecision, orderRecord);
+        }
+      } catch (paymentError) {
+        safeLogger.error('[processHybridCheckout] Payment processing failed, marking order as failed:', paymentError);
+        // Mark order as failed in database
+        if (orderRecord && orderRecord.id) {
+          await this.databaseService.updateOrder(orderRecord.id, {
+            status: 'failed',
+            metadata: JSON.stringify({
+              ...JSON.parse(orderRecord.metadata || '{}'),
+              failureReason: paymentError instanceof Error ? paymentError.message : 'Payment processing failed',
+              failedAt: new Date()
+            })
+          });
+        }
+        throw paymentError;
       }
 
       // Send notifications
