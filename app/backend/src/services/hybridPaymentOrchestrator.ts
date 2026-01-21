@@ -169,103 +169,103 @@ export class HybridPaymentOrchestrator {
         provider: 'stripe'
       };
 
-            // Calculate fees
-            // 1. Platform Listing/Sale Fee: 15% (Charged to SELLER)
-            const platformFeeRate = 0.15; 
-            const platformFee = request.amount * platformFeeRate;
-      
-            // 2. Tax Calculation
-            // taxAmount is already calculated above using taxService
-      
-            // 3. Financial Processing Fee (Transaction specific - Charged to BUYER)
-            let processingFee = 0;
-            let gasFee = 0;
-      
-            if (selectedPath === 'crypto') {
-              gasFee = 0.01; // Estimate gas for crypto transactions
-              // For crypto, we might charge a small additional processing fee or just gas
-              processingFee = 0; 
-            } else {
-              // Stripe fees: 2.9% + $0.30 
-              // This is calculated on the TOTAL amount charged to the card (Price + Tax)
-              // Platform fee is NOT added to the buyer's total, so it doesn't affect Stripe fee base here directly,
-              // UNLESS the platform fee is added on top. User said "charged to seller", so it comes out of the request.amount.
-              // Therefore, Buyer pays: Price + Tax. Processing fee is on (Price + Tax).
-              processingFee = ((request.amount + taxAmount) * 0.029) + 0.30;
-            }
-      
-            // Total charged to Buyer
-            const totalAmount = request.amount + taxAmount + processingFee + (gasFee || 0);
-      
-            // Total Fees object (informational)
-            const fees = {
-              processingFee,
-              platformFee, // Still tracked for seller deduction
-              gasFee,
-              taxAmount,
-              currency: request.currency,
-              totalFees: platformFee + processingFee + (gasFee || 0) + taxAmount
-            };
-      
-            // Generate fallback options
-            const fallbackOptions: PaymentPathDecision[] = [];
-            if (selectedPath === 'crypto' && fiatMethods.availableMethods.length > 0) {
-              const fiatPlatformFee = request.amount * platformFeeRate;
-              const fiatProcessingFee = ((request.amount + taxAmount) * 0.029) + 0.30;
-              const fiatTotalAmount = request.amount + taxAmount + fiatProcessingFee;
-              
-              fallbackOptions.push({
-                selectedPath: 'fiat',
-                reason: 'Fiat fallback if crypto payment fails',
-                method: { type: 'fiat', provider: 'stripe' },
-                fees: {
-                  processingFee: fiatProcessingFee,
-                  platformFee: fiatPlatformFee,
-                  gasFee: 0,
-                  taxAmount,
-                  currency: request.currency
-                },
-                totalAmount: fiatTotalAmount,
-                estimatedTime: 'Instant',
-                fallbackOptions: []
-              });
-            }
-      
-            return {
-              selectedPath,
-              reason,
-              method,
-              fees: fees as any, // Cast to any to match interface if strict
-              totalAmount,
-              estimatedTime: selectedPath === 'crypto' ? '1-5 minutes' : 'Instant',
-              fallbackOptions
-            };
-          } catch (error) {
-            safeLogger.error('Error determining payment path:', error);
-      
-            // Default to fiat on error
-            const platformFee = request.amount * 0.15; 
-            const processingFee = (request.amount * 0.029) + 0.30;
-            const totalAmount = request.amount + processingFee;
-            
-            return {
-              selectedPath: 'fiat',
-              reason: 'Defaulting to fiat due to path determination error',
-              method: { type: 'fiat', provider: 'stripe' },
-              fees: {
-                processingFee,
-                platformFee,
-                gasFee: 0,
-                taxAmount: 0, 
-                currency: request.currency,
-                totalFees: processingFee // Legacy field support
-              } as any,
-              totalAmount,
-              estimatedTime: 'Instant',
-              fallbackOptions: []
-            };
-          }
-        }
+      // Calculate fees
+      // 1. Platform Listing/Sale Fee: 15% (Charged to SELLER)
+      const platformFeeRate = 0.15;
+      const platformFee = request.amount * platformFeeRate;
+
+      // 2. Tax Calculation
+      // taxAmount is already calculated above using taxService
+
+      // 3. Financial Processing Fee (Transaction specific - Charged to BUYER)
+      let processingFee = 0;
+      let gasFee = 0;
+
+      if (selectedPath === 'crypto') {
+        gasFee = 0.01; // Estimate gas for crypto transactions
+        // For crypto, we might charge a small additional processing fee or just gas
+        processingFee = 0;
+      } else {
+        // Stripe fees: 2.9% + $0.30 
+        // This is calculated on the TOTAL amount charged to the card (Price + Tax)
+        // Platform fee is NOT added to the buyer's total, so it doesn't affect Stripe fee base here directly,
+        // UNLESS the platform fee is added on top. User said "charged to seller", so it comes out of the request.amount.
+        // Therefore, Buyer pays: Price + Tax. Processing fee is on (Price + Tax).
+        processingFee = ((request.amount + taxAmount) * 0.029) + 0.30;
+      }
+
+      // Total charged to Buyer
+      const totalAmount = request.amount + taxAmount + processingFee + (gasFee || 0);
+
+      // Total Fees object (informational)
+      const fees = {
+        processingFee,
+        platformFee, // Still tracked for seller deduction
+        gasFee,
+        taxAmount,
+        currency: request.currency,
+        totalFees: platformFee + processingFee + (gasFee || 0) + taxAmount
+      };
+
+      // Generate fallback options
+      const fallbackOptions: PaymentPathDecision[] = [];
+      if (selectedPath === 'crypto' && fiatMethods.availableMethods.length > 0) {
+        const fiatPlatformFee = request.amount * platformFeeRate;
+        const fiatProcessingFee = ((request.amount + taxAmount) * 0.029) + 0.30;
+        const fiatTotalAmount = request.amount + taxAmount + fiatProcessingFee;
+
+        fallbackOptions.push({
+          selectedPath: 'fiat',
+          reason: 'Fiat fallback if crypto payment fails',
+          method: { type: 'fiat', provider: 'stripe' },
+          fees: {
+            processingFee: fiatProcessingFee,
+            platformFee: fiatPlatformFee,
+            gasFee: 0,
+            taxAmount,
+            currency: request.currency
+          },
+          totalAmount: fiatTotalAmount,
+          estimatedTime: 'Instant',
+          fallbackOptions: []
+        });
+      }
+
+      return {
+        selectedPath,
+        reason,
+        method,
+        fees: fees as any, // Cast to any to match interface if strict
+        totalAmount,
+        estimatedTime: selectedPath === 'crypto' ? '1-5 minutes' : 'Instant',
+        fallbackOptions
+      };
+    } catch (error) {
+      safeLogger.error('Error determining payment path:', error);
+
+      // Default to fiat on error
+      const platformFee = request.amount * 0.15;
+      const processingFee = (request.amount * 0.029) + 0.30;
+      const totalAmount = request.amount + processingFee;
+
+      return {
+        selectedPath: 'fiat',
+        reason: 'Defaulting to fiat due to path determination error',
+        method: { type: 'fiat', provider: 'stripe' },
+        fees: {
+          processingFee,
+          platformFee,
+          gasFee: 0,
+          taxAmount: 0,
+          currency: request.currency,
+          totalFees: processingFee // Legacy field support
+        } as any,
+        totalAmount,
+        estimatedTime: 'Instant',
+        fallbackOptions: []
+      };
+    }
+  }
   /**
    * Execute hybrid checkout with automatic path selection
    */
@@ -450,8 +450,8 @@ export class HybridPaymentOrchestrator {
       }
 
       // Calculate total amount (Stripe expects amount in cents)
-      const totalAmount = Math.round(pathDecision.totalAmount * 100); 
-      
+      const totalAmount = Math.round(pathDecision.totalAmount * 100);
+
       // Calculate application fee (Platform Fee + Tax)
       // Note: Tax is typically collected by platform and remitted, so it's part of the application fee in Stripe Connect
       // unless using Stripe Tax automatic remittance. Assuming manual handling here.
@@ -488,11 +488,11 @@ export class HybridPaymentOrchestrator {
         description: `Order ${request.orderId} - LinkDAO Marketplace`,
         sellerAccountId,
         platformFee: applicationFee / 100 // Service expects dollars/units? No, stripeService expects whatever the underlying API expects.
-                                          // Checking StripePaymentService... it takes "platformFee" and subtracts it.
-                                          // It expects "amount" and "platformFee" in same units as "amount" passed to it.
-                                          // Wait, createMarketplacePaymentIntent in stripePaymentService takes `platformFee?: number`.
-                                          // And does `params.amount - params.platformFee`.
-                                          // So I should pass `applicationFee` (in cents) as `platformFee`.
+        // Checking StripePaymentService... it takes "platformFee" and subtracts it.
+        // It expects "amount" and "platformFee" in same units as "amount" passed to it.
+        // Wait, createMarketplacePaymentIntent in stripePaymentService takes `platformFee?: number`.
+        // And does `params.amount - params.platformFee`.
+        // So I should pass `applicationFee` (in cents) as `platformFee`.
       });
 
       safeLogger.info(`Created Stripe PaymentIntent ${result.paymentIntentId} for order ${request.orderId}`);
@@ -553,7 +553,7 @@ export class HybridPaymentOrchestrator {
       } catch (e) {
         safeLogger.warn('getUserByAddress failed for buyer, trying getUserById:', e);
       }
-      
+
       if (!buyer) {
         // Try to find user by wallet address in a different way
         try {
@@ -577,7 +577,7 @@ export class HybridPaymentOrchestrator {
       } catch (e) {
         safeLogger.warn('getUserByAddress failed for seller, trying getUserById:', e);
       }
-      
+
       if (!seller) {
         // Try to find user by wallet address in a different way
         try {
@@ -634,9 +634,10 @@ export class HybridPaymentOrchestrator {
         orderData.sellerId,
         orderData.amount, // Total amount paid by buyer
         orderData.paymentToken,
+        1, // quantity
         undefined, // escrowId
         undefined, // variantId
-        request.orderId, // Pass the orderId from the request
+        request.orderId, // orderId
         pathDecision.fees.taxAmount.toString(),
         '0', // Shipping cost (needs to be passed in request to be accurate)
         pathDecision.fees.platformFee.toString(),
@@ -900,7 +901,7 @@ export class HybridPaymentOrchestrator {
   }> {
     try {
       const result = await this.stripeService.processRefund(
-        paymentIntentId, 
+        paymentIntentId,
         undefined, // Full refund
         reason,
         {
@@ -933,7 +934,7 @@ export class HybridPaymentOrchestrator {
   async cancelStripePayment(paymentIntentId: string, orderId: string): Promise<boolean> {
     try {
       const result = await this.stripeService.cancelPayment(paymentIntentId);
-      
+
       if (!result.success) {
         throw new Error(result.error || 'Cancellation failed');
       }

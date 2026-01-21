@@ -301,7 +301,7 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
     setSelectedPaymentMethod(method);
     if (method.method.type !== PaymentMethodType.FIAT_STRIPE && isConnected) {
       const requiredChainId = method.method.chainId;
-      if (chainId !== requiredChainId && switchChain) {
+      if (requiredChainId && chainId !== requiredChainId && switchChain) {
         try {
           await switchChain({ chainId: requiredChainId });
           addToast(`Switched to ${getNetworkName(requiredChainId)}`, 'success');
@@ -343,7 +343,7 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
       setCurrentStep('processing');
 
       const request: PrioritizedCheckoutRequest = {
-        orderId: `order_${Date.now()}`,
+        orderId: crypto.randomUUID(),
         listingId: listing.id,
         buyerAddress: address,
         sellerAddress: listing.sellerWalletAddress,

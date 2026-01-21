@@ -403,7 +403,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
       // Also get legacy recommendation for backward compatibility
       const request: UnifiedCheckoutRequest = {
-        orderId: `order_${Date.now()}`,
+        orderId: crypto.randomUUID(),
         listingId: cartState.items[0]?.id || '',
         buyerAddress: address || '',
         sellerAddress: cartState.items[0]?.seller?.walletAddress || cartState.items[0]?.seller?.id || '',
@@ -518,7 +518,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       }
 
       const request: PrioritizedCheckoutRequest = {
-        orderId: `order_${Date.now()}`,
+        orderId: crypto.randomUUID(),
         listingId: listingId,
         buyerAddress: address,
         sellerAddress: sellerAddress,

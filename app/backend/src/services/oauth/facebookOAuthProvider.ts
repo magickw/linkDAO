@@ -15,15 +15,14 @@ const FACEBOOK_USER_URL = `https://graph.facebook.com/${FACEBOOK_API_VERSION}/me
 const FACEBOOK_FEED_URL = `https://graph.facebook.com/${FACEBOOK_API_VERSION}/me/feed`;
 
 // Default scopes for Facebook
-// Note: public_profile is always included by default
-// - pages_manage_posts: Create and manage posts as a Page
-// - pages_read_engagement: Read engagement data for Pages
+// Note: public_profile is always included by default and doesn't require app review
+// - email: Requires app review for non-test users
+// - pages_manage_posts: Create and manage posts as a Page (requires Business app verification)
+// - pages_read_engagement: Read engagement data for Pages (requires Business app verification)
 //
-// NOTE: 'publish_to_groups' requires specific app review and is often restricted.
-// NOTE: 'pages_manage_posts' and 'pages_read_engagement' require "Business" app type verification.
-// If the app is in "Consumer" mode, these will cause "Invalid Scopes".
-// We generate a limited scope set for development/consumer apps.
-const DEFAULT_SCOPES = ['public_profile', 'email'];
+// IMPORTANT: For development/consumer apps, use ONLY public_profile
+// For production apps needing email or page management, submit for app review
+const DEFAULT_SCOPES = ['public_profile'];
 
 export class FacebookOAuthProvider extends BaseOAuthProvider {
   constructor() {
@@ -148,7 +147,7 @@ export class FacebookOAuthProvider extends BaseOAuthProvider {
   async getUserInfo(accessToken: string): Promise<OAuthUserInfo> {
     try {
       const params = new URLSearchParams({
-        fields: 'id,name,email,picture.type(large)',
+        fields: 'id,name,picture.type(large)', // Removed 'email' as it requires app review
         access_token: accessToken,
       });
 
@@ -165,7 +164,7 @@ export class FacebookOAuthProvider extends BaseOAuthProvider {
       return {
         platformUserId: data.id,
         displayName: data.name,
-        email: data.email,
+        email: undefined, // Email not available without app review
         avatarUrl: data.picture?.data?.url,
       };
     } catch (error) {
