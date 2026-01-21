@@ -37,7 +37,6 @@ router.get('/:shareId', async (req: Request, res: Response) => {
       console.warn(`[PostShareRoutes] Content not found for Share ID: ${shareId}`);
 
       // DEBUG: Perform raw DB checks to diagnose why resolution failed
-      // This will help us identify if it's a data missing issue or a resolver logic issue
       let debugInfo: any = {
         inStatuses: false,
         inPosts: false,

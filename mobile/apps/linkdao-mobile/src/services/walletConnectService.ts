@@ -86,9 +86,8 @@ class WalletService {
           address = await this.connectMetaMask();
           break;
         case 'walletconnect':
-          throw new Error('WalletConnect is currently disabled due to compatibility issues. Please use MetaMask instead.');
-          // address = await this.connectWalletConnect();
-          // break;
+          address = await this.connectWalletConnect();
+          break;
         case 'coinbase':
           address = await this.connectCoinbase();
           break;
@@ -154,53 +153,203 @@ class WalletService {
           throw error;
         }
       }  /**
-   * Connect via WalletConnect (Reown AppKit)
-   * Note: Disabled due to Node.js module compatibility issues in React Native
+   * Connect via WalletConnect
+   * Uses deep linking to connect to WalletConnect-compatible wallets
    */
-  // private async connectWalletConnect(): Promise<string> {
-  //   try {
-  //     if (!this.appKit) {
-  //       throw new Error('Reown AppKit not initialized');
-  //     }
+  private async connectWalletConnect(): Promise<string> {
+    try {
+      console.log('🔗 Connecting via WalletConnect...');
 
-  //     console.log('🔗 Connecting via WalletConnect...');
+      // WalletConnect deep link scheme
+      const wcScheme = 'wc:';
 
-  //     // Open WalletConnect modal
-  //     const result = await this.appKit.openModal({
-  //       view: 'Connect',
-  //     });
+      // Create a WalletConnect URI
+      // In a production implementation, you'd generate a proper WalletConnect URI
+      // with your dapp's metadata and redirect to the wallet
+      const dappName = 'LinkDAO Mobile';
+      const dappUrl = 'https://linkdao.io';
+      const description = 'Connect your wallet to LinkDAO';
 
-  //     if (!result || !result.address) {
-  //       throw new Error('Failed to get address from WalletConnect');
-  //     }
+      // For now, we'll use a simplified approach
+      // In production, you'd use @walletconnect/web3provider or similar
+      const wcUri = `${wcScheme}${dappName}@1?bridge=https://bridge.walletconnect.org&key=${Date.now()}`;
 
-  //     const address = result.address;
-  //     console.log('✅ Connected via WalletConnect:', address);
+      // Try to open with a generic WalletConnect deep link
+      // This will prompt the user to choose a WalletConnect-compatible wallet
+      await Linking.openURL(wcUri);
 
-  //     return address;
-  //   } catch (error) {
-  //     console.error('❌ WalletConnect connection failed:', error);
-  //     throw error;
-  //   }
-  // }
+      // Note: In a real implementation, you'd need to:
+      // 1. Generate a proper WalletConnect URI with your dapp's metadata
+      // 2. Set up a WebSocket connection to handle the WalletConnect session
+      // 3. Handle the callback when the user approves the connection
+      // 4. Store the session for future use
+
+      throw new Error(
+        'WalletConnect connection requires additional setup. ' +
+        'Please use MetaMask for now or complete the WalletConnect implementation.\n' +
+        'To implement WalletConnect, install @walletconnect/web3provider and set up the session handling.'
+      );
+
+    } catch (error) {
+      console.error('❌ WalletConnect connection failed:', error);
+      throw error;
+    }
+  }
 
   /**
 
-     * Connect to Coinbase Wallet
+       * Connect to Coinbase Wallet
 
-     */
+       * Uses deep linking to connect to Coinbase Wallet mobile app
 
-    private async connectCoinbase(): Promise<string> {
+       */
 
-      throw new Error('Coinbase Wallet integration not yet implemented. Please use MetaMask for now.');
+      private async connectCoinbase(): Promise<string> {
 
-    }
+        try {
+
+          console.log('🔷 Connecting to Coinbase Wallet...');
+
+  
+
+          // Coinbase Wallet deep link scheme
+
+          const cbWalletScheme = 'cbwallet://';
+
+  
+
+          // Check if Coinbase Wallet is installed
+
+          const isInstalled = await Linking.canOpenURL(cbWalletScheme);
+
+  
+
+          if (!isInstalled) {
+
+            // Redirect to App Store if not installed
+
+            const appStoreUrl = Platform.OS === 'ios'
+
+              ? 'https://apps.apple.com/app/coinbase-wallet/id1278383455'
+
+              : 'https://play.google.com/store/apps/details?id=org.toshi';
+
+  
+
+            throw new Error(
+
+              'Coinbase Wallet is not installed. Please install it from the app store first.\n' +
+
+              `Download from: ${appStoreUrl}`
+
+            );
+
+          }
+
+  
+
+          // Create a deep link to connect to Coinbase Wallet
+
+          // Using WalletConnect protocol for connection
+
+          const dappName = 'LinkDAO Mobile';
+
+          const dappUrl = 'https://linkdao.io';
+
+  
+
+          // For now, we'll use a simple deep link approach
+
+          // In production, you'd want to use WalletConnect protocol
+
+          const deepLink = `${cbWalletScheme}connect?dappName=${encodeURIComponent(dappName)}&dappUrl=${encodeURIComponent(dappUrl)}`;
+
+  
+
+          // Open Coinbase Wallet
+
+          await Linking.openURL(deepLink);
+
+  
+
+          // Note: In a real implementation, you'd need to handle the callback
+
+          // from Coinbase Wallet when the user approves the connection
+
+          // This would require setting up a custom URL scheme in your app
+
+  
+
+          throw new Error(
+
+            'Coinbase Wallet connection requires additional setup. ' +
+
+            'Please use MetaMask for now or complete the deep link callback implementation.'
+
+          );
+
+  
+
+        } catch (error) {
+
+          console.error('❌ Failed to connect to Coinbase Wallet:', error);
+
+          throw error;
+
+        }
+
+      }
 
   /**
    * Connect to Trust Wallet
+   * Uses deep linking to connect to Trust Wallet mobile app
    */
   private async connectTrust(): Promise<string> {
-    throw new Error('Trust Wallet integration not yet implemented. Please use MetaMask for now.');
+    try {
+      console.log('🛡️ Connecting to Trust Wallet...');
+
+      // Trust Wallet deep link scheme
+      const trustWalletScheme = 'trust://';
+
+      // Check if Trust Wallet is installed
+      const isInstalled = await Linking.canOpenURL(trustWalletScheme);
+
+      if (!isInstalled) {
+        // Redirect to App Store if not installed
+        const appStoreUrl = Platform.OS === 'ios'
+          ? 'https://apps.apple.com/app/trust-crypto-bitcoin-wallet/id1288339409'
+          : 'https://play.google.com/store/apps/details?id=com.wallet.crypto.trustapp';
+
+        throw new Error(
+          'Trust Wallet is not installed. Please install it from the app store first.\n' +
+          `Download from: ${appStoreUrl}`
+        );
+      }
+
+      // Create a deep link to connect to Trust Wallet
+      const dappName = 'LinkDAO Mobile';
+      const dappUrl = 'https://linkdao.io';
+
+      // Trust Wallet uses WalletConnect protocol
+      // For now, we'll use a simple deep link approach
+      const deepLink = `${trustWalletScheme}connect?dappName=${encodeURIComponent(dappName)}&dappUrl=${encodeURIComponent(dappUrl)}`;
+
+      // Open Trust Wallet
+      await Linking.openURL(deepLink);
+
+      // Note: In a real implementation, you'd need to handle the callback
+      // from Trust Wallet when the user approves the connection
+      // This would require setting up a custom URL scheme in your app
+
+      throw new Error(
+        'Trust Wallet connection requires additional setup. ' +
+        'Please use MetaMask for now or complete the deep link callback implementation.'
+      );
+
+    } catch (error) {
+      console.error('❌ Failed to connect to Trust Wallet:', error);
+      throw error;
+    }
   }
 
   /**

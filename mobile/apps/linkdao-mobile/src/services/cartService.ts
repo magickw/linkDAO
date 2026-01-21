@@ -1,6 +1,7 @@
 /**
  * Cart Service
  * Handles shopping cart synchronization with backend
+ * Enhanced to include sellerWalletAddress directly in cart data
  */
 
 import { apiClient } from './apiClient';
@@ -8,6 +9,22 @@ import { apiClient } from './apiClient';
 export interface CartItemSync {
     productId: string;
     quantity: number;
+}
+
+export interface CartItem {
+    id: string;
+    productId: string;
+    quantity: number;
+    title: string;
+    description: string;
+    priceAmount: string;
+    priceCurrency: string;
+    images: string[];
+    sellerId: string;
+    sellerWalletAddress?: string; // Directly included to avoid separate profile fetch
+    status: string;
+    inventory: number;
+    appliedDiscount?: string;
 }
 
 class CartService {

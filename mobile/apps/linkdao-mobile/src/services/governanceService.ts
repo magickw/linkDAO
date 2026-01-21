@@ -653,29 +653,63 @@ class GovernanceService {
   }
 
   /**
-   * Analyze proposal with AI (mock implementation)
+   * Analyze proposal with AI
+   * Calls backend AI service for actual proposal analysis
    */
   async analyzeProposal(proposal: Proposal): Promise<AIProposalAnalysis | null> {
     try {
-      // Mock AI analysis - in production, this would call an AI service
-      const mockAnalysis: AIProposalAnalysis = {
+      // Call backend AI service for proposal analysis
+      const response = await apiClient.post(`${this.baseUrl}/ai/analyze-proposal`, {
         proposalId: proposal.id,
-        analysis: `This proposal ${proposal.title} aims to ${proposal.description.substring(0, 100)}... The proposal appears to be well-structured with clear objectives.`,
-        recommendation: Math.random() > 0.3 ? 'APPROVE' : Math.random() > 0.5 ? 'REJECT' : 'NEUTRAL',
-        confidence: Math.floor(Math.random() * 30) + 70,
-        riskLevel: proposal.category === 'treasury' ? 'medium' : 'low',
-        keyPoints: [
-          'Clear proposal objectives',
-          'Reasonable voting duration',
-          'Adequate quorum requirements',
-        ],
-        potentialImpact: proposal.category === 'treasury' ? 'High financial impact' : 'Moderate community impact',
+        title: proposal.title,
+        description: proposal.description,
+        category: proposal.category,
+        proposer: proposal.proposer,
+        votingPower: proposal.forVotes,
+        againstVotes: proposal.againstVotes,
+        abstainVotes: proposal.abstainVotes,
+        endTime: proposal.endTime,
+      });
+
+      const data = response.data.data || response.data;
+
+      return {
+        proposalId: proposal.id,
+        analysis: data.analysis || 'AI analysis not available',
+        recommendation: data.recommendation || 'NEUTRAL',
+        confidence: data.confidence || 0,
+        riskLevel: data.riskLevel || 'unknown',
+        keyPoints: data.keyPoints || [],
+        potentialImpact: data.potentialImpact || 'Unknown',
+        feasibilityScore: data.feasibilityScore,
+        impactScore: data.impactScore,
+        qualityScore: data.qualityScore,
       };
-      return mockAnalysis;
     } catch (error) {
-      console.error('Error analyzing proposal:', error);
-      return null;
+      console.error('[Governance] Error analyzing proposal with AI:', error);
+
+      // Fallback to mock analysis if AI service is unavailable
+      return this.getFallbackAnalysis(proposal);
     }
+  }
+
+  /**
+   * Fallback analysis when AI service is unavailable
+   */
+  private getFallbackAnalysis(proposal: Proposal): AIProposalAnalysis {
+    return {
+      proposalId: proposal.id,
+      analysis: `This proposal "${proposal.title}" aims to ${proposal.description.substring(0, 100)}... The proposal appears to be well-structured with clear objectives. Note: AI analysis service is currently unavailable.`,
+      recommendation: 'NEUTRAL',
+      confidence: 50,
+      riskLevel: proposal.category === 'treasury' ? 'medium' : 'low',
+      keyPoints: [
+        'Clear proposal objectives',
+        'Reasonable voting duration',
+        'Adequate quorum requirements',
+      ],
+      potentialImpact: proposal.category === 'treasury' ? 'High financial impact' : 'Moderate community impact',
+    };
   }
 
   /**

@@ -21,9 +21,13 @@ export class DatabaseService {
 
   private initializeDatabase() {
     try {
-      // Use the database instance from db/index.ts
-      if (databaseInstance) {
-        this.db = databaseInstance;
+      // Use dynamic require to ensure we get the latest exported values, 
+      // avoiding stale references if the db module re-initialized
+      const dbModule = require('../db/index');
+      const currentDbInstance = dbModule.db;
+
+      if (currentDbInstance) {
+        this.db = currentDbInstance;
         this.isConnected = true;
         // Only log once on first initialization
         if (!DatabaseService.initialized) {
@@ -72,6 +76,13 @@ export class DatabaseService {
   }
 
   public getDatabase() {
+    // Attempt re-initialization if not connected or using mock
+    if (!this.isConnected || !this.db || !this.db.select) {
+      safeLogger.warn('DatabaseService: Connection missing or mock detected during getDatabase(), attempting re-initialization...');
+      this.initializeDatabase();
+    }
+
+    // Check again
     this.checkConnection();
     return this.db;
   }

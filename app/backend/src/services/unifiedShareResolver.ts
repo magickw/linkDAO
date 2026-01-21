@@ -90,62 +90,80 @@ export class UnifiedShareResolver {
    * Resolve status by share ID
    */
   private async resolveStatus(shareId: string): Promise<ShareResolution | null> {
-    const db = databaseService.getDatabase();
-    const statusResult = await db
-      .select({
-        id: statuses.id,
-        shareId: statuses.shareId,
-        authorId: statuses.authorId,
-        content: statuses.content,
-        contentCid: statuses.contentCid,
-        mediaCids: statuses.mediaCids,
-        tags: statuses.tags,
-        createdAt: statuses.createdAt,
-        handle: users.handle,
-        walletAddress: users.walletAddress,
-        displayName: users.displayName,
-      })
-      .from(statuses)
-      .leftJoin(users, eq(statuses.authorId, users.id))
-      .where(eq(statuses.shareId, shareId))
-      .limit(1);
+    try {
+      safeLogger.debug(`[UnifiedShareResolver] Resolving status for shareId: ${shareId}`);
+      const db = databaseService.getDatabase();
 
-    if (!statusResult || statusResult.length === 0) {
+      const statusResult = await db
+        .select({
+          id: statuses.id,
+          shareId: statuses.shareId,
+          authorId: statuses.authorId,
+          content: statuses.content,
+          contentCid: statuses.contentCid,
+          mediaCids: statuses.mediaCids,
+          tags: statuses.tags,
+          createdAt: statuses.createdAt,
+          handle: users.handle,
+          walletAddress: users.walletAddress,
+          displayName: users.displayName,
+        })
+        .from(statuses)
+        .leftJoin(users, eq(statuses.authorId, users.id))
+        .where(eq(statuses.shareId, shareId))
+        .limit(1);
+
+      if (!statusResult || statusResult.length === 0) {
+        safeLogger.debug(`[UnifiedShareResolver] No status found for shareId: ${shareId}`);
+        return null;
+      }
+
+      safeLogger.debug(`[UnifiedShareResolver] Found status for shareId: ${shareId}, ID: ${statusResult[0].id}`);
+      return this.mapStatusResult(statusResult[0]);
+    } catch (error) {
+      safeLogger.error(`[UnifiedShareResolver] Error resolving status for shareId ${shareId}:`, error);
       return null;
     }
-
-    return this.mapStatusResult(statusResult[0]);
   }
 
   /**
    * Resolve status by UUID (fallback)
    */
   private async resolveStatusById(id: string): Promise<ShareResolution | null> {
-    const db = databaseService.getDatabase();
-    const statusResult = await db
-      .select({
-        id: statuses.id,
-        shareId: statuses.shareId,
-        authorId: statuses.authorId,
-        content: statuses.content,
-        contentCid: statuses.contentCid,
-        mediaCids: statuses.mediaCids,
-        tags: statuses.tags,
-        createdAt: statuses.createdAt,
-        handle: users.handle,
-        walletAddress: users.walletAddress,
-        displayName: users.displayName,
-      })
-      .from(statuses)
-      .leftJoin(users, eq(statuses.authorId, users.id))
-      .where(eq(statuses.id, id))
-      .limit(1);
+    try {
+      safeLogger.debug(`[UnifiedShareResolver] Resolving status by ID: ${id}`);
+      const db = databaseService.getDatabase();
 
-    if (!statusResult || statusResult.length === 0) {
+      const statusResult = await db
+        .select({
+          id: statuses.id,
+          shareId: statuses.shareId,
+          authorId: statuses.authorId,
+          content: statuses.content,
+          contentCid: statuses.contentCid,
+          mediaCids: statuses.mediaCids,
+          tags: statuses.tags,
+          createdAt: statuses.createdAt,
+          handle: users.handle,
+          walletAddress: users.walletAddress,
+          displayName: users.displayName,
+        })
+        .from(statuses)
+        .leftJoin(users, eq(statuses.authorId, users.id))
+        .where(eq(statuses.id, id))
+        .limit(1);
+
+      if (!statusResult || statusResult.length === 0) {
+        safeLogger.debug(`[UnifiedShareResolver] No status found for ID: ${id}`);
+        return null;
+      }
+
+      safeLogger.debug(`[UnifiedShareResolver] Found status for ID: ${id}`);
+      return this.mapStatusResult(statusResult[0]);
+    } catch (error) {
+      safeLogger.error(`[UnifiedShareResolver] Error resolving status by ID ${id}:`, error);
       return null;
     }
-
-    return this.mapStatusResult(statusResult[0]);
   }
 
   private mapStatusResult(item: any): ShareResolution {

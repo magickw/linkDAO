@@ -1,11 +1,19 @@
-
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+dotenv.config({ path: path.join(__dirname, '../../.env') });
 import { db } from '../src/db';
 import { statuses, posts } from '../src/db/schema';
 import { eq } from 'drizzle-orm';
 import { unifiedShareResolver } from '../src/services/unifiedShareResolver';
 
+import { databaseService } from '../src/services/databaseService';
+
 async function checkShareId(shareId: string) {
     console.log(`Checking share ID: ${shareId}`);
+    console.log(`DB URL available: ${!!process.env.DATABASE_URL}`);
+    console.log('Script dir:', __dirname);
+
+    const db = databaseService.getDatabase();
 
     // Check statuses
     const status = await db.select().from(statuses).where(eq(statuses.shareId, shareId)).limit(1);

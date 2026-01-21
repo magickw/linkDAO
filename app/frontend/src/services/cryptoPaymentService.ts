@@ -526,6 +526,15 @@ export class CryptoPaymentService {
       throw new Error('Public client not initialized');
     }
 
+    // Validate that the provider is on the correct chain for the token
+    const currentChainId = await this.publicClient.getChainId();
+    if (token.chainId && token.chainId !== currentChainId) {
+      throw new Error(
+        `Network mismatch: Token ${token.symbol} is on chain ${token.chainId}, but provider is on chain ${currentChainId}. ` +
+        `Please switch to the correct network (${token.chainId}) before proceeding.`
+      );
+    }
+
     if (token.isNative) {
       balance = await this.publicClient.getBalance({ address: userAddress });
     } else {

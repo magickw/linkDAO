@@ -1,10 +1,12 @@
 /**
  * WebSocket Service
  * Real-time updates for posts, messages, and notifications
+ * Enhanced to use accessToken for proper backend authentication
  */
 
 import { io, Socket } from 'socket.io-client';
 import { ENV } from '../constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type WebSocketEvent =
   | 'connected'
@@ -28,12 +30,21 @@ class WebSocketService {
   private reconnectDelay = 1000;
   private eventListeners: Map<WebSocketEvent, Set<EventHandler>> = new Map();
   private isConnecting = false;
+  private accessToken: string | null = null;
 
   /**
-   * Connect to WebSocket server
+   * Connect to WebSocket server using accessToken
    */
-  connect(token: string): void {
+  async connect(): Promise<void> {
     if (this.socket?.connected || this.isConnecting) {
+      return;
+    }
+
+    // Get accessToken from AsyncStorage
+    this.accessToken = await this.getAccessToken();
+
+    if (!this.accessToken) {
+      console.warn('[WebSocket] No access token available, skipping connection');
       return;
     }
 
@@ -41,7 +52,7 @@ class WebSocketService {
 
     try {
       this.socket = io(ENV.WS_URL, {
-        auth: { token },
+        auth: { token: this.accessToken }, // Use accessToken for authentication
         transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionDelay: 1000,
@@ -51,8 +62,27 @@ class WebSocketService {
 
       this.setupEventHandlers();
     } catch (error) {
-      console.error('WebSocket connection error:', error);
+      console.error('[WebSocket] Connection error:', error);
       this.isConnecting = false;
+    }
+  }
+
+  /**
+   * Get access token from AsyncStorage
+   */
+  private async getAccessToken(): Promise<string | null> {
+    try {
+      const token = await AsyncStorage.getItem('accessToken');
+      if (!token) {
+        // Fallback to other token keys
+        const authToken = await AsyncStorage.getItem('authToken');
+        const sessionToken = await AsyncStorage.getItem('token');
+        return authToken || sessionToken || null;
+      }
+      return token;
+    } catch (error) {
+      console.error('[WebSocket] Error getting access token:', error);
+      return null;
     }
   }
 
@@ -75,13 +105,19 @@ class WebSocketService {
     });
 
     this.socket.on('connect_error', (error) => {
-      console.error('WebSocket connection error:', error);
+      console.error('[WebSocket] Connection error:', error);
       this.isConnecting = false;
       this.reconnectAttempts++;
 
       if (this.reconnectAttempts < this.maxReconnectAttempts) {
-        setTimeout(() => {
-          this.connect(this.getStoredToken());
+        setTimeout(async () => {
+          // Refresh accessToken on reconnect attempts
+          this.accessToken = await this.getAccessToken();
+          if (this.accessToken) {
+            this.connect();
+          } else {
+            console.warn('[WebSocket] No access token available for reconnection');
+          }
         }, this.reconnectDelay * this.reconnectAttempts);
       }
     });
@@ -205,12 +241,15 @@ class WebSocketService {
   }
 
   /**
-   * Get stored token
+   * Update access token (call when user logs in or token refreshes)
    */
-  private getStoredToken(): string {
-    // This should get the token from AsyncStorage
-    // For now, return empty string
-    return '';
+  async updateAccessToken(token: string): Promise<void> {
+    this.accessToken = token;
+    // If connected, reconnect with new token
+    if (this.socket?.connected) {
+      this.disconnect();
+      await this.connect();
+    }
   }
 }
 
