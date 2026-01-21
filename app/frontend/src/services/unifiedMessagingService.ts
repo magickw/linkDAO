@@ -1613,12 +1613,15 @@ class UnifiedMessagingService {
   }
 
   private async fetchConversationsFromBackend(limit: number, offset: number): Promise<Conversation[]> {
+    // Backend expects page/limit, not offset
+    const page = Math.floor(offset / limit) + 1;
+
     const params = new URLSearchParams({
       limit: limit.toString(),
-      offset: offset.toString()
+      page: page.toString()
     });
 
-    const response = await this.makeRequest(`/api/chat/conversations?${params}`);
+    const response = await this.makeRequest(`/api/messaging/conversations?${params}`);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch conversations: ${response.statusText}`);
