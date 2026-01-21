@@ -152,10 +152,18 @@ export class HybridPaymentOrchestrator {
         }
       }
 
-      // Force fiat if crypto not available
-      if (!cryptoValidation.isValid || !cryptoValidation.hasSufficientBalance) {
+      // Force fiat if crypto not available, UNLESS explicitly preferred
+      if ((!cryptoValidation.isValid || !cryptoValidation.hasSufficientBalance) && request.preferredMethod !== 'crypto') {
         selectedPath = 'fiat';
         reason = 'Fiat payment required - insufficient crypto balance or validation failed';
+      } else if (request.preferredMethod === 'crypto' && (!cryptoValidation.isValid || !cryptoValidation.hasSufficientBalance)) {
+        // Log warning but respect user preference to try crypto
+        safeLogger.warn('Crypto validation failed but user preferred crypto:', {
+          isValid: cryptoValidation.isValid,
+          balance: cryptoValidation.hasSufficientBalance
+        });
+        selectedPath = 'crypto';
+        reason = 'User explicitly preferred crypto despite validation warning';
       }
 
       // Build payment method details

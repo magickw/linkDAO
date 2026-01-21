@@ -976,6 +976,12 @@ export class UnifiedCheckoutService {
     }
 
     const { data } = await response.json();
+    
+    // Validate that backend actually respected the crypto preference
+    if (data.paymentPath !== 'crypto') {
+      throw new Error(`Backend rejected crypto payment path (switched to ${data.paymentPath}). Please check your balance or try a different payment method.`);
+    }
+
     return this.transformBackendResponse(data);
   }
 
