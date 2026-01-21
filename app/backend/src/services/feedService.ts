@@ -834,7 +834,9 @@ export class FeedService {
           reposts: repostCount, // Repost count
           isRepostedByMe,
           originalPost,
-          engagementScore: score
+          engagementScore: score,
+          upvotes: Number(post.upvotes) || 0,
+          downvotes: Number(post.downvotes) || 0
         };
       }));
 
