@@ -154,7 +154,8 @@ export class CryptoPaymentService {
     const buyerAddress = accounts[0];
 
     // Use configurable escrow parameters or defaults
-    const deliveryDeadline = request.deliveryDeadline || 0; // 0 means no deadline
+    // Default to 30 days if not provided, as contract requires future deadline
+    const deliveryDeadline = request.deliveryDeadline || Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60);
     const resolutionMethod = request.resolutionMethod ?? 0; // Default to arbitrator
     const arbiter = request.arbiter || recipient; // Default to seller as arbiter (will be changed by smart contract)
 
@@ -691,7 +692,8 @@ export class CryptoPaymentService {
     }
 
     // Encode the createEscrow function call
-    const deliveryDeadline = request.deliveryDeadline || 0;
+    // Default to 30 days if not provided, as contract requires future deadline
+    const deliveryDeadline = request.deliveryDeadline || Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60);
     const resolutionMethod = request.resolutionMethod ?? 0;
 
     // Get account address for proper estimation
