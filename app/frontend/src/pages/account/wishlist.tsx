@@ -7,6 +7,15 @@ import Link from 'next/link';
 import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 
+// Helper function to safely get authentication token
+const getAuthToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('linkdao_access_token') ||
+         localStorage.getItem('authToken') ||
+         localStorage.getItem('token') ||
+         localStorage.getItem('auth_token');
+};
+
 interface Wishlist {
     id: string;
     userId: string;
@@ -62,9 +71,15 @@ export default function WishlistPage() {
     const fetchWishlists = async () => {
         try {
             setLoading(true);
+            const token = getAuthToken();
+            if (!token) {
+                toast.error('Please log in to view your wishlists');
+                return;
+            }
+
             const response = await fetch('/api/user/wishlists', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${token}`
                 }
             });
 
@@ -88,9 +103,15 @@ export default function WishlistPage() {
 
     const fetchWishlistItems = async (wishlistId: string) => {
         try {
+            const token = getAuthToken();
+            if (!token) {
+                toast.error('Please log in to view wishlist items');
+                return;
+            }
+
             const response = await fetch(`/api/user/wishlists/${wishlistId}/items`, {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${token}`
                 }
             });
 
@@ -108,10 +129,16 @@ export default function WishlistPage() {
         if (!confirm('Are you sure you want to delete this wishlist?')) return;
 
         try {
+            const token = getAuthToken();
+            if (!token) {
+                toast.error('Please log in to delete wishlists');
+                return;
+            }
+
             const response = await fetch(`/api/user/wishlists/${wishlistId}`, {
                 method: 'DELETE',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${token}`
                 }
             });
 
@@ -130,10 +157,16 @@ export default function WishlistPage() {
         if (!selectedWishlist) return;
 
         try {
+            const token = getAuthToken();
+            if (!token) {
+                toast.error('Please log in to remove items');
+                return;
+            }
+
             const response = await fetch(`/api/user/wishlists/${selectedWishlist.id}/items/${productId}`, {
                 method: 'DELETE',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${token}`
                 }
             });
 
@@ -484,11 +517,17 @@ function WishlistFormModal({ wishlist, onClose, onSave }: {
                 ? `/api/user/wishlists/${wishlist.id}`
                 : '/api/user/wishlists';
 
+            const token = getAuthToken();
+            if (!token) {
+                toast.error('Please log in to save wishlists');
+                return;
+            }
+
             const response = await fetch(url, {
                 method: wishlist ? 'PUT' : 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(formData)
             });

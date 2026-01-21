@@ -109,8 +109,9 @@ export default function OrdersPage() {
 
     // Check if order can be cancelled (handle both uppercase and lowercase status)
     const canCancelOrder = useCallback((order: Order) => {
-        const status = order.status?.toLowerCase();
-        return ['pending', 'processing'].includes(status);
+        if (!order || !order.status) return false;
+        const status = order.status.toLowerCase();
+        return ['created', 'paid', 'processing', 'pending'].includes(status);
     }, []);
 
     // Handle cancel order

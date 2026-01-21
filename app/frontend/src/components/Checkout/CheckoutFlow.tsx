@@ -181,9 +181,19 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         setLoadingSavedData(true);
 
         // Fetch saved addresses
+        const token = localStorage.getItem('token') || 
+                     localStorage.getItem('authToken') || 
+                     localStorage.getItem('linkdao_access_token');
+        
+        if (!token) {
+          console.warn('No authentication token found, skipping saved data fetch');
+          setLoadingSavedData(false);
+          return;
+        }
+
         const addressResponse = await fetch(`${API_BASE_URL}/api/user/addresses`, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
           }
         });
 
@@ -204,7 +214,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         // Fetch saved payment methods
         const paymentResponse = await fetch(`${API_BASE_URL}/api/user/payment-methods`, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
           }
         });
 

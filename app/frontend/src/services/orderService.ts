@@ -124,7 +124,9 @@ class OrderService {
         throw new Error(errorData.message || `Failed to fetch order: ${response.status} ${response.statusText}`);
       }
 
-      const order = await response.json();
+      const responseData = await response.json();
+      // Handle both wrapped ({ success: true, data: ... }) and unwrapped responses
+      const order = responseData.data || responseData;
       return this.transformOrder(order);
     } catch (error) {
       console.error('Error fetching order:', error);
@@ -319,7 +321,7 @@ class OrderService {
       }
 
       // Check if order can be cancelled
-      if (!['CREATED', 'PAID', 'PROCESSING'].includes(order.status)) {
+      if (!['CREATED', 'PENDING', 'PAID', 'PROCESSING'].includes(order.status)) {
         throw new Error(`Cannot cancel order in ${order.status} status. Only orders that are pending, paid, or processing can be cancelled.`);
       }
 
@@ -569,7 +571,7 @@ class OrderService {
       amount: order.amount?.toString() || '0',
       paymentToken: order.paymentToken || 'ETH',
       paymentMethod: order.paymentToken && (order.paymentToken.includes('USDC') || order.paymentToken.includes('USDT')) ? 'crypto' : 'fiat',
-      status: order.status as OrderStatus,
+      status: (order.status?.toUpperCase() as OrderStatus) || 'CREATED',
       createdAt: order.createdAt || new Date().toISOString(),
       shippingAddress: order.shippingAddress,
       trackingNumber: order.trackingNumber,
@@ -583,8 +585,8 @@ class OrderService {
       orderMetadata: order.orderMetadata,
       disputeId: order.disputeId,
       canConfirmDelivery: ['SHIPPED'].includes(order.status),
-      canOpenDispute: ['PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED'].includes(order.status),
-      canCancel: ['CREATED', 'PAID'].includes(order.status),
+      canOpenDispute: ['PENDING', 'PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED'].includes(order.status),
+      canCancel: ['CREATED', 'PENDING', 'PAID'].includes(order.status),
       canRefund: ['COMPLETED', 'DELIVERED'].includes(order.status),
       isEscrowProtected: !!order.escrowId,
       daysUntilAutoComplete: order.daysUntilAutoComplete || 7,

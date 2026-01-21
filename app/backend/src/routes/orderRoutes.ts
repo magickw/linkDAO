@@ -249,6 +249,18 @@ router.delete(
 );
 
 /**
+ * @route POST /api/orders/:orderId/cancel
+ * @desc Cancel order (POST alias for frontend compatibility)
+ * @access Private
+ */
+router.post(
+  '/:orderId/cancel',
+  orderRateLimit,
+  authMiddleware,
+  orderController.cancelOrder.bind(orderController)
+);
+
+/**
  * @route POST /api/orders/:orderId/cancel-request
  * @desc Request order cancellation
  * @access Private

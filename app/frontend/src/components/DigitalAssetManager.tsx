@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/context/ToastContext';
-import { 
-  Upload, 
-  Download, 
-  Eye, 
-  Shield, 
-  BarChart3, 
+import {
+  Upload,
+  Download,
+  Eye,
+  Shield,
+  BarChart3,
   AlertTriangle,
   FileText,
   Image,
@@ -14,6 +14,15 @@ import {
   Package,
   Zap
 } from 'lucide-react';
+
+// Helper function to safely get authentication token
+const getAuthToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('linkdao_access_token') ||
+         localStorage.getItem('authToken') ||
+         localStorage.getItem('token') ||
+         localStorage.getItem('auth_token');
+};
 
 interface DigitalAsset {
   id: string;
@@ -222,12 +231,17 @@ const DigitalAssetManager: React.FC = () => {
       formData.append('downloadLimit', uploadForm.downloadLimit.toString());
       formData.append('streamingEnabled', uploadForm.streamingEnabled.toString());
       formData.append('watermarkEnabled', uploadForm.watermarkEnabled.toString());
-      
+
+      const token = getAuthToken();
+      if (!token) {
+        throw new Error('Please log in to upload assets');
+      }
+
       const response = await fetch('/api/digital-assets', {
         method: 'POST',
         body: formData,
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
       
@@ -261,14 +275,19 @@ const DigitalAssetManager: React.FC = () => {
   const handleCreateLicense = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedAsset) return;
-    
+
     setLoading(true);
     try {
+      const token = getAuthToken();
+      if (!token) {
+        throw new Error('Please log in to create licenses');
+      }
+
       const response = await fetch(`/api/digital-assets/${selectedAsset.id}/licenses`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           assetId: selectedAsset.id,
