@@ -522,7 +522,7 @@ export class UnifiedMarketplaceService {
           updatedAt: listing.updatedAt,
           seller: listing.seller || {
             id: listing.sellerId,
-            walletAddress: listing.sellerId,
+            walletAddress: listing.sellerAddress || listing.sellerId,
             rating: 4.5,
             reputation: 0,
             verified: true,

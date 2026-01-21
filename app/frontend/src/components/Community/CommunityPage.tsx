@@ -188,7 +188,9 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
     userAddress: string
   ): Promise<MembershipStatus> => {
     try {
-      const response = await fetch(`/api/communities/${communityId}/members/${userAddress}`);
+      // Normalize user address to lowercase to match backend expectations
+      const normalizedAddress = userAddress.toLowerCase();
+      const response = await fetch(`/api/communities/${communityId}/members/${normalizedAddress}`);
       if (!response.ok) {
         return { isMember: false, canPost: false, canModerate: false };
       }

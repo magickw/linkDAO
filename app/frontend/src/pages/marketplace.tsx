@@ -216,7 +216,7 @@ const MarketplaceContent: React.FC = () => {
           }
 
           // Get seller info
-          const sellerAddress = listing.sellerId || listing.sellerWalletAddress || listing.seller?.walletAddress || '';
+          const sellerAddress = listing.sellerWalletAddress || listing.seller?.walletAddress || listing.sellerAddress || '';
           const sellerInfo = listing.seller || {};
 
           console.log('📦 Product seller data:', {

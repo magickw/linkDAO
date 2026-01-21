@@ -81,7 +81,7 @@ export class BlockchainMarketplaceService {
         sellerWalletAddress: input.sellerWalletAddress,
         tokenAddress: dbListing.tokenAddress,
         price: dbListing.price,
-        quantity: 1, // Default purchase quantity when retrieving listing info
+        quantity: dbListing.inventory || 0, // Use actual inventory instead of hardcoded 1
         inventory: dbListing.inventory || 0, // Available inventory from the database
         itemType: dbListing.itemType as 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE',
         listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
@@ -148,7 +148,7 @@ export class BlockchainMarketplaceService {
       sellerWalletAddress: seller.walletAddress,
       tokenAddress: '', // Not applicable for product listings
       price: dbListing.priceAmount?.toString() || '0',
-      quantity: 1, // Default purchase quantity when retrieving listing info
+      quantity: dbListing.inventory || 0, // Use actual inventory instead of hardcoded 1
       inventory: dbListing.inventory || 0,
       itemType: 'PHYSICAL', // Default to physical for product listings
       listingType: 'FIXED_PRICE', // Default to fixed price for product listings
@@ -200,7 +200,7 @@ export class BlockchainMarketplaceService {
           sellerWalletAddress: sellerAddress,
           tokenAddress: '', // Not applicable for product listings
           price: dbListing.priceAmount?.toString() || '0',
-          quantity: 1, // Default purchase quantity when retrieving listing info
+          quantity: dbListing.inventory || 0, // Use actual inventory instead of hardcoded 1
           inventory: dbListing.inventory || 0, // Available inventory from the database
           itemType: 'PHYSICAL', // Default to physical for product listings
           listingType: 'FIXED_PRICE', // Default to fixed price for product listings
@@ -259,7 +259,7 @@ export class BlockchainMarketplaceService {
           sellerWalletAddress: seller.walletAddress,
           tokenAddress: '', // Not applicable for product listings
           price: dbListing.priceAmount?.toString() || '0',
-          quantity: 1, // Default purchase quantity when retrieving listing info
+          quantity: dbListing.inventory || 0, // Use actual inventory instead of hardcoded 1
           inventory: dbListing.inventory || 0, // Available inventory from the database
           itemType: 'PHYSICAL', // Default to physical for product listings
           listingType: 'FIXED_PRICE', // Default to fixed price for product listings
@@ -318,7 +318,7 @@ export class BlockchainMarketplaceService {
           sellerWalletAddress: seller.walletAddress,
           tokenAddress: '', // Not applicable for product listings
           price: dbListing.priceAmount?.toString() || '0',
-          quantity: 1, // Default purchase quantity when retrieving listing info
+          quantity: dbListing.inventory || 0, // Use actual inventory instead of hardcoded 1
           inventory: dbListing.inventory || 0, // Available inventory from the database
           itemType: 'PHYSICAL', // Default to physical for product listings
           listingType: 'FIXED_PRICE', // Default to fixed price for product listings

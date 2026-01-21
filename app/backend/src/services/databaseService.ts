@@ -999,7 +999,10 @@ export class DatabaseService {
         }
 
         // 1b. Check and hold inventory with pessimistic locking
-        const product = await tx.select().from(schema.products).where(eq(schema.products.id, listingId));
+        const productResult = await tx.execute(sql`
+          SELECT * FROM products WHERE id = ${listingId} FOR UPDATE
+        `);
+        const product = productResult.rows || productResult;
 
         safeLogger.info('[createOrder] Searching for listing:', {
           listingId,
@@ -1881,6 +1884,29 @@ export class DatabaseService {
       return result[0] || null;
     } catch (error) {
       safeLogger.error("Error updating product:", error);
+      throw error;
+    }
+  }
+
+  async decrementProductInventory(id: string, quantity: number) {
+    try {
+      const result = await this.db
+        .update(schema.products)
+        .set({
+          inventory: sql`${schema.products.inventory} - ${quantity}`,
+          salesCount: sql`${schema.products.salesCount} + ${quantity}`
+        })
+        .where(
+          and(
+            eq(schema.products.id, id),
+            gte(schema.products.inventory, quantity)
+          )
+        )
+        .returning();
+
+      return result[0] || null;
+    } catch (error) {
+      safeLogger.error("Error decrementing product inventory:", error);
       throw error;
     }
   }
