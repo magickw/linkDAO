@@ -101,8 +101,9 @@ export class GasFeeService {
     } catch (error) {
       console.error('Gas limit estimation failed:', error);
       // Return a reasonable default for simple transfers using BigInt arithmetic
+      // INCREASED: Use 300,000 as default to support contract interactions if estimation fails
       const bufferBigInt = BigInt(Math.floor(PAYMENT_CONFIG.GAS_LIMIT_BUFFER * 100));
-      let defaultGasLimit = (21000n * bufferBigInt) / 100n;
+      let defaultGasLimit = (300000n * bufferBigInt) / 100n;
       
       // Ensure default doesn't exceed security or network limits
       const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
