@@ -160,11 +160,13 @@ class UnifiedMessagingService {
    * Initialize the messaging service with user context
    */
   async initialize(userAddress: string): Promise<void> {
-    if (this.isInitialized && this.currentUserAddress === userAddress) {
+    const normalizedAddress = userAddress.toLowerCase();
+    
+    if (this.isInitialized && this.currentUserAddress === normalizedAddress) {
       return;
     }
 
-    this.currentUserAddress = userAddress;
+    this.currentUserAddress = normalizedAddress;
 
     try {
       // Initialize IndexedDB cache
@@ -177,7 +179,7 @@ class UnifiedMessagingService {
       await this.syncFromBackend();
 
       this.isInitialized = true;
-      console.log('[UnifiedMessaging] Initialized for user:', userAddress);
+      console.log('[UnifiedMessaging] Initialized for user:', normalizedAddress);
     } catch (error) {
       console.error('[UnifiedMessaging] Initialization error:', error);
       throw error;

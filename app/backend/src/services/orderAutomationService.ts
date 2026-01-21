@@ -128,10 +128,7 @@ class OrderAutomationService {
                 .where(
                     and(
                         inArray(orders.status, ['paid', 'processing', 'shipped', 'delivered']),
-                        or(
-                            sql`${orders.updatedAt} > NOW() - INTERVAL '30 days'`,
-                            sql`${orders.createdAt} > NOW() - INTERVAL '30 days'`
-                        )
+                        sql`${orders.createdAt} > NOW() - INTERVAL '30 days'`
                     )
                 );
 

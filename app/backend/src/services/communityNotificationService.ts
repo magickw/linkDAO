@@ -661,6 +661,35 @@ export class CommunityNotificationService {
   }
 
   /**
+   * Get a single notification by ID
+   */
+  async getNotificationById(notificationId: number, userAddress: string) {
+    try {
+      const result = await db
+        .select()
+        .from(notifications)
+        .where(and(
+          eq(notifications.id, notificationId),
+          eq(notifications.userAddress, userAddress)
+        ))
+        .limit(1);
+
+      if (result.length === 0) {
+        return null;
+      }
+
+      const notification = result[0];
+      return {
+        ...notification,
+        metadata: notification.metadata ? JSON.parse(notification.metadata) : {}
+      };
+    } catch (error) {
+      safeLogger.error('[CommunityNotification] Error getting notification by ID:', error);
+      throw new Error('Failed to get notification');
+    }
+  }
+
+  /**
    * Mark notification as read
    */
   async markAsRead(notificationId: number) {

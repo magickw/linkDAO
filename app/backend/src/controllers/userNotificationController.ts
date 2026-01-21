@@ -49,6 +49,50 @@ export class UserNotificationController {
     }
 
     /**
+     * Get a single notification by ID
+     */
+    async getNotification(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            if (!id) {
+                return res.status(400).json({ error: 'Notification ID is required' });
+            }
+
+            const userId = (req as any).user?.id;
+            if (!userId) {
+                return res.status(401).json({ error: 'Unauthorized' });
+            }
+
+            // Get user wallet address
+            const userResult = await db
+                .select({ walletAddress: users.walletAddress })
+                .from(users)
+                .where(eq(users.id, userId))
+                .limit(1);
+
+            if (userResult.length === 0) {
+                return res.status(404).json({ error: 'User not found' });
+            }
+
+            const user = userResult[0];
+
+            const notification = await communityNotificationService.getNotificationById(
+                parseInt(id),
+                user.walletAddress
+            );
+
+            if (!notification) {
+                return res.status(404).json({ error: 'Notification not found' });
+            }
+
+            res.json(notification);
+        } catch (error) {
+            safeLogger.error('Error getting notification:', error);
+            res.status(500).json({ error: 'Failed to get notification' });
+        }
+    }
+
+    /**
      * Get unread notification count
      */
     async getUnreadCount(req: Request, res: Response) {

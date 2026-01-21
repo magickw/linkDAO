@@ -66,7 +66,7 @@ export class MessagingController {
 
       const conversation = await messagingService.startConversation({
         initiatorAddress: userAddress,
-        participantAddress: participantAddress.trim(),
+        participantAddress: participantAddress.trim().toLowerCase(),
         initialMessage,
         conversationType,
         communityId
@@ -254,81 +254,6 @@ export class MessagingController {
       if (!message.success) {
         res.status(400).json(apiResponse.error((message as any).message, 400));
         return;
-      }
-
-      // Emit WebSocket event for real-time update
-      const wsService = getWebSocketService();
-      if (wsService && message.data) {
-        try {
-          // Get conversation details to find other participants
-          const conversationDetails = await messagingService.getConversationDetails({
-            conversationId: id,
-            userAddress
-          });
-
-          if (conversationDetails) {
-            // Parse participants with robust error handling
-            let participants: string[] = [];
-
-            try {
-              if (typeof conversationDetails.participants === 'string') {
-                // Try to parse as JSON
-                try {
-                  const parsed = JSON.parse(conversationDetails.participants);
-                  if (Array.isArray(parsed)) {
-                    participants = parsed.filter((p: any) => typeof p === 'string' && p.trim());
-                  } else {
-                    safeLogger.warn(`Participants JSON is not an array for conversation ${id}:`, typeof parsed);
-                  }
-                } catch (parseError) {
-                  // If JSON parse fails, try comma-separated
-                  const split = conversationDetails.participants.split(',').map((p: string) => p.trim()).filter(Boolean);
-                  if (split.length > 0) {
-                    participants = split;
-                    safeLogger.warn(`Participants parsed as comma-separated for conversation ${id}`);
-                  } else {
-                    safeLogger.warn(`Failed to parse participants for conversation ${id}`, parseError);
-                  }
-                }
-              } else if (Array.isArray(conversationDetails.participants)) {
-                participants = conversationDetails.participants.filter((p: any) => typeof p === 'string' && p.trim());
-              } else if (conversationDetails.participants) {
-                safeLogger.warn(`Unexpected participants type for conversation ${id}:`, typeof conversationDetails.participants);
-              }
-            } catch (participantError) {
-              safeLogger.error(`Error processing participants for conversation ${id}:`, participantError);
-            }
-
-            // Send to conversation room for all participants
-            wsService.sendToConversation(id, 'new_message', {
-              message: message.data,
-              conversationId: id,
-              senderAddress: userAddress
-            });
-
-            // Also send individual notifications to each participant (for notification badge updates)
-            if (participants.length > 0) {
-              participants.forEach((participant: string) => {
-                try {
-                  if (participant && participant.toLowerCase() !== userAddress.toLowerCase()) {
-                    wsService.sendToUser(participant, 'message_notification', {
-                      conversationId: id,
-                      message: message.data,
-                      senderAddress: userAddress
-                    }, 'high');
-                  }
-                } catch (notifyError) {
-                  safeLogger.error(`Failed to send notification to participant ${participant}:`, notifyError);
-                }
-              });
-            } else {
-              safeLogger.warn(`No valid participants found for conversation ${id}, skipping individual notifications`);
-            }
-          }
-        } catch (wsError) {
-          // Don't let WebSocket errors block the message send response
-          safeLogger.error(`WebSocket notification failed for conversation ${id}:`, wsError);
-        }
       }
 
       res.status(201).json(apiResponse.success(message.data || message, 'Message sent successfully'));

@@ -746,6 +746,26 @@ export class MessagingService {
         }
       }
 
+      // Send real-time message update to the entire conversation room via WebSocket
+      // This ensures all online participants see the message immediately
+      try {
+        const wsService = getWebSocketService();
+        if (wsService) {
+          wsService.sendToConversation(conversationId, 'new_message', {
+            message: {
+              ...newMessage[0],
+              encryptionMetadata: encryptionMetadata || null
+            },
+            conversationId,
+            senderAddress: fromAddress
+          });
+          safeLogger.debug(`[MessagingService] WebSocket broadcast sent for conversation ${conversationId}`);
+        }
+      } catch (wsError) {
+        // Don't let WebSocket errors block the successful message response
+        safeLogger.error(`[MessagingService] WebSocket broadcast failed for conversation ${conversationId}:`, wsError);
+      }
+
       return {
         success: true,
         data: {

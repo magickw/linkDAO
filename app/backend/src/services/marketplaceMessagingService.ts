@@ -163,18 +163,20 @@ export class MarketplaceMessagingService {
         .set({ lastActivity: new Date(), lastMessageId: newMessage[0].id })
         .where(eq(conversations.id, conversationId));
 
-      // Send WebSocket notification
-      const participants = Array.isArray(conversation.participants)
-        ? conversation.participants as string[]
-        : JSON.parse(conversation.participants as string);
-      participants.forEach((participant: string) => {
-        this.webSocketService.sendToUser(participant, 'new_message', {
+      // Send real-time message update to the entire conversation room via WebSocket
+      try {
+        this.webSocketService.sendToConversation(conversationId, 'new_message', {
+          message: {
+            ...newMessage[0],
+            id: newMessage[0].id.toString() // Ensure ID is string for frontend
+          },
           conversationId,
-          messageId: newMessage[0].id,
-          content: template.content,
-          sender: 'system'
+          senderAddress: 'system'
         });
-      });
+        safeLogger.debug(`[MarketplaceMessagingService] WebSocket broadcast sent for conversation ${conversationId}`);
+      } catch (wsError) {
+        safeLogger.error(`[MarketplaceMessagingService] WebSocket broadcast failed for conversation ${conversationId}:`, wsError);
+      }
 
       return newMessage[0];
     } catch (error) {

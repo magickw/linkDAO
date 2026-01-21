@@ -24,6 +24,32 @@ class NotificationService {
   }
 
   /**
+   * Get a single notification by ID
+   */
+  async getNotificationById(notificationId: string): Promise<AppNotification | null> {
+    try {
+      const response = await fetch(`${this.baseUrl}/${notificationId}`, {
+        headers: {
+          'Authorization': `Bearer ${this.getAuthToken()}`,
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
+        throw new Error('Failed to fetch notification');
+      }
+
+      const data = await response.json();
+      return this.transformNotification(data);
+    } catch (error) {
+      console.error('Error fetching notification:', error);
+      return null;
+    }
+  }
+
+  /**
    * Get user's notifications
    */
   async getNotifications(options: GetNotificationsOptions = {}): Promise<GetNotificationsResponse> {

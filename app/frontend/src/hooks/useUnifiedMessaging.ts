@@ -117,7 +117,8 @@ export function useUnifiedMessaging(options: UseUnifiedMessagingOptions = {}): U
       setError(null);
 
       try {
-        await unifiedMessagingService.initialize(walletAddress);
+        const normalizedAddress = walletAddress.toLowerCase();
+        await unifiedMessagingService.initialize(normalizedAddress);
 
         if (!mounted) return;
 
