@@ -83,3 +83,31 @@ export const getDefaultAvatar = (displayName: string): string => {
 export const getUserAddress = (author: any): string => {
     return author?.walletAddress || author?.author || author || '';
 };
+
+/**
+ * Get profile image URL with proper handling for Cloudinary URLs and IPFS CIDs
+ * This function checks if the URL is already a full URL before constructing IPFS URLs
+ * @param avatarCid - The avatar CID or URL from the database
+ * @param walletAddress - Fallback wallet address for default avatar
+ * @returns The avatar URL
+ */
+export const getProfileImageUrl = (avatarCid: string | undefined | null, walletAddress?: string): string => {
+    if (!avatarCid) {
+        return walletAddress
+            ? `https://api.dicebear.com/7.x/identicon/svg?seed=${walletAddress}&backgroundColor=b6e3f4`
+            : '/images/default-avatar.png';
+    }
+
+    // If it's already a full URL (Cloudinary, etc.), return it as-is
+    if (avatarCid.startsWith('http://') || avatarCid.startsWith('https://')) {
+        return avatarCid;
+    }
+
+    // If it's a blob URL, return it as-is
+    if (avatarCid.startsWith('blob:')) {
+        return avatarCid;
+    }
+
+    // Otherwise, treat it as an IPFS CID and construct the IPFS gateway URL
+    return `https://ipfs.io/ipfs/${avatarCid}`;
+};

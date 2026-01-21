@@ -24,6 +24,7 @@ export interface CartItem {
     priceCurrency: string;
     images?: string[];
     sellerId: string;
+    sellerWalletAddress?: string;
     status: string;
     inventory: number;
   };
@@ -326,9 +327,11 @@ export class CartService {
         .select({
           cartItem: cartItems,
           product: products,
+          seller: users,
         })
         .from(cartItems)
         .innerJoin(products, eq(cartItems.productId, products.id))
+        .leftJoin(users, eq(products.sellerId, users.id))
         .where(eq(cartItems.cartId, cartId))
         .orderBy(desc(cartItems.createdAt));
 
@@ -352,6 +355,7 @@ export class CartService {
           priceCurrency: item.product.priceCurrency,
           images: item.product.images ? JSON.parse(item.product.images) : [],
           sellerId: item.product.sellerId,
+          sellerWalletAddress: item.seller?.walletAddress,
           status: item.product.status,
           inventory: item.product.inventory,
         },

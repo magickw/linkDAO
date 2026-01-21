@@ -124,12 +124,12 @@ class CartService {
           const parsed = JSON.parse(stored);
           const now = Date.now();
           // Only keep deletions that are less than 1 minute old
-          const validDeletions = parsed.filter((item: { id: string, timestamp: number }) => 
+          const validDeletions = parsed.filter((item: { id: string, timestamp: number }) =>
             now - item.timestamp < 60000
           );
-          
+
           validDeletions.forEach((item: { id: string }) => this.pendingDeletions.add(item.id));
-          
+
           // Clean up storage if we filtered out expired items
           if (validDeletions.length !== parsed.length) {
             this.savePendingDeletions();
@@ -1201,7 +1201,7 @@ class CartService {
         },
         seller: {
           id: product.seller?.id || product.sellerId || item.sellerId || '',
-          walletAddress: product.seller?.walletAddress || product.sellerAddress || item.sellerWalletAddress || '',
+          walletAddress: product.seller?.walletAddress || product.sellerAddress || product.sellerWalletAddress || item.sellerWalletAddress || '',
           name: product.seller?.displayName || product.seller?.storeName || item.sellerName || 'Unknown Seller',
           avatar: product.seller?.profileImageUrl || product.seller?.avatar || item.sellerAvatar || '',
           verified: product.seller?.verified || false,

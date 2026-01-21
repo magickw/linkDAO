@@ -51,6 +51,11 @@ router.all('/rpc', async (req: Request, res: Response) => {
             }
         }
 
+        // Forward Referer header if present
+        if (req.headers.referer) {
+            headers['Referer'] = req.headers.referer as string;
+        }
+
         const response = await axios({
             method: req.method,
             url: target,

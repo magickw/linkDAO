@@ -181,10 +181,10 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         setLoadingSavedData(true);
 
         // Fetch saved addresses
-        const token = localStorage.getItem('token') || 
-                     localStorage.getItem('authToken') || 
-                     localStorage.getItem('linkdao_access_token');
-        
+        const token = localStorage.getItem('token') ||
+          localStorage.getItem('authToken') ||
+          localStorage.getItem('linkdao_access_token');
+
         if (!token) {
           console.warn('No authentication token found, skipping saved data fetch');
           setLoadingSavedData(false);
@@ -496,10 +496,25 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       }
 
       // Get seller address - prioritize walletAddress, fall back to id (for compatibility)
-      const sellerAddress = cartState.items[0]?.seller?.walletAddress || cartState.items[0]?.seller?.id || '';
+      // Robust seller address extraction
+      let sellerAddress = cartState.items[0]?.seller?.walletAddress;
 
-      if (!sellerAddress) {
-        throw new Error('Seller information not available. Please refresh the page and try again.');
+      // Fallback to ID if it looks like an ETH address (common when profile fetch fails but ID IS the address)
+      if (!sellerAddress && cartState.items[0]?.seller?.id && cartState.items[0].seller.id.startsWith('0x')) {
+        console.log('⚠️ Seller walletAddress missing, using ID as address:', cartState.items[0].seller.id);
+        sellerAddress = cartState.items[0].seller.id;
+      }
+
+      // Ensure address is clean
+      if (sellerAddress) {
+        sellerAddress = sellerAddress.trim();
+      }
+
+      console.log('🔍 Resolved Seller Address:', sellerAddress);
+
+      if (!sellerAddress || !sellerAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
+        console.error('❌ Invalid seller address:', sellerAddress, 'Seller Object:', cartState.items[0]?.seller);
+        throw new Error('Seller wallet information is missing or invalid. Please try refreshing the page.');
       }
 
       const request: PrioritizedCheckoutRequest = {
@@ -512,8 +527,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         selectedPaymentMethod,
         paymentDetails: {
           walletAddress: address,
-          tokenSymbol: selectedPaymentMethod.method.token?.symbol,
-          networkId: selectedPaymentMethod.method.chainId,
+          tokenSymbol: selectedPaymentMethod.method.token?.symbol || 'ETH',
+          networkId: selectedPaymentMethod.method.chainId || 1,
           billingAddress: sameAsShipping ? shippingAddress : billingAddress
         }
       };
@@ -1007,7 +1022,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         }
 
         // Auto-switch network if needed
-        const requiredChainId = method.method.chainId;
+        const requiredChainId = method.method.chainId || 1;
         if (chainId !== requiredChainId && switchChain) {
           try {
             addToast(`Switching to ${getNetworkName(requiredChainId)}...`, 'info');

@@ -119,6 +119,20 @@ class ENSService {
         throw new Error('ENS provider not available');
       }
 
+      // Check if provider supports ENS operations
+      // JsonRpcProvider doesn't support ENS, so we need to check if resolveName is available
+      if (!provider.resolveName) {
+        console.warn('Provider does not support ENS resolution, skipping ENS lookup');
+        const result: ResolvedName = {
+          type: 'ens',
+          original: ensName,
+          resolved: '',
+          isValid: false,
+        };
+        this.setCachedResult(cacheKey, result);
+        return result;
+      }
+
       const address = await provider.resolveName(ensName);
       
       if (!address) {
@@ -243,6 +257,13 @@ class ENSService {
       // ENS is on Mainnet, so always use Mainnet provider for lookup
       const provider = await getMainnetProvider() || await getProvider();
       if (!provider || !this.isEthereumAddress(address)) {
+        return null;
+      }
+
+      // Check if provider supports ENS operations
+      // JsonRpcProvider doesn't support ENS, so we need to check if lookupAddress is available
+      if (!provider.lookupAddress) {
+        console.warn('Provider does not support ENS lookup, skipping reverse resolution');
         return null;
       }
 
