@@ -79,7 +79,7 @@ export default function Web3PostCard({ post, profile, className = '' }: Web3Post
         </div>
 
         {/* More Options */}
-        <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+        <button className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors min-h-[44px] min-w-[44px]">
           <MoreHorizontal className="w-5 h-5 text-gray-500 dark:text-gray-400" />
         </button>
       </div>

@@ -1300,6 +1300,7 @@ export const orders = pgTable("orders", {
   shippingCost: numeric("shipping_cost", { precision: 20, scale: 8 }).default('0'),
   platformFee: numeric("platform_fee", { precision: 20, scale: 8 }).default('0'),
   taxBreakdown: jsonb("tax_breakdown").default('[]'),
+  quantity: integer("quantity").default(1).notNull(),
   // New lifecycle fields
   cancellationRequestedAt: timestamp("cancellation_requested_at"),
   cancellationReason: text("cancellation_reason"),

@@ -355,13 +355,13 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 />
 
                 {/* Zoom Controls */}
-                <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity md:opacity-100">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleOpenLightbox(product.media?.findIndex(m => m.url === selectedImage) || 0);
                     }}
-                    className="p-2 bg-black/50 hover:bg-black/70 rounded-lg text-white transition-colors"
+                    className="p-3 bg-black/50 hover:bg-black/70 rounded-lg text-white transition-colors min-h-[44px] min-w-[44px]"
                     aria-label="Open lightbox"
                   >
                     <Maximize2 size={20} />

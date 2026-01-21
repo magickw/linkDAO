@@ -976,7 +976,7 @@ export class DatabaseService {
   }
 
   async createOrder(listingId: string, buyerId: string, sellerId: string, amount: string,
-    paymentToken: string, escrowId?: string, variantId?: string, orderId?: string,
+    paymentToken: string, quantity: number = 1, escrowId?: string, variantId?: string, orderId?: string,
     taxAmount: string = '0', shippingCost: string = '0', platformFee: string = '0', taxBreakdown: any[] = [],
     shippingAddress: any = null, billingAddress: any = null, paymentMethod: string = 'crypto', paymentDetails: any = null) {
     try {
@@ -997,14 +997,14 @@ export class DatabaseService {
           const variant = variantResult.rows[0];
           const availableInventory = variant.inventory - variant.reserved_inventory;
 
-          if (!variant.is_available || availableInventory < 1) {
+          if (!variant.is_available || availableInventory < quantity) {
             throw new Error('Selected variant is out of stock');
           }
 
           // Reserve inventory for this variant
           await tx.execute(sql`
             UPDATE product_variants
-            SET reserved_inventory = reserved_inventory + 1
+            SET reserved_inventory = reserved_inventory + ${quantity}
             WHERE id = ${variantId}
           `);
         }
@@ -1053,25 +1053,25 @@ export class DatabaseService {
             throw new Error('Product not found');
           }
 
-          if (listing[0].inventory < 1) {
+          if (listing[0].inventory < quantity) {
             throw new Error('Insufficient inventory');
           }
 
           // Decrement legacy listing
           await tx.update(schema.listings)
             .set({
-              inventory: sql`${schema.listings.inventory} - 1`
+              inventory: sql`${schema.listings.inventory} - ${quantity}`
             })
             .where(eq(schema.listings.id, listingId));
         } else {
-          if (product[0].inventory < 1) {
+          if (product[0].inventory < quantity) {
             throw new Error('Insufficient inventory');
           }
 
           // Create inventory hold record
           await tx.insert(schema.inventoryHolds).values({
             productId: listingId,
-            quantity: 1,
+            quantity: quantity,
             heldBy: buyerId,
             orderId: null, // Will be updated after order creation
             holdType: 'order_pending',
@@ -1088,8 +1088,8 @@ export class DatabaseService {
           // Decrement product inventory and increment holds
           await tx.update(schema.products)
             .set({
-              inventory: sql`${schema.products.inventory} - 1`,
-              inventoryHolds: sql`${schema.products.inventoryHolds} + 1`
+              inventory: sql`${schema.products.inventory} - ${quantity}`,
+              inventoryHolds: sql`${schema.products.inventoryHolds} + ${quantity}`
             })
             .where(eq(schema.products.id, listingId));
         }
@@ -1100,6 +1100,7 @@ export class DatabaseService {
           buyerId,
           sellerId,
           amount,
+          quantity,
           paymentToken,
           escrowId: escrowId || null,
           status: 'pending',

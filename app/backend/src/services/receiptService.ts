@@ -6,16 +6,24 @@ const databaseService = new DatabaseService();
 
 export interface ReceiptData {
   orderId: string;
-  buyerId: string;
-  sellerId: string;
+  buyerId?: string;
+  sellerId?: string;
   amount: string;
   currency: string;
-  taxAmount: string;
-  platformFee: string;
-  processingFee: string;
+  taxAmount?: string;
+  platformFee?: string;
+  processingFee?: string;
   paymentMethod: string;
   items: any[];
   shippingAddress?: any;
+  // New fields
+  transactionId?: string;
+  buyerAddress?: string;
+  sellerAddress?: string;
+  transactionHash?: string;
+  status?: string;
+  createdAt?: Date;
+  completedAt?: Date;
 }
 
 export class ReceiptService {
@@ -25,36 +33,45 @@ export class ReceiptService {
   async generateReceipt(data: ReceiptData): Promise<any> {
     try {
       const receiptNumber = `RCP-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
-      
+
       const receiptRecord = {
         id: uuidv4(),
         orderId: data.orderId,
         receiptNumber,
         buyerInfo: {
           buyerId: data.buyerId,
+          startAddress: data.buyerAddress, // Store wallet address if ID is missing
           shippingAddress: data.shippingAddress
         },
         items: data.items,
         pricing: {
-          subtotal: (parseFloat(data.amount) - parseFloat(data.taxAmount) - parseFloat(data.platformFee) - parseFloat(data.processingFee)).toString(),
-          tax: data.taxAmount,
-          platformFee: data.platformFee,
-          processingFee: data.processingFee,
+          subtotal: (
+            parseFloat(data.amount) -
+            (parseFloat(data.taxAmount || '0')) -
+            (parseFloat(data.platformFee || '0')) -
+            (parseFloat(data.processingFee || '0'))
+          ).toString(),
+          tax: data.taxAmount || '0',
+          platformFee: data.platformFee || '0',
+          processingFee: data.processingFee || '0',
           total: data.amount,
           currency: data.currency
         },
         paymentDetails: {
           method: data.paymentMethod,
-          timestamp: new Date()
+          transactionId: data.transactionId,
+          transactionHash: data.transactionHash,
+          status: data.status,
+          timestamp: data.completedAt || new Date()
         },
-        createdAt: new Date()
+        createdAt: data.createdAt || new Date()
       };
 
       // Store in database
       const savedReceipt = await databaseService.createReceipt(receiptRecord);
-      
+
       safeLogger.info(`Receipt generated: ${receiptNumber} for order ${data.orderId}`);
-      
+
       return savedReceipt;
     } catch (error) {
       safeLogger.error('Error generating receipt:', error);

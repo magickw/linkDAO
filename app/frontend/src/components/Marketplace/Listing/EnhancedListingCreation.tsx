@@ -549,7 +549,7 @@ export const EnhancedListingCreation: React.FC = () => {
                 {/* Remove button */}
                 <button
                   onClick={() => removeImage(index)}
-                  className="absolute top-2 left-2 bg-red-500 hover:bg-red-600 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-2 left-2 bg-red-500 hover:bg-red-600 rounded-full p-3 opacity-0 group-hover:opacity-100 transition-opacity md:opacity-100 min-h-[44px] min-w-[44px]"
                 >
                   <X size={16} className="text-white" />
                 </button>

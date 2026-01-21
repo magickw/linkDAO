@@ -226,7 +226,7 @@ export const RecentAndFollowedCommunities: React.FC<RecentAndFollowedCommunities
                   
                   <button
                     onClick={(e) => handleLeaveCommunity(e, community.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 rounded transition-all"
+                    className="opacity-0 group-hover:opacity-100 p-3 text-gray-400 hover:text-red-500 rounded transition-all md:opacity-100 min-h-[44px] min-w-[44px]"
                     aria-label={`Leave ${community.displayName}`}
                   >
                     <LogOut className="w-4 h-4" />

@@ -24,7 +24,9 @@ const shippingService = new ShippingService();
 const notificationService = new NotificationService();
 const blockchainEventService = new BlockchainEventService();
 import { ReceiptService } from './receiptService';
+import { SellerService } from './sellerService';
 const receiptService = new ReceiptService();
+const sellerService = new SellerService();
 // orderWebSocketService is now lazy-loaded via getOrderWebSocketService()
 
 export class OrderService {
@@ -68,6 +70,7 @@ export class OrderService {
         sellerUser.id,
         input.amount,
         input.paymentToken,
+        input.quantity ?? 1,
         escrowId,
         undefined, // variantId
         undefined, // orderId
@@ -103,7 +106,10 @@ export class OrderService {
       blockchainEventService.monitorOrderEvents(dbOrder.id.toString(), escrowId);
 
       // Send WebSocket updates for order creation
-      const newOrder = this.formatOrder(dbOrder, buyerUser, sellerUser, escrowId);
+      // Fetch seller profile for correct address in formatted order
+      const sellerProfile = await sellerService.getSellerProfile(sellerUser.walletAddress);
+
+      const newOrder = this.formatOrder(dbOrder, buyerUser, sellerUser, escrowId, undefined, sellerProfile);
       const wsService = getOrderWebSocketService();
       if (wsService) {
         wsService.sendOrderCreated(newOrder);
@@ -132,7 +138,8 @@ export class OrderService {
 
       if (!buyer || !seller) return null;
 
-      return this.formatOrder(dbOrder, buyer, seller, dbOrder.escrowId?.toString(), product);
+      const sellerProfile = await sellerService.getSellerProfile(seller.walletAddress);
+      return this.formatOrder(dbOrder, buyer, seller, dbOrder.escrowId?.toString(), product, sellerProfile);
     } catch (error) {
       safeLogger.error('Error getting order:', error);
       throw error;
@@ -165,7 +172,8 @@ export class OrderService {
           ]);
 
           if (buyer && seller) {
-            orders.push(this.formatOrder(dbOrder, buyer, seller, dbOrder.escrowId?.toString(), product));
+            const sellerProfile = await sellerService.getSellerProfile(seller.walletAddress);
+            orders.push(this.formatOrder(dbOrder, buyer, seller, dbOrder.escrowId?.toString(), product, sellerProfile));
           } else {
             safeLogger.warn('[OrderService] Missing buyer or seller for order', { orderId: dbOrder.id });
           }
@@ -681,7 +689,7 @@ export class OrderService {
     return user;
   }
 
-  private formatOrder(dbOrder: any, buyer: any, seller: any, escrowId?: string, product?: any): MarketplaceOrder {
+  private formatOrder(dbOrder: any, buyer: any, seller: any, escrowId?: string, product?: any, sellerProfile?: any): MarketplaceOrder {
     // Parse product images if stored as JSON string
     let productImage = '';
     if (product?.images) {
@@ -703,7 +711,7 @@ export class OrderService {
       productName: product.title || 'Unknown Product',
       productImage: productImage,
       quantity: dbOrder.quantity || 1,
-      price: orderTotal,
+      price: orderTotal / (dbOrder.quantity || 1),
       total: orderTotal,
       isPhysical: product.isPhysical ?? false,
       isService: product.isService ?? false,
@@ -753,13 +761,19 @@ export class OrderService {
         handle: seller.handle,
         displayName: seller.displayName,
         avatar: seller.avatarCid ? `https://ipfs.io/ipfs/${seller.avatarCid}` : undefined,
-        address: seller.billingAddress1 ? {
+        address: sellerProfile ? {
+          street: sellerProfile.registeredAddressStreet || sellerProfile.businessAddress || seller.billingAddress1 || '',
+          city: sellerProfile.registeredAddressCity || seller.billingCity || '',
+          state: sellerProfile.registeredAddressState || seller.billingState || '',
+          postalCode: sellerProfile.registeredAddressPostalCode || seller.billingZipCode || '',
+          country: sellerProfile.registeredAddressCountry || seller.billingCountry || ''
+        } : (seller.billingAddress1 ? {
           street: seller.billingAddress1 + (seller.billingAddress2 ? ` ${seller.billingAddress2}` : ''),
           city: seller.billingCity || '',
           state: seller.billingState || '',
           postalCode: seller.billingZipCode || '',
           country: seller.billingCountry || ''
-        } : undefined
+        } : undefined)
       },
       escrowId,
       amount: dbOrder.amount,

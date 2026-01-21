@@ -313,7 +313,7 @@ export const SimpleProductCard: React.FC<ProductCardProps> = ({
           
           {/* Favorite */}
           <button
-            className="absolute top-1 right-1 w-6 h-6 rounded-full bg-white/90 hover:bg-white flex items-center justify-center transition-colors shadow-sm"
+            className="absolute top-1 right-1 w-11 h-11 rounded-full bg-white/90 hover:bg-white flex items-center justify-center transition-colors shadow-sm"
             onClick={handleToggleFavorite}
           >
             <Heart

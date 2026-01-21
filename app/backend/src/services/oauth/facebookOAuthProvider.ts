@@ -16,11 +16,14 @@ const FACEBOOK_FEED_URL = `https://graph.facebook.com/${FACEBOOK_API_VERSION}/me
 
 // Default scopes for Facebook
 // Note: public_profile is always included by default
-// Required permissions for posting:
 // - pages_manage_posts: Create and manage posts as a Page
 // - pages_read_engagement: Read engagement data for Pages
-// - publish_to_groups: Publish to groups (requires app installation in group)
-const DEFAULT_SCOPES = ['public_profile', 'pages_manage_posts', 'pages_read_engagement', 'publish_to_groups'];
+//
+// NOTE: 'publish_to_groups' requires specific app review and is often restricted.
+// NOTE: 'pages_manage_posts' and 'pages_read_engagement' require "Business" app type verification.
+// If the app is in "Consumer" mode, these will cause "Invalid Scopes".
+// For now, we keep the Page scopes but remove 'publish_to_groups'.
+const DEFAULT_SCOPES = ['public_profile', 'pages_manage_posts', 'pages_read_engagement'];
 
 export class FacebookOAuthProvider extends BaseOAuthProvider {
   constructor() {

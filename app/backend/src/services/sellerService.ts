@@ -92,7 +92,7 @@ export interface SellerProfileData {
   profileCompleteness?: ProfileCompletenessScore;
 }
 
-class SellerService {
+export class SellerService {
   // Profile validation rules with weights for completeness scoring
   private validationRules: ValidationRule[] = [
     { field: 'displayName', required: true, weight: 15 },

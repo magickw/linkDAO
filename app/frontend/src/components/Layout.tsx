@@ -24,6 +24,9 @@ import { NotificationBell } from '@/components/NotificationBell';
 const NavigationSidebar = dynamic(() => import('@/components/NavigationSidebar'), {
   ssr: false
 });
+const MobileNavigation = dynamic(() => import('@/components/MobileNavigation'), {
+  ssr: false
+});
 
 
 interface LayoutProps {
@@ -48,23 +51,8 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
   const [darkMode, setDarkMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const touchStart = useRef<number>(0);
-
   // Check if we're on the home/feed page
   const isHomePage = router.pathname === '/';
-
-  // Add effect to listen for custom toggle event from communities page
-  useEffect(() => {
-    const handleToggleMenu = () => {
-      setIsMenuOpen(prev => !prev);
-    };
-
-    window.addEventListener('toggle-mobile-menu', handleToggleMenu);
-
-    return () => {
-      window.removeEventListener('toggle-mobile-menu', handleToggleMenu);
-    };
-  }, []);
 
   // Live badge counts
   const { conversations } = useChatHistory();
@@ -108,8 +96,6 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
       localStorage.setItem('darkMode', darkMode.toString());
     }
   }, [darkMode]);
-
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Navigation items with icons - Home now serves as the main Feed/Dashboard
   const navItems: NavItem[] = useMemo(() => ([
@@ -170,12 +156,9 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
     return () => { active = false; };
   }, [address]);
 
-  // Add keyboard event listener for mobile menu
+  // Add keyboard event listener for search focus
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isMenuOpen) {
-        setIsMenuOpen(false);
-      }
       // Add Ctrl/Cmd + K for search focus
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
@@ -189,34 +172,9 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isMenuOpen]);
+  }, []);
 
-  // Add touch event handlers for swipe gestures
-  useEffect(() => {
-    const handleTouchStart = (e: TouchEvent) => {
-      touchStart.current = e.touches[0].clientX;
-    };
-
-    const handleTouchEnd = (e: TouchEvent) => {
-      const diff = e.changedTouches[0].clientX - touchStart.current;
-      // Swipe right from edge to open menu
-      if (diff > 50 && !isMenuOpen && touchStart.current < 50) {
-        setIsMenuOpen(true);
-      }
-      // Swipe left to close menu
-      else if (diff < -50 && isMenuOpen) {
-        setIsMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('touchstart', handleTouchStart);
-    document.addEventListener('touchend', handleTouchEnd);
-
-    return () => {
-      document.removeEventListener('touchstart', handleTouchStart);
-      document.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [isMenuOpen]);
+  
 
   return (
     <>
@@ -361,7 +319,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
               {/* Dark mode toggle */}
               <button
                 onClick={() => setDarkMode(!darkMode)}
-                className="p-2 rounded-full text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white focus:outline-none"
+                className="p-3 rounded-full text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white focus:outline-none min-h-[44px] min-w-[44px]"
                 aria-label="Toggle dark mode"
               >
                 {darkMode ? (
@@ -370,79 +328,17 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
                   </svg>
                 ) : (
                   <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8 0 1010.586 10.586z" />
                   </svg>
                 )}
               </button>
 
               <ConnectButton showBalance={false} chainStatus="none" />
-
-              <button
-                onClick={() => {
-                  setIsMenuOpen(!isMenuOpen);
-                }}
-                className="text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400 focus:outline-none"
-              >
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  {isMenuOpen ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
-                  )}
-                </svg>
-              </button>
             </div>
           </div>
 
           {/* Mobile Menu */}
-          {isMenuOpen && (
-            <div className="md:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50">
-              <nav className="px-2 pt-2 pb-4 space-y-1">
-                <ul className="space-y-1">
-                  {allNavItems.map((item) => (
-                    <li key={item.name}>
-                      <Link
-                        href={item.href}
-                        className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors ${router.pathname === item.href ||
-                          (item.href === '/communities' && router.pathname.startsWith('/communities/'))
-                          ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
-                          : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700'
-                          }`}
-                        onClick={() => {
-                          setIsMenuOpen(false);
-                        }}
-                      >
-                        <span className="mr-2">{item.icon}</span>
-                        <span className="flex-1">{item.name}</span>
-                        {item.badge !== undefined && item.badge > 0 && (
-                          <span className="ml-2 inline-flex items-center justify-center rounded-full bg-primary-600 text-white text-xs px-2 py-0.5">
-                            {item.badge > 99 ? '99+' : item.badge}
-                          </span>
-                        )}
-                      </Link>
-                    </li>
-                  ))}
-
-                  {isConnected && isAdmin && (
-                    <li>
-                      <Link
-                        href="/admin"
-                        className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors ${router.pathname === '/admin'
-                          ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
-                          : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700'
-                          }`}
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <span className="mr-2">🔒</span>
-                        Admin
-                      </Link>
-                    </li>
-                  )}
-                </ul>
-              </nav>
-            </div>
-          )}
-        </header>
+          </header>
 
         <main className={fullWidth ? (isMobile ? "w-full px-0" : "w-full") : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"}>
           {children}
@@ -558,6 +454,9 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
         )}
 
         {/* {isConnected && <NotificationSystem />} */}
+
+        {/* Mobile Navigation */}
+        <MobileNavigation />
 
       </div>
     </>

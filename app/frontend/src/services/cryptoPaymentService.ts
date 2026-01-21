@@ -190,8 +190,11 @@ export class CryptoPaymentService {
       throw new Error(`Escrow contract not deployed on chain ID ${chainId}`);
     }
 
+    const accounts = await this.walletClient.getAddresses();
+    const userAddress = accounts[0];
+
     // Estimate gas for the release transaction to ensure it's within limits
-    const gasEstimate = await this.estimateGasLimit(escrowAddress, '0x');
+    const gasEstimate = await this.estimateGasLimit(escrowAddress, '0x', 0n, userAddress);
     // Validate gas limit against network and security constraints
     const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
     const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)
@@ -208,7 +211,7 @@ export class CryptoPaymentService {
       args: [BigInt(escrowId), "Delivery confirmed"],
       gas: gasEstimate,
       chain: undefined,
-      account: undefined,
+      account: userAddress,
     });
   }
 
@@ -225,8 +228,11 @@ export class CryptoPaymentService {
       throw new Error(`Escrow contract not deployed on chain ID ${chainId}`);
     }
 
+    const accounts = await this.walletClient.getAddresses();
+    const userAddress = accounts[0];
+
     // Estimate gas for the refund transaction to ensure it's within limits
-    const gasEstimate = await this.estimateGasLimit(escrowAddress, '0x');
+    const gasEstimate = await this.estimateGasLimit(escrowAddress, '0x', 0n, userAddress);
     // Validate gas limit against network and security constraints
     const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
     const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)
@@ -243,7 +249,7 @@ export class CryptoPaymentService {
       args: [BigInt(escrowId)],
       gas: gasEstimate,
       chain: undefined,
-      account: undefined,
+      account: userAddress,
     });
   }
 
@@ -543,8 +549,12 @@ export class CryptoPaymentService {
         address: token.address as `0x${string}`,
         abi: erc20Abi,
         functionName: "balanceOf",
-        args: [userAddress],
-        authorizationList: undefined
+        args: [userAddress]
+      });
+      console.log(`[CryptoPaymentService] Token balance check: ${token.symbol} (${token.chainId})`, {
+        userAddress,
+        balance: formatUnits(balance, token.decimals),
+        required: formatUnits(amount, token.decimals)
       });
     }
 
@@ -588,13 +598,15 @@ export class CryptoPaymentService {
 
     // Request approval for the exact amount needed
     // Note: Some users prefer infinite approval for UX, but exact amount is safer
-    
+
     // Estimate gas for approval transaction
     const approvalGasEstimate = await this.estimateGasLimit(
       token.address,
-      `0x095ea7b3${spender.slice(2).padStart(64, '0')}${amount.toString(16).padStart(64, '0')}`
+      `0x095ea7b3${spender.slice(2).padStart(64, '0')}${amount.toString(16).padStart(64, '0')}`,
+      0n,
+      userAddress
     );
-    
+
     const approvalHash = await this.walletClient.writeContract({
       address: token.address as `0x${string}`,
       abi: erc20Abi,
@@ -724,7 +736,7 @@ export class CryptoPaymentService {
   ): string {
     // Function signature for createEscrow(uint256,address,address,uint256,uint256,uint8)
     const functionSignature = '0x' + this.keccak256('createEscrow(uint256,address,address,uint256,uint256,uint8)').slice(0, 8);
-    
+
     // Encode parameters (each parameter is 32 bytes)
     const orderIdPadded = orderId.toString(16).padStart(64, '0');
     const sellerPadded = seller.slice(2).padStart(64, '0');
@@ -732,7 +744,7 @@ export class CryptoPaymentService {
     const amountPadded = amount.toString(16).padStart(64, '0');
     const deliveryDeadlinePadded = deliveryDeadline.toString(16).padStart(64, '0');
     const resolutionMethodPadded = resolutionMethod.toString(16).padStart(64, '0');
-    
+
     return functionSignature + orderIdPadded + sellerPadded + tokenPadded + amountPadded + deliveryDeadlinePadded + resolutionMethodPadded;
   }
 
@@ -745,14 +757,14 @@ export class CryptoPaymentService {
     const knownSignatures: Record<string, string> = {
       'createEscrow(uint256,address,address,uint256,uint256,uint8)': '0x8c8a9d5e'
     };
-    
+
     return knownSignatures[data] || '0x00000000';
   }
 
   /**
    * Estimate gas limit for a transaction
    */
-  private async estimateGasLimit(to: string, data: string, value: bigint = 0n): Promise<bigint> {
+  private async estimateGasLimit(to: string, data: string, value: bigint = 0n, account?: string): Promise<bigint> {
     if (!this.publicClient) {
       throw new Error('Public client not initialized');
     }
@@ -761,7 +773,8 @@ export class CryptoPaymentService {
       const gasEstimate = await this.publicClient.estimateGas({
         to: to as `0x${string}`,
         data: data as `0x${string}`,
-        value
+        value,
+        account: account as `0x${string}` | undefined
       });
 
       // Add buffer to gas estimate using BigInt arithmetic to avoid floating-point precision errors
