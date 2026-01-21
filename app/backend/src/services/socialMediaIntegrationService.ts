@@ -167,7 +167,24 @@ export class SocialMediaIntegrationService {
           mediaUrls: resolvedMediaUrls,
         };
 
-        const postResult = await provider.postContent(accessToken, socialContent);
+        let postResult;
+
+        // Special handling for Facebook Pages
+        if (platform === 'facebook') {
+          const pageInfo = await socialMediaConnectionService.getPageAccessToken(userId, platform);
+
+          if (pageInfo) {
+            safeLogger.info('Posting to Facebook Page', { pageId: pageInfo.pageId });
+            // We know provider is FacebookOAuthProvider
+            postResult = await (provider as any).postToPage(pageInfo.token, pageInfo.pageId, socialContent);
+          } else {
+            // Fallback to user profile (might fail due to permissions, but keep existing behavior)
+            postResult = await provider.postContent(accessToken, socialContent);
+          }
+        } else {
+          // Standard posting for other platforms
+          postResult = await provider.postContent(accessToken, socialContent);
+        }
 
         // Store post record in database with correct reference
         const postRecord = await db
@@ -238,12 +255,12 @@ export class SocialMediaIntegrationService {
     return mediaUrls.map(url => {
       // Check if it's already a URL
       if (url.startsWith('http')) return url;
-      
+
       // Check if it's a CID (v0 or v1)
       if (url.startsWith('Qm') || url.startsWith('bafy')) {
         return `https://ipfs.io/ipfs/${url}`;
       }
-      
+
       return url;
     });
   }
@@ -253,21 +270,21 @@ export class SocialMediaIntegrationService {
    */
   private stripHtml(html: string): string {
     if (!html) return '';
-    
+
     // Remove HTML tags
     let text = html.replace(/<[^>]*>/g, '');
-    
+
     // Replace HTML entities
     text = text.replace(/&nbsp;/g, ' ')
-               .replace(/&amp;/g, '&')
-               .replace(/&lt;/g, '<')
-               .replace(/&gt;/g, '>')
-               .replace(/&quot;/g, '"')
-               .replace(/&#39;/g, "'");
-    
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+
     // Remove extra whitespace
     text = text.replace(/\s+/g, ' ').trim();
-    
+
     return text;
   }
 
@@ -277,7 +294,7 @@ export class SocialMediaIntegrationService {
   adaptContentForPlatform(content: string, platform: SocialPlatform): string {
     // Strip HTML tags first
     const plainText = this.stripHtml(content);
-    
+
     const limit = PLATFORM_CHAR_LIMITS[platform];
 
     // If content fits, return as-is
@@ -396,7 +413,7 @@ export class SocialMediaIntegrationService {
       .where(eq(socialMediaPosts.id, postRecordId));
 
     return {
-      statusId: record.statusId,
+      contentId: (record.statusId || record.postId) || '',
       platform,
       connectionId: record.connectionId,
       success: postResult.success,
@@ -412,7 +429,7 @@ export class SocialMediaIntegrationService {
   async crossPostContent(config: CrossPostConfig): Promise<SocialMediaPost[]> {
     try {
       const db = databaseService.getDatabase();
-      
+
       // Get the original post
       const postData = await db
         .select({
@@ -433,16 +450,16 @@ export class SocialMediaIntegrationService {
       }
 
       const post = postData[0];
-      
+
       // Generate content for social media
       const socialContent = this.generateSocialContent(post, config.contentTemplate);
-      
+
       // Get media URLs if needed
       const mediaUrls = config.includeMedia ? this.extractMediaUrls(post.mediaCids) : [];
 
       // Post to each platform
       const results: SocialMediaPost[] = [];
-      
+
       for (const platform of config.platforms) {
         try {
           const result = await this.postToPlatform(
@@ -451,7 +468,7 @@ export class SocialMediaIntegrationService {
             mediaUrls,
             config.scheduleTime
           );
-          
+
           results.push(result);
         } catch (error) {
           safeLogger.error(`Failed to post to ${platform}:`, error);
@@ -485,7 +502,7 @@ export class SocialMediaIntegrationService {
   ): string {
     // In a real implementation, this would fetch the actual content from IPFS
     // For now, we'll create a simple template-based content
-    
+
     let content = template
       .replace('{title}', post.title || 'Check out this post')
       .replace('{postId}', post.id.toString())
@@ -508,7 +525,7 @@ export class SocialMediaIntegrationService {
    */
   private extractMediaUrls(mediaCids: string | null): string[] {
     if (!mediaCids) return [];
-    
+
     try {
       const cids = JSON.parse(mediaCids);
       // In a real implementation, this would convert IPFS CIDs to actual URLs
@@ -530,17 +547,17 @@ export class SocialMediaIntegrationService {
     scheduleTime?: Date
   ): Promise<SocialMediaPost> {
     const postId = `post-${platform}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
+
     try {
       // This is where we would integrate with actual social media APIs
       // For now, we'll simulate the posting process
-      
+
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // Simulate success or failure based on platform
       const success = Math.random() > 0.2; // 80% success rate
-      
+
       if (success) {
         return {
           id: postId,
@@ -587,7 +604,7 @@ export class SocialMediaIntegrationService {
       // In a real implementation, this would store records in a dedicated table
       // For now, we'll just log the information
       safeLogger.info('Storing cross-post records:', { posts, originalPostId });
-      
+
       // Example of what the database storage might look like:
       /*
       const db = databaseService.getDatabase();
@@ -625,7 +642,7 @@ export class SocialMediaIntegrationService {
       // Calculate time range
       const endDate = new Date();
       const startDate = new Date();
-      
+
       switch (timeframe) {
         case '24h':
           startDate.setHours(startDate.getHours() - 24);
@@ -640,10 +657,10 @@ export class SocialMediaIntegrationService {
 
       // In a real implementation, this would fetch actual analytics data
       // For now, we'll return mock data
-      
-      const platforms: Array<'twitter' | 'discord' | 'telegram' | 'facebook' | 'linkedin'> = 
+
+      const platforms: Array<'twitter' | 'discord' | 'telegram' | 'facebook' | 'linkedin'> =
         ['twitter', 'discord', 'telegram'];
-      
+
       const analytics: SocialMediaAnalytics[] = platforms.map(platform => ({
         platform,
         totalPosts: Math.floor(Math.random() * 50) + 10,
@@ -674,44 +691,44 @@ export class SocialMediaIntegrationService {
   async optimizeContentForSocialSharing(
     content: string,
     targetPlatforms: Array<'twitter' | 'discord' | 'telegram' | 'facebook' | 'linkedin'>
-  ): Promise<{ 
-    optimizedContent: string; 
-    suggestions: string[]; 
-    hashtags: string[]; 
+  ): Promise<{
+    optimizedContent: string;
+    suggestions: string[];
+    hashtags: string[];
   }> {
     try {
       // Simple content optimization
       let optimizedContent = content;
-      
+
       // Truncate to appropriate length (Twitter as the most restrictive)
       if (optimizedContent.length > 280) {
         optimizedContent = optimizedContent.substring(0, 277) + '...';
       }
-      
+
       // Generate suggestions
       const suggestions: string[] = [];
-      
+
       if (optimizedContent.length < 50) {
         suggestions.push('Consider adding more details to make your post more engaging');
       }
-      
+
       if (!optimizedContent.includes('http') && targetPlatforms.includes('twitter')) {
         suggestions.push('Consider adding links to drive traffic to your content');
       }
-      
+
       // Generate hashtags
       const hashtags: string[] = [];
-      
+
       // Simple keyword extraction (in a real implementation, this would use NLP)
       const words = optimizedContent.toLowerCase().split(/\s+/);
       const commonKeywords = ['dao', 'community', 'blockchain', 'web3', 'decentralized'];
-      
+
       for (const keyword of commonKeywords) {
         if (words.some(word => word.includes(keyword))) {
           hashtags.push(`#${keyword}`);
         }
       }
-      
+
       // Limit hashtags
       if (hashtags.length > 3) {
         hashtags.splice(3);
@@ -743,15 +760,15 @@ export class SocialMediaIntegrationService {
       if (!config.scheduleTime) {
         throw new Error('Schedule time is required for scheduling content');
       }
-      
+
       // Validate schedule time
       if (config.scheduleTime < new Date()) {
         throw new Error('Schedule time must be in the future');
       }
-      
+
       // Create scheduled posts
       const scheduledPosts: SocialMediaPost[] = [];
-      
+
       for (const platform of config.platforms) {
         scheduledPosts.push({
           id: `scheduled-${platform}-${Date.now()}`,
@@ -762,10 +779,10 @@ export class SocialMediaIntegrationService {
           metrics: {}
         });
       }
-      
+
       // Store scheduled posts
       await this.storeCrossPostRecords(scheduledPosts, config.postId);
-      
+
       return scheduledPosts;
 
     } catch (error) {

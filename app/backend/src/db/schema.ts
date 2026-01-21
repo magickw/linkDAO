@@ -6522,6 +6522,11 @@ export const socialMediaConnections = pgTable("social_media_connections", {
   // OAuth metadata
   scopes: text("scopes"), // JSON array of granted scopes
 
+  // Facebook Page Support
+  pageId: varchar("page_id", { length: 255 }),
+  pageName: varchar("page_name", { length: 255 }),
+  pageAccessToken: text("page_access_token"), // Encrypted if possible, but consistent with accessToken for now
+
   // Status tracking
   status: varchar("status", { length: 32 }).default("active"), // 'active' | 'expired' | 'revoked' | 'error'
   lastError: text("last_error"),

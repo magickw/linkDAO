@@ -1,0 +1,357 @@
+npm warn config ignoring workspace config at /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/.npmrc
+
+> linkdao-backend@1.0.5 build:typecheck
+> tsc --noEmit --project tsconfig.production.json
+
+src/config/api-gateway.ts(274,48): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './redis-production.js'?
+src/config/performanceConfig.ts(130,68): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/enhancedDatabaseOptimizationService.js'?
+src/config/production-server.ts(109,64): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../monitoring/monitoring-integration.js'?
+src/config/production-server.ts(129,65): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/marketplaceSellerRoutes.js'?
+src/config/production-server.ts(130,61): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/sellerProfileRoutes.js'?
+src/config/production-server.ts(131,63): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/sellerDashboardRoutes.js'?
+src/config/production-server.ts(132,59): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/sellerOrderRoutes.js'?
+src/config/production-server.ts(133,61): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/sellerListingRoutes.js'?
+src/config/production-server.ts(134,66): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/sellerVerificationRoutes.js'?
+src/config/production-server.ts(135,50): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/sellerImageRoutes.js'?
+src/config/production-server.ts(136,55): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/marketplaceListingsRoutes.js'?
+src/config/production-server.ts(137,59): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/marketplaceRoutes.js'?
+src/config/production-server.ts(139,43): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/docsRoutes.js'?
+src/config/production-server.ts(140,52): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/authRoutes.js'?
+src/config/production-server.ts(141,58): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/reputationRoutes.js'?
+src/config/production-server.ts(142,54): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/healthRoutes.js'?
+src/config/production-server.ts(145,52): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/feedRoutes.js'?
+src/config/production-server.ts(146,52): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/postRoutes.js'?
+src/config/production-server.ts(147,54): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/statusRoutes.js'?
+src/config/production-server.ts(150,52): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/userRoutes.js'?
+src/config/production-server.ts(151,55): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/commentRoutes.js'?
+src/config/production-server.ts(152,54): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/followRoutes.js'?
+src/config/production-server.ts(153,57): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/communityRoutes.js'?
+src/config/production-server.ts(154,65): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/communityTreasuryRoutes.js'?
+src/config/production-server.ts(155,57): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/messagingRoutes.js'?
+src/config/production-server.ts(156,56): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/bookmarkRoutes.js'?
+src/config/production-server.ts(157,54): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/searchRoutes.js'?
+src/config/production-server.ts(158,51): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/tipRoutes.js'?
+src/config/production-server.ts(159,71): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/notificationPreferencesRoutes.js'?
+src/config/production-server.ts(160,51): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/ensRoutes.js'?
+src/config/production-server.ts(161,43): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/ipfsRoutes.js'?
+src/config/production-server.ts(162,58): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/moderationRoutes.js'?
+src/config/production-server.ts(163,52): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/viewRoutes.js'?
+src/config/production-server.ts(164,53): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/shareRoutes.js'?
+src/config/production-server.ts(165,55): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/sessionRoutes.js'?
+src/config/production-server.ts(166,59): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/userProfileRoutes.js'?
+src/config/production-server.ts(167,64): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/communityCommentRoutes.js'?
+src/config/production-server.ts(168,61): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/contentReportRoutes.js'?
+src/config/production-server.ts(171,58): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/newsletterRoutes.js'?
+src/config/production-server.ts(172,67): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/enhancedFiatPaymentRoutes.js'?
+src/config/production-server.ts(395,66): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../monitoring/monitoring-integration.js'?
+src/controllers/adminController.ts(835,54): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/adminDashboardService.js'?
+src/controllers/adminController.ts(853,54): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/adminDashboardService.js'?
+src/controllers/adminController.ts(892,54): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/adminDashboardService.js'?
+src/controllers/adminController.ts(908,54): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/adminDashboardService.js'?
+src/controllers/adminController.ts(937,54): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/adminDashboardService.js'?
+src/controllers/communityController.ts(1734,60): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/bulkMemberManagementService.js'?
+src/controllers/communityController.ts(1773,60): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/bulkMemberManagementService.js'?
+src/controllers/communityController.ts(1812,60): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/bulkMemberManagementService.js'?
+src/controllers/communityController.ts(1851,60): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/bulkMemberManagementService.js'?
+src/controllers/communityController.ts(1890,60): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/bulkMemberManagementService.js'?
+src/controllers/communityController.ts(1924,60): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/bulkMemberManagementService.js'?
+src/controllers/communityController.ts(1953,60): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/bulkMemberManagementService.js'?
+src/controllers/communityController.ts(2002,60): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/bulkMemberManagementService.js'?
+src/controllers/communityController.ts(2034,60): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/bulkMemberManagementService.js'?
+src/controllers/communityController.ts(2063,56): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/pushNotificationService.js'?
+src/controllers/communityController.ts(2093,56): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/pushNotificationService.js'?
+src/controllers/communityController.ts(2116,56): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/pushNotificationService.js'?
+src/controllers/communityController.ts(2137,56): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/pushNotificationService.js'?
+src/controllers/communityController.ts(2162,56): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/pushNotificationService.js'?
+src/controllers/communityController.ts(2197,56): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/pushNotificationService.js'?
+src/controllers/communityController.ts(2210,56): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/pushNotificationService.js'?
+src/controllers/communityController.ts(2242,55): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/communityHealthService.js'?
+src/controllers/communityController.ts(2267,55): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/communityHealthService.js'?
+src/controllers/communityController.ts(2293,55): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/communityHealthService.js'?
+src/controllers/communityController.ts(2318,55): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/communityHealthService.js'?
+src/controllers/communityController.ts(2346,55): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/communityHealthService.js'?
+src/controllers/communityController.ts(2377,61): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/communityAIModerationService.js'?
+src/controllers/employeeManagementController.ts(653,15): error TS2345: Argument of type 'SQL<unknown>' is not assignable to parameter of type 'SQLWrapper'.
+  The types returned by 'getSQL()' are incompatible between these types.
+    Type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/drizzle-orm/sql/sql", { with: { "resolution-mode": "import" } }).SQL<unknown>' is not assignable to type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/drizzle-orm/sql/sql").SQL<unknown>'.
+      Types have separate declarations of a private property 'shouldInlineParams'.
+src/controllers/employeeManagementController.ts(653,22): error TS2345: Argument of type 'PgColumn<{ name: "last_login"; tableName: "users"; dataType: "date"; columnType: "PgTimestamp"; data: Date; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'SQLWrapper'.
+  The types returned by 'getSQL()' are incompatible between these types.
+    Type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/drizzle-orm/sql/sql").SQL<unknown>' is not assignable to type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/drizzle-orm/sql/sql", { with: { "resolution-mode": "import" } }).SQL<unknown>'.
+      Types have separate declarations of a private property 'shouldInlineParams'.
+src/controllers/employeeManagementController.ts(654,18): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: Column<ColumnBaseConfig<ColumnDataType, string>, object, object>, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "last_login"; tableName: "users"; dataType: "date"; columnType: "PgTimestamp"; data: Date; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Column<ColumnBaseConfig<ColumnDataType, string>, object, object>'.
+      The types of 'table._.config.columns' are incompatible between these types.
+        Type 'Record<string, PgColumn<ColumnBaseConfig<ColumnDataType, string>, {}, {}>>' is not assignable to type 'Record<string, Column<any, object, object>>'.
+          'string' index signatures are incompatible.
+            Type 'PgColumn<ColumnBaseConfig<ColumnDataType, string>, {}, {}>' is not assignable to type 'Column<any, object, object>'.
+              Property 'config' is protected but type 'Column<T, TRuntimeConfig, TTypeConfig>' is not a class derived from 'Column<T, TRuntimeConfig, TTypeConfig>'.
+  Overload 2 of 3, '(left: Aliased<Date>, right: Date | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "last_login"; tableName: "users"; dataType: "date"; columnType: "PgTimestamp"; data: Date; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<Date>'.
+      Type 'PgColumn<{ name: "last_login"; tableName: "users"; dataType: "date"; columnType: "PgTimestamp"; data: Date; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<Date>': sql, fieldAlias
+  Overload 3 of 3, '(left: SQLWrapper, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "last_login"; tableName: "users"; dataType: "date"; columnType: "PgTimestamp"; data: Date; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'SQLWrapper'.
+      The types returned by 'getSQL()' are incompatible between these types.
+        Type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/drizzle-orm/sql/sql").SQL<unknown>' is not assignable to type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/drizzle-orm/sql/sql", { with: { "resolution-mode": "import" } }).SQL<unknown>'.
+          Types have separate declarations of a private property 'shouldInlineParams'.
+src/controllers/marketplaceListingsController.ts(76,56): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/sellerService.js'?
+src/controllers/marketplaceListingsController.ts(234,48): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/sellerService.js'?
+src/controllers/sellerController.ts(873,46): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/sellerService.js'?
+src/controllers/sellerController.ts(1132,46): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/sellerService.js'?
+src/controllers/sellerController.ts(1172,46): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/sellerService.js'?
+src/controllers/sellerController.ts(1241,46): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/sellerService.js'?
+src/controllers/sellerController.ts(1264,46): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/sellerService.js'?
+src/controllers/sellerController.ts(1293,46): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/sellerService.js'?
+src/controllers/sellerController.ts(1306,46): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/sellerService.js'?
+src/controllers/sellerController.ts(1328,46): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/sellerService.js'?
+src/cron/inventoryCleanupCron.ts(22,17): error TS2323: Cannot redeclare exported variable 'initializeInventoryCleanupCron'.
+src/cron/inventoryCleanupCron.ts(43,17): error TS2323: Cannot redeclare exported variable 'stopInventoryCleanupCron'.
+src/cron/inventoryCleanupCron.ts(80,17): error TS2323: Cannot redeclare exported variable 'getInventoryCleanupCronStatus'.
+src/cron/inventoryCleanupCron.ts(93,23): error TS2323: Cannot redeclare exported variable 'triggerInventoryCleanup'.
+src/cron/inventoryCleanupCron.ts(105,3): error TS2323: Cannot redeclare exported variable 'initializeInventoryCleanupCron'.
+src/cron/inventoryCleanupCron.ts(105,3): error TS2484: Export declaration conflicts with exported declaration of 'initializeInventoryCleanupCron'.
+src/cron/inventoryCleanupCron.ts(106,3): error TS2323: Cannot redeclare exported variable 'stopInventoryCleanupCron'.
+src/cron/inventoryCleanupCron.ts(106,3): error TS2484: Export declaration conflicts with exported declaration of 'stopInventoryCleanupCron'.
+src/cron/inventoryCleanupCron.ts(107,3): error TS2323: Cannot redeclare exported variable 'getInventoryCleanupCronStatus'.
+src/cron/inventoryCleanupCron.ts(107,3): error TS2484: Export declaration conflicts with exported declaration of 'getInventoryCleanupCronStatus'.
+src/cron/inventoryCleanupCron.ts(108,3): error TS2323: Cannot redeclare exported variable 'triggerInventoryCleanup'.
+src/cron/inventoryCleanupCron.ts(108,3): error TS2484: Export declaration conflicts with exported declaration of 'triggerInventoryCleanup'.
+src/db/connectionPool.ts(151,45): error TS2345: Argument of type '(sql: Sql<{}>) => Promise<T>' is not assignable to parameter of type '(sql: TransactionSql<{}>) => T | Promise<T>'.
+  Types of parameters 'sql' and 'sql' are incompatible.
+    Type 'TransactionSql<{}>' is missing the following properties from type 'Sql<{}>': CLOSE, END, PostgresError, options, and 7 more.
+src/index.ts(152,45): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './services/cacheService.js'?
+src/index.ts(168,43): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './services/redisService.js'?
+src/index.ts(178,47): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './services/cacheWarmingService.js'?
+src/index.ts(208,59): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './services/cancellationSchedulerService.js'?
+src/index.ts(217,52): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './services/trackingPollerService.js'?
+src/index.ts(226,55): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './jobs/orderAutomationJobs.js'?
+src/index.ts(628,43): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './services/redisService.js'?
+src/index.ts(678,43): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './services/redisService.js'?
+src/index.ts(1412,55): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './services/escrowSchedulerService.js'?
+src/index.ts(1667,54): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './services/trackingPollerService.js'?
+src/middleware/checkoutRateLimiter.ts(94,21): error TS2352: Conversion of type 'ReplyUnion' to type 'number' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'MapReply<ReplyUnion, ReplyUnion>' is not comparable to type 'number'.
+src/middleware/checkoutRateLimiter.ts(95,23): error TS2352: Conversion of type 'ReplyUnion' to type 'number' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'MapReply<ReplyUnion, ReplyUnion>' is not comparable to type 'number'.
+src/middleware/globalErrorHandler.ts(331,50): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/circuitBreakerService.js'?
+src/middleware/metricsMiddleware.ts(37,3): error TS2322: Type '(chunk?: any, encoding?: BufferEncoding) => any' is not assignable to type '{ (cb?: () => void): Response<any, Record<string, any>>; (chunk: any, cb?: () => void): Response<any, Record<string, any>>; (chunk: any, encoding: BufferEncoding, cb?: () => void): Response<...>; }'.
+  Types of parameters 'encoding' and 'cb' are incompatible.
+    Type '() => void' is not assignable to type 'BufferEncoding'.
+src/routes/checkoutRoutes.enhanced.ts(8,32): error TS2307: Cannot find module '../middleware/csrfMiddleware' or its corresponding type declarations.
+src/routes/checkoutRoutes.enhanced.ts(49,22): error TS2339: Property 'updateSession' does not exist on type 'CheckoutController'.
+src/routes/checkoutRoutes.enhanced.ts(75,22): error TS2339: Property 'validateAddress' does not exist on type 'CheckoutController'.
+src/routes/checkoutRoutes.enhanced.ts(88,22): error TS2551: Property 'applyDiscountCode' does not exist on type 'CheckoutController'. Did you mean 'applyDiscount'?
+src/routes/checkoutRoutes.enhanced.ts(100,22): error TS2341: Property 'calculateTax' is private and only accessible within class 'CheckoutController'.
+src/routes/checkoutRoutes.enhanced.ts(126,22): error TS2339: Property 'cancelSession' does not exist on type 'CheckoutController'.
+src/routes/hybridPaymentRoutes.ts(392,52): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/enhancedEscrowService.js'?
+src/routes/ipfsRoutes.ts(81,20): error TS2304: Cannot find name 'detectedContentType'.
+src/routes/ipfsRoutes.ts(82,15): error TS2304: Cannot find name 'userId'.
+src/routes/marketplaceRoutes.ts(124,33): error TS2834: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Consider adding an extension to the import path.
+src/routes/marketplaceRoutes.ts(153,51): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/marketplaceService.js'?
+src/routes/marketplaceRoutes.ts(207,47): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/marketplaceListingsService.js'?
+src/routes/postShareRoutes.ts(47,37): error TS2834: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Consider adding an extension to the import path.
+src/routes/postShareRoutes.ts(48,50): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../db/schema.js'?
+src/routes/receiptRoutes.ts(61,43): error TS2551: Property 'getReceiptsByOrderId' does not exist on type 'ReceiptService'. Did you mean 'getReceiptByOrderId'?
+src/routes/receiptRoutes.ts(99,43): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/emailService.js'?
+src/scripts/validatePerformanceMonitoring.ts(15,58): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/performanceBenchmarkService.js'?
+src/scripts/validatePerformanceMonitoring.ts(16,62): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/renderPerformanceMonitoringService.js'?
+src/scripts/validatePerformanceMonitoring.ts(17,54): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/errorRecoveryCacheProfiler.js'?
+src/scripts/validatePerformanceMonitoring.ts(18,60): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/criticalPathPerformanceOptimizer.js'?
+src/scripts/validatePerformanceMonitoring.ts(19,59): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../controllers/performanceMonitoringController.js'?
+src/scripts/validatePerformanceMonitoring.ts(20,64): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../routes/performanceMonitoringRoutes.js'?
+src/scripts/validatePerformanceMonitoring.ts(21,69): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/performanceMonitoringIntegration.js'?
+src/scripts/validatePerformanceMonitoring.ts(44,58): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/performanceBenchmarkService.js'?
+src/scripts/verify_comments.ts(64,13): error TS2353: Object literal may only specify known properties, and 'statusId' does not exist in type 'CommentData'.
+src/services/ai/aiUsageMonitorService.ts(279,45): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './aiCacheService.js'?
+src/services/buyerProfileService.ts(54,17): error TS2352: Conversion of type '{ userId: string; totalOrders: string; totalSpent: string; averageOrderValue: string; savedAddressesCount: string; savedPaymentMethodsCount: string; wishlistItemsCount: string; preferredCurrency: string; ... 12 more ...; lastPurchaseAt: Date; }' to type 'BuyerProfile' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'totalOrders' are incompatible.
+    Type 'string' is not comparable to type 'number'.
+src/services/buyerProfileService.ts(77,17): error TS2769: No overload matches this call.
+  Overload 2 of 2, '(values: { userId: string | SQL<unknown> | Placeholder<string, any>; createdAt?: Date | SQL<unknown> | Placeholder<string, any>; updatedAt?: Date | SQL<...> | Placeholder<...>; ... 17 more ...; lastPurchaseAt?: Date | ... 1 more ... | Placeholder<...>; }[]): PgInsertBase<...>', gave the following error.
+    Object literal may only specify known properties, and 'userId' does not exist in type '{ userId: string | SQL<unknown> | Placeholder<string, any>; createdAt?: Date | SQL<unknown> | Placeholder<string, any>; updatedAt?: Date | SQL<...> | Placeholder<...>; ... 17 more ...; lastPurchaseAt?: Date | ... 1 more ... | Placeholder<...>; }[]'.
+src/services/buyerProfileService.ts(95,16): error TS2352: Conversion of type '{ createdAt: Date; updatedAt: Date; userId: string; totalOrders: string; totalSpent: string; averageOrderValue: string; savedAddressesCount: string; savedPaymentMethodsCount: string; ... 12 more ...; lastPurchaseAt: Date; }' to type 'BuyerProfile' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'totalOrders' are incompatible.
+    Type 'string' is not comparable to type 'number'.
+src/services/buyerProfileService.ts(111,17): error TS2352: Conversion of type '{ userId: string; totalOrders: string; totalSpent: string; averageOrderValue: string; savedAddressesCount: string; savedPaymentMethodsCount: string; wishlistItemsCount: string; preferredCurrency: string; ... 12 more ...; lastPurchaseAt: Date; }' to type 'BuyerProfile' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'totalOrders' are incompatible.
+    Type 'string' is not comparable to type 'number'.
+src/services/buyerProfileService.ts(127,17): error TS2322: Type 'number' is not assignable to type 'string | SQL<unknown> | PgColumn<ColumnBaseConfig<ColumnDataType, string>, {}, {}>'.
+src/services/buyerProfileService.ts(128,17): error TS2322: Type 'number' is not assignable to type 'string | SQL<unknown> | PgColumn<ColumnBaseConfig<ColumnDataType, string>, {}, {}>'.
+src/services/buyerProfileService.ts(129,17): error TS2322: Type 'number' is not assignable to type 'string | SQL<unknown> | PgColumn<ColumnBaseConfig<ColumnDataType, string>, {}, {}>'.
+src/services/buyerProfileService.ts(136,17): error TS2352: Conversion of type '{ userId: string; totalOrders: string; totalSpent: string; averageOrderValue: string; savedAddressesCount: string; savedPaymentMethodsCount: string; wishlistItemsCount: string; preferredCurrency: string; ... 12 more ...; lastPurchaseAt: Date; }' to type 'BuyerProfile' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'totalOrders' are incompatible.
+    Type 'string' is not comparable to type 'number'.
+src/services/buyerProfileService.ts(146,17): error TS2322: Type 'number' is not assignable to type 'string | SQL<unknown> | PgColumn<ColumnBaseConfig<ColumnDataType, string>, {}, {}>'.
+src/services/buyerProfileService.ts(159,17): error TS2322: Type 'number' is not assignable to type 'string | SQL<unknown> | PgColumn<ColumnBaseConfig<ColumnDataType, string>, {}, {}>'.
+src/services/buyerProfileService.ts(172,17): error TS2322: Type 'number' is not assignable to type 'string | SQL<unknown> | PgColumn<ColumnBaseConfig<ColumnDataType, string>, {}, {}>'.
+src/services/buyerProfileService.ts(191,17): error TS2352: Conversion of type '{ userId: string; totalOrders: string; totalSpent: string; averageOrderValue: string; savedAddressesCount: string; savedPaymentMethodsCount: string; wishlistItemsCount: string; preferredCurrency: string; ... 12 more ...; lastPurchaseAt: Date; }' to type 'BuyerProfile' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'totalOrders' are incompatible.
+    Type 'string' is not comparable to type 'number'.
+src/services/buyerProfileService.ts(207,17): error TS2352: Conversion of type '{ userId: string; totalOrders: string; totalSpent: string; averageOrderValue: string; savedAddressesCount: string; savedPaymentMethodsCount: string; wishlistItemsCount: string; preferredCurrency: string; ... 12 more ...; lastPurchaseAt: Date; }' to type 'BuyerProfile' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'totalOrders' are incompatible.
+    Type 'string' is not comparable to type 'number'.
+src/services/buyerProfileService.ts(223,17): error TS2352: Conversion of type '{ userId: string; totalOrders: string; totalSpent: string; averageOrderValue: string; savedAddressesCount: string; savedPaymentMethodsCount: string; wishlistItemsCount: string; preferredCurrency: string; ... 12 more ...; lastPurchaseAt: Date; }' to type 'BuyerProfile' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'totalOrders' are incompatible.
+    Type 'string' is not comparable to type 'number'.
+src/services/buyerProfileService.ts(266,17): error TS2352: Conversion of type '{ userId: string; totalOrders: string; totalSpent: string; averageOrderValue: string; savedAddressesCount: string; savedPaymentMethodsCount: string; wishlistItemsCount: string; preferredCurrency: string; ... 12 more ...; lastPurchaseAt: Date; }' to type 'BuyerProfile' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'totalOrders' are incompatible.
+    Type 'string' is not comparable to type 'number'.
+src/services/cacheWarmingService.ts(145,39): error TS2834: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Consider adding an extension to the import path.
+src/services/cacheWarmingService.ts(146,47): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../db/schema.js'?
+src/services/cacheWarmingService.ts(319,35): error TS2834: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Consider adding an extension to the import path.
+src/services/cacheWarmingService.ts(320,40): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../db/schema.js'?
+src/services/cacheWarmingService.ts(349,35): error TS2834: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Consider adding an extension to the import path.
+src/services/cacheWarmingService.ts(350,38): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../db/schema.js'?
+src/services/communityService.ts(1956,58): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './pushNotificationService.js'?
+src/services/communityService.ts(1974,60): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './pushNotificationService.js'?
+src/services/contentModerationQueue.ts(56,5): error TS2322: Type 'Queue<ContentModerationJob, any, string, ExtractDataType<DataTypeOrJob, DataTypeOrJob>, ExtractResultType<DataTypeOrJob, DefaultResultType>, ExtractNameType<...>>' is not assignable to type 'Queue<ContentModerationJob, any, string, ContentModerationJob, any, string>'.
+  Types of property 'add' are incompatible.
+    Type '(name: ExtractNameType<DataTypeOrJob, DefaultNameType>, data: ExtractDataType<DataTypeOrJob, DataTypeOrJob>, opts?: JobsOptions) => Promise<...>' is not assignable to type '(name: string, data: ContentModerationJob, opts?: JobsOptions) => Promise<Job<ContentModerationJob, any, string>>'.
+      Types of parameters 'data' and 'data' are incompatible.
+        Type 'ContentModerationJob' is not assignable to type 'ExtractDataType<DataTypeOrJob, DataTypeOrJob>'.
+src/services/contentModerationQueue.ts(57,7): error TS2322: Type 'Redis' is not assignable to type 'ConnectionOptions'.
+  Type 'Redis' is not assignable to type 'ClusterOptions | Redis | Cluster'.
+    Type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/ioredis/built/Redis").default' is not assignable to type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/bullmq/node_modules/ioredis/built/Redis").default'.
+      Types of property 'options' are incompatible.
+        Type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/ioredis/built/redis/RedisOptions").RedisOptions' is not assignable to type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/bullmq/node_modules/ioredis/built/redis/RedisOptions").RedisOptions'.
+          Type 'RedisOptions' is not assignable to type 'CommonRedisOptions'.
+            The types returned by 'new Connector(...)' are incompatible between these types.
+              Type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/ioredis/built/connectors/AbstractConnector").default' is not assignable to type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/bullmq/node_modules/ioredis/built/connectors/AbstractConnector").default'.
+                Property 'connecting' is protected but type 'AbstractConnector' is not a class derived from 'AbstractConnector'.
+src/services/contentModerationQueue.ts(69,5): error TS2322: Type 'Queue<ContentModerationJob, any, string, ExtractDataType<DataTypeOrJob, DataTypeOrJob>, ExtractResultType<DataTypeOrJob, DefaultResultType>, ExtractNameType<...>>' is not assignable to type 'Queue<ContentModerationJob, any, string, ContentModerationJob, any, string>'.
+  Types of property 'add' are incompatible.
+    Type '(name: ExtractNameType<DataTypeOrJob, DefaultNameType>, data: ExtractDataType<DataTypeOrJob, DataTypeOrJob>, opts?: JobsOptions) => Promise<...>' is not assignable to type '(name: string, data: ContentModerationJob, opts?: JobsOptions) => Promise<Job<ContentModerationJob, any, string>>'.
+      Types of parameters 'data' and 'data' are incompatible.
+        Type 'ContentModerationJob' is not assignable to type 'ExtractDataType<DataTypeOrJob, DataTypeOrJob>'.
+src/services/contentModerationQueue.ts(70,7): error TS2322: Type 'Redis' is not assignable to type 'ConnectionOptions'.
+  Type 'Redis' is not assignable to type 'ClusterOptions | Redis | Cluster'.
+    Type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/ioredis/built/Redis").default' is not assignable to type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/bullmq/node_modules/ioredis/built/Redis").default'.
+      Types of property 'options' are incompatible.
+        Type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/ioredis/built/redis/RedisOptions").RedisOptions' is not assignable to type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/bullmq/node_modules/ioredis/built/redis/RedisOptions").RedisOptions'.
+          Type 'RedisOptions' is not assignable to type 'CommonRedisOptions'.
+            The types returned by 'new Connector(...)' are incompatible between these types.
+              Type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/ioredis/built/connectors/AbstractConnector").default' is not assignable to type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/bullmq/node_modules/ioredis/built/connectors/AbstractConnector").default'.
+                Property 'connecting' is protected but type 'AbstractConnector' is not a class derived from 'AbstractConnector'.
+src/services/contentModerationQueue.ts(84,7): error TS2322: Type 'Redis' is not assignable to type 'ConnectionOptions'.
+  Type 'Redis' is not assignable to type 'ClusterOptions | Redis | Cluster'.
+    Type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/ioredis/built/Redis").default' is not assignable to type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/bullmq/node_modules/ioredis/built/Redis").default'.
+      Types of property 'options' are incompatible.
+        Type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/ioredis/built/redis/RedisOptions").RedisOptions' is not assignable to type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/bullmq/node_modules/ioredis/built/redis/RedisOptions").RedisOptions'.
+          Type 'RedisOptions' is not assignable to type 'CommonRedisOptions'.
+            The types returned by 'new Connector(...)' are incompatible between these types.
+              Type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/ioredis/built/connectors/AbstractConnector").default' is not assignable to type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/bullmq/node_modules/ioredis/built/connectors/AbstractConnector").default'.
+                Property 'connecting' is protected but type 'AbstractConnector' is not a class derived from 'AbstractConnector'.
+src/services/contentModerationQueue.ts(100,9): error TS2322: Type 'Redis' is not assignable to type 'ConnectionOptions'.
+  Type 'Redis' is not assignable to type 'ClusterOptions | Redis | Cluster'.
+    Type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/ioredis/built/Redis").default' is not assignable to type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/bullmq/node_modules/ioredis/built/Redis").default'.
+      Types of property 'options' are incompatible.
+        Type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/ioredis/built/redis/RedisOptions").RedisOptions' is not assignable to type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/bullmq/node_modules/ioredis/built/redis/RedisOptions").RedisOptions'.
+          Type 'RedisOptions' is not assignable to type 'CommonRedisOptions'.
+            The types returned by 'new Connector(...)' are incompatible between these types.
+              Type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/ioredis/built/connectors/AbstractConnector").default' is not assignable to type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/bullmq/node_modules/ioredis/built/connectors/AbstractConnector").default'.
+                Property 'connecting' is protected but type 'AbstractConnector' is not a class derived from 'AbstractConnector'.
+src/services/contentModerationQueue.ts(116,9): error TS2322: Type 'Redis' is not assignable to type 'ConnectionOptions'.
+  Type 'Redis' is not assignable to type 'ClusterOptions | Redis | Cluster'.
+    Type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/ioredis/built/Redis").default' is not assignable to type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/bullmq/node_modules/ioredis/built/Redis").default'.
+      Types of property 'options' are incompatible.
+        Type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/ioredis/built/redis/RedisOptions").RedisOptions' is not assignable to type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/bullmq/node_modules/ioredis/built/redis/RedisOptions").RedisOptions'.
+          Type 'RedisOptions' is not assignable to type 'CommonRedisOptions'.
+            The types returned by 'new Connector(...)' are incompatible between these types.
+              Type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/ioredis/built/connectors/AbstractConnector").default' is not assignable to type 'import("/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/bullmq/node_modules/ioredis/built/connectors/AbstractConnector").default'.
+                Property 'connecting' is protected but type 'AbstractConnector' is not a class derived from 'AbstractConnector'.
+src/services/contentModerationQueue.ts(244,44): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './aiService.js'?
+src/services/contentModerationQueue.ts(370,46): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './aiService.js'?
+src/services/errorRecoveryService.ts(129,46): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './feedService.js'?
+src/services/errorRecoveryService.ts(142,51): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './communityService.js'?
+src/services/errorRecoveryService.ts(155,37): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../db/index.js'?
+src/services/errorRecoveryService.ts(156,40): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../db/schema.js'?
+src/services/escrowSchedulerService.ts(38,28): error TS2503: Cannot find namespace 'cron'.
+src/services/escrowSchedulerService.ts(39,30): error TS2503: Cannot find namespace 'cron'.
+src/services/healthMonitoringService.ts(99,37): error TS2834: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Consider adding an extension to the import path.
+src/services/healthMonitoringService.ts(165,44): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './cacheService.js'?
+src/services/healthMonitoringService.ts(440,37): error TS2834: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Consider adding an extension to the import path.
+src/services/healthMonitoringService.ts(467,47): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './cacheService.js'?
+src/services/healthMonitoringService.ts(505,35): error TS2834: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Consider adding an extension to the import path.
+src/services/healthMonitoringService.ts(515,35): error TS2834: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Consider adding an extension to the import path.
+src/services/highValueTransactionService.ts(188,41): error TS2339: Property 'kycStatus' does not exist on type '{ id: string; walletAddress: string; handle: string; displayName: string; ens: string; avatarCid: string; bioCid: string; profileCid: string; physicalAddress: string; role: string; email: string; ... 37 more ...; updatedAt: Date; }'.
+src/services/highValueTransactionService.ts(188,76): error TS2339: Property 'kycStatus' does not exist on type '{ id: string; walletAddress: string; handle: string; displayName: string; ens: string; avatarCid: string; bioCid: string; profileCid: string; physicalAddress: string; role: string; email: string; ... 37 more ...; updatedAt: Date; }'.
+src/services/highValueTransactionService.ts(192,50): error TS2339: Property 'kycStatus' does not exist on type '{ id: string; walletAddress: string; handle: string; displayName: string; ens: string; avatarCid: string; bioCid: string; profileCid: string; physicalAddress: string; role: string; email: string; ... 37 more ...; updatedAt: Date; }'.
+src/services/highValueTransactionService.ts(208,30): error TS2339: Property 'kycExpiresAt' does not exist on type '{ id: string; walletAddress: string; handle: string; displayName: string; ens: string; avatarCid: string; bioCid: string; profileCid: string; physicalAddress: string; role: string; email: string; ... 37 more ...; updatedAt: Date; }'.
+src/services/hybridPaymentOrchestrator.ts(221,17): error TS2741: Property 'totalFees' is missing in type '{ processingFee: number; platformFee: number; gasFee: number; taxAmount: number; currency: string; }' but required in type '{ processingFee: number; platformFee: number; gasFee?: number; taxAmount: number; totalFees: number; currency: string; }'.
+src/services/ipfsService.ts(409,49): error TS2550: Property 'any' does not exist on type 'PromiseConstructor'. Do you need to change your target library? Try changing the 'lib' compiler option to 'es2021' or later.
+src/services/ldaoReceiptService.ts(38,49): error TS2339: Property 'generateLDAOPurchaseReceipt' does not exist on type 'ReceiptService'.
+src/services/ldaoSupportService.ts(62,50): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './supportMonitoringService.js'?
+src/services/ldaoSupportService.ts(480,52): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/webSocketService.js'?
+src/services/ldaoSupportService.ts(528,52): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/webSocketService.js'?
+src/services/ldaoSupportService.ts(576,52): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../services/webSocketService.js'?
+src/services/oauth/linkedinOAuthProvider.ts(410,9): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(input: string | URL | Request, init?: RequestInit): Promise<Response>', gave the following error.
+    Type 'Buffer<ArrayBufferLike>' is not assignable to type 'BodyInit'.
+      Type 'Buffer<ArrayBufferLike>' is missing the following properties from type 'URLSearchParams': size, append, delete, get, and 2 more.
+  Overload 2 of 3, '(input: string | URL | Request, init?: RequestInit): Promise<Response>', gave the following error.
+    Type 'Buffer<ArrayBufferLike>' is not assignable to type 'BodyInit'.
+      Type 'Buffer<ArrayBufferLike>' is missing the following properties from type 'URLSearchParams': size, append, delete, get, and 2 more.
+  Overload 3 of 3, '(input: URL | RequestInfo, init?: RequestInit): Promise<Response>', gave the following error.
+    Type 'Buffer<ArrayBufferLike>' is not assignable to type 'BodyInit'.
+      Type 'Buffer<ArrayBufferLike>' is missing the following properties from type 'URLSearchParams': size, append, delete, get, and 2 more.
+src/services/orderPaymentIntegrationService.ts(493,49): error TS2339: Property 'generateMarketplaceReceipt' does not exist on type 'ReceiptService'.
+src/services/orderService.ts(893,13): error TS2353: Object literal may only specify known properties, and 'transactionId' does not exist in type 'ReceiptData'.
+src/services/productService.ts(706,48): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './reviewService.js'?
+src/services/productService.ts(732,50): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './sellerService.js'?
+src/services/returnAnalyticsService.ts(395,49): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../queues/returnEventQueue.js'?
+src/services/returnAnalyticsService.ts(822,52): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './webSocketService.js'?
+src/services/searchService.ts(517,52): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './recommendationService.js'?
+src/services/searchService.ts(540,52): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './recommendationService.js'?
+src/services/searchService.ts(1447,54): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './recommendationService.js'?
+src/services/searchService.ts(1548,48): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './reviewService.js'?
+src/services/sellerOrderService.ts(355,32): error TS2339: Property 'createdAt' does not exist on type 'PgTableWithColumns<{ name: "order_events"; schema: undefined; columns: { id: PgColumn<{ name: "id"; tableName: "order_events"; dataType: "number"; columnType: "PgSerial"; data: number; driverParam: number; notNull: true; ... 7 more ...; generated: undefined; }, {}, {}>; ... 4 more ...; timestamp: PgColumn<...>; }; d...'.
+src/services/sellerOrderService.ts(363,26): error TS2339: Property 'createdAt' does not exist on type '{ id: number; orderId: string; eventType: string; description: string; metadata: string; timestamp: Date; }'.
+src/services/sellerOrderService.ts(399,63): error TS2339: Property 'createdAt' does not exist on type 'PgTableWithColumns<{ name: "order_events"; schema: undefined; columns: { id: PgColumn<{ name: "id"; tableName: "order_events"; dataType: "number"; columnType: "PgSerial"; data: number; driverParam: number; notNull: true; ... 7 more ...; generated: undefined; }, {}, {}>; ... 4 more ...; timestamp: PgColumn<...>; }; d...'.
+src/services/serviceHealthMonitor.ts(208,35): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../db/index.js'?
+src/services/serviceHealthMonitor.ts(243,44): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './feedService.js'?
+src/services/serviceHealthMonitor.ts(254,49): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './communityService.js'?
+src/services/shareCartService.ts(38,10): error TS2554: Expected 1 arguments, but got 2.
+src/services/shareCartService.ts(61,10): error TS2554: Expected 1 arguments, but got 2.
+src/services/shareCartService.ts(63,25): error TS2339: Property 'rows' does not exist on type 'RowList<Record<string, unknown>[]>'.
+src/services/shareCartService.ts(63,40): error TS2339: Property 'rows' does not exist on type 'RowList<Record<string, unknown>[]>'.
+src/services/shareCartService.ts(67,32): error TS2339: Property 'rows' does not exist on type 'RowList<Record<string, unknown>[]>'.
+src/services/shareCartService.ts(74,10): error TS2554: Expected 1 arguments, but got 2.
+src/services/shareCartService.ts(108,41): error TS2339: Property 'rowCount' does not exist on type 'RowList<Record<string, unknown>[]>'.
+src/services/shippingIntegrationService.ts(100,17): error TS2322: Type '{ id: string; }' is not assignable to type 'string'.
+src/services/socialMediaIntegrationService.ts(416,7): error TS2353: Object literal may only specify known properties, and 'statusId' does not exist in type 'SocialPostResult'.
+src/services/systemHealthMonitoringService.ts(397,89): error TS2339: Property 'name' does not exist on type '{ status: "healthy" | "failed" | "degraded"; responseTime: number; errorRate: number; throughput: number; }'.
+src/services/uniswapV3Service.ts(261,26): error TS2339: Property 'fee' does not exist on type 'SwapParams'.
+src/services/uniswapV3Service.ts(264,60): error TS2353: Object literal may only specify known properties, and 'fee' does not exist in type 'SwapParams'.
+src/services/wishlistService.ts(178,16): error TS2352: Conversion of type '{ id: string; wishlistId: string; productId: string; quantity: string; priority: string; notes: string; priceAtAdd: string; priceAlertThreshold: string; addedAt: Date; updatedAt: Date; }[]' to type 'WishlistItem[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ id: string; wishlistId: string; productId: string; quantity: string; priority: string; notes: string; priceAtAdd: string; priceAlertThreshold: string; addedAt: Date; updatedAt: Date; }' is not comparable to type 'WishlistItem'.
+    Types of property 'quantity' are incompatible.
+      Type 'string' is not comparable to type 'number'.
+src/services/wishlistService.ts(189,17): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(value: { wishlistId: string | SQL<unknown> | Placeholder<string, any>; productId: string | SQL<unknown> | Placeholder<string, any>; id?: string | SQL<unknown> | Placeholder<...>; ... 6 more ...; addedAt?: Date | ... 1 more ... | Placeholder<...>; }): PgInsertBase<...>', gave the following error.
+    Type 'number' is not assignable to type 'string | SQL<unknown> | Placeholder<string, any>'.
+  Overload 2 of 2, '(values: { wishlistId: string | SQL<unknown> | Placeholder<string, any>; productId: string | SQL<unknown> | Placeholder<string, any>; id?: string | SQL<unknown> | Placeholder<...>; ... 6 more ...; addedAt?: Date | ... 1 more ... | Placeholder<...>; }[]): PgInsertBase<...>', gave the following error.
+    Object literal may only specify known properties, and 'quantity' does not exist in type '{ wishlistId: string | SQL<unknown> | Placeholder<string, any>; productId: string | SQL<unknown> | Placeholder<string, any>; id?: string | SQL<unknown> | Placeholder<...>; ... 6 more ...; addedAt?: Date | ... 1 more ... | Placeholder<...>; }[]'.
+src/services/wishlistService.ts(194,16): error TS2352: Conversion of type '{ id: string; updatedAt: Date; notes: string; wishlistId: string; productId: string; quantity: string; priority: string; priceAtAdd: string; priceAlertThreshold: string; addedAt: Date; }' to type 'WishlistItem' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'quantity' are incompatible.
+    Type 'string' is not comparable to type 'number'.
+src/services/wishlistService.ts(203,18): error TS2345: Argument of type '{ updatedAt: Date; quantity?: number; priority?: "high" | "medium" | "low"; notes?: string; priceAlertThreshold?: number; }' is not assignable to parameter of type '{ wishlistId?: string | SQL<unknown> | PgColumn<ColumnBaseConfig<ColumnDataType, string>, {}, {}>; productId?: string | SQL<unknown> | PgColumn<...>; ... 7 more ...; addedAt?: Date | ... 1 more ... | PgColumn<...>; }'.
+  Types of property 'quantity' are incompatible.
+    Type 'number' is not assignable to type 'string | SQL<unknown> | PgColumn<ColumnBaseConfig<ColumnDataType, string>, {}, {}>'.
+src/services/wishlistService.ts(213,17): error TS2352: Conversion of type '{ id: string; wishlistId: string; productId: string; quantity: string; priority: string; notes: string; priceAtAdd: string; priceAlertThreshold: string; addedAt: Date; updatedAt: Date; }' to type 'WishlistItem' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'quantity' are incompatible.
+    Type 'string' is not comparable to type 'number'.
+src/services/wishlistService.ts(263,16): error TS2352: Conversion of type '{ id: string; wishlistId: string; productId: string; quantity: string; priority: string; notes: string; priceAtAdd: string; priceAlertThreshold: string; addedAt: Date; updatedAt: Date; }[]' to type 'WishlistItem[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ id: string; wishlistId: string; productId: string; quantity: string; priority: string; notes: string; priceAtAdd: string; priceAlertThreshold: string; addedAt: Date; updatedAt: Date; }' is not comparable to type 'WishlistItem'.
+    Types of property 'quantity' are incompatible.
+      Type 'string' is not comparable to type 'number'.
+src/services/wishlistService.ts(292,17): error TS2352: Conversion of type '{ id: string; wishlistId: string; productId: string; quantity: string; priority: string; notes: string; priceAtAdd: string; priceAlertThreshold: string; addedAt: Date; updatedAt: Date; }' to type 'WishlistItem' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'quantity' are incompatible.
+    Type 'string' is not comparable to type 'number'.
+npm error Lifecycle script `build:typecheck` failed with error:
+npm error code 1
+npm error path /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend
+npm error workspace linkdao-backend@1.0.5
+npm error location /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend
+npm error command failed
+npm error command sh -c tsc --noEmit --project tsconfig.production.json

@@ -28,6 +28,9 @@ export interface SocialMediaConnection {
   platformAvatarUrl?: string;
   status: 'active' | 'expired' | 'revoked' | 'error';
   scopes?: string[];
+  pageId?: string;
+  pageName?: string;
+  pageAccessToken?: string;
   connectedAt: Date;
   lastUsedAt?: Date;
   lastError?: string;
@@ -136,6 +139,23 @@ class SocialMediaConnectionService {
         ? await this.encryptToken(tokens.refreshToken)
         : null;
 
+      // Facebook Page Support
+      let pageId: string | undefined;
+      let pageName: string | undefined;
+      let pageAccessToken: string | undefined;
+
+      if (platform === 'facebook') {
+        const pages = await (provider as any).getManagedPages(tokens.accessToken);
+        if (pages && pages.length > 0) {
+          const page = pages[0];
+          pageId = page.id;
+          pageName = page.name;
+          if (page.accessToken) {
+            pageAccessToken = await this.encryptToken(page.accessToken);
+          }
+        }
+      }
+
       // Check if connection already exists
       const existingConnection = await db
         .select()
@@ -165,6 +185,9 @@ class SocialMediaConnectionService {
             scopes: tokens.scopes ? JSON.stringify(tokens.scopes) : null,
             status: 'active',
             lastError: null,
+            pageId: pageId || null,
+            pageName: pageName || null,
+            pageAccessToken: pageAccessToken || null,
             updatedAt: new Date(),
           })
           .where(eq(socialMediaConnections.id, existingConnection[0].id));
@@ -186,6 +209,9 @@ class SocialMediaConnectionService {
             platformAvatarUrl: userInfo.avatarUrl,
             scopes: tokens.scopes ? JSON.stringify(tokens.scopes) : null,
             status: 'active',
+            pageId: pageId || null,
+            pageName: pageName || null,
+            pageAccessToken: pageAccessToken || null,
           })
           .returning();
 
@@ -209,6 +235,9 @@ class SocialMediaConnectionService {
         platformAvatarUrl: userInfo.avatarUrl,
         status: 'active',
         scopes: tokens.scopes,
+        pageId,
+        pageName,
+        pageAccessToken,
         connectedAt: new Date(),
       };
     } catch (error) {
@@ -237,6 +266,9 @@ class SocialMediaConnectionService {
         connectedAt: socialMediaConnections.connectedAt,
         lastUsedAt: socialMediaConnections.lastUsedAt,
         lastError: socialMediaConnections.lastError,
+        pageId: socialMediaConnections.pageId,
+        pageName: socialMediaConnections.pageName,
+        pageAccessToken: socialMediaConnections.pageAccessToken,
       })
       .from(socialMediaConnections)
       .where(eq(socialMediaConnections.userId, userId));
@@ -249,6 +281,9 @@ class SocialMediaConnectionService {
       connectedAt: conn.connectedAt || new Date(),
       lastUsedAt: conn.lastUsedAt || undefined,
       lastError: conn.lastError || undefined,
+      pageId: conn.pageId || undefined,
+      pageName: conn.pageName || undefined,
+      pageAccessToken: conn.pageAccessToken || undefined,
     }));
   }
 
@@ -289,6 +324,9 @@ class SocialMediaConnectionService {
       connectedAt: conn.connectedAt || new Date(),
       lastUsedAt: conn.lastUsedAt || undefined,
       lastError: conn.lastError || undefined,
+      pageId: conn.pageId || undefined,
+      pageName: conn.pageName || undefined,
+      pageAccessToken: conn.pageAccessToken || undefined,
     };
   }
 
@@ -389,6 +427,41 @@ class SocialMediaConnectionService {
 
     // Decrypt and return token
     return this.decryptToken(connection.accessToken);
+  }
+
+  /**
+   * Get page access token for a connection (if available)
+   */
+  async getPageAccessToken(userId: string, platform: string): Promise<{ token: string; pageId: string } | null> {
+    const connections = await db
+      .select({
+        id: socialMediaConnections.id,
+        pageAccessToken: socialMediaConnections.pageAccessToken,
+        pageId: socialMediaConnections.pageId,
+      })
+      .from(socialMediaConnections)
+      .where(
+        and(
+          eq(socialMediaConnections.userId, userId),
+          eq(socialMediaConnections.platform, platform)
+        )
+      )
+      .limit(1);
+
+    if (connections.length === 0) {
+      return null;
+    }
+
+    const connection = connections[0];
+
+    if (!connection.pageId || !connection.pageAccessToken) {
+      return null;
+    }
+
+    return {
+      token: await this.decryptToken(connection.pageAccessToken),
+      pageId: connection.pageId,
+    };
   }
 
   /**
