@@ -54,4 +54,46 @@ router.post('/revoke-delegation', governanceRateLimit, csrfProtection,  governan
 // Get user voting history
 router.get('/users/:userId/voting-history', governanceRateLimit, governanceController.getUserVotingHistory);
 
+// Get general participation stats (for frontend compatibility)
+router.get('/participation/general', governanceRateLimit, async (req, res) => {
+  try {
+    // Return mock/general participation data
+    res.json({
+      success: true,
+      data: {
+        totalParticipants: 0,
+        activeProposals: 0,
+        recentActivity: []
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch participation stats'
+    });
+  }
+});
+
+// Get general voting power (for frontend compatibility)
+router.get('/voting-power/general/:userAddress', governanceRateLimit, async (req, res) => {
+  try {
+    const { userAddress } = req.params;
+    
+    // Return mock voting power data
+    res.json({
+      success: true,
+      data: {
+        votingPower: '0',
+        delegatedPower: '0',
+        totalPower: '0'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch voting power'
+    });
+  }
+});
+
 export default router;

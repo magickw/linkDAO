@@ -21,6 +21,7 @@ export interface PriceUpdateSubscription {
 
 class CryptoPriceService {
   private baseUrl = 'https://api.coingecko.com/api/v3';
+  private apiKey = process.env.NEXT_PUBLIC_COINGECKO_API_KEY || '';
   private priceCache = new Map<string, CryptoPriceData>();
   private subscriptions = new Set<PriceUpdateSubscription>();
   private updateInterval: NodeJS.Timeout | null = null;
@@ -338,13 +339,19 @@ class CryptoPriceService {
       return new Map();
     }
 
-    const url = `${this.baseUrl}/simple/price?ids=${coinIds.join(',')}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true&include_last_updated_at=true`;
+    const url = `${this.baseUrl}/simple/price?ids=${coinIds.join(',')}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true&include_last_updated_at=true${this.apiKey ? `&x_cg_pro_api_key=${this.apiKey}` : ''}`;
 
     try {
+      const headers: HeadersInit = {
+        'Accept': 'application/json'
+      };
+      
+      if (this.apiKey) {
+        headers['x-cg-pro-api-key'] = this.apiKey;
+      }
+
       const data = await cachedFetch<Record<string, any>>(url, {
-        headers: {
-          'Accept': 'application/json'
-        }
+        headers
       }, `coingecko_prices_${coinIds.join(',')}`);
       
       if (!data) {

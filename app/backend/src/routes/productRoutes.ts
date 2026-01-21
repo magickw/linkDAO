@@ -16,6 +16,7 @@ router.put('/categories/:id', csrfProtection, asyncHandler(productController.upd
 router.delete('/categories/:id', csrfProtection, asyncHandler(productController.deleteCategory.bind(productController)));
 
 // Product routes
+router.get('/products', asyncHandler(productController.getAllProducts.bind(productController)));
 router.post('/products', csrfProtection, asyncHandler(productController.createProduct.bind(productController)));
 router.get('/products/search', asyncHandler(productController.searchProducts.bind(productController)));
 router.get('/products/search/advanced', asyncHandler(productController.advancedSearch.bind(productController)));

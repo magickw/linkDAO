@@ -540,20 +540,70 @@ export class HybridPaymentOrchestrator {
     const isBuyerUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(request.buyerAddress);
     const isSellerUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(request.sellerAddress);
 
-    const buyer = isBuyerUuid
-      ? await this.databaseService.getUserById(request.buyerAddress)
-      : await this.databaseService.getUserByAddress?.(request.buyerAddress);
+    let buyer: any;
+    let seller: any;
 
-    const seller = isSellerUuid
-      ? await this.databaseService.getUserById(request.sellerAddress)
-      : await this.databaseService.getUserByAddress?.(request.sellerAddress);
+    // Try to get buyer
+    if (isBuyerUuid) {
+      buyer = await this.databaseService.getUserById(request.buyerAddress);
+    } else {
+      // Try getUserByAddress first, then fallback to getUserById if it fails
+      try {
+        buyer = await this.databaseService.getUserByAddress?.(request.buyerAddress);
+      } catch (e) {
+        safeLogger.warn('getUserByAddress failed for buyer, trying getUserById:', e);
+      }
+      
+      if (!buyer) {
+        // Try to find user by wallet address in a different way
+        try {
+          const allUsers = await this.databaseService.executeQuery(async () => {
+            return this.databaseService.db.select().from(require('../db/schema').users).limit(100);
+          });
+          buyer = allUsers.find((u: any) => u.walletAddress?.toLowerCase() === request.buyerAddress.toLowerCase());
+        } catch (e) {
+          safeLogger.error('Failed to find buyer by wallet address:', e);
+        }
+      }
+    }
 
-    if (!buyer?.id || !seller?.id) {
-      const error = new Error(`Failed to find user records - buyer: ${buyer?.id}, seller: ${seller?.id}`);
-      safeLogger.error('Cannot create order - missing user records:', {
+    // Try to get seller
+    if (isSellerUuid) {
+      seller = await this.databaseService.getUserById(request.sellerAddress);
+    } else {
+      // Try getUserByAddress first, then fallback
+      try {
+        seller = await this.databaseService.getUserByAddress?.(request.sellerAddress);
+      } catch (e) {
+        safeLogger.warn('getUserByAddress failed for seller, trying getUserById:', e);
+      }
+      
+      if (!seller) {
+        // Try to find user by wallet address in a different way
+        try {
+          const allUsers = await this.databaseService.executeQuery(async () => {
+            return this.databaseService.db.select().from(require('../db/schema').users).limit(100);
+          });
+          seller = allUsers.find((u: any) => u.walletAddress?.toLowerCase() === request.sellerAddress.toLowerCase());
+        } catch (e) {
+          safeLogger.error('Failed to find seller by wallet address:', e);
+        }
+      }
+    }
+
+    if (!buyer?.id) {
+      const error = new Error(`Buyer account not found. Please ensure you are logged in with a valid account.`);
+      safeLogger.error('Cannot create order - missing buyer record:', {
         buyerAddress: request.buyerAddress,
+        buyerId: buyer?.id
+      });
+      throw error;
+    }
+
+    if (!seller?.id) {
+      const error = new Error(`Seller account not found. Please contact support.`);
+      safeLogger.error('Cannot create order - missing seller record:', {
         sellerAddress: request.sellerAddress,
-        buyerId: buyer?.id,
         sellerId: seller?.id
       });
       throw error;
