@@ -48,6 +48,7 @@ export interface PaymentPathDecision {
 
 export interface HybridPaymentResult {
   orderId: string;
+  orderNumber?: string; // Friendly order number
   paymentPath: 'crypto' | 'fiat';
   escrowType: 'smart_contract' | 'stripe_connect';
   escrowId?: string;
@@ -368,6 +369,7 @@ export class HybridPaymentOrchestrator {
 
       return {
         orderId: orderRecord.id,
+        orderNumber: orderRecord.orderNumber, // Pass friendly order number
         paymentPath: 'crypto',
         escrowType: 'smart_contract',
         escrowId: escrowResult.escrowId,
@@ -407,6 +409,7 @@ export class HybridPaymentOrchestrator {
 
       return {
         orderId: orderRecord.id,
+        orderNumber: orderRecord.orderNumber, // Pass friendly order number
         paymentPath: 'fiat',
         escrowType: 'stripe_connect',
         stripePaymentIntentId: stripeResult.paymentIntentId,
@@ -547,6 +550,44 @@ export class HybridPaymentOrchestrator {
     request: HybridCheckoutRequest,
     pathDecision: PaymentPathDecision
   ): Promise<any> {
+    // 1. Idempotency Check: Resume existing order if present
+    try {
+      const existingOrder = await this.databaseService.getOrderById(request.orderId);
+      if (existingOrder) {
+        safeLogger.info(`[createOrderRecord] Order ${request.orderId} already exists, resuming checkout.`, {
+          status: existingOrder.status,
+          paymentMethod: existingOrder.paymentMethod
+        });
+
+        // Update existing order with latest decision details if it's still actionable
+        if (existingOrder.status === 'created' || existingOrder.status === 'pending') {
+          await this.databaseService.updateOrder(existingOrder.id, {
+            paymentMethod: pathDecision.selectedPath,
+            amount: pathDecision.totalAmount.toString(),
+            paymentToken: pathDecision.method.tokenSymbol || request.currency,
+            metadata: JSON.stringify({
+              ...request.metadata,
+              paymentPath: pathDecision.selectedPath,
+              fees: pathDecision.fees,
+              subtotal: request.amount,
+              shippingAddress: request.shippingAddress
+            }),
+            // Update fees/shipping/tax columns as well to ensure consistency
+            taxAmount: pathDecision.fees.taxAmount.toString(),
+            shippingCost: (pathDecision.fees as any).shippingCost?.toString() || '0',
+            platformFee: pathDecision.fees.platformFee.toString()
+          });
+          
+          // Return refreshed order
+          return await this.databaseService.getOrderById(request.orderId);
+        }
+
+        return existingOrder;
+      }
+    } catch (e) {
+      safeLogger.warn('[createOrderRecord] Error checking for existing order (proceeding to create):', e);
+    }
+
     // Get user profiles
     const isBuyerUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(request.buyerAddress);
     const isSellerUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(request.sellerAddress);
@@ -576,6 +617,17 @@ export class HybridPaymentOrchestrator {
           safeLogger.error('Failed to find buyer by wallet address:', e);
         }
       }
+
+      // Auto-provision buyer if still not found and looks like a valid wallet address
+      if (!buyer && /^0x[a-fA-F0-9]{40}$/i.test(request.buyerAddress)) {
+        safeLogger.info('Auto-provisioning buyer account for:', request.buyerAddress);
+        try {
+          const handle = 'user_' + request.buyerAddress.substring(2, 8).toLowerCase();
+          buyer = await this.databaseService.createUser(request.buyerAddress, handle);
+        } catch (createError) {
+          safeLogger.error('Failed to auto-provision buyer:', createError);
+        }
+      }
     }
 
     // Try to get seller
@@ -598,6 +650,17 @@ export class HybridPaymentOrchestrator {
           seller = allUsers.find((u: any) => u.walletAddress?.toLowerCase() === request.sellerAddress.toLowerCase());
         } catch (e) {
           safeLogger.error('Failed to find seller by wallet address:', e);
+        }
+      }
+
+      // Auto-provision seller if still not found and looks like a valid wallet address
+      if (!seller && /^0x[a-fA-F0-9]{40}$/i.test(request.sellerAddress)) {
+        safeLogger.info('Auto-provisioning seller account for:', request.sellerAddress);
+        try {
+          const handle = 'seller_' + request.sellerAddress.substring(2, 8).toLowerCase();
+          seller = await this.databaseService.createUser(request.sellerAddress, handle);
+        } catch (createError) {
+          safeLogger.error('Failed to auto-provision seller:', createError);
         }
       }
     }
@@ -819,6 +882,7 @@ export class HybridPaymentOrchestrator {
       // 1. Generate Receipt for the buyer
       const receipt = await receiptService.generateReceipt({
         orderId: result.orderId,
+        orderNumber: result.orderNumber,
         buyerId: request.buyerAddress, // Using address as ID if UUID not available, logic in service handles resolution if needed
         sellerId: request.sellerAddress,
         amount: pathDecision.totalAmount.toString(),

@@ -11,6 +11,10 @@ router.get('/unread-count', (req, res) => userNotificationController.getUnreadCo
 router.get('/', (req, res) => userNotificationController.getNotifications(req, res));
 router.get('/:id', (req, res) => userNotificationController.getNotification(req, res));
 router.post('/:id/read', (req, res) => userNotificationController.markAsRead(req, res));
+// Mark all notifications as read
 router.post('/read-all', (req, res) => userNotificationController.markAllAsRead(req, res));
+
+// Create a new notification (for order events etc.)
+router.post('/', (req, res) => userNotificationController.createNotification(req, res));
 
 export const userNotificationRoutes = router;

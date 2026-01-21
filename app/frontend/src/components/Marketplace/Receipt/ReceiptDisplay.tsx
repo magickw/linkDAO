@@ -75,6 +75,11 @@ export const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-3">Buyer Information</h3>
           <div className="space-y-2">
+            {isMarketplaceReceipt && (
+              <p className="text-gray-600">
+                <span className="font-medium">Order Number:</span> {(receipt as MarketplaceReceipt).displayOrderId || (receipt as MarketplaceReceipt).orderId}
+              </p>
+            )}
             <p className="text-gray-600">
               <span className="font-medium">Wallet:</span> {receipt.buyerAddress}
             </p>

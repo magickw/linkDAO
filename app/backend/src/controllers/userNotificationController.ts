@@ -176,6 +176,76 @@ export class UserNotificationController {
             res.status(500).json({ error: 'Failed to mark all notifications as read' });
         }
     }
+    /**
+     * Create a notification (Manually via API)
+     * Used by frontend for order notifications like cancellations
+     */
+    async createNotification(req: Request, res: Response) {
+        try {
+            const userId = (req as any).user?.id;
+            if (!userId) {
+                return res.status(401).json({ error: 'Unauthorized' });
+            }
+
+            // Get user wallet address
+            const userResult = await db
+                .select({ walletAddress: users.walletAddress, displayName: users.displayName })
+                .from(users)
+                .where(eq(users.id, userId))
+                .limit(1);
+
+            if (userResult.length === 0) {
+                return res.status(404).json({ error: 'User not found' });
+            }
+
+            const user = userResult[0];
+            const { type, title, message, data, priority } = req.body;
+
+            // Validate required fields
+            if (!title || !message) {
+                return res.status(400).json({ error: 'Title and message are required' });
+            }
+
+            // Map generic notification to community notification format
+            // We use 'marketplace' as a virtual community for order events
+            const communityId = 'marketplace';
+            const communityName = 'LinkDAO Marketplace';
+
+            await communityNotificationService.sendNotification({
+                userAddress: user.walletAddress,
+                communityId,
+                communityName,
+                type: type || 'system_alert', // Default to system_alert if generic type provided
+                title,
+                message,
+                actionUrl: data?.actionUrl || '/marketplace/orders', // Default to orders page
+                contentPreview: message,
+                userName: user.displayName || 'System',
+                metadata: {
+                    ...data,
+                    priority: priority || 'medium',
+                    source: 'user_api'
+                }
+            });
+
+            res.status(201).json({
+                success: true,
+                message: 'Notification created successfully',
+                // Return a mock notification object to satisfy frontend expectation
+                data: {
+                    id: Date.now(), // Temporary ID since we don't wait for DB insert ID in sendNotification
+                    type: type || 'system_alert',
+                    title,
+                    message,
+                    createdAt: new Date(),
+                    isRead: false
+                }
+            });
+        } catch (error) {
+            safeLogger.error('Error creating user notification:', error);
+            res.status(500).json({ error: 'Failed to create notification' });
+        }
+    }
 }
 
 

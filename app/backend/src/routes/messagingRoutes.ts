@@ -23,7 +23,7 @@ router.get('/conversations',
   validateRequest({
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 50 },
+      limit: { type: 'number', optional: true, min: 1, max: 100 },
       search: { type: 'string', optional: true }
     }
   }),
@@ -184,7 +184,7 @@ router.get('/search',
       q: { type: 'string', required: true, minLength: 2 },
       conversationId: { type: 'string', optional: true },
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 50 }
+      limit: { type: 'number', optional: true, min: 1, max: 100 }
     }
   }),
   messagingController.searchMessages

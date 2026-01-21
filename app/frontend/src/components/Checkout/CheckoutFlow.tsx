@@ -107,6 +107,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
   // State management
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('address');
+  // Persist orderId across retries to prevent duplicate orders
+  const [orderId] = useState(() => typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `order_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PrioritizedPaymentMethod | null>(null);
   const [prioritizationResult, setPrioritizationResult] = useState<PrioritizationResult | null>(null);
   const [recommendation, setRecommendation] = useState<CheckoutRecommendation | null>(null);
@@ -518,7 +520,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       }
 
       const request: PrioritizedCheckoutRequest = {
-        orderId: crypto.randomUUID(),
+        orderId: orderId,
         listingId: listingId,
         buyerAddress: address,
         sellerAddress: sellerAddress,

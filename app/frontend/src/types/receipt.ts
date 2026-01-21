@@ -30,7 +30,8 @@ export interface BaseReceipt {
 
 export interface MarketplaceReceipt extends BaseReceipt {
   type: ReceiptType.MARKETPLACE;
-  orderId?: string;
+  orderId: string;
+  displayOrderId?: string; // Friendly order number (e.g. ORD-12345)
   items: Array<{
     id: string;
     name: string;

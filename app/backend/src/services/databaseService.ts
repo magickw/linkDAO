@@ -1095,6 +1095,12 @@ export class DatabaseService {
         }
 
         // 2. Create Order
+        const generateOrderNumber = () => {
+          const timestamp = Date.now().toString().slice(-6);
+          const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+          return `ORD-${timestamp}-${random}`;
+        };
+
         const orderValues: any = {
           listingId,
           buyerId,
@@ -1105,6 +1111,7 @@ export class DatabaseService {
           escrowId: escrowId || null,
           status: 'pending',
           createdAt: new Date(),
+          orderNumber: generateOrderNumber(), // Add user-friendly order number
           taxAmount,
           shippingCost,
           platformFee,

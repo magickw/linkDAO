@@ -323,25 +323,42 @@ class ReceiptService {
       metadata: receipt.metadata
     };
 
+    // Extract friendly order number from paymentDetails
+    let displayOrderId: string | undefined;
+    if (receipt.paymentDetails) {
+      let details = receipt.paymentDetails;
+      if (typeof details === 'string') {
+        try {
+          details = JSON.parse(details);
+        } catch (e) {
+          console.warn('Failed to parse paymentDetails', e);
+        }
+      }
+      if (details && details.displayOrderNumber) {
+        displayOrderId = details.displayOrderNumber;
+      }
+    }
+
     if (receipt.type === ReceiptType.MARKETPLACE) {
       return {
         ...baseReceipt,
         type: ReceiptType.MARKETPLACE,
         orderId: receipt.orderId,
+        displayOrderId: displayOrderId, // Use friendly ID
         items: receipt.items || [],
         fees: receipt.fees,
         sellerAddress: receipt.sellerAddress,
         sellerName: receipt.sellerName
       } as PaymentReceipt;
-    } else {
-      return {
-        ...baseReceipt,
-        type: ReceiptType.LDAO_TOKEN,
-        fees: receipt.fees,
-        tokensPurchased: receipt.tokensPurchased || '0',
-        pricePerToken: receipt.pricePerToken || '0'
-      } as PaymentReceipt;
     }
+
+    return {
+      ...baseReceipt,
+      type: ReceiptType.LDAO_TOKEN,
+      fees: receipt.fees,
+      tokensPurchased: receipt.tokensPurchased || '0',
+      pricePerToken: receipt.pricePerToken || '0'
+    } as PaymentReceipt;
   }
 }
 

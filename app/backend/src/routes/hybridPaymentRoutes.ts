@@ -217,7 +217,7 @@ router.post('/checkout', authMiddleware, async (req, res) => {
         errorMessage = 'Payment processing error. Please try another payment method';
       } else if (error.message.includes('network')) {
         errorMessage = 'Network error. Please try again';
-      } else if (error.message.includes('user records') || error.message.includes('Failed to find user')) {
+      } else if (error.message.includes('user records') || error.message.includes('Failed to find user') || error.message.includes('account not found')) {
         errorMessage = 'User account not found. Please ensure you are logged in.';
       } else if (error.message.includes('Product not found') || error.message.includes('listing')) {
         errorMessage = 'Product not found or no longer available';

@@ -6,6 +6,7 @@ const databaseService = new DatabaseService();
 
 export interface ReceiptData {
   orderId: string;
+  orderNumber?: string; // Friendly order number (e.g. ORD-12345)
   buyerId?: string;
   sellerId?: string;
   amount: string;
@@ -62,7 +63,8 @@ export class ReceiptService {
           transactionId: data.transactionId,
           transactionHash: data.transactionHash,
           status: data.status,
-          timestamp: data.completedAt || new Date()
+          timestamp: data.completedAt || new Date(),
+          displayOrderNumber: data.orderNumber // Store friendly order number for display
         },
         createdAt: data.createdAt || new Date()
       };
