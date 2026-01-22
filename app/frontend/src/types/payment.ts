@@ -37,7 +37,7 @@ export interface PaymentRequest {
   metadata?: Record<string, any>;
   // Enhanced properties for escrow payments
   totalAmount?: string;
-  listingId?: number;
+  listingId?: string | number;
   sellerId?: string;
   escrowEnabled?: boolean;
   // Escrow configuration
