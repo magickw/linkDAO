@@ -367,6 +367,7 @@ export class HybridPaymentOrchestrator {
         throw new Error('Checkout processing failed with unknown error');
       }
     }
+  }
 
   /**
    * Process crypto escrow path (smart contract)
