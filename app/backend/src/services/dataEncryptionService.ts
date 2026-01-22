@@ -274,7 +274,13 @@ export class DataEncryptionService {
 
     } catch (error) {
       // Log at debug level since decryption failures are expected for legacy/migrated data
-      logger.debug('Decryption failed - data may have been encrypted with different key or is corrupted');
+      logger.debug('Decryption failed - data may have been encrypted with different key or is corrupted', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        algorithm: encryptedData.algorithm,
+        hasTag: !!encryptedData.tag,
+        ivLength: encryptedData.iv?.length,
+        encryptedLength: encryptedData.encrypted?.length
+      });
       throw new Error('Failed to decrypt data');
     }
   }
