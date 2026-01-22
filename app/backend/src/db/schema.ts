@@ -4008,8 +4008,6 @@ export const conversationParticipants = pgTable("conversation_participants", {
   isMuted: boolean("is_muted").default(false),
   notificationsEnabled: boolean("notifications_enabled").default(true),
   customTitle: varchar("custom_title", { length: 255 }),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({
   conversationIdIdx: index("idx_conversation_participants_conversation_id").on(t.conversationId),
   userIdIdx: index("idx_conversation_participants_user_id").on(t.userId),

@@ -1,12 +1,12 @@
 /**
  * Post Card Component
- * Enhanced post display with Bento Grid and Glassmorphism styles
+ * Enhanced post display with iOS 26 Liquid Glass styling
  */
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { THEME } from '../constants/theme';
+import { LiquidGlassTheme, createGlassStyle } from '../constants/liquidGlassTheme';
 import { Post } from '../store/postsStore';
 import TipButton from './TipButton';
 
@@ -38,14 +38,25 @@ export const PostCard: React.FC<PostCardProps> = ({
     return date.toLocaleDateString();
   };
 
+  const glassStyle = createGlassStyle(
+    {
+      variant: 'regular' as any,
+      shape: 'roundedRectangle' as any,
+      opacity: 0.7,
+      isInteractive: false,
+      isEnabled: true,
+    },
+    false
+  );
+
   return (
     <TouchableOpacity 
       activeOpacity={0.9}
-      style={styles.container}
+      style={[styles.container, glassStyle]}
       onPress={() => onPress?.(post.id)}
     >
-      {/* Glassmorphism Background effect */}
-      <View style={styles.glassBackground} />
+      {/* Liquid Glass Highlight */}
+      <View style={styles.glassHighlight} />
       
       <View style={styles.cardContent}>
         {/* Header */}
@@ -94,9 +105,9 @@ export const PostCard: React.FC<PostCardProps> = ({
               <Ionicons 
                 name={post.isLiked ? "heart" : "heart-outline"} 
                 size={20} 
-                color={post.isLiked ? THEME.colors.error : THEME.colors.text.secondary} 
+                color={post.isLiked ? LiquidGlassTheme.colors.tints.error : LiquidGlassTheme.colors.text.secondary} 
               />
-              <Text style={[styles.actionCount, post.isLiked && { color: THEME.colors.error }]}>
+              <Text style={[styles.actionCount, post.isLiked && { color: LiquidGlassTheme.colors.tints.error }]}>
                 {post.likes}
               </Text>
             </TouchableOpacity>
@@ -105,7 +116,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               style={styles.actionItem}
               onPress={() => onComment?.(post.id)}
             >
-              <Ionicons name="chatbubble-outline" size={18} color={THEME.colors.text.secondary} />
+              <Ionicons name="chatbubble-outline" size={18} color={LiquidGlassTheme.colors.text.secondary} />
               <Text style={styles.actionCount}>{post.comments}</Text>
             </TouchableOpacity>
 
@@ -113,7 +124,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               style={styles.actionItem}
               onPress={() => onShare?.(post.id)}
             >
-              <Ionicons name="share-outline" size={18} color={THEME.colors.text.secondary} />
+              <Ionicons name="share-outline" size={18} color={LiquidGlassTheme.colors.text.secondary} />
             </TouchableOpacity>
           </View>
 
@@ -131,35 +142,23 @@ export const PostCard: React.FC<PostCardProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: THEME.spacing.md,
-    borderRadius: THEME.borderRadius.xl,
+    marginBottom: 16,
     overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
+    borderWidth: 1,
   },
-  glassBackground: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
-    ...Platform.select({
-      ios: {
-        // Blur effect would be added here with Expo BlurView
-      }
-    })
+  glassHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '40%',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+    pointerEvents: 'none',
   },
   cardContent: {
-    padding: THEME.spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-    borderRadius: THEME.borderRadius.xl,
+    padding: 16,
   },
   header: {
     flexDirection: 'row',
@@ -180,27 +179,27 @@ const styles = StyleSheet.create({
     borderRadius: THEME.borderRadius.full,
   },
   avatarPlaceholder: {
-    backgroundColor: THEME.colors.primary,
+    backgroundColor: LiquidGlassTheme.colors.tints.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    color: THEME.colors.text.white,
+    color: LiquidGlassTheme.colors.text.primary,
     fontWeight: 'bold',
     fontSize: 18,
   },
   authorName: {
     fontSize: 16,
     fontWeight: '700',
-    color: THEME.colors.text.primary,
+    color: LiquidGlassTheme.colors.text.primary,
   },
   handle: {
     fontSize: 13,
-    color: THEME.colors.text.secondary,
+    color: LiquidGlassTheme.colors.text.tertiary,
   },
   time: {
     fontSize: 12,
-    color: THEME.colors.text.muted,
+    color: LiquidGlassTheme.colors.text.tertiary,
   },
   content: {
     fontSize: 15,

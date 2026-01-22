@@ -403,13 +403,20 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       const validReplyToId = replyingTo?.messageId && !replyingTo.messageId.startsWith('msg_')
         ? replyingTo.messageId
         : undefined;
+      
+      const validQuoteId = quotingTo?.messageId && !quotingTo.messageId.startsWith('msg_')
+        ? quotingTo.messageId
+        : undefined;
 
       sendMessage({
         conversationId: selectedDM,
         fromAddress: address,
         content: newMessage.trim(),
         messageType: 'text',
-        replyToId: validReplyToId
+        replyToId: validReplyToId,
+        metadata: {
+          quotedMessageId: validQuoteId
+        }
       } as any).catch(err => {
         console.warn('Failed to send DM via hook', err);
         // Do NOT manually add to local state here - the hook handles optimistic updates
@@ -421,13 +428,20 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
         ? replyingTo.messageId
         : undefined;
 
+      const validQuoteId = quotingTo?.messageId && !quotingTo.messageId.startsWith('msg_')
+        ? quotingTo.messageId
+        : undefined;
+
       // Handle channel message - persist to backend
       sendMessage({
         conversationId: selectedChannel,
         fromAddress: address,
         content: newMessage.trim(),
         messageType: 'text',
-        replyToId: validReplyToId
+        replyToId: validReplyToId,
+        metadata: {
+          quotedMessageId: validQuoteId
+        }
       } as any).catch(err => {
         console.warn('Failed to send channel message via hook', err);
       });
@@ -869,29 +883,28 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       const lines = content.split('\n');
       const renderedLines: React.ReactNode[] = [];
       let currentBlockquote: string[] = [];
+      let currentAuthor: string | null = null;
 
       lines.forEach((line, i) => {
         if (line.startsWith('>')) {
-          let content = line.substring(1).trim();
+          let text = line.substring(1).trim();
           // Detect author header: **Name**:
-          const authorMatch = content.match(/^\*\*(.*)\*\*:/);
+          const authorMatch = text.match(/^\*\*(.*)\*\*:/);
           if (authorMatch) {
+            // If we have an existing blockquote, render it first
             if (currentBlockquote.length > 0) {
-              renderedLines.push(renderBlockquote(currentBlockquote, `bq-${i}`));
+              renderedLines.push(renderBlockquote(currentBlockquote, currentAuthor, `bq-${i}`));
               currentBlockquote = [];
             }
-            renderedLines.push(
-              <div key={`author-${i}`} className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mt-2 ml-1">
-                {authorMatch[1]}
-              </div>
-            );
-            content = content.replace(/^\*\*(.*)\*\*:/, '').trim();
+            currentAuthor = authorMatch[1];
+            text = text.replace(/^\*\*(.*)\*\*:/, '').trim();
           }
-          if (content) currentBlockquote.push(content);
+          if (text) currentBlockquote.push(text);
         } else {
           if (currentBlockquote.length > 0) {
-            renderedLines.push(renderBlockquote(currentBlockquote, `bq-${i}`));
+            renderedLines.push(renderBlockquote(currentBlockquote, currentAuthor, `bq-${i}`));
             currentBlockquote = [];
+            currentAuthor = null;
           }
           if (line.trim() || i < lines.length - 1) {
             renderedLines.push(<div key={`l-${i}`} className="min-h-[1.2em]">{renderMentions(line)}</div>);
@@ -900,7 +913,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       });
 
       if (currentBlockquote.length > 0) {
-        renderedLines.push(renderBlockquote(currentBlockquote, "bq-final"));
+        renderedLines.push(renderBlockquote(currentBlockquote, currentAuthor, "bq-final"));
       }
 
       return <>{renderedLines}</>;
@@ -909,11 +922,18 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     return renderMentions(content);
   };
 
-  const renderBlockquote = (lines: string[], key: string) => (
-    <div key={key} className="bg-gray-100 dark:bg-gray-800/50 border-l-4 border-gray-400 p-3 my-1 rounded-r-lg text-sm text-gray-600 dark:text-gray-300 italic shadow-sm">
-      {lines.map((line, idx) => (
-        <div key={idx}>{line}</div>
-      ))}
+  const renderBlockquote = (lines: string[], author: string | null, key: string) => (
+    <div key={key} className="my-2 flex flex-col gap-1">
+      {author && (
+        <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1">
+          {author}
+        </div>
+      )}
+      <div className="bg-gray-100 dark:bg-gray-800/80 border-l-4 border-gray-400 p-3 rounded-r-lg text-sm text-gray-600 dark:text-gray-300 italic shadow-inner transition-colors group-hover:bg-gray-200 dark:group-hover:bg-gray-750">
+        {lines.map((line, idx) => (
+          <div key={idx} className="whitespace-pre-wrap">{line}</div>
+        ))}
+      </div>
     </div>
   );
 
@@ -1556,32 +1576,52 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                             )}
                           </div>
 
-                          {/* Reply Reference - Blue accent for replies */}
+                          {/* Reply Reference - Compact blue box at the top */}
                           {message.replyToId && (
-                            <button
-                              onClick={() => {
+                            <div 
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 const element = document.getElementById(`message-${message.replyToId}`);
-                                element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                element?.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-50');
-                                setTimeout(() => element?.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-50'), 2000);
+                                if (element) {
+                                  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                  element.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-50');
+                                  setTimeout(() => element.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-50'), 2000);
+                                }
                               }}
-                              className="mb-2 flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-2 rounded-r text-left w-full group/reply"
+                              className={`
+                                mb-2 p-2 rounded-r-lg border-l-4 border-blue-500 cursor-pointer transition-all hover:scale-[1.01]
+                                ${message.fromAddress === address 
+                                  ? 'bg-blue-700/40 text-blue-50' 
+                                  : 'bg-blue-50 dark:bg-blue-900/30'
+                                }
+                              `}
                             >
-                              <div className="flex-1 min-w-0">
-                                <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-tight">
-                                  Replying to {message.replyTo?.senderName || truncateAddress(message.replyTo?.fromAddress || '')}
-                                </div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300 truncate italic">
-                                  {message.replyTo?.content || 'Original message...'}
-                                </div>
-                              </div>
-                              <CornerUpLeft size={12} className="text-blue-400 opacity-0 group-hover/reply:opacity-100 transition-opacity" />
-                            </button>
+                              {(() => {
+                                const parentMsg = sortedMessages.find(m => m.id === message.replyToId);
+                                const parentAuthor = parentMsg 
+                                  ? (parentMsg.fromAddress === address ? 'You' : truncateAddress(parentMsg.fromAddress))
+                                  : (message.replyTo?.senderName || truncateAddress(message.replyTo?.fromAddress || ''));
+                                
+                                return (
+                                  <>
+                                    <div className="flex items-center justify-between mb-0.5">
+                                      <div className={`text-[10px] font-bold uppercase tracking-wider ${message.fromAddress === address ? 'text-blue-200' : 'text-blue-600 dark:text-blue-400'}`}>
+                                        Replying to {parentAuthor}
+                                      </div>
+                                      <CornerUpLeft size={10} className="text-blue-400 opacity-60" />
+                                    </div>
+                                    <div className={`text-xs truncate ${message.fromAddress === address ? 'text-blue-100' : 'text-gray-600 dark:text-gray-300'} italic`}>
+                                      {parentMsg?.content || message.replyTo?.content || 'Original message...'}
+                                    </div>
+                                  </>
+                                );
+                              })()}
+                            </div>
                           )}
 
-                          {/* Only show content if it exists */}
+                          {/* Message content with improved Quote rendering */}
                           {message.content && message.content.trim() && (
-                            <div className="text-gray-700 dark:text-gray-200">
+                            <div className="text-gray-700 dark:text-gray-200 leading-relaxed">
                               {parseMentions(message.content)}
                             </div>
                           )}
@@ -1662,21 +1702,31 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                                   {attachment.type === 'image' && (
                                     <div className="max-w-sm">
                                       <img
-                                        src={attachment.url}
-                                        alt={attachment.name}
-                                        className="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90"
+                                        src={attachment.preview || attachment.url}
+                                        alt={attachment.name || (attachment as any).filename}
+                                        className="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 shadow-sm border border-gray-200 dark:border-gray-700"
                                         onClick={() => window.open(attachment.url, '_blank')}
                                       />
-                                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{attachment.name}</div>
+                                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{attachment.name || (attachment as any).filename}</div>
                                     </div>
                                   )}
 
-                                  {(attachment.type === 'file' || attachment.type === 'proposal') && (
-                                    <div className="bg-gray-100 dark:bg-gray-700 rounded p-2 flex items-center max-w-sm cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
+                                  {attachment.type !== 'image' && attachment.type !== 'nft' && attachment.type !== 'transaction' && (
+                                    <div className="bg-gray-100 dark:bg-gray-700/50 rounded-lg p-3 flex items-center max-w-sm cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-600"
                                       onClick={() => window.open(attachment.url, '_blank')}>
-                                      {attachment.type === 'proposal' && <Vote size={16} className="mr-2 text-blue-500 dark:text-blue-400" />}
-                                      {attachment.type === 'file' && <LinkIcon size={16} className="mr-2 text-gray-500 dark:text-gray-400" />}
-                                      <span className="text-xs text-gray-700 dark:text-gray-300 flex-1 truncate">{attachment.name}</span>
+                                      {attachment.type === 'proposal' ? (
+                                        <Vote size={18} className="mr-3 text-blue-500 dark:text-blue-400 flex-shrink-0" />
+                                      ) : (
+                                        <LinkIcon size={18} className="mr-3 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                                      )}
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                          {attachment.name || (attachment as any).filename || 'Attached File'}
+                                        </p>
+                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-tighter">
+                                          {attachment.type} attachment
+                                        </p>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
@@ -2370,8 +2420,8 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                                 <LinkIcon size={16} />}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white truncate" title={file.name}>
-                              {file.name}
+                            <div className="text-sm font-medium text-gray-900 dark:text-white truncate" title={file.name || (file as any).filename}>
+                              {file.name || (file as any).filename || 'Shared File'}
                             </div>
                             <div className="flex items-center justify-between mt-1">
                               <span className="text-[10px] text-gray-500 dark:text-gray-400">

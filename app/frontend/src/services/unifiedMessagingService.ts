@@ -87,6 +87,7 @@ interface PendingMessage {
   contentType: Message['contentType'];
   attachments?: MessageAttachment[];
   replyToId?: string;
+  metadata?: any;
   createdAt: Date;
   retryCount: number;
 }
@@ -489,8 +490,9 @@ class UnifiedMessagingService {
     contentType?: Message['contentType'];
     attachments?: MessageAttachment[];
     replyToId?: string;
+    metadata?: any;
   }): Promise<Message> {
-    const { conversationId, content, contentType = 'text', attachments, replyToId } = params;
+    const { conversationId, content, contentType = 'text', attachments, replyToId, metadata } = params;
 
     // Generate temp ID for optimistic update
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -505,7 +507,8 @@ class UnifiedMessagingService {
       timestamp: new Date(),
       deliveryStatus: 'sent',
       attachments,
-      replyToId
+      replyToId,
+      metadata
     };
 
     // Add to cache immediately (optimistic update)
@@ -524,6 +527,7 @@ class UnifiedMessagingService {
         contentType,
         attachments,
         replyToId,
+        metadata,
         createdAt: new Date(),
         retryCount: 0
       });
@@ -543,7 +547,9 @@ class UnifiedMessagingService {
             content,
             contentType,
             attachments,
-            replyToId
+            replyToId,
+            quotedMessageId: metadata?.quotedMessageId,
+            metadata
           })
         }
       );
@@ -1468,7 +1474,9 @@ class UnifiedMessagingService {
               content: pending.content,
               contentType: pending.contentType,
               attachments: pending.attachments,
-              replyToId: pending.replyToId
+              replyToId: pending.replyToId,
+              quotedMessageId: pending.metadata?.quotedMessageId,
+              metadata: pending.metadata
             })
           }
         );

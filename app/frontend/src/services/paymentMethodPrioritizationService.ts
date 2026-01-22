@@ -651,6 +651,11 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
     allMethods: PrioritizedPaymentMethod[],
     stablecoinResult: any
   ): PrioritizedPaymentMethod[] {
+    // Safety check
+    if (!stablecoinResult?.prioritizedStablecoins) {
+      return allMethods;
+    }
+
     // Merge stablecoin-enhanced methods back into the full list
     const stablecoinMap = new Map<string, PrioritizedPaymentMethod>(
       stablecoinResult.prioritizedStablecoins.map((m: PrioritizedPaymentMethod) => [m.method.id, m])
@@ -680,7 +685,7 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
     const recommendations = this.generateRecommendations(prioritizedMethods, context);
 
     // Add stablecoin-specific recommendations
-    if (stablecoinResult.usdcFirstApplied) {
+    if (stablecoinResult?.usdcFirstApplied) {
       recommendations.unshift({
         type: 'convenience',
         message: 'USDC prioritized for stable value and predictable costs',
