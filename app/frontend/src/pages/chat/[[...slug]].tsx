@@ -805,9 +805,14 @@ export default function ChatPage() {
 
   return (
     <Layout title={pageTitle} fullWidth={true} hideFooter={true}>
-      <div className="h-[calc(100vh-80px)] bg-gray-50 dark:bg-gray-900 flex">
-        {/* Left Sidebar - Channels/Conversations */}
-        <div className="w-64 bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+      <div className="h-[calc(100vh-80px)] bg-gray-50 dark:bg-gray-900 flex overflow-hidden">
+        {/* Left Sidebar - Channels/Conversations 
+            Hidden on mobile when a conversation is selected
+        */}
+        <div className={`
+          ${isMobile && selectedConversation ? 'hidden' : 'flex'}
+          w-full md:w-64 bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-col
+        `}>
           {/* Header */}
           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-3">
@@ -1065,7 +1070,10 @@ export default function ChatPage() {
         </div>
 
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col bg-white dark:bg-gray-900">
+        <div className={`
+          flex-1 flex flex-col bg-white dark:bg-gray-900
+          ${isMobile && !selectedConversation ? 'hidden' : 'flex'}
+        `}>
           {selectedConversation ? (
             <MessagingInterface
               className="h-full"

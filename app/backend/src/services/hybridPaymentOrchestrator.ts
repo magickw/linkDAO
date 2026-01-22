@@ -127,16 +127,22 @@ export class HybridPaymentOrchestrator {
       }
 
       // Check crypto balance and availability
+      // Determine target chain ID (default to Sepolia for testnet, or environment default)
+      // If request includes chainId, use it. Otherwise default to configured default or Sepolia.
+      const defaultChainId = process.env.DEFAULT_CHAIN_ID ? parseInt(process.env.DEFAULT_CHAIN_ID) : 11155111;
+      const targetChainId = request.paymentMethodDetails?.chainId || defaultChainId;
+
+      // Check crypto balance and availability
       const cryptoValidation = await this.paymentValidationService.validatePayment({
         paymentMethod: 'crypto',
         amount: request.amount + taxAmount, // Check balance for amount + tax
         currency: 'USDC', // Default to USDC for crypto
         userAddress: request.buyerAddress,
         paymentDetails: {
-          tokenAddress: getTokenAddress('USDC', 1), // Use correct USDC address
+          tokenAddress: getTokenAddress('USDC', targetChainId), // Use correct USDC address for target chain
           tokenSymbol: 'USDC',
           tokenDecimals: 6,
-          chainId: 1,
+          chainId: targetChainId,
           recipientAddress: request.sellerAddress
         }
       });

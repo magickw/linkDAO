@@ -164,9 +164,7 @@ export class CryptoPaymentService {
       abi: enhancedEscrowABI,
       functionName: "createEscrow",
       args: [
-        request.listingId
-          ? (typeof request.listingId === 'string' ? this.uuidToBigInt(request.listingId) : BigInt(request.listingId))
-          : this.uuidToBigInt(orderId),
+        this.uuidToBigInt(orderId),
         recipient as `0x${string}`,
         token.address as `0x${string}`,
         amount,
@@ -707,9 +705,7 @@ export class CryptoPaymentService {
 
     // Encode the function call data
     const escrowData = this.encodeEscrowCallData(
-      request.listingId
-        ? (typeof request.listingId === 'string' ? this.uuidToBigInt(request.listingId) : BigInt(request.listingId))
-        : this.uuidToBigInt(orderId),
+      this.uuidToBigInt(orderId),
       recipient,
       token.address,
       amount,
