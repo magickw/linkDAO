@@ -1,0 +1,229 @@
+npm warn config ignoring workspace config at /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/.npmrc
+
+> linkdao-backend@1.0.5 dev
+> ts-node --transpileOnly src/index.ts
+
+{"timestamp":"2026-01-22T00:53:40.572Z","level":"info","message":"Circuit breaker created: database","service":"marketplace-api","environment":"production","metadata":{"name":"database","config":{"failureThreshold":5,"recoveryTimeout":30000,"monitoringPeriod":10000,"expectedErrors":["ECONNREFUSED","ENOTFOUND","ETIMEDOUT"],"name":"database"}},"performance":{"memoryUsage":{"rss":175210496,"heapTotal":75284480,"heapUsed":45998096,"external":7872386,"arrayBuffers":4890797},"cpuUsage":{"user":763510,"system":69297}}}
+{"timestamp":"2026-01-22T00:53:40.573Z","level":"info","message":"Circuit breaker created: external-api","service":"marketplace-api","environment":"production","metadata":{"name":"external-api","config":{"failureThreshold":3,"recoveryTimeout":60000,"monitoringPeriod":15000,"expectedErrors":["ECONNREFUSED","ENOTFOUND","ETIMEDOUT","ECONNRESET"],"name":"external-api"}},"performance":{"memoryUsage":{"rss":175226880,"heapTotal":75284480,"heapUsed":46014184,"external":7880634,"arrayBuffers":4899005},"cpuUsage":{"user":764124,"system":69332}}}
+{"timestamp":"2026-01-22T00:53:40.573Z","level":"info","message":"Circuit breaker created: cache","service":"marketplace-api","environment":"production","metadata":{"name":"cache","config":{"failureThreshold":10,"recoveryTimeout":15000,"monitoringPeriod":5000,"expectedErrors":["ECONNREFUSED","ENOTFOUND","ETIMEDOUT"],"name":"cache"}},"performance":{"memoryUsage":{"rss":175243264,"heapTotal":75284480,"heapUsed":46025760,"external":7880634,"arrayBuffers":4899005},"cpuUsage":{"user":764225,"system":69344}}}
+{"timestamp":"2026-01-22T00:53:40.574Z","level":"info","message":"Circuit breaker created: auth-service","service":"marketplace-api","environment":"production","metadata":{"name":"auth-service","config":{"failureThreshold":3,"recoveryTimeout":45000,"monitoringPeriod":10000,"expectedErrors":["ECONNREFUSED","ENOTFOUND","ETIMEDOUT"],"name":"auth-service"}},"performance":{"memoryUsage":{"rss":175243264,"heapTotal":75284480,"heapUsed":46029512,"external":7880634,"arrayBuffers":4899005},"cpuUsage":{"user":764251,"system":69350}}}
+{"timestamp":"2026-01-22T00:53:40.583Z","level":"info","message":"Fallback service initialized","service":"marketplace-api","environment":"production","metadata":{"config":{"enableStaticFallbacks":true,"enableMockData":false,"enableCachedData":true,"maxCacheAge":300000,"logFallbackUsage":true},"staticFallbacksCount":5},"performance":{"memoryUsage":{"rss":176865280,"heapTotal":75284480,"heapUsed":49510432,"external":7902328,"arrayBuffers":4920699},"cpuUsage":{"user":802464,"system":70579}}}
+{"timestamp":"2026-01-22T00:53:40.889Z","level":"info","message":"🔗 Attempting Redis connection to:","service":"marketplace-api","environment":"production","metadata":{"0":"r","1":"e","2":"d","3":"i","4":"s","5":":","6":"/","7":"/","8":"*","9":"*","10":"*","11":":","12":"*","13":"*","14":"*","15":"@","16":"r","17":"e","18":"d","19":"i","20":"s","21":"-","22":"1","23":"3","24":"9","25":"0","26":"5","27":".","28":"c","29":"2","30":"5","31":"7","32":".","33":"u","34":"s","35":"-","36":"e","37":"a","38":"s","39":"t","40":"-","41":"1","42":"-","43":"3","44":".","45":"e","46":"c","47":"2","48":".","49":"c","50":"l","51":"o","52":"u","53":"d","54":".","55":"r","56":"e","57":"d","58":"i","59":"s","60":"l","61":"a","62":"b","63":"s","64":".","65":"c","66":"o","67":"m","68":":","69":"1","70":"3","71":"9","72":"0","73":"5"},"performance":{"memoryUsage":{"rss":200851456,"heapTotal":91996160,"heapUsed":71172680,"external":7998951,"arrayBuffers":4906847},"cpuUsage":{"user":1148671,"system":119898}}}
+{"timestamp":"2026-01-22T00:53:40.889Z","level":"info","message":"Detected managed Redis service, switching to SSL connection:","service":"marketplace-api","environment":"production","metadata":{"originalUrl":"redis://***:***@redis-13905.c257.us-east-1-3.ec2.cloud.redislabs.com:13905","adjustedUrl":"rediss://***:***@redis-13905.c257.us-east-1-3.ec2.cloud.redislabs.com:13905"},"performance":{"memoryUsage":{"rss":200851456,"heapTotal":91996160,"heapUsed":71186776,"external":8007143,"arrayBuffers":4915039},"cpuUsage":{"user":1148858,"system":119928}}}
+{"timestamp":"2026-01-22T00:53:40.901Z","level":"info","message":"✅ Shared Redis service is enabled, will check connection dynamically","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":208404480,"heapTotal":99860480,"heapUsed":77515648,"external":7972503,"arrayBuffers":4880399},"cpuUsage":{"user":1164799,"system":122498}}}
+{"timestamp":"2026-01-22T00:53:41.449Z","level":"info","message":"✅ Database connection established successfully (Pro tier optimized, max: 25, min: 5)","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":250019840,"heapTotal":136364032,"heapUsed":89271664,"external":8056755,"arrayBuffers":4898470},"cpuUsage":{"user":2210062,"system":177731}}}
+{"timestamp":"2026-01-22T00:53:41.451Z","level":"info","message":"✅ Database service initialized successfully","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":250036224,"heapTotal":136364032,"heapUsed":89334744,"external":8056755,"arrayBuffers":4898470},"cpuUsage":{"user":2210588,"system":177820}}}
+{"timestamp":"2026-01-22T00:53:41.791Z","level":"info","message":"Performance monitoring service started","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":217579520,"heapTotal":140443648,"heapUsed":106854040,"external":8067532,"arrayBuffers":4909247},"cpuUsage":{"user":2541540,"system":205265}}}
+{"timestamp":"2026-01-22T00:53:41.805Z","level":"info","message":"✅ Security configuration validated successfully","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":217300992,"heapTotal":140443648,"heapUsed":113899824,"external":8135595,"arrayBuffers":4977310},"cpuUsage":{"user":2562815,"system":205788}}}
+🚀 RESOURCE CONFIGURATION DEBUG:
+   MEMORY_LIMIT: 2048 MB
+   isHighResource: true
+   isResourceConstrained: false
+   isSevereResourceConstrained: false
+   isRenderPro (Legacy): true
+🚀 Running on Render Pro Tier - Memory optimizations enabled
+{"timestamp":"2026-01-22T00:53:41.806Z","level":"info","message":"🔍 Starting memory monitoring (interval: 300000ms)","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":217366528,"heapTotal":140443648,"heapUsed":114023544,"external":8135595,"arrayBuffers":4977310},"cpuUsage":{"user":2564881,"system":205844}}}
+{"timestamp":"2026-01-22T00:53:41.806Z","level":"info","message":"📊 Thresholds - Warning: 3200MB, Critical: 3600MB, GC: 2400MB","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":217366528,"heapTotal":140443648,"heapUsed":114026944,"external":8135595,"arrayBuffers":4977310},"cpuUsage":{"user":2564898,"system":205849}}}
+📊 Initial memory: 108.75MB heap / 207.3MB RSS
+⏱️  Memory monitoring interval: 300s
+📏 Process memory limit: 2048MB
+{"timestamp":"2026-01-22T00:53:41.871Z","level":"info","message":"✅ Pinata API key configuration detected (recommended method)","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":227901440,"heapTotal":149897216,"heapUsed":121017408,"external":9085703,"arrayBuffers":4970161},"cpuUsage":{"user":2667278,"system":212199}}}
+✅ Data encryption service initialized
+{"timestamp":"2026-01-22T00:53:41.993Z","level":"warn","message":"Perspective API key not found in environment variables","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":240353280,"heapTotal":162381824,"heapUsed":130187336,"external":9087230,"arrayBuffers":4971624},"cpuUsage":{"user":2842100,"system":218189}}}
+{"timestamp":"2026-01-22T00:53:41.994Z","level":"warn","message":"Google Vision API key not found in environment variables","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":240353280,"heapTotal":162381824,"heapUsed":130195232,"external":9087230,"arrayBuffers":4971624},"cpuUsage":{"user":2842456,"system":218229}}}
+{"timestamp":"2026-01-22T00:53:42.129Z","level":"info","message":"🔗 Attempting Redis connection to:","service":"marketplace-api","environment":"production","metadata":{"0":"r","1":"e","2":"d","3":"i","4":"s","5":":","6":"/","7":"/","8":"*","9":"*","10":"*","11":":","12":"*","13":"*","14":"*","15":"@","16":"r","17":"e","18":"d","19":"i","20":"s","21":"-","22":"1","23":"3","24":"9","25":"0","26":"5","27":".","28":"c","29":"2","30":"5","31":"7","32":".","33":"u","34":"s","35":"-","36":"e","37":"a","38":"s","39":"t","40":"-","41":"1","42":"-","43":"3","44":".","45":"e","46":"c","47":"2","48":".","49":"c","50":"l","51":"o","52":"u","53":"d","54":".","55":"r","56":"e","57":"d","58":"i","59":"s","60":"l","61":"a","62":"b","63":"s","64":".","65":"c","66":"o","67":"m","68":":","69":"1","70":"3","71":"9","72":"0","73":"5"},"performance":{"memoryUsage":{"rss":254541824,"heapTotal":176799744,"heapUsed":143424824,"external":9144043,"arrayBuffers":5028405},"cpuUsage":{"user":3019230,"system":229737}}}
+{"timestamp":"2026-01-22T00:53:42.205Z","level":"info","message":"Email service initialized with Resend","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":273465344,"heapTotal":196198400,"heapUsed":162318016,"external":9123666,"arrayBuffers":5008028},"cpuUsage":{"user":3104815,"system":244651}}}
+{"timestamp":"2026-01-22T00:53:42.214Z","level":"warn","message":"VAPID keys not configured. Push notifications will not work.","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":273727488,"heapTotal":196378624,"heapUsed":167418208,"external":9160450,"arrayBuffers":5044812},"cpuUsage":{"user":3113154,"system":244932}}}
+{"timestamp":"2026-01-22T00:53:42.251Z","level":"info","message":"Using Pinata REST API directly for IPFS operations","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":274907136,"heapTotal":197705728,"heapUsed":174397016,"external":9183103,"arrayBuffers":5067465},"cpuUsage":{"user":3137226,"system":250243}}}
+{"timestamp":"2026-01-22T00:53:42.251Z","level":"info","message":"Using Pinata REST API directly for IPFS operations","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":274907136,"heapTotal":197705728,"heapUsed":174400720,"external":9183103,"arrayBuffers":5067465},"cpuUsage":{"user":3137332,"system":250278}}}
+Registering /api/posts/repost route
+{"timestamp":"2026-01-22T00:53:42.477Z","level":"info","message":"Using Pinata REST API for IPFS operations","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":305954816,"heapTotal":232947712,"heapUsed":201718840,"external":9203521,"arrayBuffers":5087883},"cpuUsage":{"user":3473498,"system":272596}}}
+{"timestamp":"2026-01-22T00:53:42.478Z","level":"info","message":"IPFS service initialized - using Pinata REST API","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":305954816,"heapTotal":232947712,"heapUsed":201727080,"external":9203521,"arrayBuffers":5087883},"cpuUsage":{"user":3473629,"system":272635}}}
+{"timestamp":"2026-01-22T00:53:42.478Z","level":"info","message":"IPFS service created","service":"marketplace-api","environment":"production","metadata":{"service":true},"performance":{"memoryUsage":{"rss":305954816,"heapTotal":232947712,"heapUsed":201730192,"external":9203521,"arrayBuffers":5087883},"cpuUsage":{"user":3473660,"system":272648}}}
+{"timestamp":"2026-01-22T00:53:43.189Z","level":"info","message":"x402 Resource Routes registered:","service":"marketplace-api","environment":"production","metadata":{"routes":["GET /api/x402/protected","POST /api/x402/checkout"]},"performance":{"memoryUsage":{"rss":350339072,"heapTotal":241631232,"heapUsed":150652176,"external":9281754,"arrayBuffers":5166116},"cpuUsage":{"user":4485664,"system":338032}}}
+Registering /p routes
+Registering /cp routes
+Finished registering share routes
+{"timestamp":"2026-01-22T00:53:43.483Z","level":"warn","message":"Perspective API key not found in environment variables","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":354533376,"heapTotal":245710848,"heapUsed":191509544,"external":9354619,"arrayBuffers":5151352},"cpuUsage":{"user":4862004,"system":359118}}}
+{"timestamp":"2026-01-22T00:53:43.483Z","level":"warn","message":"Google Vision API key not found in environment variables","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":354533376,"heapTotal":245710848,"heapUsed":191512288,"external":9275255,"arrayBuffers":5159544},"cpuUsage":{"user":4862058,"system":359159}}}
+{"timestamp":"2026-01-22T00:53:43.527Z","level":"warn","message":"Google Safe Browsing API key not configured","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":355106816,"heapTotal":246251520,"heapUsed":207359368,"external":9344520,"arrayBuffers":5228809},"cpuUsage":{"user":4932587,"system":361180}}}
+{"timestamp":"2026-01-22T00:53:43.527Z","level":"warn","message":"PhishFort API key not configured","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":355106816,"heapTotal":246251520,"heapUsed":207377232,"external":9344520,"arrayBuffers":5228809},"cpuUsage":{"user":4932815,"system":361215}}}
+✅ Sharp module loaded successfully in sellerImageService
+✅ Sharp module loaded successfully
+{"timestamp":"2026-01-22T00:53:44.292Z","level":"info","message":"✅ ENS validation providers initialized","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":430522368,"heapTotal":338264064,"heapUsed":301359584,"external":9311455,"arrayBuffers":5195744},"cpuUsage":{"user":5792152,"system":435783}}}
+{"timestamp":"2026-01-22T00:53:44.371Z","level":"info","message":"Using Pinata REST API directly for IPFS operations","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":435765248,"heapTotal":346947584,"heapUsed":315516936,"external":9349739,"arrayBuffers":5234028},"cpuUsage":{"user":5888858,"system":442267}}}
+{"timestamp":"2026-01-22T00:53:44.475Z","level":"info","message":"Using Pinata REST API directly for IPFS operations","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":452657152,"heapTotal":364150784,"heapUsed":330687920,"external":9349011,"arrayBuffers":5233300},"cpuUsage":{"user":6008261,"system":451399}}}
+{"timestamp":"2026-01-22T00:53:44.505Z","level":"info","message":"Using Pinata REST API directly for IPFS operations","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":457605120,"heapTotal":368918528,"heapUsed":337542608,"external":9369568,"arrayBuffers":5253857},"cpuUsage":{"user":6045643,"system":453741}}}
+{"timestamp":"2026-01-22T00:53:44.505Z","level":"info","message":"Using Pinata REST API directly for IPFS operations","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":457605120,"heapTotal":368918528,"heapUsed":337548120,"external":9369568,"arrayBuffers":5253857},"cpuUsage":{"user":6045710,"system":453776}}}
+{"timestamp":"2026-01-22T00:53:44.505Z","level":"info","message":"Using Pinata REST API directly for IPFS operations","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":457605120,"heapTotal":368918528,"heapUsed":337553840,"external":9377760,"arrayBuffers":5262049},"cpuUsage":{"user":6045736,"system":453783}}}
+{"timestamp":"2026-01-22T00:53:44.505Z","level":"info","message":"Using Pinata REST API directly for IPFS operations","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":457605120,"heapTotal":368918528,"heapUsed":337559096,"external":9377760,"arrayBuffers":5262049},"cpuUsage":{"user":6045766,"system":453789}}}
+{"timestamp":"2026-01-22T00:53:44.797Z","level":"info","message":"Alert rule added: High Error Rate","service":"marketplace-api","environment":"production","metadata":{"ruleId":"high_error_rate","severity":"critical"},"performance":{"memoryUsage":{"rss":498843648,"heapTotal":409878528,"heapUsed":378767760,"external":9423975,"arrayBuffers":5308264},"cpuUsage":{"user":6381893,"system":486642}}}
+{"timestamp":"2026-01-22T00:53:44.797Z","level":"info","message":"Alert rule added: Slow Response Time","service":"marketplace-api","environment":"production","metadata":{"ruleId":"slow_response_time","severity":"warning"},"performance":{"memoryUsage":{"rss":498843648,"heapTotal":409878528,"heapUsed":378770976,"external":9432167,"arrayBuffers":5316456},"cpuUsage":{"user":6381948,"system":486686}}}
+{"timestamp":"2026-01-22T00:53:44.798Z","level":"info","message":"Alert rule added: High Memory Usage","service":"marketplace-api","environment":"production","metadata":{"ruleId":"high_memory_usage","severity":"warning"},"performance":{"memoryUsage":{"rss":498843648,"heapTotal":409878528,"heapUsed":378773624,"external":9432167,"arrayBuffers":5316456},"cpuUsage":{"user":6381963,"system":486693}}}
+{"timestamp":"2026-01-22T00:53:44.798Z","level":"info","message":"Alert rule added: Critical Memory Usage","service":"marketplace-api","environment":"production","metadata":{"ruleId":"critical_memory_usage","severity":"critical"},"performance":{"memoryUsage":{"rss":498843648,"heapTotal":409878528,"heapUsed":378776264,"external":9432167,"arrayBuffers":5316456},"cpuUsage":{"user":6381974,"system":486699}}}
+{"timestamp":"2026-01-22T00:53:44.798Z","level":"info","message":"Alert rule added: Service Unhealthy","service":"marketplace-api","environment":"production","metadata":{"ruleId":"service_unhealthy","severity":"critical"},"performance":{"memoryUsage":{"rss":498843648,"heapTotal":409878528,"heapUsed":378779184,"external":9432167,"arrayBuffers":5316456},"cpuUsage":{"user":6381985,"system":486703}}}
+{"timestamp":"2026-01-22T00:53:44.798Z","level":"info","message":"Alert rule added: Critical Dependency Failure","service":"marketplace-api","environment":"production","metadata":{"ruleId":"dependency_failure","severity":"critical"},"performance":{"memoryUsage":{"rss":498843648,"heapTotal":409878528,"heapUsed":378781824,"external":9432167,"arrayBuffers":5316456},"cpuUsage":{"user":6381995,"system":486708}}}
+{"timestamp":"2026-01-22T00:53:44.798Z","level":"info","message":"Alert rule added: Low Throughput","service":"marketplace-api","environment":"production","metadata":{"ruleId":"low_throughput","severity":"warning"},"performance":{"memoryUsage":{"rss":498843648,"heapTotal":409878528,"heapUsed":378784504,"external":9432167,"arrayBuffers":5316456},"cpuUsage":{"user":6382005,"system":486713}}}
+{"timestamp":"2026-01-22T00:53:45.030Z","level":"info","message":"UniswapV3Service initialized with direct SDK integration (ethers v6 compatible)","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":500318208,"heapTotal":380502016,"heapUsed":156981496,"external":9319359,"arrayBuffers":5203648},"cpuUsage":{"user":6735165,"system":518111}}}
+{"timestamp":"2026-01-22T00:53:45.031Z","level":"info","message":"UniswapV3Service initialized with direct SDK integration (ethers v6 compatible)","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":500318208,"heapTotal":380502016,"heapUsed":156995232,"external":9319359,"arrayBuffers":5203648},"cpuUsage":{"user":6735308,"system":518145}}}
+{"timestamp":"2026-01-22T00:53:45.031Z","level":"info","message":"UniswapV3Service initialized with direct SDK integration (ethers v6 compatible)","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":500318208,"heapTotal":380502016,"heapUsed":156999864,"external":9319359,"arrayBuffers":5203648},"cpuUsage":{"user":6735327,"system":518157}}}
+{"timestamp":"2026-01-22T00:53:45.031Z","level":"info","message":"UniswapV3Service initialized with direct SDK integration (ethers v6 compatible)","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":500318208,"heapTotal":380502016,"heapUsed":157004496,"external":9319359,"arrayBuffers":5203648},"cpuUsage":{"user":6735340,"system":518162}}}
+{"timestamp":"2026-01-22T00:53:45.031Z","level":"info","message":"UniswapV3Service initialized with direct SDK integration (ethers v6 compatible)","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":500318208,"heapTotal":380502016,"heapUsed":157009352,"external":9327551,"arrayBuffers":5211840},"cpuUsage":{"user":6735356,"system":518179}}}
+{"timestamp":"2026-01-22T00:53:45.031Z","level":"info","message":"UniswapV3Service initialized with direct SDK integration (ethers v6 compatible)","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":500318208,"heapTotal":380502016,"heapUsed":157013984,"external":9327551,"arrayBuffers":5211840},"cpuUsage":{"user":6735367,"system":518186}}}
+✅ DEX, Staking, and LDAO monitoring routes enabled
+✅ Leaderboard, Treasury, Post Management, Announcement, and Monthly Update routes enabled
+{"timestamp":"2026-01-22T00:53:45.587Z","level":"info","message":"IPFS routes - imported services","service":"marketplace-api","environment":"production","metadata":{"ipfsService":true,"ipfsIntegrationService":true},"performance":{"memoryUsage":{"rss":515571712,"heapTotal":400867328,"heapUsed":248719024,"external":12389458,"arrayBuffers":8248553},"cpuUsage":{"user":7462691,"system":551515}}}
+📝 All routes and middleware registered successfully
+📡 Attempting to start server on port 8000...
+🚀 LinkDAO Backend with Enhanced Social Platform running on port 8000
+📊 Environment: production
+MakeRange Health check: http://localhost:8000/health
+📡 API ready: http://localhost:8000/
+✅ CDP SDK loaded successfully with dynamic import
+🔑 Checking for CDP API credentials...
+🔐 Initializing CDP client with provided credentials...
+{"timestamp":"2026-01-22T00:53:46.190Z","level":"info","message":"✅ CDP client initialized successfully","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":521879552,"heapTotal":403718144,"heapUsed":280393368,"external":12595430,"arrayBuffers":8235007},"cpuUsage":{"user":7823633,"system":652476}}}
+✅ CDP client initialized successfully
+{"timestamp":"2026-01-22T00:53:46.191Z","level":"info","message":"BlockchainEventService initialized successfully","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":521928704,"heapTotal":403718144,"heapUsed":280476744,"external":12514799,"arrayBuffers":8243199},"cpuUsage":{"user":7825550,"system":652502}}}
+✅ Blockchain event monitoring started
+⚠️ Cancellation scheduler failed to start: Error: Cannot find module '/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/services/cancellationSchedulerService' imported from /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/index.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+    at moduleResolve (node:internal/modules/esm/resolve:859:10)
+    at defaultResolve (node:internal/modules/esm/resolve:983:11)
+    at ModuleLoader.#cachedDefaultResolve (node:internal/modules/esm/loader:731:20)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:708:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:310:38)
+    at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:664:36)
+    at TracingChannel.tracePromise (node:diagnostics_channel:350:14)
+    at ModuleLoader.import (node:internal/modules/esm/loader:663:21)
+    at defaultImportModuleDynamicallyForScript (node:internal/modules/esm/utils:235:31) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/services/cancellationSchedulerService'
+}
+⚠️ Tracking poller service failed to start: Error: Cannot find module '/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/services/trackingPollerService' imported from /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/index.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+    at moduleResolve (node:internal/modules/esm/resolve:859:10)
+    at defaultResolve (node:internal/modules/esm/resolve:983:11)
+    at ModuleLoader.#cachedDefaultResolve (node:internal/modules/esm/loader:731:20)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:708:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:310:38)
+    at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:664:36)
+    at TracingChannel.tracePromise (node:diagnostics_channel:350:14)
+    at ModuleLoader.import (node:internal/modules/esm/loader:663:21)
+    at defaultImportModuleDynamicallyForScript (node:internal/modules/esm/utils:235:31) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/services/trackingPollerService'
+}
+⚠️ Order automation jobs failed to start: Error: Cannot find module '/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/jobs/orderAutomationJobs' imported from /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/index.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+    at moduleResolve (node:internal/modules/esm/resolve:859:10)
+    at defaultResolve (node:internal/modules/esm/resolve:983:11)
+    at ModuleLoader.#cachedDefaultResolve (node:internal/modules/esm/loader:731:20)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:708:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:310:38)
+    at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:664:36)
+    at TracingChannel.tracePromise (node:diagnostics_channel:350:14)
+    at ModuleLoader.import (node:internal/modules/esm/loader:663:21)
+    at defaultImportModuleDynamicallyForScript (node:internal/modules/esm/utils:235:31) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/jobs/orderAutomationJobs'
+}
+✅ Blockchain event monitoring started
+⚠️ Escrow scheduler service failed to start: Error: Cannot find module '/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/services/escrowSchedulerService' imported from /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/index.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+    at moduleResolve (node:internal/modules/esm/resolve:859:10)
+    at defaultResolve (node:internal/modules/esm/resolve:983:11)
+    at ModuleLoader.#cachedDefaultResolve (node:internal/modules/esm/loader:731:20)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:708:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:310:38)
+    at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:664:36)
+    at TracingChannel.tracePromise (node:diagnostics_channel:350:14)
+    at ModuleLoader.import (node:internal/modules/esm/loader:663:21)
+    at defaultImportModuleDynamicallyForScript (node:internal/modules/esm/utils:235:31) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/services/escrowSchedulerService'
+}
+Failed to import cacheService: Error: Cannot find module '/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/services/cacheService' imported from /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/index.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+    at moduleResolve (node:internal/modules/esm/resolve:859:10)
+    at defaultResolve (node:internal/modules/esm/resolve:983:11)
+    at ModuleLoader.#cachedDefaultResolve (node:internal/modules/esm/loader:731:20)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:708:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:310:38)
+    at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:664:36)
+    at TracingChannel.tracePromise (node:diagnostics_channel:350:14)
+    at ModuleLoader.import (node:internal/modules/esm/loader:663:21)
+    at defaultImportModuleDynamicallyForScript (node:internal/modules/esm/utils:235:31) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/services/cacheService'
+}
+⚠️ Redis service singleton connection failed: Error: Cannot find module '/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/services/redisService' imported from /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/index.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+    at moduleResolve (node:internal/modules/esm/resolve:859:10)
+    at defaultResolve (node:internal/modules/esm/resolve:983:11)
+    at ModuleLoader.#cachedDefaultResolve (node:internal/modules/esm/loader:731:20)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:708:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:310:38)
+    at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:664:36)
+    at TracingChannel.tracePromise (node:diagnostics_channel:350:14)
+    at ModuleLoader.import (node:internal/modules/esm/loader:663:21)
+    at defaultImportModuleDynamicallyForScript (node:internal/modules/esm/utils:235:31) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/services/redisService'
+}
+Failed to import cacheWarmingService: Error: Cannot find module '/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/services/cacheWarmingService' imported from /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/index.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+    at moduleResolve (node:internal/modules/esm/resolve:859:10)
+    at defaultResolve (node:internal/modules/esm/resolve:983:11)
+    at ModuleLoader.#cachedDefaultResolve (node:internal/modules/esm/loader:731:20)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:708:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:310:38)
+    at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:664:36)
+    at TracingChannel.tracePromise (node:diagnostics_channel:350:14)
+    at ModuleLoader.import (node:internal/modules/esm/loader:663:21)
+    at defaultImportModuleDynamicallyForScript (node:internal/modules/esm/utils:235:31) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/src/services/cacheWarmingService'
+}
+{"timestamp":"2026-01-22T00:53:46.194Z","level":"info","message":"WebSocket resource constraints detected:","service":"marketplace-api","environment":"production","metadata":{"isResourceConstrained":false,"forceEnabled":false,"memoryUsageMB":268,"memoryThreshold":3200,"maxConnections":1000},"performance":{"memoryUsage":{"rss":522141696,"heapTotal":403718144,"heapUsed":281382360,"external":12522991,"arrayBuffers":8251391},"cpuUsage":{"user":7827987,"system":653126}}}
+{"timestamp":"2026-01-22T00:53:46.195Z","level":"info","message":"WebSocket service initialized with resource awareness: normal mode","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":522223616,"heapTotal":403718144,"heapUsed":281482408,"external":12522991,"arrayBuffers":8251391},"cpuUsage":{"user":7828758,"system":653238}}}
+{"timestamp":"2026-01-22T00:53:46.195Z","level":"info","message":"WebSocket configuration:","service":"marketplace-api","environment":"production","metadata":{"path":"/socket.io/","transports":["websocket","polling"],"corsOrigins":["https://www.linkdao.io","https://linkdao.io","https://app.linkdao.io","https://marketplace.linkdao.io","https://api.linkdao.io","http://localhost:3000","http://localhost:3001","http://127.0.0.1:3000","http://127.0.0.1:3001","https://www.linkdao.io","https://linkdao.io","https://linkdao.vercel.app","https://app.linkdao.io"],"maxConnections":1000,"isResourceConstrained":false},"performance":{"memoryUsage":{"rss":522223616,"heapTotal":403718144,"heapUsed":281487400,"external":12522991,"arrayBuffers":8251391},"cpuUsage":{"user":7828792,"system":653244}}}
+{"timestamp":"2026-01-22T00:53:46.195Z","level":"info","message":"WebSocket service initialized with resource-aware configuration","service":"marketplace-api","environment":"production","metadata":{"renderServiceType":"pro","isRenderFree":false,"isRenderStandard":false,"isResourceConstrained":false,"config":{"resourceAware":true,"maxConnections":1000,"memoryThreshold":3200,"enableHeartbeat":true,"heartbeatInterval":30000,"messageQueueLimit":200,"connectionTimeout":60000}},"performance":{"memoryUsage":{"rss":522223616,"heapTotal":403718144,"heapUsed":281493544,"external":12522991,"arrayBuffers":8251391},"cpuUsage":{"user":7828824,"system":653249}}}
+✅ WebSocket service initialized (shared Socket.IO instance created)
+🔌 WebSocket ready for real-time updates (High Performance Mode: Active)
+📊 WebSocket config: maxConnections=1000, memoryThreshold=3200MB
+{"timestamp":"2026-01-22T00:53:46.195Z","level":"info","message":"AdminWebSocketService: Using shared Socket.IO instance","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":522256384,"heapTotal":403718144,"heapUsed":281503568,"external":12522991,"arrayBuffers":8251391},"cpuUsage":{"user":7828891,"system":653280}}}
+{"timestamp":"2026-01-22T00:53:46.196Z","level":"info","message":"Admin WebSocket service initialized","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":522256384,"heapTotal":403718144,"heapUsed":281513944,"external":12522991,"arrayBuffers":8251391},"cpuUsage":{"user":7829060,"system":653285}}}
+✅ Admin WebSocket service initialized (using shared Socket.IO instance)
+🔧 Admin real-time dashboard ready
+{"timestamp":"2026-01-22T00:53:46.196Z","level":"info","message":"Seller WebSocket service initialized","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":522272768,"heapTotal":403718144,"heapUsed":281522680,"external":12522991,"arrayBuffers":8251391},"cpuUsage":{"user":7829113,"system":653295}}}
+{"timestamp":"2026-01-22T00:53:46.196Z","level":"info","message":"Seller WebSocket service initialized","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":522272768,"heapTotal":403718144,"heapUsed":281524944,"external":12522991,"arrayBuffers":8251391},"cpuUsage":{"user":7829125,"system":653299}}}
+✅ Seller WebSocket service initialized (using shared Socket.IO instance)
+🛒 Seller real-time updates ready
+✅ Live Chat Socket service initialized (using shared Socket.IO instance)
+💬 Live chat support ready
+⚠️ Cache service not available
+{"timestamp":"2026-01-22T00:53:46.196Z","level":"info","message":"Starting comprehensive monitoring service","service":"marketplace-api","environment":"production","metadata":{"interval":300000,"thresholds":{"errorRate":10,"responseTime":2000,"memoryUsage":85,"cpuUsage":80,"diskUsage":90,"dbConnectionPool":90,"cacheHitRate":70,"rateLimitViolations":50}},"performance":{"memoryUsage":{"rss":522272768,"heapTotal":403718144,"heapUsed":281540080,"external":12522991,"arrayBuffers":8251391},"cpuUsage":{"user":7829272,"system":653312}}}
+{"timestamp":"2026-01-22T00:53:46.196Z","level":"warn","message":"Redis is disabled or not available, cache miss for key:","service":"marketplace-api","environment":"production","metadata":{"0":"r","1":"a","2":"t","3":"e","4":"_","5":"l","6":"i","7":"m","8":"i","9":"t","10":"_","11":"s","12":"t","13":"a","14":"t","15":"s"},"performance":{"memoryUsage":{"rss":522289152,"heapTotal":403718144,"heapUsed":281558616,"external":12522991,"arrayBuffers":8251391},"cpuUsage":{"user":7829454,"system":653334}}}
+✅ Comprehensive monitoring service started
+📊 System health monitoring active (300s intervals)
+⚠️ Order event listener disabled to save resources
+{"timestamp":"2026-01-22T00:53:46.196Z","level":"info","message":"System metrics collected","service":"marketplace-api","environment":"production","metadata":{"timestamp":"2026-01-22T00:53:46.196Z","memory":{"heapUsed":269,"heapTotal":385,"rss":498,"systemTotal":16384,"percentage":3},"application":{"errorRate":0,"averageResponseTime":150,"rateLimitViolations":0}},"performance":{"memoryUsage":{"rss":522289152,"heapTotal":403718144,"heapUsed":281583800,"external":12522991,"arrayBuffers":8251391},"cpuUsage":{"user":7829606,"system":653345}}}
+{"timestamp":"2026-01-22T00:53:46.200Z","level":"info","message":"Self-hosted storage initialized successfully","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":522616832,"heapTotal":403980288,"heapUsed":281805152,"external":12662659,"arrayBuffers":8259987},"cpuUsage":{"user":7832624,"system":653819}}}
+{"timestamp":"2026-01-22T00:53:46.262Z","level":"info","message":"Health check completed","service":"marketplace-api","environment":"production","metadata":{"status":"healthy","services":[{"name":"database","status":"up","responseTime":10},{"name":"cache","status":"up","responseTime":6},{"name":"externalAPIs","status":"up","responseTime":50},{"name":"fileSystem","status":"up","responseTime":0}]},"performance":{"memoryUsage":{"rss":523911168,"heapTotal":404242432,"heapUsed":282115720,"external":12672668,"arrayBuffers":8263533},"cpuUsage":{"user":7840280,"system":655156}}}
+{"timestamp":"2026-01-22T00:53:46.264Z","level":"info","message":"✅ Redis connected for trending cache","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":523911168,"heapTotal":404242432,"heapUsed":282131552,"external":12672668,"arrayBuffers":8263533},"cpuUsage":{"user":7840472,"system":655199}}}
+{"timestamp":"2026-01-22T00:53:46.365Z","level":"info","message":"✅ Redis ready for trending cache","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":520060928,"heapTotal":404242432,"heapUsed":282192120,"external":12672683,"arrayBuffers":8263548},"cpuUsage":{"user":7841661,"system":655256}}}
+{"timestamp":"2026-01-22T00:53:59.818Z","level":"error","message":"Critical Alert: Service external_services health check failed: Health check timeout","service":"marketplace-api","environment":"production","metadata":{"alertKey":"service_external_services"},"performance":{"memoryUsage":{"rss":294780928,"heapTotal":218251264,"heapUsed":183345984,"external":12540658,"arrayBuffers":8137986},"cpuUsage":{"user":8202576,"system":706122}}}
+{"timestamp":"2026-01-22T00:53:59.821Z","level":"error","message":"CRITICAL ALERT: Service Unhealthy","service":"marketplace-api","environment":"production","metadata":{"ruleId":"service_unhealthy","message":"Critical services unhealthy: database","metrics":[{"name":"database","status":"unhealthy","responseTime":2,"impact":"critical"},{"name":"cache","status":"degraded","responseTime":2,"impact":"medium"},{"name":"external_services","status":"unhealthy","impact":"high"}]},"performance":{"memoryUsage":{"rss":295092224,"heapTotal":218251264,"heapUsed":183419000,"external":12540658,"arrayBuffers":8137986},"cpuUsage":{"user":8203963,"system":707271}}}
+{"timestamp":"2026-01-22T00:53:59.821Z","level":"error","message":"CRITICAL ALERT: Critical Dependency Failure","service":"marketplace-api","environment":"production","metadata":{"ruleId":"dependency_failure","message":"Critical dependencies failed: postgresql","metrics":[{"name":"postgresql","status":"unhealthy","impact":"critical","affectedServices":["database","authentication","marketplace_listings","seller_profiles"]},{"name":"redis","status":"degraded","impact":"medium","affectedServices":["cache","session_management","rate_limiting"]}]},"performance":{"memoryUsage":{"rss":295092224,"heapTotal":218251264,"heapUsed":183427392,"external":12540658,"arrayBuffers":8137986},"cpuUsage":{"user":8204051,"system":707295}}}
+{"timestamp":"2026-01-22T00:54:11.454Z","level":"info","message":"📊 Connection Pool Metrics Summary:","service":"marketplace-api","environment":"production","metadata":{"avgUtilization":"0.0%","maxUtilization":"0.0%","avgQueryDuration":"0ms","totalQueries":0,"totalErrors":0},"performance":{"memoryUsage":{"rss":196788224,"heapTotal":218251264,"heapUsed":184152728,"external":12563205,"arrayBuffers":8158030},"cpuUsage":{"user":8218604,"system":713345}}}
+{"timestamp":"2026-01-22T00:54:16.267Z","level":"info","message":"Health check completed","service":"marketplace-api","environment":"production","metadata":{"status":"healthy","services":[{"name":"database","status":"up","responseTime":11},{"name":"cache","status":"up","responseTime":6},{"name":"externalAPIs","status":"up","responseTime":50},{"name":"fileSystem","status":"up","responseTime":1}]},"performance":{"memoryUsage":{"rss":141361152,"heapTotal":218251264,"heapUsed":184388192,"external":12563405,"arrayBuffers":8158230},"cpuUsage":{"user":8228000,"system":717031}}}
+{"timestamp":"2026-01-22T00:54:20.631Z","level":"error","message":"Critical Alert: Service external_services health check failed: Health check timeout","service":"marketplace-api","environment":"production","metadata":{"alertKey":"service_external_services"},"performance":{"memoryUsage":{"rss":100450304,"heapTotal":218251264,"heapUsed":184398904,"external":12563405,"arrayBuffers":8158230},"cpuUsage":{"user":8229740,"system":717684}}}
+{"timestamp":"2026-01-22T00:54:41.455Z","level":"info","message":"📊 Connection Pool Metrics Summary:","service":"marketplace-api","environment":"production","metadata":{"avgUtilization":"0.0%","maxUtilization":"0.0%","avgQueryDuration":"0ms","totalQueries":0,"totalErrors":0},"performance":{"memoryUsage":{"rss":81985536,"heapTotal":219299840,"heapUsed":184332848,"external":12579560,"arrayBuffers":8176888},"cpuUsage":{"user":8251533,"system":739675}}}
+{"timestamp":"2026-01-22T00:54:41.996Z","level":"info","message":"🚨 ALERT [WARNING]: Warning: System in degraded mode","service":"marketplace-api","environment":"production","performance":{"memoryUsage":{"rss":90423296,"heapTotal":219299840,"heapUsed":184396048,"external":12579560,"arrayBuffers":8176888},"cpuUsage":{"user":8256132,"system":745905}}}
+{"timestamp":"2026-01-22T00:54:46.265Z","level":"info","message":"Health check completed","service":"marketplace-api","environment":"production","metadata":{"status":"healthy","services":[{"name":"database","status":"up","responseTime":11},{"name":"cache","status":"up","responseTime":5},{"name":"externalAPIs","status":"up","responseTime":52},{"name":"fileSystem","status":"up","responseTime":0}]},"performance":{"memoryUsage":{"rss":120651776,"heapTotal":218513408,"heapUsed":185254928,"external":12607130,"arrayBuffers":8204458},"cpuUsage":{"user":8300326,"system":765625}}}
+{"timestamp":"2026-01-22T00:54:50.646Z","level":"error","message":"Critical Alert: Service external_services health check failed: Health check timeout","service":"marketplace-api","environment":"production","metadata":{"alertKey":"service_external_services"},"performance":{"memoryUsage":{"rss":119914496,"heapTotal":218513408,"heapUsed":185298680,"external":12615322,"arrayBuffers":8212650},"cpuUsage":{"user":8302241,"system":766984}}}
+{"timestamp":"2026-01-22T00:54:54.800Z","level":"error","message":"Critical Alert: Service external_services health check failed: Health check timeout","service":"marketplace-api","environment":"production","metadata":{"alertKey":"service_external_services"},"performance":{"memoryUsage":{"rss":100401152,"heapTotal":218513408,"heapUsed":185372440,"external":12615322,"arrayBuffers":8212650},"cpuUsage":{"user":8309448,"system":769512}}}
+{"timestamp":"2026-01-22T00:55:11.456Z","level":"info","message":"📊 Connection Pool Metrics Summary:","service":"marketplace-api","environment":"production","metadata":{"avgUtilization":"0.0%","maxUtilization":"0.0%","avgQueryDuration":"0ms","totalQueries":0,"totalErrors":0},"performance":{"memoryUsage":{"rss":97779712,"heapTotal":219561984,"heapUsed":185408736,"external":12634202,"arrayBuffers":8231530},"cpuUsage":{"user":8321905,"system":792498}}}
+{"timestamp":"2026-01-22T00:55:16.268Z","level":"info","message":"Health check completed","service":"marketplace-api","environment":"production","metadata":{"status":"healthy","services":[{"name":"database","status":"up","responseTime":10},{"name":"cache","status":"up","responseTime":6},{"name":"externalAPIs","status":"up","responseTime":51},{"name":"fileSystem","status":"up","responseTime":2}]},"performance":{"memoryUsage":{"rss":69828608,"heapTotal":219561984,"heapUsed":185678728,"external":12634402,"arrayBuffers":8231730},"cpuUsage":{"user":8327966,"system":798624}}}
+{"timestamp":"2026-01-22T00:55:20.634Z","level":"error","message":"Critical Alert: Service external_services health check failed: Health check timeout","service":"marketplace-api","environment":"production","metadata":{"alertKey":"service_external_services"},"performance":{"memoryUsage":{"rss":62816256,"heapTotal":219561984,"heapUsed":185689368,"external":12634402,"arrayBuffers":8231730},"cpuUsage":{"user":8328945,"system":799880}}}

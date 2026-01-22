@@ -5,7 +5,9 @@ import { eq } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { orderAutomationService } from './orderAutomationService';
 
-const easypost = new EasyPost(process.env.EASYPOST_API_KEY || '');
+// Initialize with env key or fallback to prevent startup crash
+const easypostApiKey = process.env.EASYPOST_API_KEY || 'TEST_KEY_PLACEHOLDER';
+const easypost = new EasyPost(easypostApiKey);
 
 export interface Address {
     name: string;

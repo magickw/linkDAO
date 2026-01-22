@@ -301,6 +301,11 @@ const nextConfig = {
         permanent: true,
       },
       {
+        source: '/messages',
+        destination: '/chat',
+        permanent: true,
+      },
+      {
         source: '/marketplace/:path((?!seller/store/|listing/).*)+',
         destination: '/marketplace',
         permanent: false,
