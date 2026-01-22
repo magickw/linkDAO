@@ -4,6 +4,7 @@ import { getTokenAddress } from '../config/tokenAddresses';
 import { DatabaseService } from './databaseService';
 import { UserProfileService } from './userProfileService';
 import { ExchangeRateService } from './exchangeRateService';
+import { NETWORK_CONFIGS } from '../config/networkConfig';
 
 export interface PaymentValidationRequest {
   paymentMethod: 'crypto' | 'fiat' | 'escrow';
@@ -123,11 +124,36 @@ export class PaymentValidationService {
     TRANSACTION_BUFFER: 1.2 // 20% buffer for gas price fluctuations
   };
 
+  private providers: Map<number, ethers.JsonRpcProvider> = new Map();
+
   constructor() {
     this.databaseService = new DatabaseService();
     this.userProfileService = new UserProfileService();
     this.exchangeRateService = new ExchangeRateService();
-    this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com');
+
+    // Initialize default provider (valid fallback)
+    const defaultRpc = process.env.RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
+    this.provider = new ethers.JsonRpcProvider(defaultRpc);
+  }
+
+  /**
+   * Get a provider for a specific chain ID
+   */
+  private getProviderForChain(chainId: number): ethers.JsonRpcProvider {
+    if (this.providers.has(chainId)) {
+      return this.providers.get(chainId)!;
+    }
+
+    const networkConfig = NETWORK_CONFIGS[chainId];
+    if (networkConfig) {
+      const provider = new ethers.JsonRpcProvider(networkConfig.rpcUrl);
+      this.providers.set(chainId, provider);
+      return provider;
+    }
+
+    // Fallback to default provider if no specific config found (or log warning)
+    safeLogger.warn(`No specific RPC URL found for chain ${chainId}, using default provider`);
+    return this.provider;
   }
 
   /**
@@ -193,21 +219,23 @@ export class PaymentValidationService {
       let balance: bigint;
       let gasBalance: bigint | undefined;
 
+      const provider = this.getProviderForChain(chainId);
+
       if (tokenAddress === '0x0000000000000000000000000000000000000000') {
         // Native token (ETH, MATIC, etc.)
-        balance = await this.provider.getBalance(userAddress);
+        balance = await provider.getBalance(userAddress);
         gasBalance = balance;
       } else {
         // ERC-20 token
         const tokenContract = new ethers.Contract(
           tokenAddress,
           ['function balanceOf(address) view returns (uint256)'],
-          this.provider
+          provider
         );
         balance = await tokenContract.balanceOf(userAddress);
 
         // Check native token balance for gas
-        gasBalance = await this.provider.getBalance(userAddress);
+        gasBalance = await provider.getBalance(userAddress);
       }
 
       const requiredAmountBigInt = ethers.parseUnits(requiredAmount, token.decimals);

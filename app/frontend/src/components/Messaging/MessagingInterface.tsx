@@ -1908,7 +1908,6 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                           </div>
                         </div>
                       </div>
-                    </div>
                   </Web3SwipeGestureHandler>
                 </React.Fragment>
               );
