@@ -28,9 +28,6 @@ router.all('/rpc', async (req: Request, res: Response) => {
     }
 
     try {
-        // Log the proxy request (optional, can be noisy)
-        // safeLogger.info('Proxying RPC request', { target, method: req.method });
-
         // Prepare headers
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
@@ -38,20 +35,16 @@ router.all('/rpc', async (req: Request, res: Response) => {
             'User-Agent': 'LinkDAO-RPC-Proxy/1.0'
         };
 
-        // Forward Origin and Referer headers so Alchemy allowlists work
+        // Forward Origin and Referer
         if (req.headers.origin) {
             headers['Origin'] = req.headers.origin as string;
         } else if (req.headers.referer) {
-            // Fallback for some clients
             try {
                 const url = new URL(req.headers.referer as string);
                 headers['Origin'] = url.origin;
-            } catch (e) {
-                // Ignore invalid referer
-            }
+            } catch (e) { /* Ignore */ }
         }
 
-        // Forward Referer header if present
         if (req.headers.referer) {
             headers['Referer'] = req.headers.referer as string;
         }
@@ -61,16 +54,16 @@ router.all('/rpc', async (req: Request, res: Response) => {
             url: target,
             data: req.body,
             headers,
-            timeout: 20000, // 20s timeout for RPC operations
+            timeout: 20000,
             validateStatus: () => true // Forward all status codes
         });
 
-        // Forward essential headers
+        // Forward content-type
         if (response.headers['content-type']) {
             res.set('Content-Type', response.headers['content-type']);
         }
-        
-        // Disable caching for RPC responses
+
+        // Disable caching
         res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
 
         res.status(response.status).send(response.data);
@@ -82,14 +75,14 @@ router.all('/rpc', async (req: Request, res: Response) => {
             code: error.code
         });
 
-        // Return a JSON-RPC compatible error if possible, or a standard HTTP error
+        // JSON-RPC Error Response
         if (req.body && req.body.id) {
             return res.status(502).json({
                 jsonrpc: '2.0',
                 id: req.body.id,
                 error: {
                     code: -32000,
-                    message: `RPC Proxy Error: ${error.message}`
+                    message: `RPC Proxy Error: ${error.message || 'Upstream connection failed'}`
                 }
             });
         }

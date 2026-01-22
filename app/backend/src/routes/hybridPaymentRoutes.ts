@@ -82,7 +82,7 @@ async function getMarketData() {
 
     if (etherscanGas.status === 'fulfilled' && etherscanGas.value.result) {
       gasPrice = etherscanGas.value.result.SafeGasPrice || '20';
-      
+
       // Determine congestion based on gas price
       const gasGwei = parseFloat(gasPrice);
       if (gasGwei > 50) {
@@ -118,7 +118,7 @@ async function getMarketData() {
     };
   } catch (error) {
     safeLogger.warn('Failed to fetch market data, using defaults:', error);
-    
+
     // Return conservative defaults
     return {
       gasPrice: '20',
@@ -158,18 +158,18 @@ router.get('/comparison', (req, res) => {
  */
 router.post('/checkout', authMiddleware, async (req, res) => {
   try {
-    const { 
-      orderId, 
-      listingId, 
-      buyerAddress, 
-      sellerAddress, 
-      amount, 
-      currency, 
+    const {
+      orderId,
+      listingId,
+      buyerAddress,
+      sellerAddress,
+      amount,
+      currency,
       preferredMethod,
       userCountry,
       paymentMethodDetails,
       shippingAddress,
-      shippingCost 
+      shippingCost
     } = req.body;
 
     // Validate required fields
@@ -238,6 +238,15 @@ router.post('/checkout', authMiddleware, async (req, res) => {
       } else if (error.message.includes('minimum amount')) {
         errorMessage = error.message; // Return the specific minimum amount error
         statusCode = 400;
+      } else if (error.message.includes('not initialized')) {
+        errorMessage = 'Service temporarily unavailable (Configuration Error). Please contact support.';
+        statusCode = 503;
+      } else if (error.message.includes('Invalid addresses') || error.message.includes('validation failed')) {
+        errorMessage = error.message;
+        statusCode = 400;
+      } else if (error.message.includes('database')) {
+        errorMessage = 'System error: Database operation failed';
+        statusCode = 500;
       }
     }
 
@@ -310,7 +319,7 @@ router.post('/orders/:orderId/fulfill', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     safeLogger.error('Error handling order fulfillment:', error);
-    
+
     let errorMessage = 'Order fulfillment failed';
     if (error instanceof Error) {
       if (error.message.includes('not found')) {

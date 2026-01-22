@@ -226,7 +226,7 @@ export class WebSocketService {
       const connectionsFromIP = Array.from(this.connectedUsers.values())
         .filter(user => user.ip === clientIP).length;
 
-      if (connectionsFromIP > 5) { // Limit to 5 connections per IP
+      if (connectionsFromIP > 20) { // Limit to 20 connections per IP (increased for stability)
         safeLogger.warn(`Too many connections from IP ${clientIP} (${connectionsFromIP}), rejecting: ${socket.id}`);
         socket.emit('error', { message: 'Too many connections from your IP' });
         socket.disconnect();
