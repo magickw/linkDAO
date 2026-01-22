@@ -5,6 +5,7 @@ import { UserProfileService } from './userProfileService';
 import { PaymentValidationService } from './paymentValidationService';
 import { NotificationService } from './notificationService';
 import { MarketplaceEscrow } from '../models/Marketplace';
+import { getNetworkConfig, getDefaultNetworkConfig, isChainSupported } from '../config/networkConfig';
 
 const databaseService = new DatabaseService();
 const userProfileService = new UserProfileService();
@@ -53,57 +54,119 @@ export interface EscrowRecoveryOptions {
   timeoutActions: string[];
 }
 
-// Enhanced Escrow Service
+// Enhanced Escrow Service with Multi-Network Support
 export class EnhancedEscrowService {
-  private provider: ethers.JsonRpcProvider;
+  private provider: ethers.JsonRpcProvider; // Default provider
   private enhancedEscrowContract: ethers.Contract | null;
   private marketplaceContract: ethers.Contract | null;
   private paymentValidationService: PaymentValidationService;
   private tokenDecimalsCache: Map<string, number> = new Map();
 
+  // Multi-network support
+  private providerCache: Map<number, ethers.JsonRpcProvider> = new Map();
+  private contractCache: Map<number, { escrow: ethers.Contract | null; marketplace: ethers.Contract | null }> = new Map();
+
+  // Enhanced Escrow ABI (shared across all networks)
+  private readonly ENHANCED_ESCROW_ABI = [
+    "function createEscrow(uint256 listingId, address seller, address tokenAddress, uint256 amount, uint256 deliveryDeadline, uint8 resolutionMethod) external payable returns (uint256)",
+    "function createEscrowWithSecurity(uint256 listingId, address seller, address tokenAddress, uint256 amount, uint256 deliveryDeadline, uint8 resolutionMethod, bool requiresMultiSig, uint256 multiSigThreshold, uint256 timeLockDuration) external payable returns (uint256)",
+    "function lockFunds(uint256 escrowId) external payable",
+    "function confirmDelivery(uint256 escrowId, string deliveryInfo) external",
+    "function addSignature(uint256 escrowId) external",
+    "function openDispute(uint256 escrowId) external",
+    "function autoResolveDispute(uint256 escrowId) external",
+    "function castVote(uint256 escrowId, bool forBuyer) external",
+    "function resolveDisputeByArbitrator(uint256 escrowId, bool buyerWins) external",
+    "function getEscrow(uint256 escrowId) external view returns (address seller, address buyer, uint256 amount, address token, uint256 createdAt, uint256 duration, uint8 status, address winner)",
+    "function getDetailedReputation(address user) external view returns (uint256 totalScore, uint256 successfulTransactions, uint256 disputedTransactions, uint256 arbitrationWins, uint256 arbitrationLosses)",
+    "function getEscrowChainId(uint256 escrowId) external view returns (uint256)"
+  ];
+
+  private readonly MARKETPLACE_ABI = [
+    "function listings(uint256) external view returns (tuple)"
+  ];
+
   constructor(rpcUrl: string, enhancedEscrowContractAddress: string, marketplaceContractAddress: string) {
+    // Initialize default provider (for backward compatibility)
     this.provider = new ethers.JsonRpcProvider(rpcUrl);
     this.enhancedEscrowContract = null;
     this.marketplaceContract = null;
     this.paymentValidationService = new PaymentValidationService();
 
-    // Initialize contracts if addresses are provided
+    // Initialize default contracts if addresses are provided
     if (enhancedEscrowContractAddress && ethers.isAddress(enhancedEscrowContractAddress)) {
-      // Enhanced Escrow ABI (simplified for this example)
-      const ENHANCED_ESCROW_ABI = [
-        "function createEscrow(uint256 listingId, address seller, address tokenAddress, uint256 amount, uint256 deliveryDeadline, uint8 resolutionMethod) external payable returns (uint256)",
-        "function createEscrowWithSecurity(uint256 listingId, address seller, address tokenAddress, uint256 amount, uint256 deliveryDeadline, uint8 resolutionMethod, bool requiresMultiSig, uint256 multiSigThreshold, uint256 timeLockDuration) external payable returns (uint256)",
-        "function lockFunds(uint256 escrowId) external payable",
-        "function confirmDelivery(uint256 escrowId, string deliveryInfo) external",
-        "function addSignature(uint256 escrowId) external",
-        "function openDispute(uint256 escrowId) external",
-        "function autoResolveDispute(uint256 escrowId) external",
-        "function castVote(uint256 escrowId, bool forBuyer) external",
-        "function resolveDisputeByArbitrator(uint256 escrowId, bool buyerWins) external",
-        "function getEscrow(uint256 escrowId) external view returns (address seller, address buyer, uint256 amount, address token, uint256 createdAt, uint256 duration, uint8 status, address winner)",
-        "function getDetailedReputation(address user) external view returns (uint256 totalScore, uint256 successfulTransactions, uint256 disputedTransactions, uint256 arbitrationWins, uint256 arbitrationLosses)",
-        "function getEscrowChainId(uint256 escrowId) external view returns (uint256)" // Added for cross-chain support
-      ];
-
       this.enhancedEscrowContract = new ethers.Contract(
         enhancedEscrowContractAddress,
-        ENHANCED_ESCROW_ABI,
+        this.ENHANCED_ESCROW_ABI,
         this.provider
       );
     }
 
     if (marketplaceContractAddress && ethers.isAddress(marketplaceContractAddress)) {
-      // Marketplace ABI (simplified for this example)
-      const MARKETPLACE_ABI = [
-        "function listings(uint256) external view returns (tuple)"
-      ];
-
       this.marketplaceContract = new ethers.Contract(
         marketplaceContractAddress,
-        MARKETPLACE_ABI,
+        this.MARKETPLACE_ABI,
         this.provider
       );
     }
+  }
+
+  /**
+   * Get or create provider for a specific chain
+   */
+  private getProviderForChain(chainId: number): ethers.JsonRpcProvider {
+    if (this.providerCache.has(chainId)) {
+      return this.providerCache.get(chainId)!;
+    }
+
+    const networkConfig = getNetworkConfig(chainId);
+    if (!networkConfig) {
+      safeLogger.warn(`No network config for chain ${chainId}, using default provider`);
+      return this.provider;
+    }
+
+    const provider = new ethers.JsonRpcProvider(networkConfig.rpcUrl);
+    this.providerCache.set(chainId, provider);
+    return provider;
+  }
+
+  /**
+   * Get or create contracts for a specific chain
+   */
+  private getContractsForChain(chainId: number): { escrow: ethers.Contract | null; marketplace: ethers.Contract | null } {
+    if (this.contractCache.has(chainId)) {
+      return this.contractCache.get(chainId)!;
+    }
+
+    const networkConfig = getNetworkConfig(chainId);
+    if (!networkConfig) {
+      safeLogger.warn(`No network config for chain ${chainId}, using default contracts`);
+      return { escrow: this.enhancedEscrowContract, marketplace: this.marketplaceContract };
+    }
+
+    const provider = this.getProviderForChain(chainId);
+    let escrowContract: ethers.Contract | null = null;
+    let marketplaceContract: ethers.Contract | null = null;
+
+    if (networkConfig.escrowContractAddress && ethers.isAddress(networkConfig.escrowContractAddress)) {
+      escrowContract = new ethers.Contract(
+        networkConfig.escrowContractAddress,
+        this.ENHANCED_ESCROW_ABI,
+        provider
+      );
+    }
+
+    if (networkConfig.marketplaceContractAddress && ethers.isAddress(networkConfig.marketplaceContractAddress)) {
+      marketplaceContract = new ethers.Contract(
+        networkConfig.marketplaceContractAddress,
+        this.MARKETPLACE_ABI,
+        provider
+      );
+    }
+
+    const contracts = { escrow: escrowContract, marketplace: marketplaceContract };
+    this.contractCache.set(chainId, contracts);
+    return contracts;
   }
 
   /**
@@ -368,6 +431,7 @@ export class EnhancedEscrowService {
     sellerAddress: string,
     tokenAddress: string,
     amount: string,
+    chainId: number = 11155111, // Default to Sepolia
     escrowDurationDays: number = 7,
     disputeResolutionMethod: number = 0 // 0 = AUTOMATIC, 1 = COMMUNITY_VOTING, 2 = ARBITRATOR
   ): Promise<{ escrowId: string; transactionData?: any }> {
@@ -377,6 +441,7 @@ export class EnhancedEscrowService {
       sellerAddress,
       tokenAddress,
       amount,
+      chainId,
       escrowDurationDays,
       disputeResolutionMethod,
       false, // requiresMultiSig
@@ -391,6 +456,7 @@ export class EnhancedEscrowService {
     sellerAddress: string,
     tokenAddress: string,
     amount: string,
+    chainId: number = 11155111, // Default to Sepolia
     escrowDurationDays: number = 7,
     disputeResolutionMethod: number = 0, // 0 = AUTOMATIC, 1 = COMMUNITY_VOTING, 2 = ARBITRATOR
     requiresMultiSig: boolean = false,
@@ -403,6 +469,7 @@ export class EnhancedEscrowService {
       sellerAddress,
       tokenAddress,
       amount,
+      chainId,
       escrowDurationDays,
       disputeResolutionMethod,
       requiresMultiSig,
@@ -417,6 +484,7 @@ export class EnhancedEscrowService {
     sellerAddress: string,
     tokenAddress: string,
     amount: string,
+    chainId: number = 11155111, // Default to Sepolia
     escrowDurationDays: number = 7,
     disputeResolutionMethod: number = 0, // 0 = AUTOMATIC, 1 = COMMUNITY_VOTING, 2 = ARBITRATOR
     requiresMultiSig: boolean = false,
@@ -430,7 +498,8 @@ export class EnhancedEscrowService {
         buyerAddress,
         sellerAddress,
         tokenAddress,
-        amount
+        amount,
+        chainId
       });
 
       if (!validation.isValid) {
@@ -441,8 +510,21 @@ export class EnhancedEscrowService {
         throw new Error('Insufficient balance for escrow creation');
       }
 
-      if (!this.enhancedEscrowContract) {
-        throw new Error('Enhanced Escrow contract not initialized');
+      // Get chain-specific contracts and provider
+      const networkConfig = getNetworkConfig(chainId);
+      if (!networkConfig) {
+        throw new Error(`Unsupported chain ID: ${chainId}`);
+      }
+
+      const provider = this.getProviderForChain(chainId);
+      const contracts = this.getContractsForChain(chainId);
+
+      // Log network connection
+      const network = await provider.getNetwork();
+      safeLogger.info(`Connected to network: ${networkConfig.name} (Chain ID: ${network.chainId})`);
+
+      if (!contracts.escrow) {
+        throw new Error(`Enhanced escrow contract is not deployed on this network`);
       }
 
       // Create escrow in database first
@@ -469,8 +551,8 @@ export class EnhancedEscrowService {
       // Calculate delivery deadline
       const deliveryDeadline = Math.floor(Date.now() / 1000) + (escrowDurationDays * 24 * 60 * 60);
 
-      // Prepare smart contract transaction data
-      const contractInterface = this.enhancedEscrowContract.interface;
+      // Prepare smart contract transaction data using chain-specific contract
+      const contractInterface = contracts.escrow.interface;
       let encodedData;
 
       if (requiresMultiSig || timeLockDurationSeconds > 0) {
@@ -510,7 +592,7 @@ export class EnhancedEscrowService {
       return {
         escrowId,
         transactionData: {
-          to: this.enhancedEscrowContract.target,
+          to: contracts.escrow.target,
           data: encodedData,
           value: tokenAddress === '0x0000000000000000000000000000000000000000' ? ethers.parseUnits(amount, 18).toString() : '0'
         }
