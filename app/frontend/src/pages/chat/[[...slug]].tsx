@@ -38,6 +38,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useProfile } from '@/hooks/useProfile';
 import { UserProfile } from '@/models/UserProfile';
+import { unifiedMessagingService } from '@/services/unifiedMessagingService';
 
 // Channel categories for organization (matching screenshot design)
 interface ChannelCategory {
