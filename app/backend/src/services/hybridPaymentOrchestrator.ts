@@ -20,6 +20,12 @@ export interface HybridCheckoutRequest {
   preferredMethod?: 'crypto' | 'fiat' | 'auto';
   userCountry?: string;
   metadata?: any;
+  paymentMethodDetails?: {
+    type?: string;
+    tokenAddress?: string;
+    chainId?: number;
+    provider?: string;
+  };
   shippingAddress?: any;
   shippingCost?: number;
 }
