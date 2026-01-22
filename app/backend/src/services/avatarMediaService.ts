@@ -4,6 +4,7 @@ import { users } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
 import path from 'path';
+import { v2 as cloudinary } from 'cloudinary';
 
 export interface MediaUploadResult {
   success: boolean;
