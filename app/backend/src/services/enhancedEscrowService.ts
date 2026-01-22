@@ -155,8 +155,26 @@ export class EnhancedEscrowService {
       }
 
       // Validate addresses
-      if (!ethers.isAddress(request.buyerAddress) || !ethers.isAddress(request.sellerAddress) || !ethers.isAddress(request.tokenAddress)) {
-        result.errors.push('Invalid addresses provided');
+      const buyerValid = ethers.isAddress(request.buyerAddress);
+      const sellerValid = ethers.isAddress(request.sellerAddress);
+      const tokenValid = ethers.isAddress(request.tokenAddress);
+
+      safeLogger.info('[validateEscrowCreation] Address validation:', {
+        buyerAddress: request.buyerAddress,
+        buyerValid,
+        sellerAddress: request.sellerAddress,
+        sellerValid,
+        tokenAddress: request.tokenAddress,
+        tokenValid
+      });
+
+      if (!buyerValid || !sellerValid || !tokenValid) {
+        const invalidAddresses = [];
+        if (!buyerValid) invalidAddresses.push(`buyer: ${request.buyerAddress}`);
+        if (!sellerValid) invalidAddresses.push(`seller: ${request.sellerAddress}`);
+        if (!tokenValid) invalidAddresses.push(`token: ${request.tokenAddress}`);
+
+        result.errors.push(`Invalid addresses provided: ${invalidAddresses.join(', ')}`);
         return result;
       }
 

@@ -378,11 +378,24 @@ export class HybridPaymentOrchestrator {
     try {
       // Create smart contract escrow
       // Use totalAmount from decision to include tax and fees
+
+      // Determine token address - use zero address for native currency (ETH)
+      const tokenAddress = pathDecision.method.tokenAddress || '0x0000000000000000000000000000000000000000';
+
+      safeLogger.info('[processCryptoEscrowPath] Creating escrow with parameters:', {
+        listingId: request.listingId,
+        buyerAddress: request.buyerAddress,
+        sellerAddress: request.sellerAddress,
+        tokenAddress,
+        amount: pathDecision.totalAmount.toString(),
+        methodDetails: pathDecision.method
+      });
+
       const escrowResult = await this.escrowService.createEscrow(
         request.listingId,
         request.buyerAddress,
         request.sellerAddress,
-        pathDecision.method.tokenAddress || '0x0000000000000000000000000000000000000000',
+        tokenAddress,
         pathDecision.totalAmount.toString()
       );
 
