@@ -249,42 +249,48 @@ export class EnhancedEscrowService {
 
       // Verify network connectivity and contract deployment
       try {
-        const network = await this.provider.getNetwork();
+        const targetChainId = request.chainId || (await this.provider.getNetwork()).chainId;
+        const provider = request.chainId ? this.getProviderForChain(targetChainId as number) : this.provider;
+        const network = await provider.getNetwork();
+
         safeLogger.info(`Connected to network: ${network.name} (Chain ID: ${network.chainId})`);
 
+        // Get chain-specific contracts
+        const contracts = request.chainId ? this.getContractsForChain(targetChainId as number) : { escrow: this.enhancedEscrowContract };
+        const escrowContract = contracts.escrow;
+
         // Check if escrow contract is deployed
-        if (this.enhancedEscrowContract) {
-          const code = await this.provider.getCode(this.enhancedEscrowContract.target as string);
+        if (escrowContract) {
+          const code = await provider.getCode(escrowContract.target as string);
           if (code === '0x') {
-            result.errors.push('Enhanced escrow contract is not deployed on this network');
+            result.errors.push(`Enhanced escrow contract is not deployed on this network (Chain ID: ${network.chainId})`);
             return result;
           }
+        } else {
+          result.errors.push(`Enhanced escrow contract is not configured for this network (Chain ID: ${network.chainId})`);
+          return result;
         }
 
         // Check cross-chain support if specified
         if (request.chainId && request.chainId !== Number(network.chainId)) {
-          // In a real implementation, we would check if the target chain is supported
-          // For now, we'll assume Base (8453), Polygon (137), and Arbitrum (42161) are supported
-          const supportedChains = [8453, 137, 42161]; // Added Base chain support
-          if (!supportedChains.includes(request.chainId)) {
-            result.chainSupported = false;
-            result.errors.push(`Target chain ${request.chainId} is not supported for cross-chain escrow`);
-            return result;
-          }
-          result.warnings.push(`Cross-chain escrow to chain ${request.chainId} will require additional bridge fees`);
+          // This should ideally not happen if we switched providers correctly
+          result.errors.push(`Provider network mismatch: requested ${request.chainId}, got ${network.chainId}`);
+          return result;
         }
       } catch (networkError) {
+        safeLogger.error('Network validation error:', networkError);
         result.errors.push('Failed to connect to blockchain network');
         return result;
       }
 
       // Enhanced balance check with real blockchain data
       try {
+        const targetChainId = request.chainId ? Number(request.chainId) : Number((await this.provider.getNetwork()).chainId);
         const balanceCheck = await this.paymentValidationService.checkCryptoBalance(
           request.buyerAddress,
           request.tokenAddress,
           request.amount,
-          Number((await this.provider.getNetwork()).chainId)
+          targetChainId
         );
 
         result.hasSufficientBalance = balanceCheck.hasSufficientBalance;
@@ -295,7 +301,8 @@ export class EnhancedEscrowService {
 
         // Check gas balance for ERC-20 tokens with enhanced validation
         if (request.tokenAddress !== '0x0000000000000000000000000000000000000000' && balanceCheck.gasBalance) {
-          const gasPrice = await this.provider.getFeeData();
+          const provider = request.chainId ? this.getProviderForChain(targetChainId) : this.provider;
+          const gasPrice = await provider.getFeeData();
           if (gasPrice.gasPrice) {
             // Estimate gas for ERC-20 approval + escrow creation
             const estimatedGasLimit = 200000; // Conservative estimate
@@ -314,7 +321,9 @@ export class EnhancedEscrowService {
 
       // Enhanced gas fee estimation with EIP-1559 support
       try {
-        const feeData = await this.provider.getFeeData();
+        const targetChainId = request.chainId ? Number(request.chainId) : Number((await this.provider.getNetwork()).chainId);
+        const provider = request.chainId ? this.getProviderForChain(targetChainId) : this.provider;
+        const feeData = await provider.getFeeData();
         const gasLimit = await this.estimateEscrowCreationGas(request);
 
         if (feeData.maxFeePerGas && feeData.maxPriorityFeePerGas) {
@@ -334,24 +343,29 @@ export class EnhancedEscrowService {
       // Check token approvals for ERC-20 with real contract verification
       if (request.tokenAddress !== '0x0000000000000000000000000000000000000000') {
         try {
+          const targetChainId = request.chainId ? Number(request.chainId) : Number((await this.provider.getNetwork()).chainId);
+          const provider = request.chainId ? this.getProviderForChain(targetChainId) : this.provider;
+          const contracts = request.chainId ? this.getContractsForChain(targetChainId) : { escrow: this.enhancedEscrowContract };
+          const escrowContract = contracts.escrow;
+
           // Check if token contract exists and is valid
-          const tokenCode = await this.provider.getCode(request.tokenAddress);
+          const tokenCode = await provider.getCode(request.tokenAddress);
           if (tokenCode === '0x') {
             result.errors.push('Token contract does not exist at provided address');
             return result;
           }
 
           // Check current allowance
-          if (this.enhancedEscrowContract) {
+          if (escrowContract) {
             const tokenContract = new ethers.Contract(
               request.tokenAddress,
               ['function allowance(address owner, address spender) view returns (uint256)'],
-              this.provider
+              provider
             );
 
             const currentAllowance = await tokenContract.allowance(
               request.buyerAddress,
-              this.enhancedEscrowContract.target
+              escrowContract.target
             );
 
             const decimals = await this.getTokenDecimals(request.tokenAddress);
@@ -394,12 +408,17 @@ export class EnhancedEscrowService {
    */
   private async estimateEscrowCreationGas(request: EscrowCreationRequest): Promise<number> {
     try {
-      if (!this.enhancedEscrowContract) {
+      const targetChainId = request.chainId ? Number(request.chainId) : undefined;
+      const contracts = targetChainId ? this.getContractsForChain(targetChainId) : { escrow: this.enhancedEscrowContract };
+      const provider = targetChainId ? this.getProviderForChain(targetChainId) : this.provider;
+      const escrowContract = contracts.escrow;
+
+      if (!escrowContract) {
         return request.tokenAddress === '0x0000000000000000000000000000000000000000' ? 100000 : 150000;
       }
 
       // Create a read-only interface for gas estimation
-      const contractInterface = this.enhancedEscrowContract.interface;
+      const contractInterface = escrowContract.interface;
       const encodedData = contractInterface.encodeFunctionData('createEscrow', [
         request.listingId,
         request.buyerAddress,
@@ -408,8 +427,8 @@ export class EnhancedEscrowService {
         ethers.parseUnits(request.amount, await this.getTokenDecimals(request.tokenAddress)) // Dynamic decimals
       ]);
 
-      const gasEstimate = await this.provider.estimateGas({
-        to: this.enhancedEscrowContract.target as string,
+      const gasEstimate = await provider.estimateGas({
+        to: escrowContract.target as string,
         data: encodedData,
         from: request.buyerAddress
       });
