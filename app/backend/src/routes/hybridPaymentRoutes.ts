@@ -223,7 +223,7 @@ router.post('/checkout', authMiddleware, async (req, res) => {
       } else if (error.message.includes('Stripe')) {
         errorMessage = 'Payment processing error. Please try another payment method';
         statusCode = 400;
-      } else if (error.message.includes('network') || error.message.includes('Crypto payment failed')) {
+      } else if (error.message.includes('network') || error.message.includes('Crypto payment failed') || error.message.includes('Escrow validation failed') || error.message.includes('Failed to check buyer balance')) {
         errorMessage = 'Network error or transaction failed. Please try again';
         statusCode = 400;
       } else if (error.message.includes('user records') || error.message.includes('Failed to find user') || error.message.includes('account not found')) {
