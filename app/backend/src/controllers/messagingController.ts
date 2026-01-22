@@ -1130,13 +1130,16 @@ export class MessagingController {
 
       safeLogger.info(`[FileUpload] Virus scan passed (${scanResult.scanner})`);
 
-      // Step 4: Upload to IPFS
-      safeLogger.info(`[FileUpload] Uploading to IPFS`);
-      const ipfsResult = await ipfsService.uploadFile(file.buffer, {
-        metadata: {
-          name: file.originalname,
-          mimeType: file.mimetype
-        }
+      // Step 4: Upload to hybrid storage (S3 + IPFS + Thumbnails)
+      safeLogger.info(`[FileUpload] Uploading to hybrid storage`);
+      const { hybridStorageService } = await import('../services/hybridStorageService');
+
+      const storageResult = await hybridStorageService.uploadFile(file.buffer, {
+        filename: file.originalname,
+        mimeType: file.mimetype,
+        generateThumbnails: true,
+        uploadToIPFS: true,
+        folder: 'messages'
       });
 
       // Step 5: Store file metadata in database
@@ -1145,7 +1148,8 @@ export class MessagingController {
         filename: file.originalname,
         mimeType: file.mimetype,
         sizeBytes: file.size,
-        ipfsCid: ipfsResult.ipfsHash,
+        s3Key: storageResult.s3Key,
+        ipfsCid: storageResult.ipfsCid,
         uploadedBy: userAddress,
         virusScanStatus: 'clean',
         virusScanResult: scanResult
@@ -1161,13 +1165,27 @@ export class MessagingController {
         mimeType: file.mimetype,
         filename: file.originalname,
         size: file.size,
-        url: ipfsResult.gatewayUrl,
-        cid: ipfsResult.ipfsHash,
+        // Primary URL (S3 with CDN, or IPFS fallback)
+        url: storageResult.cdnUrl || storageResult.s3Url || storageResult.ipfsGatewayUrl,
+        // Storage locations
+        s3Key: storageResult.s3Key,
+        s3Url: storageResult.s3Url,
+        cdnUrl: storageResult.cdnUrl,
+        ipfsCid: storageResult.ipfsCid,
+        ipfsUrl: storageResult.ipfsGatewayUrl,
+        // Thumbnails (if generated)
+        thumbnails: storageResult.thumbnails ? {
+          small: storageResult.thumbnails.small?.url,
+          medium: storageResult.thumbnails.medium?.url
+        } : undefined,
+        // Metadata
         uploadedBy: userAddress,
         uploadedAt: new Date().toISOString(),
         fileHash: deduplicationResult.fileHash,
         virusScanStatus: 'clean',
-        uploadTimeMs: uploadTime
+        uploadTimeMs: uploadTime,
+        primaryStorage: storageResult.primaryStorage,
+        backupStorage: storageResult.backupStorage
       };
 
       res.status(201).json(apiResponse.success(attachment, 'File uploaded successfully'));

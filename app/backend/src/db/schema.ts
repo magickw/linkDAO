@@ -6599,12 +6599,18 @@ export const fileAttachments = pgTable("file_attachments", {
   virusScanResult: jsonb("virus_scan_result"),
   referenceCount: integer("reference_count").default(1),
   isQuarantined: boolean("is_quarantined").default(false),
+  // Phase 2: Thumbnails and CDN
+  thumbnailSmallUrl: varchar("thumbnail_small_url", { length: 500 }),
+  thumbnailMediumUrl: varchar("thumbnail_medium_url", { length: 500 }),
+  s3Url: varchar("s3_url", { length: 500 }),
+  cdnUrl: varchar("cdn_url", { length: 500 }),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   hashIdx: index("idx_file_attachments_hash").on(t.fileHash),
   uploadedByIdx: index("idx_file_attachments_uploaded_by").on(t.uploadedBy),
   virusScanStatusIdx: index("idx_file_attachments_virus_scan_status").on(t.virusScanStatus),
   createdAtIdx: index("idx_file_attachments_created_at").on(t.createdAt),
+  s3UrlIdx: index("idx_file_attachments_s3_url").on(t.s3Url),
 }));
 
 // Virus Scan Logs - Audit trail for virus scanning
