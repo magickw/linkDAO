@@ -53,10 +53,27 @@ export class AvatarMediaService {
       dimensions: { width: 400, height: 400 },
       quality: 85,
     };
+
+    // Initialize Cloudinary
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    if (cloudName && apiKey && apiSecret) {
+      cloudinary.config({
+        cloud_name: cloudName,
+        api_key: apiKey,
+        api_secret: apiSecret,
+        secure: true
+      });
+    } else {
+      safeLogger.warn('Cloudinary configuration missing for AvatarMediaService');
+    }
+
     this.cdnConfig = {
-      baseUrl: process.env.CDN_BASE_URL || 'https://cdn.linkdao.io',
-      apiKey: process.env.CDN_API_KEY,
-      bucketName: process.env.CDN_BUCKET_NAME || 'linkdao-avatars',
+      baseUrl: process.env.CDN_BASE_URL || 'https://res.cloudinary.com/' + (cloudName || 'demo'),
+      apiKey: apiKey,
+      bucketName: cloudName || 'linkdao-avatars',
       region: process.env.CDN_REGION || 'us-east-1',
     };
   }
@@ -77,44 +94,54 @@ export class AvatarMediaService {
         return { success: false, error: validation.error };
       }
 
-      // Process image (resize, optimize)
-      const processedBuffer = await this.processAvatarImage(fileBuffer, mimeType);
-      
-      // Generate unique filename
-      const uniqueFilename = this.generateUniqueFilename(filename, userId);
-      
-      // Upload to IPFS
-      const ipfsResult = await this.uploadToIPFS(processedBuffer, uniqueFilename);
-      if (!ipfsResult.success) {
-        return { success: false, error: 'Failed to upload to IPFS' };
-      }
+      // Generate unique filename/public_id
+      const publicId = `avatars/${userId}_${Date.now()}`;
 
-      // Upload to CDN for faster access
-      const cdnResult = await this.uploadToCDN(processedBuffer, uniqueFilename, mimeType);
-      
-      // Create metadata
-      const metadata: MediaMetadata = {
-        filename: uniqueFilename,
-        size: processedBuffer.length,
-        mimeType,
-        width: this.defaultAvatarOptions.dimensions.width,
-        height: this.defaultAvatarOptions.dimensions.height,
-        uploadedAt: new Date(),
-        userId,
-      };
+      // Upload to Cloudinary
+      const uploadResult = await new Promise<any>((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+          {
+            public_id: publicId,
+            resource_type: 'image',
+            folder: 'avatars',
+            overwrite: true,
+            transformation: [
+              { width: 400, height: 400, crop: 'fill', gravity: 'face' },
+              { quality: 'auto', fetch_format: 'auto' }
+            ]
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        ).end(fileBuffer);
+      });
 
-      // Update user profile with new avatar
-      await this.updateUserAvatar(userId, ipfsResult.hash!, cdnResult.url);
+      // Update user profile with new avatar URL
+      // We store the secure_url directly or the public_id. 
+      // Existing code seemed to use profileCid for IPFS hash, we can use it for Public ID or URL.
+      // Better to store URL if schema allows, or public_id if we want to transform later.
+      // Let's store the full URL for simplicity and compatibility with frontend expectation.
+
+      await this.updateUserAvatar(userId, uploadResult.public_id, uploadResult.secure_url);
 
       return {
         success: true,
-        ipfsHash: ipfsResult.hash,
-        cdnUrl: cdnResult.url,
-        metadata,
+        ipfsHash: uploadResult.public_id, // Reuse field for Cloudinary Public ID
+        cdnUrl: uploadResult.secure_url,
+        metadata: {
+          filename: filename,
+          size: uploadResult.bytes,
+          mimeType: uploadResult.format ? `image/${uploadResult.format}` : mimeType,
+          width: uploadResult.width,
+          height: uploadResult.height,
+          uploadedAt: new Date(uploadResult.created_at),
+          userId,
+        }
       };
     } catch (error) {
       safeLogger.error('Error uploading avatar:', error);
-      return { success: false, error: 'Internal server error' };
+      return { success: false, error: error instanceof Error ? error.message : 'Internal server error' };
     }
   }
 
@@ -146,8 +173,23 @@ export class AvatarMediaService {
         }
       }
 
-      // Fall back to IPFS
+      // Fall back to stored CID/URL
       if (user.avatarCid) {
+        // If it looks like a URL, return it
+        if (user.avatarCid.startsWith('http')) {
+          return user.avatarCid;
+        }
+        // If it looks like a Cloudinary ID (no http, no slash usually)
+        if (!user.avatarCid.includes('/')) {
+          return cloudinary.url(user.avatarCid, {
+            secure: true,
+            transformation: [
+              { width: 400, height: 400, crop: 'fill', gravity: 'face' },
+              { quality: 'auto', fetch_format: 'auto' }
+            ]
+          });
+        }
+        // Fallback to IPFS URL if it looks like a hash
         return this.getIPFSUrl(user.avatarCid);
       }
 
@@ -173,7 +215,7 @@ export class AvatarMediaService {
       try {
         const resizedBuffer = await this.resizeImage(originalBuffer, size, size, mimeType);
         const filename = `avatar_${size}x${size}`;
-        
+
         const ipfsResult = await this.uploadToIPFS(resizedBuffer, filename);
         const cdnResult = await this.uploadToCDN(resizedBuffer, filename, mimeType);
 
@@ -206,7 +248,7 @@ export class AvatarMediaService {
   async deleteAvatar(userId: string): Promise<boolean> {
     try {
       const db = this.databaseService.getDatabase();
-      
+
       // Get current avatar hash
       const [user] = await db
         .select({ avatarCid: users.profileCid })
@@ -217,7 +259,7 @@ export class AvatarMediaService {
       if (user?.avatarCid) {
         // Delete from IPFS (if supported by provider)
         await this.deleteFromIPFS(user.avatarCid);
-        
+
         // Delete from CDN
         await this.deleteFromCDN(user.avatarCid);
       }
@@ -286,12 +328,12 @@ export class AvatarMediaService {
       // This would integrate with IPFS client
       // For now, simulate IPFS upload
       const hash = crypto.createHash('sha256').update(buffer).digest('hex');
-      
+
       // In real implementation:
       // const ipfs = create({ url: process.env.IPFS_NODE_URL });
       // const result = await ipfs.add({ content: buffer, path: filename });
       // return { success: true, hash: result.cid.toString() };
-      
+
       return { success: true, hash: `Qm${hash.substring(0, 44)}` };
     } catch (error) {
       safeLogger.error('Error uploading to IPFS:', error);
@@ -304,7 +346,7 @@ export class AvatarMediaService {
       // This would integrate with CDN provider (AWS S3, Cloudflare, etc.)
       // For now, simulate CDN upload
       const url = `${this.cdnConfig.baseUrl}/avatars/${filename}`;
-      
+
       // In real implementation:
       // const s3 = new AWS.S3({ region: this.cdnConfig.region });
       // await s3.upload({
@@ -314,7 +356,7 @@ export class AvatarMediaService {
       //   ContentType: mimeType,
       //   ACL: 'public-read'
       // }).promise();
-      
+
       return { success: true, url };
     } catch (error) {
       safeLogger.error('Error uploading to CDN:', error);
@@ -351,12 +393,12 @@ export class AvatarMediaService {
 
   private async updateUserAvatar(userId: string, ipfsHash: string, cdnUrl?: string): Promise<void> {
     const db = this.databaseService.getDatabase();
-    
+
     // Store IPFS hash in profileCid field
     // In a more complete implementation, you might have separate avatar fields
     await db
       .update(users)
-      .set({ 
+      .set({
         profileCid: ipfsHash,
         // If you had separate avatar fields:
         // avatarIpfsHash: ipfsHash,
@@ -389,12 +431,12 @@ export class AvatarMediaService {
       'https://api.dicebear.com/7.x/bottts/svg',
       'https://api.dicebear.com/7.x/avataaars/svg',
     ];
-    
+
     // Use a hash to consistently select the same avatar service for the same user
     const hash = crypto.createHash('md5').update(identifier).digest('hex');
     const serviceIndex = parseInt(hash.substring(0, 2), 16) % avatarServices.length;
     const service = avatarServices[serviceIndex];
-    
+
     return `${service}?seed=${encodeURIComponent(identifier)}&size=400`;
   }
 
@@ -403,7 +445,7 @@ export class AvatarMediaService {
    */
   async batchProcessAvatars(userAvatars: Array<{ userId: string; buffer: Buffer; filename: string; mimeType: string }>): Promise<MediaUploadResult[]> {
     const results: MediaUploadResult[] = [];
-    
+
     // Process in batches to avoid overwhelming the system
     const batchSize = 5;
     for (let i = 0; i < userAvatars.length; i += batchSize) {
@@ -411,16 +453,16 @@ export class AvatarMediaService {
       const batchPromises = batch.map(({ userId, buffer, filename, mimeType }) =>
         this.uploadAvatar(userId, buffer, filename, mimeType)
       );
-      
+
       const batchResults = await Promise.all(batchPromises);
       results.push(...batchResults);
-      
+
       // Small delay between batches
       if (i + batchSize < userAvatars.length) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
-    
+
     return results;
   }
 
@@ -445,3 +487,4 @@ export class AvatarMediaService {
     };
   }
 }
+export const avatarService = new AvatarMediaService();

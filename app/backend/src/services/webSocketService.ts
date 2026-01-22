@@ -474,7 +474,16 @@ export class WebSocketService {
   }
 
   private broadcastUserStatus(walletAddress: string, status: 'online' | 'offline') {
-    // Broadcast to user's followers or relevant communities
+    // Broadcast to ALL users so chat lists update correctly
+    // Frontend expects: 'user_online' or 'user_offline' with payload { userAddress: string }
+    const event = status === 'online' ? 'user_online' : 'user_offline';
+
+    this.io.emit(event, {
+      userAddress: walletAddress,
+      timestamp: new Date()
+    });
+
+    // Also emit the original event for backward compatibility or other listeners
     this.io.to(`user:${walletAddress}`).emit('user:status', {
       walletAddress,
       status,

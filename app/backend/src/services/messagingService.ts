@@ -171,7 +171,6 @@ export class MessagingService {
             `
           })
           .from(conversations)
-
           .leftJoin(
             conversationParticipants,
             eq(conversations.id, conversationParticipants.conversationId)
@@ -791,6 +790,7 @@ export class MessagingService {
       try {
         const wsService = getWebSocketService();
         if (wsService) {
+          // Send to conversation room (for active chat view)
           wsService.sendToConversation(conversationId, 'new_message', {
             message: {
               ...newMessage[0],
@@ -799,6 +799,20 @@ export class MessagingService {
             conversationId,
             senderAddress: fromAddress
           });
+
+          // ALSO send to each participant's user room (for chat list updates/notifications)
+          // This ensures they get the event even if they aren't in the conversation room
+          for (const participant of participants) {
+            wsService.sendToUser(participant, 'new_message', {
+              message: {
+                ...newMessage[0],
+                encryptionMetadata: encryptionMetadata || null
+              },
+              conversationId,
+              senderAddress: fromAddress
+            });
+          }
+
           safeLogger.debug(`[MessagingService] WebSocket broadcast sent for conversation ${conversationId}`);
         }
       } catch (wsError) {

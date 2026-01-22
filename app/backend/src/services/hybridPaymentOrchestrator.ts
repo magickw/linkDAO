@@ -351,20 +351,31 @@ export class HybridPaymentOrchestrator {
 
       // Re-throw the error with original message preserved
       if (error instanceof Error) {
-        throw error;
+        // Re-throw the error with original message preserved
+        if (error instanceof Error) {
+          throw error;
+        }
+        // If it's an object with a message (common in some libs), use that
+        if (typeof error === 'object' && error !== null && 'message' in error) {
+          throw new Error((error as any).message);
+        }
+        // If it's a string, wrap it
+        if (typeof error === 'string') {
+          throw new Error(error);
+        }
+
+        throw new Error('Checkout processing failed with unknown error');
       }
-      throw new Error('Checkout processing failed');
     }
-  }
 
   /**
    * Process crypto escrow path (smart contract)
    */
   private async processCryptoEscrowPath(
-    request: HybridCheckoutRequest,
-    pathDecision: PaymentPathDecision,
-    orderRecord: any
-  ): Promise<HybridPaymentResult & { transactionData?: any }> {
+      request: HybridCheckoutRequest,
+      pathDecision: PaymentPathDecision,
+      orderRecord: any
+    ): Promise<HybridPaymentResult & { transactionData?: any }> {
     try {
       // Create smart contract escrow
       // Use totalAmount from decision to include tax and fees
@@ -576,24 +587,39 @@ export class HybridPaymentOrchestrator {
         });
 
         // Update existing order with latest decision details if it's still actionable
-        if (existingOrder.status === 'created' || existingOrder.status === 'pending') {
+        // Update existing order with latest decision details if it's still actionable or if we are retrying a failed order
+        if (existingOrder.status === 'created' || existingOrder.status === 'pending' || existingOrder.status === 'failed') {
+          // Parse current metadata to remove failure info if retrying
+          let currentMetadata = {};
+          try {
+            currentMetadata = JSON.parse(existingOrder.metadata || '{}');
+            if (existingOrder.status === 'failed') {
+              delete (currentMetadata as any).failureReason;
+              delete (currentMetadata as any).failedAt;
+            }
+          } catch (e) {
+            currentMetadata = {};
+          }
+
           await this.databaseService.updateOrder(existingOrder.id, {
+            status: 'pending', // Reset status to pending for retry
             paymentMethod: pathDecision.selectedPath,
             amount: pathDecision.totalAmount.toString(),
             paymentToken: pathDecision.method.tokenSymbol || request.currency,
             metadata: JSON.stringify({
+              ...currentMetadata,
               ...request.metadata,
               paymentPath: pathDecision.selectedPath,
               fees: pathDecision.fees,
               subtotal: request.amount,
               shippingAddress: request.shippingAddress
             }),
-            // Update fees/shipping/tax columns as well to ensure consistency
+            // Update fees/shipping/tax columns
             taxAmount: pathDecision.fees.taxAmount.toString(),
             shippingCost: (pathDecision.fees as any).shippingCost?.toString() || '0',
             platformFee: pathDecision.fees.platformFee.toString()
           });
-          
+
           // Return refreshed order
           return await this.databaseService.getOrderById(request.orderId);
         }

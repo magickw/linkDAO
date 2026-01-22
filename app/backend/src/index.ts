@@ -1185,6 +1185,10 @@ app.use('/api/preview', contentPreviewRoutes);
 // Enhanced user routes
 app.use('/api/users', enhancedUserRoutes);
 
+// Avatar routes - Handles avatar fetching and uploading
+import avatarRoutes from './routes/avatarRoutes';
+app.use('/api/avatars', avatarRoutes);
+
 // Governance routes
 app.use('/api/governance', governanceRoutes);
 
