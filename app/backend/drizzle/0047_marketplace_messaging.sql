@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS conversation_participants (
   last_read_message_id uuid,
   is_muted boolean DEFAULT false,
   is_pinned boolean DEFAULT false,
-  notification_enabled boolean DEFAULT true,
+  notifications_enabled boolean DEFAULT true,
   custom_label varchar(100),
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),

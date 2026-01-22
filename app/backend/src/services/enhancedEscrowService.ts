@@ -6,6 +6,9 @@ import { PaymentValidationService } from './paymentValidationService';
 import { NotificationService } from './notificationService';
 import { MarketplaceEscrow } from '../models/Marketplace';
 import { getNetworkConfig, getDefaultNetworkConfig, isChainSupported } from '../config/networkConfig';
+import { db } from '../db';
+import * as schema from '../db/schema';
+import { eq } from 'drizzle-orm';
 
 const databaseService = new DatabaseService();
 const userProfileService = new UserProfileService();
@@ -559,14 +562,57 @@ export class EnhancedEscrowService {
         throw new Error('Buyer or seller profile not found');
       }
 
-      // Validate listing exists
+      // Validate listing exists or ensure product compatibility
+      let listingIdToUse = listingId;
       const listing = await databaseService.getListingById(listingId);
+
       if (!listing) {
-        throw new Error(`Listing with ID ${listingId} not found`);
+        // Check if it's a product
+        const product = await databaseService.getProductById(listingId);
+        if (product) {
+          // It's a product. We need to ensure a corresponding listing exists in the listings table
+          // because the escrows table references listings.id
+
+          // Check if a listing already exists for this product
+          const existingListings = await db.select()
+            .from(schema.listings)
+            .where(eq(schema.listings.productId, listingId))
+            .limit(1);
+
+          if (existingListings.length > 0) {
+            listingIdToUse = existingListings[0].id;
+          } else {
+            // Create a new listing entry for this product
+            // This is a "compatibility listing" to satisfy the FK constraint
+            try {
+              const [newListing] = await db.insert(schema.listings).values({
+                sellerId: product.sellerId,
+                productId: product.id,
+                tokenAddress: '0x0000000000000000000000000000000000000000', // Default
+                price: product.priceAmount.toString(),
+                inventory: product.inventory,
+                itemType: 'PHYSICAL', // Default
+                listingType: 'FIXED_PRICE', // Default
+                metadataURI: product.metadataUri || '{}',
+                status: 'active'
+              }).returning();
+
+              listingIdToUse = newListing.id;
+              safeLogger.info(`Created compatibility listing ${listingIdToUse} for product ${listingId}`);
+            } catch (err) {
+              safeLogger.error('Failed to create compatibility listing:', err);
+              throw new Error(`Failed to initialize listing for product ${listingId}`);
+            }
+          }
+        } else {
+          throw new Error(`Listing or Product with ID ${listingId} not found`);
+        }
+      } else {
+        listingIdToUse = listing.id;
       }
 
       const dbEscrow = await databaseService.createEscrow(
-        listingId,
+        listingIdToUse,
         buyer.id,
         seller.id,
         amount
@@ -585,9 +631,13 @@ export class EnhancedEscrowService {
       const contractInterface = contracts.escrow.interface;
       let encodedData;
 
+      // Convert UUID to BigInt for smart contract (remove dashes, parse as hex)
+      // This is necessary because the contract expects uint256
+      const listingIdBigInt = BigInt('0x' + listingIdToUse.replace(/-/g, ''));
+
       if (requiresMultiSig || timeLockDurationSeconds > 0) {
         encodedData = contractInterface.encodeFunctionData('createEscrowWithSecurity', [
-          listingId,
+          listingIdBigInt,
           sellerAddress,
           tokenAddress,
           ethers.parseUnits(amount, await this.getTokenDecimals(tokenAddress, chainId)),
@@ -599,7 +649,7 @@ export class EnhancedEscrowService {
         ]);
       } else {
         encodedData = contractInterface.encodeFunctionData('createEscrow', [
-          listingId,
+          listingIdBigInt,
           sellerAddress,
           tokenAddress,
           ethers.parseUnits(amount, await this.getTokenDecimals(tokenAddress, chainId)),
