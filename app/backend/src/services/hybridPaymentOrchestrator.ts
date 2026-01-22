@@ -170,11 +170,15 @@ export class HybridPaymentOrchestrator {
       }
 
       // Build payment method details
+      // Extract chainId from request metadata (sent as paymentMethodDetails from frontend)
+      const requestedChainId = request.metadata?.chainId || 1; // Default to Ethereum Mainnet if not specified
+      const requestedTokenAddress = request.metadata?.tokenAddress;
+
       const method = selectedPath === 'crypto' ? {
         type: 'crypto' as const,
-        tokenAddress: getTokenAddress('USDC', 1), // Use correct USDC address
+        tokenAddress: requestedTokenAddress || getTokenAddress('USDC', requestedChainId), // Use requested token address or get USDC for the chain
         tokenSymbol: 'USDC',
-        chainId: 1
+        chainId: requestedChainId // Use the chainId from the frontend request
       } : {
         type: 'fiat' as const,
         provider: 'stripe'
