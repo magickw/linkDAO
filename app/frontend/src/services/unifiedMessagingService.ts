@@ -2030,19 +2030,24 @@ class UnifiedMessagingService {
 
   // Transform helpers
   private transformMessage(data: any): Message {
-    const fromAddress = data.fromAddress || data.senderAddress || data.sender_address || data.sender || data.authorAddress || data.author;
+    // Handle nested message structures often sent by WebSockets
+    const rawMessage = data.message || data.data || data;
+
+    // Extract common fields with fallbacks
+    const fromAddress = rawMessage.fromAddress || rawMessage.senderAddress || rawMessage.sender_address || rawMessage.sender || rawMessage.authorAddress || rawMessage.author;
 
     if (!fromAddress && process.env.NODE_ENV === 'development') {
       console.warn('[UnifiedMessaging] TransformMessage: No sender address found in data:', data);
     }
 
     return {
-      ...data,
+      ...rawMessage, // Spread the inner message object, not the wrapper
+      id: rawMessage.id || data.id, // Ensure ID is captured
       fromAddress: fromAddress || '',
       senderAddress: fromAddress || '', // Ensure symmetry
-      timestamp: new Date(data.timestamp || data.createdAt || data.sentAt || data.sent_at || data.created_at || data.timestamp || Date.now()),
-      editedAt: data.editedAt || data.edited_at ? new Date(data.editedAt || data.edited_at) : undefined,
-      deletedAt: data.deletedAt || data.deleted_at ? new Date(data.deletedAt || data.deleted_at) : undefined
+      timestamp: new Date(rawMessage.timestamp || rawMessage.createdAt || rawMessage.sentAt || rawMessage.sent_at || rawMessage.created_at || rawMessage.timestamp || Date.now()),
+      editedAt: rawMessage.editedAt || rawMessage.edited_at ? new Date(rawMessage.editedAt || rawMessage.edited_at) : undefined,
+      deletedAt: rawMessage.deletedAt || rawMessage.deleted_at ? new Date(rawMessage.deletedAt || rawMessage.deleted_at) : undefined
     };
   }
 

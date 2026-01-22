@@ -688,7 +688,7 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
       });
     }
 
-    if (stablecoinResult.fallbacksActivated.length > 0) {
+    if (stablecoinResult?.fallbacksActivated?.length > 0) {
       recommendations.push({
         type: 'convenience',
         message: 'Stablecoin fallback activated - consider alternative networks',

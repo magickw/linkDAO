@@ -112,11 +112,19 @@ export class DatabaseService {
         walletAddress: address,
         handle: handle || null,
         profileCid: profileCid || null
-      }).returning();
+      })
+        .onConflictDoUpdate({
+          target: schema.users.walletAddress,
+          set: {
+            handle: handle || undefined, // Only update handle if provided
+            updatedAt: new Date()
+          }
+        })
+        .returning();
 
       return result[0];
     } catch (error) {
-      safeLogger.error("Error creating user:", error);
+      safeLogger.error("Error creating/updating user:", error);
       throw error;
     }
   }
