@@ -55,7 +55,7 @@ describe('CryptoPaymentService', () => {
   };
 
   const mockUSDC: PaymentToken = {
-    address: '0xA0b86a33E6441c8C06DD2b7c94b7E6E8b8b8b8b8',
+    address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // Correct USDC address for Ethereum Mainnet
     symbol: 'USDC',
     name: 'USD Coin',
     decimals: 6,
@@ -72,7 +72,7 @@ describe('CryptoPaymentService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     mockGasFeeService = jest.mocked(GasFeeService);
     mockGasFeeService.prototype.estimateGasFees = jest.fn().mockResolvedValue({
       gasLimit: BigInt(21000),
@@ -172,7 +172,7 @@ describe('CryptoPaymentService', () => {
     it('should retry failed payment successfully', async () => {
       // First, create a failed transaction
       mockWalletClient.sendTransaction.mockRejectedValueOnce(new Error('Network error'));
-      
+
       let transaction;
       try {
         transaction = await paymentService.processPayment(mockPaymentRequest);
@@ -209,7 +209,7 @@ describe('CryptoPaymentService', () => {
   describe('cancelPayment', () => {
     it('should cancel pending payment successfully', async () => {
       const transaction = await paymentService.processPayment(mockPaymentRequest);
-      
+
       await expect(paymentService.cancelPayment(transaction.id))
         .resolves.not.toThrow();
 
@@ -257,7 +257,7 @@ describe('CryptoPaymentService', () => {
     it('should update transaction status when confirmed', async () => {
       const mockTxHash = '0xmonitored123...';
       mockWalletClient.sendTransaction.mockResolvedValue(mockTxHash);
-      
+
       // Mock successful transaction receipt
       mockPublicClient.getTransactionReceipt.mockResolvedValue({
         status: 'success',
@@ -265,7 +265,7 @@ describe('CryptoPaymentService', () => {
         gasUsed: BigInt(21000),
         effectiveGasPrice: parseUnits('20', 9)
       });
-      
+
       mockPublicClient.getBlockNumber.mockResolvedValue(BigInt(12357)); // 12 confirmations
 
       const transaction = await paymentService.processPayment(mockPaymentRequest);
@@ -279,7 +279,7 @@ describe('CryptoPaymentService', () => {
     it('should handle failed transaction', async () => {
       const mockTxHash = '0xfailed123...';
       mockWalletClient.sendTransaction.mockResolvedValue(mockTxHash);
-      
+
       // Mock failed transaction receipt
       mockPublicClient.getTransactionReceipt.mockResolvedValue({
         status: 'reverted',

@@ -8,6 +8,7 @@ import CostEffectivenessCalculator from './costEffectivenessCalculator';
 import NetworkAvailabilityChecker from './networkAvailabilityChecker';
 import UserPreferenceManager from './userPreferenceManager';
 import PaymentMethodConfigurationManager from '../config/paymentMethodPrioritization';
+import { getTokenAddress } from '../config/tokenAddresses';
 import {
   PaymentMethodType,
   PaymentMethodConfig,
@@ -80,9 +81,9 @@ export class PaymentPrioritizationFactory {
     region?: 'US' | 'EU' | 'ASIA' | 'OTHER'
   ): Promise<UserContext> {
     const preferenceManager = new UserPreferenceManager();
-    
+
     // Get user preferences
-    const preferences = userAddress 
+    const preferences = userAddress
       ? await preferenceManager.getUserPaymentPreferences(userAddress)
       : preferenceManager['getDefaultPreferences']();
 
@@ -104,7 +105,7 @@ export class PaymentPrioritizationFactory {
    */
   async createMarketConditions(chainIds: number[] = [1, 137, 42161]): Promise<MarketConditions> {
     const costCalculator = new CostEffectivenessCalculator();
-    
+
     // Get network conditions for specified chains
     const gasConditions = await Promise.all(
       chainIds.map(chainId => costCalculator.getNetworkConditions(chainId))
@@ -222,7 +223,7 @@ export class PaymentPrioritizationFactory {
     const mockBalances = [
       {
         token: {
-          address: '0xA0b86a33E6441c8C06DD2b7c94b7E6E8b8b8b8b8',
+          address: getTokenAddress('USDC', chainId), // Use correct USDC address for the chain
           symbol: 'USDC',
           name: 'USD Coin',
           decimals: 6,
@@ -271,7 +272,7 @@ export const quickPrioritization = async (
     chainId,
     transactionAmount
   );
-  
+
   return service.prioritizePaymentMethods(context);
 };
 

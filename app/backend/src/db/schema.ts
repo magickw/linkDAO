@@ -3887,9 +3887,12 @@ export const chatMessages = pgTable("chat_messages", {
   deliveryStatus: varchar("delivery_status", { length: 16 }).default("sent"),
   replyCount: integer("reply_count").default(0),
   originalContent: text("original_content"),
+  quotedMessageId: uuid("quoted_message_id").references(() => chatMessages.id),
+  metadata: jsonb("metadata").default("{}"),
 }, (t) => ({
   convoTimestampIdx: index("idx_chat_messages_conversation_id_timestamp").on(t.conversationId, t.sentAt),
   replyToIdx: index("idx_chat_messages_reply_to").on(t.replyToId),
+  quotedIdx: index("idx_chat_messages_quoted").on(t.quotedMessageId),
   isPinnedIdx: index("idx_chat_messages_is_pinned").on(t.conversationId, t.isPinned),
   deliveryStatusIdx: index("idx_chat_messages_delivery_status").on(t.conversationId, t.deliveryStatus),
 }));

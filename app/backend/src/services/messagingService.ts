@@ -537,9 +537,21 @@ export class MessagingService {
             conversationId: chatMessages.conversationId,
             senderAddress: chatMessages.senderAddress,
             content: chatMessages.content,
+            messageType: chatMessages.messageType,
+            encryptionMetadata: chatMessages.encryptionMetadata,
+            replyToId: chatMessages.replyToId,
+            quotedMessageId: chatMessages.quotedMessageId,
+            metadata: chatMessages.metadata,
+            attachments: chatMessages.attachments,
+            isPinned: chatMessages.isPinned,
+            pinnedBy: chatMessages.pinnedBy,
+            pinnedAt: chatMessages.pinnedAt,
             sentAt: chatMessages.sentAt,
             editedAt: chatMessages.editedAt,
-            deletedAt: chatMessages.deletedAt
+            deletedAt: chatMessages.deletedAt,
+            deliveryStatus: chatMessages.deliveryStatus,
+            replyCount: chatMessages.replyCount,
+            originalContent: chatMessages.originalContent
           })
           .from(chatMessages)
           .where(and(...whereConditions))
@@ -673,6 +685,8 @@ export class MessagingService {
             messageType: sanitizedMessage.messageType || 'text',
             encryptionMetadata: data.encryptionMetadata || null,
             replyToId: data.replyToId,
+            quotedMessageId: data.quotedMessageId || (data.metadata?.quotedMessageId),
+            metadata: data.metadata || {},
             attachments: sanitizedMessage.attachments || [], // Default to empty array for JSONB
             sentAt: new Date()
           })
