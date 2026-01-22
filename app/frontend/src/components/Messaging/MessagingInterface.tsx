@@ -1539,212 +1539,190 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                     className=""
                   >
                     <div
-                      className="hover:bg-gray-100 dark:hover:bg-gray-800/50 p-2 rounded transition-colors group"
+                      className={`flex w-full mb-4 px-2 group ${message.fromAddress === address ? 'justify-end' : 'justify-start'}`}
                       id={`message-${message.id}`}
                     >
-                      <div className="flex">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center mr-3 flex-shrink-0 overflow-hidden shadow-sm">
-                          {senderAvatarUrl ? (
-                            <img
-                              src={senderAvatarUrl}
-                              alt={senderDisplayName}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.parentElement?.classList.remove('overflow-hidden');
-                                e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'justify-center');
-                                const icon = document.createElement('div');
-                                icon.innerHTML = DOMPurify.sanitize('<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>');
-                                e.currentTarget.parentElement?.appendChild(icon.firstChild!);
-                              }}
-                            />
-                          ) : (
-                            <User size={20} className="text-white" />
-                          )}
+                      <div className={`flex max-w-[85%] md:max-w-[75%] ${message.fromAddress === address ? 'flex-row-reverse' : 'flex-row'}`}>
+                        {/* Avatar */}
+                        <div className={`flex-shrink-0 ${message.fromAddress === address ? 'ml-3' : 'mr-3'}`}>
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center overflow-hidden shadow-sm">
+                            {senderAvatarUrl ? (
+                              <img
+                                src={senderAvatarUrl}
+                                alt={senderDisplayName}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  e.currentTarget.parentElement?.classList.remove('overflow-hidden');
+                                  e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'justify-center');
+                                  const icon = document.createElement('div');
+                                  icon.innerHTML = DOMPurify.sanitize('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>');
+                                  e.currentTarget.parentElement?.appendChild(icon.firstChild!);
+                                }}
+                              />
+                            ) : (
+                              <User size={16} className="text-white" />
+                            )}
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-baseline mb-0.5">
-                            <span className="font-semibold text-gray-900 dark:text-white mr-2 hover:underline cursor-pointer">
-                              {senderDisplayName}
+
+                        {/* Message Content Container */}
+                        <div className={`flex flex-col ${message.fromAddress === address ? 'items-end' : 'items-start'}`}>
+                          {/* Sender Name & Time */}
+                          <div className={`flex items-baseline mb-1 space-x-2 ${message.fromAddress === address ? 'flex-row-reverse space-x-reverse' : 'flex-row'}`}>
+                            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                              {message.fromAddress === address ? 'You' : senderDisplayName}
                             </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400">
                               {timestampDisplay}
                             </span>
+                          </div>
+
+                          {/* Bubble */}
+                          <div
+                            className={`
+                              relative p-3 rounded-2xl shadow-sm transition-all
+                              ${message.fromAddress === address
+                                ? 'bg-blue-600 text-white rounded-tr-none'
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-tl-none border border-gray-200 dark:border-gray-700'
+                              }
+                            `}
+                          >
+                            {/* Reply Reference - Compact blue box at the top */}
+                            {message.replyToId && (
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const element = document.getElementById(`message-${message.replyToId}`);
+                                  if (element) {
+                                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    element.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-50');
+                                    setTimeout(() => element.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-50'), 2000);
+                                  }
+                                }}
+                                className={`
+                                  mb-2 p-2 rounded-lg border-l-4 border-blue-400 cursor-pointer text-xs
+                                  ${message.fromAddress === address
+                                    ? 'bg-blue-700/50 text-blue-50'
+                                    : 'bg-gray-200/50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300'
+                                  }
+                                `}
+                              >
+                                {(() => {
+                                  const parentMsg = sortedMessages.find(m => m.id === message.replyToId);
+                                  const parentAuthor = parentMsg
+                                    ? (parentMsg.fromAddress === address ? 'You' : truncateAddress(parentMsg.fromAddress))
+                                    : (message.replyTo?.senderName || truncateAddress(message.replyTo?.fromAddress || ''));
+
+                                  return (
+                                    <>
+                                      <div className="font-bold mb-0.5 opacity-80">
+                                        Replying to {parentAuthor}
+                                      </div>
+                                      <div className="italic truncate">
+                                        {parentMsg?.content || message.replyTo?.content || 'Original message...'}
+                                      </div>
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                            )}
+
+                            {/* Quote Reference */}
+                            {(() => {
+                              const quoteId = (message as any).quotedMessageId || (message as any).metadata?.quotedMessageId;
+                              if (!quoteId) return null;
+                              const quotedMsg = sortedMessages.find(m => m.id === quoteId);
+                              if (!quotedMsg) return null;
+
+                              const quoteAuthor = quotedMsg.fromAddress === address ? 'You' : truncateAddress(quotedMsg.fromAddress);
+                              return (
+                                <div className={`
+                                  mb-2 p-2 rounded-lg border-l-4 border-gray-400 text-xs italic
+                                  ${message.fromAddress === address ? 'bg-blue-700/30 text-blue-50' : 'bg-gray-200 dark:bg-gray-700'}
+                                `}>
+                                  <div className="font-bold not-italic mb-1 opacity-80">{quoteAuthor}</div>
+                                  <div>{quotedMsg.content}</div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* Message content */}
+                            {message.content && message.content.trim() && (
+                              <div className="text-sm leading-relaxed break-words">
+                                {parseMentions(message.content)}
+                              </div>
+                            )}
+
+                            {/* Attachments */}
+                            {message.attachments && message.attachments.length > 0 && (
+                              <div className="mt-2 space-y-2">
+                                {message.attachments.map((attachment, idx) => (
+                                  <div key={idx} className="max-w-xs overflow-hidden rounded-lg">
+                                    {attachment.type === 'image' && (
+                                      <img
+                                        src={attachment.preview || attachment.url}
+                                        alt={attachment.name || 'Image'}
+                                        className="w-full h-auto cursor-pointer hover:opacity-90"
+                                        onClick={() => window.open(attachment.url, '_blank')}
+                                      />
+                                    )}
+                                    {attachment.type !== 'image' && (
+                                      <div
+                                        className={`flex items-center p-2 rounded border ${message.fromAddress === address ? 'bg-blue-700/30 border-blue-500' : 'bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-600'}`}
+                                        onClick={() => window.open(attachment.url, '_blank')}
+                                      >
+                                        <LinkIcon size={14} className="mr-2" />
+                                        <span className="text-xs truncate">{attachment.name || 'File'}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Encryption indicator */}
                             {isViewingDM && message.isEncrypted && (
-                              <span title="End-to-end encrypted">
-                                <Lock size={12} className="ml-1 text-green-500 dark:text-green-400" />
-                              </span>
+                              <div className="absolute -bottom-1 -left-1 bg-white dark:bg-gray-900 rounded-full p-0.5 shadow-sm">
+                                <Lock size={10} className="text-green-500" />
+                              </div>
                             )}
                           </div>
 
-                          {/* Reply Reference - Compact blue box at the top */}
-                          {message.replyToId && (
-                            <div 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const element = document.getElementById(`message-${message.replyToId}`);
-                                if (element) {
-                                  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                  element.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-50');
-                                  setTimeout(() => element.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-50'), 2000);
-                                }
-                              }}
-                              className={`
-                                mb-2 p-2 rounded-r-lg border-l-4 border-blue-500 cursor-pointer transition-all hover:scale-[1.01]
-                                ${message.fromAddress === address 
-                                  ? 'bg-blue-700/40 text-blue-50' 
-                                  : 'bg-blue-50 dark:bg-blue-900/30'
-                                }
-                              `}
-                            >
-                              {(() => {
-                                const parentMsg = sortedMessages.find(m => m.id === message.replyToId);
-                                const parentAuthor = parentMsg 
-                                  ? (parentMsg.fromAddress === address ? 'You' : truncateAddress(parentMsg.fromAddress))
-                                  : (message.replyTo?.senderName || truncateAddress(message.replyTo?.fromAddress || ''));
-                                
-                                return (
-                                  <>
-                                    <div className="flex items-center justify-between mb-0.5">
-                                      <div className={`text-[10px] font-bold uppercase tracking-wider ${message.fromAddress === address ? 'text-blue-200' : 'text-blue-600 dark:text-blue-400'}`}>
-                                        Replying to {parentAuthor}
-                                      </div>
-                                      <CornerUpLeft size={10} className="text-blue-400 opacity-60" />
-                                    </div>
-                                    <div className={`text-xs truncate ${message.fromAddress === address ? 'text-blue-100' : 'text-gray-600 dark:text-gray-300'} italic`}>
-                                      {parentMsg?.content || message.replyTo?.content || 'Original message...'}
-                                    </div>
-                                  </>
-                                );
-                              })()}
-                            </div>
-                          )}
-
-                          {/* Quote Reference - Full gray block for quotes via metadata */}
-                          {(() => {
-                            const quoteId = (message as any).quotedMessageId || (message as any).metadata?.quotedMessageId;
-                            if (!quoteId) return null;
-                            const quotedMsg = sortedMessages.find(m => m.id === quoteId);
-                            if (!quotedMsg) return null;
-                            
-                            const quoteAuthor = quotedMsg.fromAddress === address ? 'You' : truncateAddress(quotedMsg.fromAddress);
-                            return renderBlockquote([quotedMsg.content], quoteAuthor, `quote-${message.id}`);
-                          })()}
-
-                          {/* Message content with improved Quote rendering */}
-                          {message.content && message.content.trim() && (
-                            <div className="text-gray-700 dark:text-gray-200 leading-relaxed">
-                              {parseMentions(message.content)}
-                            </div>
-                          )}
-
-                          {/* Attachments */}
-                          {message.attachments && message.attachments.length > 0 && (
-                            <div className="mt-2 space-y-2">
-                              {message.attachments.map((attachment, idx) => (
-                                <div key={idx}>
-                                  {attachment.type === 'nft' && attachment.metadata && (
-                                    <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600 max-w-sm">
-                                      <div className="flex items-start space-x-3">
-                                        {attachment.metadata.imageUrl && (
-                                          <img
-                                            src={attachment.metadata.imageUrl}
-                                            alt={attachment.metadata.tokenName || attachment.name}
-                                            className="w-12 h-12 rounded object-cover flex-shrink-0"
-                                          />
-                                        )}
-                                        <div className="flex-1 min-w-0">
-                                          <div className="flex items-center mb-1">
-                                            <Image size={14} className="mr-1 text-purple-500 dark:text-purple-400" />
-                                            <span className="text-sm font-medium text-gray-900 dark:text-white">NFT</span>
-                                          </div>
-                                          <div className="text-sm text-gray-700 dark:text-gray-300 font-medium truncate">
-                                            {attachment.metadata.tokenName || attachment.name}
-                                          </div>
-                                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                            {attachment.metadata.contractAddress &&
-                                              `${attachment.metadata.contractAddress.slice(0, 6)}...${attachment.metadata.contractAddress.slice(-4)}`}
-                                            {attachment.metadata.tokenId && ` #${attachment.metadata.tokenId}`}
-                                          </div>
-                                          {attachment.metadata.price && (
-                                            <div className="text-xs text-green-500 dark:text-green-400 mt-1">
-                                              {attachment.metadata.price} ETH
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {attachment.type === 'transaction' && attachment.metadata && (
-                                    <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600 max-w-sm">
-                                      <div className="flex items-center space-x-3">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${attachment.metadata.status === 'success' ? 'bg-green-500/20 text-green-500 dark:text-green-400' :
-                                          attachment.metadata.status === 'failed' ? 'bg-red-500/20 text-red-500 dark:text-red-400' :
-                                            'bg-yellow-500/20 text-yellow-500 dark:text-yellow-400'
-                                          }`}>
-                                          <Wallet size={16} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                          <div className="text-sm font-medium text-gray-900 dark:text-white">Transaction</div>
-                                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                            {attachment.metadata.transactionHash &&
-                                              `${attachment.metadata.transactionHash.slice(0, 10)}...${attachment.metadata.transactionHash.slice(-8)}`}
-                                          </div>
-                                          <div className="flex items-center space-x-2 mt-1">
-                                            {attachment.metadata.status && (
-                                              <span className={`text-xs px-2 py-0.5 rounded ${attachment.metadata.status === 'success' ? 'bg-green-500/20 text-green-500 dark:text-green-400' :
-                                                attachment.metadata.status === 'failed' ? 'bg-red-500/20 text-red-500 dark:text-red-400' :
-                                                  'bg-yellow-500/20 text-yellow-500 dark:text-yellow-400'
-                                                }`}>
-                                                {attachment.metadata.status}
-                                              </span>
-                                            )}
-                                            {attachment.metadata.gasUsed && (
-                                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                Gas: {attachment.metadata.gasUsed}
-                                              </span>
-                                            )}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {attachment.type === 'image' && (
-                                    <div className="max-w-sm">
-                                      <img
-                                        src={attachment.preview || attachment.url}
-                                        alt={attachment.name || (attachment as any).filename}
-                                        className="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 shadow-sm border border-gray-200 dark:border-gray-700"
-                                        onClick={() => window.open(attachment.url, '_blank')}
-                                      />
-                                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{attachment.name || (attachment as any).filename}</div>
-                                    </div>
-                                  )}
-
-                                  {attachment.type !== 'image' && attachment.type !== 'nft' && attachment.type !== 'transaction' && (
-                                    <div className="bg-gray-100 dark:bg-gray-700/50 rounded-lg p-3 flex items-center max-w-sm cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-600"
-                                      onClick={() => window.open(attachment.url, '_blank')}>
-                                      {attachment.type === 'proposal' ? (
-                                        <Vote size={18} className="mr-3 text-blue-500 dark:text-blue-400 flex-shrink-0" />
-                                      ) : (
-                                        <LinkIcon size={18} className="mr-3 text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                                      )}
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                          {attachment.name || (attachment as any).filename || 'Attached File'}
-                                        </p>
-                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-tighter">
-                                          {attachment.type} attachment
-                                        </p>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
+                          {/* Reactions */}
+                          {message.reactions && message.reactions.length > 0 && (
+                            <div className={`flex flex-wrap mt-1 gap-1 ${message.fromAddress === address ? 'justify-end' : 'justify-start'}`}>
+                              {message.reactions.map((reaction, idx) => (
+                                <button
+                                  key={idx}
+                                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-1.5 py-0.5 text-[10px] flex items-center shadow-xs"
+                                  onClick={() => addReaction(message.id, reaction.emoji)}
+                                >
+                                  <span className="mr-1">{reaction.emoji}</span>
+                                  <span className="text-gray-500">{reaction.count}</span>
+                                </button>
                               ))}
                             </div>
                           )}
+
+                          {/* Action Bar (Hidden by default, visible on hover) */}
+                          <div className={`
+                            flex items-center space-x-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity
+                            ${message.fromAddress === address ? 'flex-row-reverse space-x-reverse' : 'flex-row'}
+                          `}>
+                            <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-gray-500" onClick={() => replyToMessage(message.id, senderDisplayName, message.content)}>
+                              <CornerUpLeft size={12} />
+                            </button>
+                            <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-gray-500" onClick={() => quoteMessage(message.content, senderDisplayName, message.id)}>
+                              <Quote size={12} />
+                            </button>
+                            <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-gray-500" onClick={() => toggleReactionPicker(message.id)}>
+                              <span className="text-xs">+</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
                           {/* Reactions */}
                           {message.reactions && message.reactions.length > 0 && (

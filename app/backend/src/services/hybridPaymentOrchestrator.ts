@@ -180,6 +180,14 @@ export class HybridPaymentOrchestrator {
       const requestedChainId = request.paymentMethodDetails?.chainId || 11155111; // Default to Sepolia if not specified
       const requestedTokenAddress = request.paymentMethodDetails?.tokenAddress;
 
+      // DEBUG: Log the chainId extraction
+      safeLogger.info('[processHybridCheckout] ChainId extraction:', {
+        'request.paymentMethodDetails': request.paymentMethodDetails,
+        'request.paymentMethodDetails?.chainId': request.paymentMethodDetails?.chainId,
+        'requestedChainId': requestedChainId,
+        'requestedTokenAddress': requestedTokenAddress
+      });
+
       const method = selectedPath === 'crypto' ? {
         type: 'crypto' as const,
         tokenAddress: requestedTokenAddress || getTokenAddress('USDC', requestedChainId), // Use requested token address or get USDC for the chain
@@ -189,6 +197,9 @@ export class HybridPaymentOrchestrator {
         type: 'fiat' as const,
         provider: 'stripe'
       };
+
+      // DEBUG: Log the final method object
+      safeLogger.info('[processHybridCheckout] Payment method object:', method);
 
       // Calculate fees
       // 1. Platform Listing/Sale Fee: 15% (Charged to SELLER)
@@ -402,13 +413,21 @@ export class HybridPaymentOrchestrator {
         methodDetails: pathDecision.method
       });
 
+      // DEBUG: Log the chainId being passed to createEscrow
+      const chainIdToUse = pathDecision.method.chainId || 11155111;
+      safeLogger.info('[processCryptoEscrowPath] ChainId being passed to createEscrow:', {
+        'pathDecision.method.chainId': pathDecision.method.chainId,
+        'chainIdToUse': chainIdToUse,
+        'pathDecision.method': pathDecision.method
+      });
+
       const escrowResult = await this.escrowService.createEscrow(
         request.listingId,
         request.buyerAddress,
         request.sellerAddress,
         tokenAddress,
         pathDecision.totalAmount.toString(),
-        pathDecision.method.chainId || 11155111 // Use chainId from payment method, default to Sepolia
+        chainIdToUse // Use chainId from payment method, default to Sepolia
       );
 
       // Update order with escrow details
