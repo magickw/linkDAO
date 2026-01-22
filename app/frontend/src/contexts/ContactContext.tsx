@@ -2,9 +2,127 @@ import React, { createContext, useContext, useReducer, useEffect, useCallback, u
 import { Contact, ContactGroup, ContactFormData, ContactSearchFilters, ContactContextType } from '@/types/contacts';
 import { unifiedMessagingService } from '@/services/unifiedMessagingService';
 
-// ... (keep previous imports and types)
+// Contact reducer actions
+type ContactAction =
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_ERROR'; payload: string | null }
+  | { type: 'SET_CONTACTS'; payload: Contact[] }
+  | { type: 'SET_GROUPS'; payload: ContactGroup[] }
+  | { type: 'ADD_CONTACT'; payload: Contact }
+  | { type: 'UPDATE_CONTACT'; payload: { id: string; updates: Partial<Contact> } }
+  | { type: 'DELETE_CONTACT'; payload: string }
+  | { type: 'SELECT_CONTACT'; payload: Contact | null }
+  | { type: 'SET_SEARCH_FILTERS'; payload: Partial<ContactSearchFilters> }
+  | { type: 'ADD_GROUP'; payload: ContactGroup }
+  | { type: 'UPDATE_GROUP'; payload: { id: string; updates: Partial<ContactGroup> } }
+  | { type: 'DELETE_GROUP'; payload: string };
 
-// Contact provider component
+interface ContactState {
+  contacts: Contact[];
+  groups: ContactGroup[];
+  selectedContact: Contact | null;
+  searchFilters: ContactSearchFilters;
+  isLoading: boolean;
+  error: string | null;
+}
+
+const initialState: ContactState = {
+  contacts: [],
+  groups: [],
+  selectedContact: null,
+  searchFilters: {
+    query: '',
+    groups: [],
+    tags: [],
+    status: []
+  },
+  isLoading: false,
+  error: null
+};
+
+function contactReducer(state: ContactState, action: ContactAction): ContactState {
+  switch (action.type) {
+    case 'SET_LOADING':
+      return { ...state, isLoading: action.payload };
+
+    case 'SET_ERROR':
+      return { ...state, error: action.payload, isLoading: false };
+
+    case 'SET_CONTACTS':
+      return { ...state, contacts: action.payload, isLoading: false };
+
+    case 'SET_GROUPS':
+      return { ...state, groups: action.payload };
+
+    case 'ADD_CONTACT':
+      return {
+        ...state,
+        contacts: [...state.contacts, action.payload],
+        isLoading: false
+      };
+
+    case 'UPDATE_CONTACT':
+      return {
+        ...state,
+        contacts: state.contacts.map(contact =>
+          contact.id === action.payload.id
+            ? { ...contact, ...action.payload.updates, updatedAt: new Date() }
+            : contact
+        ),
+        selectedContact: state.selectedContact?.id === action.payload.id
+          ? { ...state.selectedContact, ...action.payload.updates, updatedAt: new Date() }
+          : state.selectedContact
+      };
+
+    case 'DELETE_CONTACT':
+      return {
+        ...state,
+        contacts: state.contacts.filter(contact => contact.id !== action.payload),
+        selectedContact: state.selectedContact?.id === action.payload ? null : state.selectedContact
+      };
+
+    case 'SELECT_CONTACT':
+      return { ...state, selectedContact: action.payload };
+
+    case 'SET_SEARCH_FILTERS':
+      return {
+        ...state,
+        searchFilters: { ...state.searchFilters, ...action.payload }
+      };
+
+    case 'ADD_GROUP':
+      return {
+        ...state,
+        groups: [...state.groups, action.payload]
+      };
+
+    case 'UPDATE_GROUP':
+      return {
+        ...state,
+        groups: state.groups.map(group =>
+          group.id === action.payload.id
+            ? { ...group, ...action.payload.updates }
+            : group
+        )
+      };
+
+    case 'DELETE_GROUP':
+      return {
+        ...state,
+        groups: state.groups.filter(group => group.id !== action.payload),
+        contacts: state.contacts.map(contact => ({
+          ...contact,
+          groups: contact.groups.filter(group => group.id !== action.payload)
+        }))
+      };
+
+    default:
+      return state;
+  }
+}
+
+const ContactContext = createContext<ContactContextType | undefined>(undefined);
+
 export function ContactProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(contactReducer, initialState);
 

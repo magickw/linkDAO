@@ -245,6 +245,15 @@ export const useChatHistory = (): UseChatHistoryReturn => {
       })
     );
 
+    // Presence updates
+    unsubscribers.push(
+      unifiedMessagingService.on('presence_update', ({ userAddress, isOnline }) => {
+        // Find conversations with this participant and update their status/activity if needed
+        // This triggers a re-render of the conversation list
+        queryClient.invalidateQueries({ queryKey: ['conversations', user?.address] });
+      })
+    );
+
     return () => {
       unsubscribers.forEach(unsub => unsub());
     };
