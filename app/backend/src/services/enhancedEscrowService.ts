@@ -170,29 +170,31 @@ export class EnhancedEscrowService {
   }
 
   /**
-   * Helper to get token decimals
+   * Helper to get token decimals with multi-chain support
    */
-  private async getTokenDecimals(tokenAddress: string): Promise<number> {
+  async getTokenDecimals(tokenAddress: string, chainId?: number): Promise<number> {
     if (tokenAddress === '0x0000000000000000000000000000000000000000') {
       return 18; // Native ETH
     }
 
-    if (this.tokenDecimalsCache.has(tokenAddress)) {
-      return this.tokenDecimalsCache.get(tokenAddress)!;
+    const cacheKey = `${chainId || 'default'}-${tokenAddress}`;
+    if (this.tokenDecimalsCache.has(cacheKey)) {
+      return this.tokenDecimalsCache.get(cacheKey)!;
     }
 
     try {
+      const provider = chainId ? this.getProviderForChain(chainId) : this.provider;
       const tokenContract = new ethers.Contract(
         tokenAddress,
         ['function decimals() view returns (uint8)'],
-        this.provider
+        provider
       );
       const decimals = await tokenContract.decimals();
       const decimalsNum = Number(decimals);
-      this.tokenDecimalsCache.set(tokenAddress, decimalsNum);
+      this.tokenDecimalsCache.set(cacheKey, decimalsNum);
       return decimalsNum;
     } catch (error) {
-      safeLogger.warn(`Failed to fetch decimals for ${tokenAddress}, defaulting to 18`, error);
+      safeLogger.warn(`Failed to fetch decimals for ${tokenAddress} on chain ${chainId}, defaulting to 18`, error);
       return 18;
     }
   }
@@ -368,7 +370,7 @@ export class EnhancedEscrowService {
               escrowContract.target
             );
 
-            const decimals = await this.getTokenDecimals(request.tokenAddress);
+            const decimals = await this.getTokenDecimals(request.tokenAddress, targetChainId);
             const requiredAmount = ethers.parseUnits(request.amount, decimals);
 
             if (currentAllowance < requiredAmount) {
@@ -406,6 +408,9 @@ export class EnhancedEscrowService {
   /**
    * Estimate gas required for escrow creation
    */
+  /**
+   * Estimate gas required for escrow creation
+   */
   private async estimateEscrowCreationGas(request: EscrowCreationRequest): Promise<number> {
     try {
       const targetChainId = request.chainId ? Number(request.chainId) : undefined;
@@ -424,7 +429,7 @@ export class EnhancedEscrowService {
         request.buyerAddress,
         request.sellerAddress,
         request.tokenAddress,
-        ethers.parseUnits(request.amount, await this.getTokenDecimals(request.tokenAddress)) // Dynamic decimals
+        ethers.parseUnits(request.amount, await this.getTokenDecimals(request.tokenAddress, targetChainId)) // Dynamic decimals
       ]);
 
       const gasEstimate = await provider.estimateGas({
@@ -554,6 +559,12 @@ export class EnhancedEscrowService {
         throw new Error('Buyer or seller profile not found');
       }
 
+      // Validate listing exists
+      const listing = await databaseService.getListingById(listingId);
+      if (!listing) {
+        throw new Error(`Listing with ID ${listingId} not found`);
+      }
+
       const dbEscrow = await databaseService.createEscrow(
         listingId,
         buyer.id,
@@ -579,7 +590,7 @@ export class EnhancedEscrowService {
           listingId,
           sellerAddress,
           tokenAddress,
-          ethers.parseUnits(amount, await this.getTokenDecimals(tokenAddress)),
+          ethers.parseUnits(amount, await this.getTokenDecimals(tokenAddress, chainId)),
           deliveryDeadline,
           disputeResolutionMethod,
           requiresMultiSig,
@@ -591,7 +602,7 @@ export class EnhancedEscrowService {
           listingId,
           sellerAddress,
           tokenAddress,
-          ethers.parseUnits(amount, await this.getTokenDecimals(tokenAddress)),
+          ethers.parseUnits(amount, await this.getTokenDecimals(tokenAddress, chainId)),
           deliveryDeadline,
           disputeResolutionMethod
         ]);

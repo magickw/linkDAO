@@ -414,7 +414,7 @@ CREATE TABLE IF NOT EXISTS conversation_participants (
   joined_at timestamptz DEFAULT now(),
   last_read_at timestamptz,
   is_muted boolean DEFAULT false,
-  notification_enabled boolean DEFAULT true,
+  notifications_enabled boolean DEFAULT true,
   UNIQUE(conversation_id, user_id)
 );
 
