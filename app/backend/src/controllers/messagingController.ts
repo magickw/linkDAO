@@ -1023,6 +1023,7 @@ export class MessagingController {
     }
   }
 
+
   // Upload message attachment (images, documents, etc.)
   async uploadAttachment(req: Request, res: Response): Promise<void> {
     try {
@@ -1038,20 +1039,120 @@ export class MessagingController {
       }
 
       const file = req.file;
+      const startTime = Date.now();
 
-      // Validate file size (25MB max for messaging)
-      if (file.size > 25 * 1024 * 1024) {
-        res.status(400).json(apiResponse.error('File size exceeds 25MB limit', 400));
+      // Import security services
+      const { fileValidationService } = await import('../services/fileValidationService');
+      const { virusScanningService } = await import('../services/virusScanningService');
+      const { fileDeduplicationService } = await import('../services/fileDeduplicationService');
+
+      // Step 1: Validate file (MIME type, extension, magic numbers, size)
+      safeLogger.info(`[FileUpload] Validating file: ${file.originalname}`);
+      const validationResult = await fileValidationService.validateFile(
+        file.buffer,
+        file.originalname,
+        file.mimetype
+      );
+
+      if (!validationResult.valid) {
+        safeLogger.warn(`[FileUpload] File validation failed: ${validationResult.errors.join(', ')}`);
+        res.status(400).json(apiResponse.error(
+          `File validation failed: ${validationResult.errors[0]}`,
+          400,
+          { errors: validationResult.errors }
+        ));
         return;
       }
 
-      // Upload to IPFS
+      // Log warnings if any
+      if (validationResult.warnings && validationResult.warnings.length > 0) {
+        safeLogger.warn(`[FileUpload] File validation warnings: ${validationResult.warnings.join(', ')}`);
+      }
+
+      // Step 2: Check for duplicate files
+      safeLogger.info(`[FileUpload] Checking for duplicates`);
+      const deduplicationResult = await fileDeduplicationService.checkDuplicate(file.buffer);
+
+      if (deduplicationResult.isDuplicate && deduplicationResult.existingFile) {
+        // File already exists - increment reference count and return existing file
+        await fileDeduplicationService.incrementReferenceCount(deduplicationResult.fileHash);
+
+        safeLogger.info(`[FileUpload] Duplicate file detected, returning existing: ${deduplicationResult.fileHash}`);
+
+        const attachment = {
+          id: crypto.randomUUID(), // New ID for this reference
+          type: deduplicationResult.existingFile.mimeType.split('/')[0],
+          mimeType: deduplicationResult.existingFile.mimeType,
+          filename: file.originalname, // Use new filename
+          size: deduplicationResult.existingFile.sizeBytes,
+          url: deduplicationResult.existingFile.ipfsCid
+            ? `https://gateway.pinata.cloud/ipfs/${deduplicationResult.existingFile.ipfsCid}`
+            : undefined,
+          cid: deduplicationResult.existingFile.ipfsCid,
+          uploadedBy: userAddress,
+          uploadedAt: new Date().toISOString(),
+          isDuplicate: true,
+          originalFileHash: deduplicationResult.fileHash
+        };
+
+        res.status(201).json(apiResponse.success(attachment, 'File uploaded successfully (deduplicated)'));
+        return;
+      }
+
+      // Step 3: Virus scan
+      safeLogger.info(`[FileUpload] Scanning file for viruses`);
+      const scanResult = await virusScanningService.scanFile(file.buffer, file.originalname);
+
+      if (scanResult.isInfected) {
+        safeLogger.error(`[FileUpload] Virus detected in file: ${scanResult.viruses.join(', ')}`);
+
+        // Store quarantined file metadata
+        await fileDeduplicationService.storeFileMetadata({
+          fileHash: deduplicationResult.fileHash,
+          filename: file.originalname,
+          mimeType: file.mimetype,
+          sizeBytes: file.size,
+          uploadedBy: userAddress,
+          virusScanStatus: 'infected',
+          virusScanResult: scanResult
+        });
+
+        res.status(400).json(apiResponse.error(
+          'File rejected: Virus detected',
+          400,
+          {
+            viruses: scanResult.viruses,
+            scanner: scanResult.scanner
+          }
+        ));
+        return;
+      }
+
+      safeLogger.info(`[FileUpload] Virus scan passed (${scanResult.scanner})`);
+
+      // Step 4: Upload to IPFS
+      safeLogger.info(`[FileUpload] Uploading to IPFS`);
       const ipfsResult = await ipfsService.uploadFile(file.buffer, {
         metadata: {
           name: file.originalname,
           mimeType: file.mimetype
         }
       });
+
+      // Step 5: Store file metadata in database
+      const fileMetadata = await fileDeduplicationService.storeFileMetadata({
+        fileHash: deduplicationResult.fileHash,
+        filename: file.originalname,
+        mimeType: file.mimetype,
+        sizeBytes: file.size,
+        ipfsCid: ipfsResult.ipfsHash,
+        uploadedBy: userAddress,
+        virusScanStatus: 'clean',
+        virusScanResult: scanResult
+      });
+
+      const uploadTime = Date.now() - startTime;
+      safeLogger.info(`[FileUpload] File uploaded successfully in ${uploadTime}ms`);
 
       // Build attachment metadata
       const attachment = {
@@ -1063,7 +1164,10 @@ export class MessagingController {
         url: ipfsResult.gatewayUrl,
         cid: ipfsResult.ipfsHash,
         uploadedBy: userAddress,
-        uploadedAt: new Date().toISOString()
+        uploadedAt: new Date().toISOString(),
+        fileHash: deduplicationResult.fileHash,
+        virusScanStatus: 'clean',
+        uploadTimeMs: uploadTime
       };
 
       res.status(201).json(apiResponse.success(attachment, 'File uploaded successfully'));

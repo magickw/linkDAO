@@ -6584,6 +6584,44 @@ export const oauthStates = pgTable("oauth_states", {
   userIdx: index("idx_oauth_states_user").on(t.userId),
 }));
 
+// File Attachments - For deduplication and virus scanning tracking
+export const fileAttachments = pgTable("file_attachments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  fileHash: varchar("file_hash", { length: 64 }).unique().notNull(),
+  filename: varchar("filename", { length: 255 }).notNull(),
+  mimeType: varchar("mime_type", { length: 100 }).notNull(),
+  sizeBytes: integer("size_bytes").notNull(),
+  s3Key: varchar("s3_key", { length: 500 }),
+  ipfsCid: varchar("ipfs_cid", { length: 100 }),
+  uploadedBy: varchar("uploaded_by", { length: 66 }).notNull(),
+  uploadTimestamp: timestamp("upload_timestamp").defaultNow(),
+  virusScanStatus: varchar("virus_scan_status", { length: 20 }).default("pending"),
+  virusScanResult: jsonb("virus_scan_result"),
+  referenceCount: integer("reference_count").default(1),
+  isQuarantined: boolean("is_quarantined").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  hashIdx: index("idx_file_attachments_hash").on(t.fileHash),
+  uploadedByIdx: index("idx_file_attachments_uploaded_by").on(t.uploadedBy),
+  virusScanStatusIdx: index("idx_file_attachments_virus_scan_status").on(t.virusScanStatus),
+  createdAtIdx: index("idx_file_attachments_created_at").on(t.createdAt),
+}));
+
+// Virus Scan Logs - Audit trail for virus scanning
+export const virusScanLogs = pgTable("virus_scan_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  fileHash: varchar("file_hash", { length: 64 }).notNull().references(() => fileAttachments.fileHash, { onDelete: "cascade" }),
+  scanner: varchar("scanner", { length: 20 }).notNull(),
+  scanResult: varchar("scan_result", { length: 20 }).notNull(),
+  viruses: text("viruses").array(),
+  scanTimeMs: integer("scan_time_ms"),
+  scannedAt: timestamp("scanned_at").defaultNow(),
+  scannedBy: varchar("scanned_by", { length: 66 }),
+}, (t) => ({
+  fileHashIdx: index("idx_virus_scan_logs_file_hash").on(t.fileHash),
+  scannedAtIdx: index("idx_virus_scan_logs_scanned_at").on(t.scannedAt),
+}));
+
 
 // Verification Schema
 export * from "./verificationSchema";

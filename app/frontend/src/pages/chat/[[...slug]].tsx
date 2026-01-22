@@ -184,6 +184,37 @@ export default function ChatPage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasNewMessage, setHasNewMessage] = useState(false);
 
+  // Synchronize presence from unifiedMessagingService
+  useEffect(() => {
+    // Initial sync - handle potential async initialization
+    const syncInitialPresence = () => {
+      const initialOnline = unifiedMessagingService.getOnlineUsers();
+      setOnlineUsers(new Set(initialOnline.map(addr => addr.toLowerCase())));
+    };
+
+    syncInitialPresence();
+
+    // Subscribe to updates
+    const unsubscribe = unifiedMessagingService.on('presence_update', (data) => {
+      setOnlineUsers(prev => {
+        const updated = new Set(prev);
+        if (data.isOnline) {
+          updated.add(data.userAddress.toLowerCase());
+        } else {
+          updated.delete(data.userAddress.toLowerCase());
+        }
+        return updated;
+      });
+    });
+
+    // Also sync when conversations are loaded as service might have initialized in background
+    if (hookConversations && hookConversations.length > 0) {
+      syncInitialPresence();
+    }
+
+    return () => unsubscribe();
+  }, [hookConversations]);
+
   // WebSocket integration
   const {
     connectionState,
@@ -315,13 +346,13 @@ export default function ChatPage() {
     };
 
     const handleUserOnline = (data: { userAddress: string }) => {
-      setOnlineUsers(prev => new Set(prev).add(data.userAddress));
+      setOnlineUsers(prev => new Set(prev).add(data.userAddress.toLowerCase()));
     };
 
     const handleUserOffline = (data: { userAddress: string }) => {
       setOnlineUsers(prev => {
         const updated = new Set(prev);
-        updated.delete(data.userAddress);
+        updated.delete(data.userAddress.toLowerCase());
         return updated;
       });
     };
@@ -890,7 +921,7 @@ export default function ChatPage() {
                             ) : (
                               sortedConversations.map((conversation) => {
                                 const otherParticipant = getOtherParticipant(conversation);
-                                const isUserOnline = onlineUsers.has(otherParticipant);
+                                const isUserOnline = onlineUsers.has(otherParticipant.toLowerCase());
                                 const conversationTyping = typingUsers.get(conversation.id) || [];
                                 const isTyping = conversationTyping.length > 0;
                                 const isSelected = selectedConversation?.id === conversation.id;

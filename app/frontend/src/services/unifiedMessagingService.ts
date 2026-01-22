@@ -201,7 +201,8 @@ class UnifiedMessagingService {
       ws.on('user_typing', this.handleWebSocketTyping.bind(this));
       ws.on('user_stopped_typing', this.handleWebSocketStopTyping.bind(this));
       ws.on('message_read', this.handleWebSocketReadReceipt.bind(this));
-      ws.on('user_status_update', this.handleWebSocketPresence.bind(this));
+      ws.on('user_online', (data: any) => this.handleWebSocketPresence({ ...data, isOnline: true }));
+      ws.on('user_offline', (data: any) => this.handleWebSocketPresence({ ...data, isOnline: false }));
       ws.on('reaction_update', this.handleWebSocketReaction.bind(this));
 
       this.emitEvent('connection_change', {
@@ -1928,13 +1929,19 @@ class UnifiedMessagingService {
   }
 
   private handleWebSocketPresence(data: any): void {
-    const { userAddress, isOnline, lastSeen } = data;
+    const { userAddress, isOnline, lastSeen, timestamp } = data;
+    const effectiveLastSeen = lastSeen || timestamp;
+    
     if (isOnline) {
       this.onlineUsers.add(userAddress.toLowerCase());
     } else {
       this.onlineUsers.delete(userAddress.toLowerCase());
     }
-    this.emitEvent('presence_update', { userAddress, isOnline, lastSeen: lastSeen ? new Date(lastSeen) : undefined });
+    this.emitEvent('presence_update', { 
+      userAddress, 
+      isOnline, 
+      lastSeen: effectiveLastSeen ? new Date(effectiveLastSeen) : undefined 
+    });
   }
 
   private handleWebSocketReaction(data: any): void {

@@ -222,14 +222,26 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
         this.dynamicEngine.performDynamicPrioritization(context, methodsWithCosts)
       );
 
-      // Apply stablecoin prioritization rules
-      const stablecoinResult = this.stablecoinRules.applyStablecoinPrioritization(
-        dynamicResult.prioritizedMethods,
-        context
-      );
+      // Apply stablecoin prioritization rules with safety wrapper
+      let stablecoinResult: any = null;
+      try {
+        stablecoinResult = this.stablecoinRules.applyStablecoinPrioritization(
+          dynamicResult.prioritizedMethods,
+          context
+        );
+      } catch (error) {
+        console.warn('[PaymentPrioritization] Stablecoin prioritization failed:', error);
+        // Continue with original methods if stablecoin rules fail
+        stablecoinResult = null;
+      }
 
-      // Use the enhanced prioritized methods
-      const prioritizedMethods = (stablecoinResult?.prioritizedStablecoins?.length ?? 0) > 0
+      // Use the enhanced prioritized methods with comprehensive safety checks
+      const prioritizedMethods = (
+        stablecoinResult &&
+        stablecoinResult.prioritizedStablecoins &&
+        Array.isArray(stablecoinResult.prioritizedStablecoins) &&
+        stablecoinResult.prioritizedStablecoins.length > 0
+      )
         ? this.mergeStablecoinResults(dynamicResult.prioritizedMethods, stablecoinResult)
         : dynamicResult.prioritizedMethods;
 

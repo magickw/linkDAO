@@ -98,6 +98,7 @@ export function useUnifiedMessaging(options: UseUnifiedMessagingOptions = {}): U
   const [error, setError] = useState<string | null>(null);
   const [connectionMode, setConnectionMode] = useState<'websocket' | 'polling' | 'offline'>('offline');
   const [pendingMessagesCount, setPendingMessagesCount] = useState(0);
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
 
   // Track typing users per conversation
   const [typingUsersMap, setTypingUsersMap] = useState<Map<string, Set<string>>>(new Map());
@@ -270,6 +271,21 @@ export function useUnifiedMessaging(options: UseUnifiedMessagingOptions = {}): U
       })
     );
 
+    // Presence updates
+    unsubscribers.push(
+      unifiedMessagingService.on('presence_update', ({ userAddress, isOnline }) => {
+        setOnlineUsers(prev => {
+          const newSet = new Set(prev);
+          if (isOnline) {
+            newSet.add(userAddress.toLowerCase());
+          } else {
+            newSet.delete(userAddress.toLowerCase());
+          }
+          return newSet;
+        });
+      })
+    );
+
     return () => {
       unsubscribers.forEach(unsub => unsub());
     };
@@ -368,12 +384,12 @@ export function useUnifiedMessaging(options: UseUnifiedMessagingOptions = {}): U
   }, [typingUsersMap]);
 
   const isUserOnline = useCallback((userAddress: string) => {
-    return unifiedMessagingService.isUserOnline(userAddress);
-  }, []);
+    return onlineUsers.has(userAddress.toLowerCase());
+  }, [onlineUsers]);
 
   const getOnlineUsers = useCallback(() => {
-    return unifiedMessagingService.getOnlineUsers();
-  }, []);
+    return Array.from(onlineUsers);
+  }, [onlineUsers]);
 
   const addReaction = useCallback(async (messageId: string, emoji: string) => {
     return unifiedMessagingService.addReaction(messageId, emoji);

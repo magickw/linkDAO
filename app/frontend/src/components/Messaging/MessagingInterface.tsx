@@ -71,6 +71,8 @@ interface ChannelMessage {
   content: string;
   timestamp: Date;
   replyToId?: string;
+  quotedMessageId?: string;
+  metadata?: any;
   replyTo?: {
     fromAddress: string;
     content: string;
@@ -281,12 +283,15 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
         }
       }
 
+      // CHECK INITIAL ONLINE STATUS
+      const isOnline = unifiedMessagingService.isUserOnline(participantAddress);
+
       return {
         id: c.id,
         participant: participantAddress,
         participantEnsName: undefined,
         participantAvatar,
-        isOnline: false,
+        isOnline: isOnline,
         isTyping: false,
         lastSeen: undefined,
         unreadCount: c.unreadCounts?.[address || ''] || 0,
@@ -302,6 +307,19 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
     setDmConversations(mapped);
   }, [hookConversations, address, getParticipantProfile]);
+
+  // Subscribe to presence updates
+  useEffect(() => {
+    const unsubscribe = unifiedMessagingService.on('presence_update', (data) => {
+      setDmConversations(prev => prev.map(dm => 
+        dm.participant.toLowerCase() === data.userAddress.toLowerCase()
+          ? { ...dm, isOnline: data.isOnline, lastSeen: data.lastSeen }
+          : dm
+      ));
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // When viewing a DM, load messages via hook
   useEffect(() => {
@@ -323,6 +341,8 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
         timestamp: new Date(m.timestamp),
         replyToId: (m as any).replyToId,
         replyTo: (m as any).replyTo,
+        quotedMessageId: (m as any).quotedMessageId || (m as any).metadata?.quotedMessageId,
+        metadata: (m as any).metadata,
         reactions: (m as any).reactions as any,
         threadReplies: (m as any).threadReplies as any,
         isEncrypted: !!(m as any).isEncrypted,
