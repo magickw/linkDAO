@@ -1131,7 +1131,7 @@ export class SellerController {
 
       const { sellerService } = await import('../services/sellerService');
 
-      const profile = await sellerService.getSellerProfile(walletAddress, { createIfMissing: true });
+      const profile = await sellerService.getSellerProfile(walletAddress, { createIfMissing: false });
 
       if (!profile) {
         safeLogger.info("Seller profile not found for address:", walletAddress);
@@ -1175,43 +1175,11 @@ export class SellerController {
 
       if (!profile) {
         safeLogger.info("Seller profile not found for address:", walletAddress);
-
-        // Create a basic profile for the seller if it doesn't exist
-        try {
-          // Generate a default avatar using the wallet address
-          const defaultAvatar = `https://api.dicebear.com/7.x/identicon/svg?seed=${walletAddress}`;
-
-          const basicProfileData = {
-            walletAddress,
-            storeName: 'My Store',
-            bio: "Welcome to my store!",
-            description: "Seller profile created automatically",
-            profileImageCdn: defaultAvatar,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            // Set default tier to allow basic seller functionality
-            tier: 'bronze', // Basic tier to allow seller functionality
-            profileCompleteness: {
-              score: 20, // Basic profile completeness
-              missingFields: ['profileImageCdn', 'coverImageCdn', 'bio', 'description'],
-              recommendations: [{
-                action: 'Complete Profile',
-                description: 'Add more information to your profile',
-                impact: 80
-              }],
-              lastCalculated: new Date().toISOString()
-            }
-          };
-
-          const newProfile = await sellerService.createSellerProfile(basicProfileData as any);
-          safeLogger.info("Created basic seller profile for address:", walletAddress);
-
-          res.json({ success: true, data: newProfile });
-          return;
-        } catch (creationError) {
-          safeLogger.error("Error creating basic profile:", creationError);
-          return res.status(500).json({ success: false, error: "Failed to create basic seller profile" });
-        }
+        return res.status(404).json({ 
+          success: false, 
+          error: "Seller profile not found. Please complete seller onboarding first.",
+          redirectTo: '/marketplace/seller/onboarding'
+        });
       }
 
       safeLogger.info("Successfully fetched seller profile for address:", walletAddress);

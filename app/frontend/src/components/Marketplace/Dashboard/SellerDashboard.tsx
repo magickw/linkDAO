@@ -420,38 +420,71 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
     );
   }
 
-  if (!profile) {
+  // Handle the case where profile doesn't exist or onboarding isn't complete
+  if (!profile || !profile.onboardingProgress?.completed || profile.applicationStatus !== 'approved') {
+    const isPending = profile && profile.applicationStatus === 'pending';
+    const isRejected = profile && profile.applicationStatus === 'rejected';
+    const isOnboardingIncomplete = profile && !profile.onboardingProgress?.completed;
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
         <GlassPanel className="max-w-md w-full text-center">
           <div className="mb-6">
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mx-auto mb-4 flex items-center justify-center">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
+            <div className={`w-16 h-16 bg-gradient-to-r ${isRejected ? 'from-red-500 to-orange-500' : 'from-blue-500 to-purple-500'} rounded-full mx-auto mb-4 flex items-center justify-center`}>
+              {isPending ? (
+                <svg className="w-8 h-8 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-12 0 9 9 0 0112 0z" />
+                </svg>
+              ) : isRejected ? (
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              )}
             </div>
-            <h1 className="text-2xl font-bold text-white mb-2">Welcome to Seller Dashboard</h1>
+            <h1 className="text-2xl font-bold text-white mb-2">
+              {isPending ? 'Application Pending' : isRejected ? 'Application Rejected' : 'Welcome to Seller Dashboard'}
+            </h1>
             <p className="text-gray-300 mb-4">
-              To start selling on LinkDAO Marketplace, you'll need to set up your seller profile first.
+              {isPending 
+                ? "Your seller application is currently being reviewed. We'll notify you once it's approved." 
+                : isRejected 
+                  ? "Your seller application was not approved at this time. Please check your email for details."
+                  : "To start selling on LinkDAO Marketplace, you'll need to set up your seller profile first."}
             </p>
-            <div className="text-left bg-white/5 rounded-lg p-4 mb-6">
-              <h3 className="text-white font-semibold mb-2">What you'll need:</h3>
-              <ul className="text-gray-300 text-sm space-y-1">
-                <li>• Store name and description</li>
-                <li>• Business information</li>
-                <li>• Payment method setup</li>
-                <li>• Profile verification</li>
-              </ul>
-            </div>
+            
+            {!isPending && !isRejected && (
+              <div className="text-left bg-white/5 rounded-lg p-4 mb-6">
+                <h3 className="text-white font-semibold mb-2">What you'll need:</h3>
+                <ul className="text-gray-300 text-sm space-y-1">
+                  <li>• Store name and description</li>
+                  <li>• Business information</li>
+                  <li>• Payment method setup</li>
+                  <li>• Profile verification</li>
+                </ul>
+              </div>
+            )}
+
+            {isRejected && profile.rejectionReason && (
+              <div className="text-left bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6">
+                <h3 className="text-red-400 font-semibold mb-1 text-sm">Reason for rejection:</h3>
+                <p className="text-gray-300 text-sm">{profile.rejectionReason}</p>
+              </div>
+            )}
           </div>
           <div className="space-y-3">
-            <Button
-              onClick={() => router.push('/marketplace/seller/onboarding')}
-              variant="primary"
-              className="w-full"
-            >
-              Complete Seller Setup
-            </Button>
+            {!isRejected && (
+              <Button
+                onClick={() => router.push('/marketplace/seller/onboarding')}
+                variant="primary"
+                className="w-full"
+              >
+                {isOnboardingIncomplete ? 'Continue Seller Setup' : 'Complete Seller Setup'}
+              </Button>
+            )}
             <Button
               onClick={() => router.push('/marketplace')}
               variant="secondary"

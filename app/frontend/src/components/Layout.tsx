@@ -453,8 +453,6 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
           </footer>
         )}
 
-        {isConnected && <NotificationSystem />}
-
         {/* Mobile Navigation */}
         <MobileNavigation />
 

@@ -374,7 +374,7 @@ export class UnifiedCheckoutService {
       // This ensures the backend knows the payment is on the way
       if (transaction.hash) {
         try {
-          await this.verifyCryptoTransaction(transaction.id, transaction.hash);
+          await this.verifyCryptoTransaction(request.orderId, transaction.id, transaction.hash);
         } catch (verifyError) {
           console.warn('Failed to immediately verify transaction with backend:', verifyError);
           // Non-blocking, the polling mechanism should pick it up later or nextSteps will guide user
@@ -691,7 +691,7 @@ export class UnifiedCheckoutService {
   /**
    * Verify crypto transaction on blockchain
    */
-  async verifyCryptoTransaction(escrowId: string, transactionHash: string): Promise<{
+  async verifyCryptoTransaction(orderId: string, escrowId: string, transactionHash: string): Promise<{
     verified: boolean;
     status: string;
     blockNumber?: number;
@@ -699,7 +699,7 @@ export class UnifiedCheckoutService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/orders/verify-transaction`, {
+      const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/orders/${orderId}/verify-transaction`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

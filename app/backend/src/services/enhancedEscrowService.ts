@@ -427,18 +427,41 @@ export class EnhancedEscrowService {
 
       // Create a read-only interface for gas estimation
       const contractInterface = escrowContract.interface;
+      // Calculate delivery deadline (default 7 days if not provided)
+      const durationDays = request.escrowDuration || 7;
+      const deliveryDeadline = Math.floor(Date.now() / 1000) + (durationDays * 24 * 60 * 60);
+      const resolutionMethod = 0; // Default to AUTOMATIC for estimation
+
+      // Convert UUID to BigInt for smart contract (remove dashes, parse as hex)
+      // Checks if it's already a number or numeric string, otherwise treats as UUID
+      let listingIdBigInt;
+      try {
+        if (/^\d+$/.test(request.listingId)) {
+          listingIdBigInt = BigInt(request.listingId);
+        } else {
+          listingIdBigInt = BigInt('0x' + request.listingId.replace(/-/g, ''));
+        }
+      } catch (e) {
+        // Fallback for non-standard IDs
+        listingIdBigInt = BigInt(0);
+      }
+
       const encodedData = contractInterface.encodeFunctionData('createEscrow', [
-        request.listingId,
-        request.buyerAddress,
+        listingIdBigInt,
         request.sellerAddress,
         request.tokenAddress,
-        ethers.parseUnits(request.amount, await this.getTokenDecimals(request.tokenAddress, targetChainId)) // Dynamic decimals
+        ethers.parseUnits(request.amount, await this.getTokenDecimals(request.tokenAddress, targetChainId)), // Dynamic decimals
+        deliveryDeadline,
+        resolutionMethod
       ]);
 
       const gasEstimate = await provider.estimateGas({
         to: escrowContract.target as string,
         data: encodedData,
-        from: request.buyerAddress
+        from: request.buyerAddress,
+        value: request.tokenAddress === '0x0000000000000000000000000000000000000000'
+          ? ethers.parseUnits(request.amount, 18)
+          : BigInt(0)
       });
 
       // Add 20% buffer for safety
