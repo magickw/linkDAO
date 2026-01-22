@@ -1131,7 +1131,7 @@ export class SellerController {
 
       const { sellerService } = await import('../services/sellerService');
 
-      const profile = await sellerService.getSellerProfile(walletAddress, { createIfMissing: false });
+      const profile = await sellerService.getSellerProfile(walletAddress, { createIfMissing: true });
 
       if (!profile) {
         safeLogger.info("Seller profile not found for address:", walletAddress);
