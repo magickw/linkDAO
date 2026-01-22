@@ -4,7 +4,7 @@
   "description": "LinkDao Web3 Marketplace Backend",
   "main": "src/index.production.js",
   "scripts": {
-    "postinstall": "npm install bs58 sharp csv-parser cloudinary && (node -e \"try { require('sharp'); console.log('✅ Sharp module loaded successfully'); } catch(e) { console.log('⚠️ Sharp not available, installing for platform:', process.platform, process.arch); }\" || npm rebuild sharp)",
+    "postinstall": "(node -e \"try { require('sharp'); console.log('✅ Sharp module loaded successfully'); } catch(e) { console.log('⚠️ Sharp not available, installing for platform:', process.platform, process.arch); }\" || npm rebuild sharp)",
     "build": "bash scripts/build-production.sh",
     "build:swc": "swc src -d dist --copy-files --strip-leading-paths",
     "build:typecheck": "tsc --noEmit --project tsconfig.production.json",

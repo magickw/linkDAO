@@ -4,7 +4,14 @@ import { users } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
 import path from 'path';
-import { v2 as cloudinary } from 'cloudinary';
+
+// Dynamically import cloudinary to handle missing dependency gracefully
+let cloudinary: any = null;
+try {
+  cloudinary = require('cloudinary').v2;
+} catch (e) {
+  safeLogger.warn('Cloudinary module not found, avatar uploads to CDN will be disabled');
+}
 
 export interface MediaUploadResult {
   success: boolean;
