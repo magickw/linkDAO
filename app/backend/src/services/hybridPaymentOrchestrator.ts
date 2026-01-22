@@ -170,9 +170,9 @@ export class HybridPaymentOrchestrator {
       }
 
       // Build payment method details
-      // Extract chainId from request metadata (sent as paymentMethodDetails from frontend)
-      const requestedChainId = request.metadata?.chainId || 1; // Default to Ethereum Mainnet if not specified
-      const requestedTokenAddress = request.metadata?.tokenAddress;
+      // Extract chainId from request.paymentMethodDetails (sent from frontend)
+      const requestedChainId = request.paymentMethodDetails?.chainId || 11155111; // Default to Sepolia if not specified
+      const requestedTokenAddress = request.paymentMethodDetails?.tokenAddress;
 
       const method = selectedPath === 'crypto' ? {
         type: 'crypto' as const,

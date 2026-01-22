@@ -116,38 +116,61 @@ export class CacheService {
     };
   }
 
-  private initializeRedis(): void {
+  private async initializeRedis(): Promise<void> {
     if (!this.useRedis) {
-      safeLogger.info('Redis is disabled, skipping initialization');
+      if (!CacheService.loggedInit) {
+        safeLogger.info('Redis is disabled, skipping initialization');
+        CacheService.loggedInit = true;
+      }
       return;
     }
 
     try {
-      // Don't make assumptions during initialization - just check if the service is enabled
-      // The actual connection status will be checked dynamically during operations
+      // First, get the current status of the shared Redis service
       const redisStatus = redisService.getRedisStatus();
+      
       if (redisStatus.enabled) {
-        safeLogger.info('✅ Shared Redis service is enabled, will check connection dynamically');
-        this.isConnected = redisStatus.connected; // Initialize with current connection state
+        if (!CacheService.loggedInit) {
+          safeLogger.info('✅ Shared Redis service is enabled, initializing cache connection');
+          CacheService.loggedInit = true;
+        }
+        
+        // Use the shared client instance if it exists
+        const client = redisService.getClient();
+        if (client) {
+          this.redis = client;
+          this.isConnected = redisStatus.connected;
+          // Note: event handlers are managed by redisService
+        } else {
+          // Attempt to connect if not already connected
+          safeLogger.info('🔗 Attempting to connect to shared Redis service...');
+          try {
+            await redisService.connect();
+            const newStatus = redisService.getRedisStatus();
+            this.redis = redisService.getClient();
+            this.isConnected = newStatus.connected;
+          } catch (connError) {
+            safeLogger.warn('⚠️ Could not immediately connect to Redis, will retry on operation');
+            this.isConnected = false;
+          }
+        }
       } else {
-        safeLogger.warn('⚠️ Shared Redis service is not enabled, Redis functionality disabled for cache');
+        if (!CacheService.loggedInit) {
+          safeLogger.warn('⚠️ Shared Redis service is not enabled, Redis functionality disabled for cache');
+          CacheService.loggedInit = true;
+        }
         this.useRedis = false;
       }
-    } catch (error) {
+    } catch (error: any) {
       safeLogger.error('Failed to initialize Redis with shared service:', {
         error: {
           name: error.name,
           message: error.message,
-          code: (error as any).code,
-          errno: (error as any).errno,
-          syscall: (error as any).syscall,
-          address: (error as any).address,
-          port: (error as any).port
+          code: (error as any).code
         }
       });
       this.useRedis = false;
       this.isConnected = false;
-      this.redis = null;
     }
   }
 
