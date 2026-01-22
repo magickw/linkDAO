@@ -1,5 +1,6 @@
 import { ethers } from 'ethers';
 import { safeLogger } from '../utils/safeLogger';
+import { getTokenAddress } from '../config/tokenAddresses';
 import { DatabaseService } from './databaseService';
 import { UserProfileService } from './userProfileService';
 import { ExchangeRateService } from './exchangeRateService';
@@ -101,7 +102,7 @@ export class PaymentValidationService {
   private readonly SUPPORTED_TOKENS = {
     1: [ // Ethereum Mainnet
       { address: '0x0000000000000000000000000000000000000000', symbol: 'ETH', decimals: 18, name: 'Ethereum' },
-      { address: '0xA0b86a33E6441c8C06DD2b7c94b7E6E8b8b8b8b8', symbol: 'USDC', decimals: 6, name: 'USD Coin' },
+      { address: getTokenAddress('USDC', 1), symbol: 'USDC', decimals: 6, name: 'USD Coin' },
       { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', symbol: 'USDT', decimals: 6, name: 'Tether USD' }
     ],
     137: [ // Polygon
@@ -649,7 +650,7 @@ export class PaymentValidationService {
     try {
       // Suggest stablecoins as crypto alternatives
       const stablecoins = [
-        { address: '0xA0b86a33E6441c8C06DD2b7c94b7E6E8b8b8b8b8', symbol: 'USDC', chainId: 1 },
+        { address: getTokenAddress('USDC', 1), symbol: 'USDC', chainId: 1 },
         { address: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', symbol: 'USDC', chainId: 137 }
       ];
 

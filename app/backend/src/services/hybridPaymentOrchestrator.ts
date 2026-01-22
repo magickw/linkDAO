@@ -1,5 +1,6 @@
 import { PaymentValidationService } from './paymentValidationService';
 import { safeLogger } from '../utils/safeLogger';
+import { getTokenAddress } from '../config/tokenAddresses';
 import { EnhancedFiatPaymentService } from './enhancedFiatPaymentService';
 import { EnhancedEscrowService } from './enhancedEscrowService';
 import { ExchangeRateService } from './exchangeRateService';
@@ -126,7 +127,7 @@ export class HybridPaymentOrchestrator {
         currency: 'USDC', // Default to USDC for crypto
         userAddress: request.buyerAddress,
         paymentDetails: {
-          tokenAddress: '0xA0b86a33E6441c8C06DD2b7c94b7E6E8b8b8b8b8', // USDC
+          tokenAddress: getTokenAddress('USDC', 1), // Use correct USDC address
           tokenSymbol: 'USDC',
           tokenDecimals: 6,
           chainId: 1,
@@ -171,7 +172,7 @@ export class HybridPaymentOrchestrator {
       // Build payment method details
       const method = selectedPath === 'crypto' ? {
         type: 'crypto' as const,
-        tokenAddress: '0xA0b86a33E6441c8C06DD2b7c94b7E6E8b8b8b8b8',
+        tokenAddress: getTokenAddress('USDC', 1), // Use correct USDC address
         tokenSymbol: 'USDC',
         chainId: 1
       } : {

@@ -56,6 +56,9 @@ async function decryptAddressData(encryptedData: string): Promise<any> {
       dataLength: encryptedData?.length,
       dataPreview: encryptedData?.substring(0, 100)
     });
+    
+    // Try to return empty object instead of throwing error
+    // This allows the application to continue even if decryption fails
     return {};
   }
 }

@@ -80,8 +80,8 @@ export class EnhancedEscrowService {
         "function autoResolveDispute(uint256 escrowId) external",
         "function castVote(uint256 escrowId, bool forBuyer) external",
         "function resolveDisputeByArbitrator(uint256 escrowId, bool buyerWins) external",
-        "function getEscrow(uint256 escrowId) external view returns (tuple)",
-        "function getDetailedReputation(address user) external view returns (tuple)",
+        "function getEscrow(uint256 escrowId) external view returns (address seller, address buyer, uint256 amount, address token, uint256 createdAt, uint256 duration, uint8 status, address winner)",
+        "function getDetailedReputation(address user) external view returns (uint256 totalScore, uint256 successfulTransactions, uint256 disputedTransactions, uint256 arbitrationWins, uint256 arbitrationLosses)",
         "function getEscrowChainId(uint256 escrowId) external view returns (uint256)" // Added for cross-chain support
       ];
 

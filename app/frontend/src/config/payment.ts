@@ -38,7 +38,7 @@ export const USDC_POLYGON: PaymentToken = {
   name: 'USD Coin',
   decimals: 6,
   chainId: polygon.id,
-  logoURI: 'https://tokens.1inch.io/0xa0b86a33e6441c8c06dd2b7c94b7e6e8b8b8b8b8.png'
+  logoURI: 'https://tokens.1inch.io/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.png'
 };
 
 export const USDC_ARBITRUM: PaymentToken = {
@@ -47,7 +47,7 @@ export const USDC_ARBITRUM: PaymentToken = {
   name: 'USD Coin',
   decimals: 6,
   chainId: arbitrum.id,
-  logoURI: 'https://tokens.1inch.io/0xa0b86a33e6441c8c06dd2b7c94b7e6e8b8b8b8b8.png'
+  logoURI: 'https://tokens.1inch.io/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.png'
 };
 
 export const USDT_MAINNET: PaymentToken = {
@@ -85,7 +85,7 @@ export const USDC_SEPOLIA: PaymentToken = {
   name: 'USD Coin (Sepolia)',
   decimals: 6,
   chainId: sepolia.id,
-  logoURI: 'https://tokens.1inch.io/0xa0b86a33e6441c8c06dd2b7c94b7e6e8b8b8b8b8.png'
+  logoURI: 'https://tokens.1inch.io/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.png'
 };
 
 // Base network tokens
@@ -95,7 +95,7 @@ export const USDC_BASE: PaymentToken = {
   name: 'USD Coin',
   decimals: 6,
   chainId: base.id,
-  logoURI: 'https://tokens.1inch.io/0xa0b86a33e6441c8c06dd2b7c94b7e6e8b8b8b8b8.png'
+  logoURI: 'https://tokens.1inch.io/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.png'
 };
 
 export const USDC_BASE_SEPOLIA: PaymentToken = {
@@ -104,7 +104,7 @@ export const USDC_BASE_SEPOLIA: PaymentToken = {
   name: 'USD Coin (Base Sepolia)',
   decimals: 6,
   chainId: baseSepolia.id,
-  logoURI: 'https://tokens.1inch.io/0xa0b86a33e6441c8c06dd2b7c94b7e6e8b8b8b8b8.png'
+  logoURI: 'https://tokens.1inch.io/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.png'
 };
 
 // Chain configurations
@@ -196,7 +196,7 @@ export const PAYMENT_CONFIG = {
     [sepolia.id]: 3,
     [baseSepolia.id]: 1
   },
-  
+
   // Gas price multipliers for different priority levels
   GAS_PRICE_MULTIPLIERS: {
     slow: 1.0,
@@ -204,19 +204,19 @@ export const PAYMENT_CONFIG = {
     fast: 1.25,
     instant: 1.5
   },
-  
+
   // Maximum retry attempts for failed transactions
   MAX_RETRY_ATTEMPTS: 3,
-  
+
   // Transaction timeout in milliseconds
   TRANSACTION_TIMEOUT: 300000, // 5 minutes
-  
+
   // Minimum confirmation time in milliseconds
   MIN_CONFIRMATION_TIME: 30000, // 30 seconds
-  
+
   // Gas limit buffers
   GAS_LIMIT_BUFFER: 1.1, // 10% buffer (reduced from 20% to prevent exceeding block limits)
-  
+
   // Slippage tolerance for gas price estimation
   GAS_PRICE_SLIPPAGE: 0.1 // 10%
 };
