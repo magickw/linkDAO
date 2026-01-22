@@ -27,10 +27,13 @@ interface Attachment {
 }
 
 interface MessageInputProps {
-  onSendMessage: (content: string, contentType?: 'text' | 'image' | 'file' | 'voice', attachments?: Attachment[]) => void;
+  onSendMessage: (content: string, contentType?: 'text' | 'image' | 'file' | 'voice', attachments?: Attachment[], metadata?: any) => void;
   onTyping: (isTyping: boolean) => void;
   disabled?: boolean;
   placeholder?: string;
+  replyTarget?: any;
+  quoteTarget?: any;
+  onCancelTarget?: () => void;
 }
 
 export const MessageInput: React.FC<MessageInputProps> = ({
@@ -38,6 +41,9 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   onTyping,
   disabled = false,
   placeholder = "Type a message...",
+  replyTarget,
+  quoteTarget,
+  onCancelTarget,
 }) => {
   const [message, setMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -48,6 +54,12 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
+
+  const truncateAddress = (address: string) => {
+    if (!address) return 'Unknown';
+    if (address.length <= 10) return address;
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
 
   // Handle message input changes
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -85,8 +97,17 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const handleSendMessage = useCallback(() => {
     const trimmedMessage = message.trim();
     if (trimmedMessage && !disabled) {
-      onSendMessage(trimmedMessage);
+      const metadata: any = {};
+      if (replyTarget) {
+        metadata.replyToId = replyTarget.id;
+      }
+      if (quoteTarget) {
+        metadata.quotedMessageId = quoteTarget.id;
+      }
+
+      onSendMessage(trimmedMessage, 'text', [], metadata);
       setMessage('');
+      onCancelTarget?.();
       onTyping(false);
       
       // Reset textarea height
@@ -99,7 +120,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         clearTimeout(typingTimeoutRef.current);
       }
     }
-  }, [message, disabled, onSendMessage, onTyping]);
+  }, [message, disabled, onSendMessage, onTyping, replyTarget, quoteTarget, onCancelTarget]);
 
   // Handle key press
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
@@ -210,8 +231,14 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         if (result.success && result.data) {
           const attachment = result.data as Attachment;
           const caption = message.trim() || attachment.filename;
-          onSendMessage(caption, 'image', [attachment]);
+          
+          const metadata: any = {};
+          if (replyTarget) metadata.replyToId = replyTarget.id;
+          if (quoteTarget) metadata.quotedMessageId = quoteTarget.id;
+
+          onSendMessage(caption, 'image', [attachment], metadata);
           setMessage('');
+          onCancelTarget?.();
         }
       }
     } catch (error) {
@@ -222,7 +249,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       URL.revokeObjectURL(attachmentPreview.preview);
       setAttachmentPreview(null);
     }
-  }, [attachmentPreview, message, onSendMessage]);
+  }, [attachmentPreview, message, onSendMessage, replyTarget, quoteTarget, onCancelTarget]);
 
   // Handle canceling attachment preview
   const handleCancelAttachment = useCallback(() => {
@@ -254,7 +281,13 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         const result = await response.json();
         if (result.success && result.data) {
           const voiceMessage = result.data as Attachment;
-          onSendMessage('Voice message', 'voice', [voiceMessage]);
+          
+          const metadata: any = {};
+          if (replyTarget) metadata.replyToId = replyTarget.id;
+          if (quoteTarget) metadata.quotedMessageId = quoteTarget.id;
+
+          onSendMessage('Voice message', 'voice', [voiceMessage], metadata);
+          onCancelTarget?.();
         }
       }
     } catch (error) {
@@ -262,7 +295,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     } finally {
       setIsUploading(false);
     }
-  }, [onSendMessage]);
+  }, [onSendMessage, replyTarget, quoteTarget, onCancelTarget]);
 
   // Cleanup on unmount
   React.useEffect(() => {
@@ -290,6 +323,29 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   return (
     <div className="message-input">
+      {/* Reply/Quote Target Preview */}
+      {(replyTarget || quoteTarget) && (
+        <div className={`px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3 ${replyTarget ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-gray-100 dark:bg-gray-800'}`}>
+          <div className={`w-1 h-8 rounded-full ${replyTarget ? 'bg-blue-500' : 'bg-gray-400'}`} />
+          <div className="flex-1 min-w-0">
+            <p className={`text-xs font-bold ${replyTarget ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`}>
+              {replyTarget ? `Replying to ${truncateAddress(replyTarget.fromAddress)}` : `Quoting ${truncateAddress(quoteTarget.fromAddress)}`}
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+              {replyTarget ? replyTarget.content : quoteTarget.content}
+            </p>
+          </div>
+          <button
+            onClick={onCancelTarget}
+            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Attachment Preview */}
       {attachmentPreview && (
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">

@@ -8,7 +8,8 @@ import {
   Copy,
   Forward,
   Smile,
-  MoreHorizontal
+  MoreHorizontal,
+  Quote
 } from 'lucide-react';
 import { unifiedMessagingService } from '@/services/unifiedMessagingService';
 import { EmojiPicker } from './EmojiPicker';
@@ -27,6 +28,7 @@ interface MessageContextMenuProps {
   position: { x: number; y: number };
   onClose: () => void;
   onReply?: () => void;
+  onQuote?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
   onPinToggle?: (isPinned: boolean) => void;
@@ -48,6 +50,7 @@ export const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
   position,
   onClose,
   onReply,
+  onQuote,
   onEdit,
   onDelete,
   onPinToggle,
@@ -168,6 +171,13 @@ export const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
       label: 'Reply',
       icon: Reply,
       onClick: () => { onReply?.(); onClose(); },
+      show: true
+    },
+    {
+      id: 'quote',
+      label: 'Quote',
+      icon: Quote,
+      onClick: () => { onQuote?.(); onClose(); },
       show: true
     },
     {

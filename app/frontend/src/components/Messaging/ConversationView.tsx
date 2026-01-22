@@ -37,6 +37,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
   const [showPinnedPanel, setShowPinnedPanel] = useState(false);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [replyTarget, setReplyTarget] = useState<Message | null>(null);
+  const [quoteTarget, setQuoteTarget] = useState<Message | null>(null);
   const [editTarget, setEditTarget] = useState<Message | null>(null);
   const [replyCounts, setReplyCounts] = useState<Record<string, number>>({});
   const [showSearch, setShowSearch] = useState(false);
@@ -355,7 +356,12 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleSendMessage = async (content: string, contentType: 'text' | 'image' | 'file' = 'text', attachments?: any[]) => {
+  const handleSendMessage = async (
+    content: string, 
+    contentType: 'text' | 'image' | 'file' | 'voice' = 'text', 
+    attachments?: any[],
+    metadata?: any
+  ) => {
     try {
       const response = await fetch(`/api/conversations/${conversation.id}/messages`, {
         method: 'POST',
@@ -367,6 +373,10 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
           content,
           contentType,
           attachments,
+          metadata,
+          // Support standard fields if backend expects them at root
+          replyToId: metadata?.replyToId,
+          quotedMessageId: metadata?.quotedMessageId
         }),
       });
 
@@ -570,6 +580,8 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
                     isOwn={message.fromAddress === currentUserAddress}
                     currentUserAddress={currentUserAddress}
                     replyCount={replyCounts[message.id] || 0}
+                    repliedToMessage={messages.find(m => m.id === message.replyToId)}
+                    quotedMessage={messages.find(m => m.id === (message as any).quotedMessageId || message.metadata?.quotedMessageId)}
                     showAvatar={
                       index === 0 ||
                       messages[index - 1].fromAddress !== message.fromAddress
@@ -587,6 +599,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
                       isPinned: msg.isPinned
                     })}
                     onThreadClick={(messageId) => setActiveThreadId(messageId)}
+                    onJumpToMessage={scrollToMessage}
                     onReactionToggle={handleReactionToggle}
                   />
                 </div>
@@ -616,24 +629,6 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
         )}
       </div>
 
-      {/* Reply Target Indicator */}
-      {replyTarget && (
-        <div className="px-4 py-2 bg-gray-100 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 flex items-center gap-2">
-          <span className="text-sm text-gray-500">Replying to:</span>
-          <span className="text-sm text-gray-900 dark:text-white truncate flex-1">
-            {replyTarget.content}
-          </span>
-          <button
-            onClick={() => setReplyTarget(null)}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
-
       {/* Message Input */}
       <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <MessageInput
@@ -641,6 +636,12 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
           onTyping={handleTyping}
           disabled={!isConnected}
           placeholder={isConnected ? "Type a message..." : "Connecting..."}
+          replyTarget={replyTarget}
+          quoteTarget={quoteTarget}
+          onCancelTarget={() => {
+            setReplyTarget(null);
+            setQuoteTarget(null);
+          }}
         />
       </div>
 
@@ -657,7 +658,17 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
           onClose={closeContextMenu}
           onReply={() => {
             const msg = messages.find(m => m.id === contextMenu.messageId);
-            if (msg) setReplyTarget(msg);
+            if (msg) {
+              setReplyTarget(msg);
+              setQuoteTarget(null);
+            }
+          }}
+          onQuote={() => {
+            const msg = messages.find(m => m.id === contextMenu.messageId);
+            if (msg) {
+              setQuoteTarget(msg);
+              setReplyTarget(null);
+            }
           }}
           onEdit={() => {
             const msg = messages.find(m => m.id === contextMenu.messageId);

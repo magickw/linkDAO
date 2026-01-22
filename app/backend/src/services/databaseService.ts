@@ -70,7 +70,7 @@ export class DatabaseService {
     }
   }
 
-  private async executeQuery<T>(operation: () => Promise<T>): Promise<T> {
+  public async executeQuery<T>(operation: () => Promise<T>): Promise<T> {
     this.checkConnection();
     return await operation();
   }

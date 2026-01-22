@@ -350,22 +350,20 @@ export class HybridPaymentOrchestrator {
       });
 
       // Re-throw the error with original message preserved
+      // Re-throw the error with original message preserved
       if (error instanceof Error) {
-        // Re-throw the error with original message preserved
-        if (error instanceof Error) {
-          throw error;
-        }
-        // If it's an object with a message (common in some libs), use that
-        if (typeof error === 'object' && error !== null && 'message' in error) {
-          throw new Error((error as any).message);
-        }
-        // If it's a string, wrap it
-        if (typeof error === 'string') {
-          throw new Error(error);
-        }
-
-        throw new Error('Checkout processing failed with unknown error');
+        throw error;
       }
+      // If it's an object with a message, use that
+      if (typeof error === 'object' && error !== null && 'message' in error) {
+        throw new Error((error as any).message);
+      }
+      // If it's a string, wrap it
+      if (typeof error === 'string') {
+        throw new Error(error);
+      }
+
+      throw new Error('Checkout processing failed with unknown error');
     }
   }
 
@@ -373,10 +371,10 @@ export class HybridPaymentOrchestrator {
    * Process crypto escrow path (smart contract)
    */
   private async processCryptoEscrowPath(
-      request: HybridCheckoutRequest,
-      pathDecision: PaymentPathDecision,
-      orderRecord: any
-    ): Promise<HybridPaymentResult & { transactionData?: any }> {
+    request: HybridCheckoutRequest,
+    pathDecision: PaymentPathDecision,
+    orderRecord: any
+  ): Promise<HybridPaymentResult & { transactionData?: any }> {
     try {
       // Create smart contract escrow
       // Use totalAmount from decision to include tax and fees

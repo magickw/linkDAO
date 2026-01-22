@@ -13,9 +13,14 @@ interface MessageBubbleProps {
   showTimestamp: boolean;
   currentUserAddress?: string;
   replyCount?: number;
+  repliedToMessage?: Message;
+  quotedMessage?: Message;
+  isQuote?: boolean;
+  senderName?: string;
   onContextMenu?: (event: React.MouseEvent, message: Message) => void;
   onThreadClick?: (messageId: string) => void;
   onReactionToggle?: (messageId: string, emoji: string) => void;
+  onJumpToMessage?: (messageId: string) => void;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -25,11 +30,66 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   showTimestamp,
   currentUserAddress,
   replyCount = 0,
+  repliedToMessage,
+  quotedMessage,
+  isQuote,
+  senderName,
   onContextMenu,
   onThreadClick,
   onReactionToggle,
+  onJumpToMessage,
 }) => {
   const [showActions, setShowActions] = useState(false);
+
+  const truncateAddress = (address: string) => {
+    if (!address) return 'Unknown';
+    if (address.length <= 10) return address;
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
+  const getDisplayName = (msg: Message) => {
+    return truncateAddress(msg.fromAddress);
+  };
+
+  const renderReplyReference = () => {
+    if (!repliedToMessage) return null;
+
+    return (
+      <div 
+        onClick={() => onJumpToMessage?.(repliedToMessage.id)}
+        className={`
+          mb-1 p-2 rounded-t-lg border-l-2 border-blue-500 cursor-pointer transition-colors
+          ${isOwn 
+            ? 'bg-blue-700/50 hover:bg-blue-700/70' 
+            : 'bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50'
+          }
+        `}
+      >
+        <div className={`text-[10px] font-bold ${isOwn ? 'text-blue-200' : 'text-blue-600 dark:text-blue-400'}`}>
+          Replying to {getDisplayName(repliedToMessage)}
+        </div>
+        <div className={`text-xs truncate ${isOwn ? 'text-blue-100' : 'text-gray-600 dark:text-gray-300'} italic`}>
+          {repliedToMessage.content}
+        </div>
+      </div>
+    );
+  };
+
+  const renderQuoteBlock = () => {
+    if (!quotedMessage) return null;
+
+    return (
+      <div className="mb-2 p-3 rounded-lg border-l-4 border-gray-400 bg-gray-100 dark:bg-gray-800/50">
+        <div className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+          {getDisplayName(quotedMessage)}
+        </div>
+        <div className="text-sm text-gray-600 dark:text-gray-400 italic whitespace-pre-wrap break-words">
+          {quotedMessage.content}
+        </div>
+      </div>
+    );
+  };
+
   const formatMessageTime = (timestamp: Date) => {
     const messageDate = new Date(timestamp);
     const now = new Date();
@@ -183,6 +243,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             }
             ${message.isPinned ? 'ring-1 ring-yellow-500/50' : ''}
           `}>
+            {renderReplyReference()}
+            {renderQuoteBlock()}
             {renderMessageContent()}
 
             {/* Message Info */}
