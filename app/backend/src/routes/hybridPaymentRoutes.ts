@@ -211,6 +211,7 @@ router.post('/checkout', authMiddleware, async (req, res) => {
     // Provide specific error messages for common issues
     let errorMessage = 'Checkout processing failed';
     let errorDetails: any = {};
+    let statusCode = 500;
 
     if (error instanceof Error) {
       errorDetails.message = error.message;
@@ -218,22 +219,29 @@ router.post('/checkout', authMiddleware, async (req, res) => {
 
       if (error.message.includes('insufficient')) {
         errorMessage = 'Insufficient inventory or balance';
+        statusCode = 400;
       } else if (error.message.includes('Stripe')) {
         errorMessage = 'Payment processing error. Please try another payment method';
-      } else if (error.message.includes('network')) {
-        errorMessage = 'Network error. Please try again';
+        statusCode = 400;
+      } else if (error.message.includes('network') || error.message.includes('Crypto payment failed')) {
+        errorMessage = 'Network error or transaction failed. Please try again';
+        statusCode = 400;
       } else if (error.message.includes('user records') || error.message.includes('Failed to find user') || error.message.includes('account not found')) {
         errorMessage = 'User account not found. Please ensure you are logged in.';
+        statusCode = 401;
       } else if (error.message.includes('Product not found') || error.message.includes('listing')) {
         errorMessage = 'Product not found or no longer available';
+        statusCode = 404;
       } else if (error.message.includes('inventory')) {
         errorMessage = 'Product is out of stock';
+        statusCode = 409;
       } else if (error.message.includes('minimum amount')) {
         errorMessage = error.message; // Return the specific minimum amount error
+        statusCode = 400;
       }
     }
 
-    res.status(500).json({
+    res.status(statusCode).json({
       success: false,
       error: errorMessage,
       details: process.env.NODE_ENV === 'development' ? errorDetails : undefined

@@ -31,12 +31,28 @@ export const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
 
   const formatCurrency = (amount: string, currency: string) => {
     const numericAmount = parseFloat(amount);
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency === 'ETH' ? 'USD' : currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(numericAmount);
+    
+    // Map known stablecoins to USD formatting or handle crypto
+    if (['USDC', 'USDT', 'DAI'].includes(currency)) {
+      return `$${numericAmount.toFixed(2)} ${currency}`;
+    }
+    
+    // Handle ETH/BTC etc
+    if (['ETH', 'BTC', 'MATIC'].includes(currency)) {
+       return `${numericAmount.toFixed(6)} ${currency}`;
+    }
+
+    try {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: currency,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(numericAmount);
+    } catch (e) {
+      // Fallback for invalid currency codes
+      return `${numericAmount.toFixed(2)} ${currency}`;
+    }
   };
 
   return (

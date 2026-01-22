@@ -1122,6 +1122,14 @@ export class DatabaseService {
           paymentDetails: paymentDetails ? (typeof paymentDetails === 'string' ? paymentDetails : JSON.stringify(paymentDetails)) : null
         };
 
+        safeLogger.info('[createOrder] Inserting order with values:', {
+          orderId: orderValues.id,
+          orderNumber: orderValues.orderNumber,
+          taxAmount: orderValues.taxAmount,
+          shippingCost: orderValues.shippingCost,
+          amount: orderValues.amount
+        });
+
         // Use provided orderId if available and is valid UUID, otherwise let DB generate it
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (orderId && uuidRegex.test(orderId)) {

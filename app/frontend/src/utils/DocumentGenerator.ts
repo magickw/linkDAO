@@ -321,9 +321,26 @@ export class DocumentGenerator {
     }
 
     private formatCurrency(amount: number): string {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: this.data.currency || 'USD'
-        }).format(amount);
+        const currency = this.data.currency || 'USD';
+        
+        // Map known stablecoins to USD formatting or handle crypto
+        if (['USDC', 'USDT', 'DAI'].includes(currency)) {
+            return `$${amount.toFixed(2)} ${currency}`;
+        }
+        
+        // Handle ETH/BTC etc
+        if (['ETH', 'BTC', 'MATIC'].includes(currency)) {
+            return `${amount.toFixed(6)} ${currency}`;
+        }
+
+        try {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: currency
+            }).format(amount);
+        } catch (e) {
+            // Fallback for invalid currency codes
+            return `${amount.toFixed(2)} ${currency}`;
+        }
     }
 }
