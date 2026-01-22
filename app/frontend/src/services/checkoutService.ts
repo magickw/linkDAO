@@ -3,11 +3,11 @@
  * Handles the complete checkout flow with Web3 and traditional payment integration
  */
 
-import { 
-  UnifiedCheckoutService, 
-  UnifiedCheckoutRequest, 
+import {
+  UnifiedCheckoutService,
+  UnifiedCheckoutRequest,
   PrioritizedCheckoutRequest,
-  CheckoutRecommendation 
+  CheckoutRecommendation
 } from './unifiedCheckoutService';
 import { CryptoPaymentService } from './cryptoPaymentService';
 import { StripePaymentService } from './stripePaymentService';
@@ -16,10 +16,11 @@ import { CostEffectivenessCalculator } from './costEffectivenessCalculator';
 import { NetworkAvailabilityChecker } from './networkAvailabilityChecker';
 import { UserPreferenceManager } from './userPreferenceManager';
 import { CartItem } from './cartService';
-import { 
-  PrioritizationResult, 
+import { getTokenAddress } from '../config/tokenAddresses';
+import {
+  PrioritizationResult,
   PrioritizationContext,
-  PaymentMethodType 
+  PaymentMethodType
 } from '../types/paymentPrioritization';
 
 export interface CheckoutSession {
@@ -67,7 +68,7 @@ export interface PaymentDetails {
   walletAddress?: string;
   tokenSymbol?: string;
   networkId?: number;
-  
+
   // For fiat payments
   cardToken?: string;
   billingAddress?: ShippingAddress;
@@ -83,7 +84,7 @@ export class CheckoutService {
     const cryptoService = new CryptoPaymentService();
     const stripeService = new StripePaymentService();
     this.unifiedCheckoutService = new UnifiedCheckoutService(cryptoService, stripeService);
-    
+
     // Initialize prioritization service
     const costCalculator = new CostEffectivenessCalculator();
     const networkChecker = new NetworkAvailabilityChecker();
@@ -93,7 +94,7 @@ export class CheckoutService {
       networkChecker,
       preferenceManager
     );
-    
+
     this.apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   }
 
@@ -164,7 +165,7 @@ export class CheckoutService {
         };
 
         session.recommendation = await this.unifiedCheckoutService.getCheckoutRecommendation(request);
-        
+
         // Get prioritized payment methods
         session.prioritizationResult = await this.getPrioritizedPaymentMethods(
           total,
@@ -186,7 +187,7 @@ export class CheckoutService {
     try {
       // Use the unified checkout service's prioritized method
       const result = await this.unifiedCheckoutService.processPrioritizedCheckout(request);
-      
+
       // Transform to CheckoutResult format
       return {
         success: true,
@@ -200,7 +201,7 @@ export class CheckoutService {
       };
     } catch (error: any) {
       console.error('Prioritized checkout processing failed:', error);
-      
+
       return {
         success: false,
         orderId: request.orderId,
@@ -260,7 +261,7 @@ export class CheckoutService {
       return result;
     } catch (error: any) {
       console.error('Checkout processing failed:', error);
-      
+
       return {
         success: false,
         orderId: session.orderId,
@@ -293,7 +294,7 @@ export class CheckoutService {
   async getSession(sessionId: string): Promise<CheckoutSession | null> {
     try {
       const response = await fetch(`${this.apiBaseUrl}/api/checkout/session/${sessionId}`);
-      
+
       if (!response.ok) {
         return null;
       }
@@ -359,21 +360,23 @@ export class CheckoutService {
    */
   private async getAvailablePaymentMethods() {
     // Mock implementation - should be replaced with actual service calls
+    const chainId = 1; // Ethereum mainnet
+
     return [
       {
         id: 'usdc-eth',
         type: PaymentMethodType.STABLECOIN_USDC,
         name: 'USDC',
         description: 'USD Coin on Ethereum',
-        chainId: 1,
+        chainId,
         enabled: true,
         supportedNetworks: [1],
         token: {
-          address: '0xA0b86a33E6441E6C7C5c8b0b8c8b0b8c8b0b8c8b',
+          address: getTokenAddress('USDC', chainId), // Use correct USDC address for the chain
           symbol: 'USDC',
           decimals: 6,
           name: 'USD Coin',
-          chainId: 1
+          chainId
         }
       },
       {
@@ -428,21 +431,21 @@ export class CheckoutService {
         }
       ],
       exchangeRates: [
-        { 
-          fromToken: 'ETH', 
-          toToken: 'USD', 
-          rate: 2000, 
+        {
+          fromToken: 'ETH',
+          toToken: 'USD',
+          rate: 2000,
           source: 'coingecko',
           confidence: 0.95,
-          lastUpdated: new Date() 
+          lastUpdated: new Date()
         },
-        { 
-          fromToken: 'USDC', 
-          toToken: 'USD', 
-          rate: 1, 
+        {
+          fromToken: 'USDC',
+          toToken: 'USD',
+          rate: 1,
           source: 'coingecko',
           confidence: 0.99,
-          lastUpdated: new Date() 
+          lastUpdated: new Date()
         }
       ],
       lastUpdated: new Date()
@@ -455,12 +458,12 @@ export class CheckoutService {
   private calculateShipping(items: CartItem[]): number {
     // Simple shipping calculation - can be enhanced with real shipping APIs
     const totalWeight = items.reduce((weight, item) => weight + (item.quantity * 0.5), 0); // Assume 0.5 lbs per item
-    
+
     if (totalWeight === 0) return 0; // Digital items
     if (totalWeight <= 1) return 5.99;
     if (totalWeight <= 5) return 9.99;
     if (totalWeight <= 10) return 14.99;
-    
+
     return 19.99;
   }
 
@@ -583,7 +586,7 @@ export class CheckoutService {
       });
 
       const response = await fetch(`${this.apiBaseUrl}/api/orders?${params}`);
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch orders');
       }
