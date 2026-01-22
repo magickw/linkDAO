@@ -311,7 +311,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   // Subscribe to presence updates
   useEffect(() => {
     const unsubscribe = unifiedMessagingService.on('presence_update', (data) => {
-      setDmConversations(prev => prev.map(dm => 
+      setDmConversations(prev => prev.map(dm =>
         dm.participant.toLowerCase() === data.userAddress.toLowerCase()
           ? { ...dm, isOnline: data.isOnline, lastSeen: data.lastSeen }
           : dm
@@ -423,7 +423,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       const validReplyToId = replyingTo?.messageId && !replyingTo.messageId.startsWith('msg_')
         ? replyingTo.messageId
         : undefined;
-      
+
       const validQuoteId = quotingTo?.messageId && !quotingTo.messageId.startsWith('msg_')
         ? quotingTo.messageId
         : undefined;
@@ -1691,41 +1691,6 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
                           {/* Reactions */}
                           {message.reactions && message.reactions.length > 0 && (
-                            <div className={`flex flex-wrap mt-1 gap-1 ${message.fromAddress === address ? 'justify-end' : 'justify-start'}`}>
-                              {message.reactions.map((reaction, idx) => (
-                                <button
-                                  key={idx}
-                                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-1.5 py-0.5 text-[10px] flex items-center shadow-xs"
-                                  onClick={() => addReaction(message.id, reaction.emoji)}
-                                >
-                                  <span className="mr-1">{reaction.emoji}</span>
-                                  <span className="text-gray-500">{reaction.count}</span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Action Bar (Hidden by default, visible on hover) */}
-                          <div className={`
-                            flex items-center space-x-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity
-                            ${message.fromAddress === address ? 'flex-row-reverse space-x-reverse' : 'flex-row'}
-                          `}>
-                            <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-gray-500" onClick={() => replyToMessage(message.id, senderDisplayName, message.content)}>
-                              <CornerUpLeft size={12} />
-                            </button>
-                            <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-gray-500" onClick={() => quoteMessage(message.content, senderDisplayName, message.id)}>
-                              <Quote size={12} />
-                            </button>
-                            <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-gray-500" onClick={() => toggleReactionPicker(message.id)}>
-                              <span className="text-xs">+</span>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                          {/* Reactions */}
-                          {message.reactions && message.reactions.length > 0 && (
                             <div className="flex mt-2 space-x-1 relative">
                               {message.reactions.map((reaction, idx) => (
                                 <button
@@ -1908,6 +1873,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                           </div>
                         </div>
                       </div>
+                    </div>
                   </Web3SwipeGestureHandler>
                 </React.Fragment>
               );
