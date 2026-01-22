@@ -565,33 +565,14 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   };
 
   const quoteMessage = (content: string, author: string, messageId: string) => {
-    // Set quoting metadata
+    // Set quoting metadata for the preview banner
     setQuotingTo({ messageId, username: author, content });
     setReplyingTo(null); // Clear reply if quoting
 
-    // Format each line with a blockquote prefix for the editable area
-    const lines = content.trim().split('\n');
-    const quotedContent = lines.map(line => `> ${line}`).join('\n');
-    const quoteBlock = `> **${author}**:\n${quotedContent}\n\n`;
-
-    setNewMessage(prev => {
-      // Add proper spacing between existing message and new quote
-      const prefix = prev ? (prev.endsWith('\n\n') ? prev : prev.endsWith('\n') ? prev + '\n' : prev + '\n\n') : '';
-      return prefix + quoteBlock;
-    });
-
-    // Focus input and position cursor after a short delay to ensure state update
+    // Focus input after a short delay to ensure state update
     setTimeout(() => {
       if (messageInputRef.current) {
         messageInputRef.current.focus();
-        // Position at the end of the newly inserted text
-        const length = messageInputRef.current.value.length;
-        messageInputRef.current.selectionStart = length;
-        messageInputRef.current.selectionEnd = length;
-
-        // Manually trigger auto-resize for the new content
-        messageInputRef.current.style.height = 'auto';
-        messageInputRef.current.style.height = `${Math.min(messageInputRef.current.scrollHeight, 200)}px`;
       }
     }, 0);
   };
@@ -1618,6 +1599,17 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                               })()}
                             </div>
                           )}
+
+                          {/* Quote Reference - Full gray block for quotes via metadata */}
+                          {(() => {
+                            const quoteId = (message as any).quotedMessageId || (message as any).metadata?.quotedMessageId;
+                            if (!quoteId) return null;
+                            const quotedMsg = sortedMessages.find(m => m.id === quoteId);
+                            if (!quotedMsg) return null;
+                            
+                            const quoteAuthor = quotedMsg.fromAddress === address ? 'You' : truncateAddress(quotedMsg.fromAddress);
+                            return renderBlockquote([quotedMsg.content], quoteAuthor, `quote-${message.id}`);
+                          })()}
 
                           {/* Message content with improved Quote rendering */}
                           {message.content && message.content.trim() && (
