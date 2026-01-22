@@ -1131,6 +1131,10 @@ app.use('/api/marketplace/products', productVariantRoutes);
 // -------------------------------------------------------------------------
 app.use('/api/sellers', sellerRoutes);
 
+// Register product routes
+import productRoutes from './routes/productRoutes';
+app.use('/api/products', productRoutes);
+
 // 5. CATCH-ALL MARKETPLACE ROUTES (MUST BE LAST)
 // -------------------------------------------------------------------------
 // Seller profiles - handles /seller/:walletAddress pattern
@@ -1729,3 +1733,4 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 export default app;
+console.log('Force redeploy timestamp: Wed Jan 21 17:33:13 PST 2026');
