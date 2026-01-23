@@ -601,10 +601,24 @@ export class CryptoPaymentService {
       authorizationList: undefined
     }) as bigint;
 
+    console.log('[CryptoPaymentService] Token Approval Check:', {
+      token: token.address,
+      spender,
+      user: userAddress,
+      allowance: currentAllowance.toString(),
+      required: amount.toString()
+    });
+
     // If allowance is sufficient, no need to approve
     if (currentAllowance >= amount) {
+      console.log('[CryptoPaymentService] Allowance sufficient, skipping approval');
       return;
     }
+
+    console.log('[CryptoPaymentService] Insufficient allowance, requesting approval...', {
+      current: currentAllowance.toString(),
+      required: amount.toString()
+    });
 
     // Request approval for the exact amount needed
     // Note: Some users prefer infinite approval for UX, but exact amount is safer
@@ -714,11 +728,18 @@ export class CryptoPaymentService {
     );
 
     // Estimate gas for the escrow contract call
-    const gasEstimate = await this.gasFeeService.estimateGasFees(
-      escrowAddress,
-      escrowData,
-      token.isNative ? amount : 0n
-    );
+    let gasEstimate;
+    try {
+      gasEstimate = await this.gasFeeService.estimateGasFees(
+        escrowAddress,
+        escrowData,
+        token.isNative ? amount : 0n
+      );
+    } catch (error) {
+      console.error('Escrow gas estimation failed:', error);
+      // Attempt to decode error if possible or just log detail
+      throw error;
+    }
 
     // Ensure gas limit doesn't exceed security or network limits
     const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
