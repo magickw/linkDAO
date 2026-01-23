@@ -134,10 +134,9 @@ export function BusinessInfoStep({ onComplete, data }: BusinessInfoStepProps) {
             <div className="flex items-center justify-between mb-8 px-2">
                 {subStepTitles.map((title, idx) => (
                     <div key={idx} className="flex flex-col items-center flex-1 relative">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold z-10 ${
-                            subStep === idx ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.5)]' : 
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold z-10 ${subStep === idx ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.5)]' :
                             subStep > idx ? 'bg-green-500 text-white' : 'bg-gray-700 text-gray-400'
-                        }`}>
+                            }`}>
                             {subStep > idx ? '✓' : idx + 1}
                         </div>
                         <span className={`text-[10px] mt-2 font-medium uppercase tracking-tighter ${subStep === idx ? 'text-purple-400' : 'text-gray-500'}`}>
@@ -167,8 +166,8 @@ export function BusinessInfoStep({ onComplete, data }: BusinessInfoStepProps) {
                                     type="button"
                                     onClick={() => handleInputChange('businessType', 'individual')}
                                     className={`p-4 rounded-xl border-2 transition-all duration-200 ${formData.businessType === 'individual'
-                                            ? 'border-purple-500 bg-purple-500/10 shadow-[0_0_20px_rgba(168,85,247,0.15)]'
-                                            : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
+                                        ? 'border-purple-500 bg-purple-500/10 shadow-[0_0_20px_rgba(168,85,247,0.15)]'
+                                        : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
                                         }`}
                                 >
                                     <div className="text-center">
@@ -181,8 +180,8 @@ export function BusinessInfoStep({ onComplete, data }: BusinessInfoStepProps) {
                                     type="button"
                                     onClick={() => handleInputChange('businessType', 'business')}
                                     className={`p-4 rounded-xl border-2 transition-all duration-200 ${formData.businessType === 'business'
-                                            ? 'border-purple-500 bg-purple-500/10 shadow-[0_0_20px_rgba(168,85,247,0.15)]'
-                                            : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
+                                        ? 'border-purple-500 bg-purple-500/10 shadow-[0_0_20px_rgba(168,85,247,0.15)]'
+                                        : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
                                         }`}
                                 >
                                     <div className="text-center">
@@ -368,8 +367,8 @@ export function BusinessInfoStep({ onComplete, data }: BusinessInfoStepProps) {
                         )}
                     </div>
                     <div className="flex space-x-3">
-                        <button 
-                            type="button" 
+                        <button
+                            type="button"
                             onClick={() => onComplete(formData)}
                             className="text-gray-500 hover:text-white text-sm font-medium transition-colors px-4"
                         >
@@ -390,5 +389,5 @@ export function BusinessInfoStep({ onComplete, data }: BusinessInfoStepProps) {
         </div>
     );
 }
-    );
-}
+
+

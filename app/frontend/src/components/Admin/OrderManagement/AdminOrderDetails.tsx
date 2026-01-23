@@ -40,6 +40,25 @@ export function AdminOrderDetails({ orderId, onBack }: AdminOrderDetailsProps) {
         }
     };
 
+    const loadEscrowStatus = async () => {
+        if (!orderId) return;
+        try {
+            setEscrowLoading(true);
+            const status = await adminService.getEscrowStatus(orderId);
+            setEscrowStatus(status);
+        } catch (error) {
+            console.error('Failed to load escrow status:', error);
+        } finally {
+            setEscrowLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (order && order.paymentMethod === 'crypto') {
+            loadEscrowStatus();
+        }
+    }, [order]);
+
     const handleAction = async (action: string) => {
         if (!confirm(`Are you sure you want to perform: ${action}?`)) return;
 
@@ -151,6 +170,63 @@ export function AdminOrderDetails({ orderId, onBack }: AdminOrderDetailsProps) {
                             {order.status.toUpperCase()}
                         </Badge>
                     </GlassPanel>
+
+                    {/* Escrow Status Widget */}
+                    {order && order.paymentMethod === 'crypto' && (
+                        <GlassPanel className="p-6">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-sm font-semibold text-gray-400 uppercase">On-Chain Escrow</h3>
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={loadEscrowStatus}
+                                    disabled={escrowLoading}
+                                    className="h-6 w-6 p-0"
+                                >
+                                    <Clock className={`w-3 h-3 ${escrowLoading ? 'animate-spin' : ''}`} />
+                                </Button>
+                            </div>
+                            
+                            {escrowLoading ? (
+                                <div className="text-sm text-gray-500">Checking blockchain...</div>
+                            ) : escrowStatus ? (
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm text-gray-400">Status</span>
+                                        <Badge 
+                                            variant="outline"
+                                            className={
+                                                escrowStatus.statusLabel === 'DEPOSITED' ? 'text-green-400 border-green-400' :
+                                                escrowStatus.statusLabel === 'RELEASED' ? 'text-blue-400 border-blue-400' :
+                                                escrowStatus.statusLabel === 'REFUNDED' ? 'text-orange-400 border-orange-400' :
+                                                'text-gray-400'
+                                            }
+                                        >
+                                            {escrowStatus.statusLabel}
+                                        </Badge>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-400">Amount</span>
+                                        <span className="text-white font-mono">{parseFloat(escrowStatus.amount).toFixed(4)} {order.currency || 'TOKENS'}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-400">Created</span>
+                                        <span className="text-white">{new Date(escrowStatus.createdAt * 1000).toLocaleDateString()}</span>
+                                    </div>
+                                    {/* Verification Badge */}
+                                    <div className="mt-3 pt-3 border-t border-gray-800 flex items-center gap-2 text-green-400 text-xs font-semibold">
+                                        <CheckCircle className="w-4 h-4" />
+                                        Verified on Blockchain
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-sm text-yellow-500 flex items-center gap-2">
+                                    <ShieldAlert className="w-4 h-4" />
+                                    Not found on blockchain
+                                </div>
+                            )}
+                        </GlassPanel>
+                    )}
 
                     <GlassPanel className="p-6">
                         <h3 className="text-sm font-semibold text-gray-400 mb-2 uppercase">Customer</h3>

@@ -51,10 +51,10 @@ const DragDropUpload: React.FC<DragDropUploadProps> = ({
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     const files = Array.from(e.dataTransfer.files);
     const imageFile = files.find(file => file.type.startsWith('image/'));
-    
+
     if (imageFile) {
       await handleFileUpload(imageFile);
     }
@@ -92,7 +92,7 @@ const DragDropUpload: React.FC<DragDropUploadProps> = ({
       <label className="block text-sm font-medium text-gray-300 mb-2">
         {label}
       </label>
-      
+
       {/* Drag and Drop Area */}
       <div
         onDragOver={handleDragOver}
@@ -100,8 +100,8 @@ const DragDropUpload: React.FC<DragDropUploadProps> = ({
         onDrop={handleDrop}
         className={`
           relative border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200
-          ${isDragging 
-            ? 'border-purple-400 bg-purple-500/10' 
+          ${isDragging
+            ? 'border-purple-400 bg-purple-500/10'
             : 'border-gray-600 hover:border-gray-500'
           }
           ${isUploading ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}
@@ -124,7 +124,7 @@ const DragDropUpload: React.FC<DragDropUploadProps> = ({
               </p>
               <p className="text-gray-500 text-xs">PNG, JPG, GIF up to 10MB</p>
             </div>
-            
+
             <input
               type="file"
               accept={accept}
@@ -204,18 +204,18 @@ export function ProfileSetupStep({ onComplete, data, profile }: ProfileSetupStep
 
   const handleImportENS = async () => {
     if (!walletAddress) return;
-    
+
     setIsImportingENS(true);
     try {
       const ensName = await ensService.reverseResolveENS(walletAddress);
-      
+
       if (!ensName) {
         addToast('No ENS name found for this wallet address', 'info');
         return;
       }
 
       const resolved = await ensService.resolveENS(ensName);
-      
+
       if (resolved.profile) {
         const p = resolved.profile;
         setFormData(prev => ({
@@ -288,14 +288,14 @@ export function ProfileSetupStep({ onComplete, data, profile }: ProfileSetupStep
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
     setIsSubmitting(true);
     setSubmitError(null);
-    
+
     try {
       // Map form data to the expected API structure
       const profileData = {
@@ -306,7 +306,7 @@ export function ProfileSetupStep({ onComplete, data, profile }: ProfileSetupStep
         coverImageUrl: formData.coverImage,  // Map form's coverImage to API's coverImageUrl
         walletAddress, // Include wallet address
       };
-      
+
       await onComplete(profileData);
       addToast('Profile saved successfully!', 'success');
     } catch (error) {
@@ -339,7 +339,7 @@ export function ProfileSetupStep({ onComplete, data, profile }: ProfileSetupStep
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -382,209 +382,206 @@ export function ProfileSetupStep({ onComplete, data, profile }: ProfileSetupStep
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Display Name */}
-        <div>
-          <label htmlFor="displayName" className="block text-sm font-medium text-gray-300 mb-2">
-            Display Name *
-          </label>
-          <input
-            type="text"
-            id="displayName"
-            value={formData.displayName}
-            onChange={(e) => handleInputChange('displayName', e.target.value)}
-            className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-              errors.displayName ? 'border-red-500' : 'border-gray-600'
-            }`}
-            placeholder="Your name or username"
-            maxLength={50}
-          />
-          {errors.displayName && (
-            <p className="mt-1 text-sm text-red-400">{errors.displayName}</p>
-          )}
-          <p className="mt-1 text-xs text-gray-400">
-            This is how other users will see you on the marketplace
-          </p>
-        </div>
-
-        {/* Store Name */}
-        <div>
-          <label htmlFor="storeName" className="block text-sm font-medium text-gray-300 mb-2">
-            Store Name *
-          </label>
-          <input
-            type="text"
-            id="storeName"
-            value={formData.storeName}
-            onChange={(e) => handleInputChange('storeName', e.target.value)}
-            className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-              errors.storeName ? 'border-red-500' : 'border-gray-600'
-            }`}
-            placeholder="Your store or business name"
-            maxLength={100}
-          />
-          {errors.storeName && (
-            <p className="mt-1 text-sm text-red-400">{errors.storeName}</p>
-          )}
-          <p className="mt-1 text-xs text-gray-400">
-            The name of your store or business on the marketplace
-          </p>
-        </div>
-      </div>
-
-      {/* Cover Image - Using Unified Image Upload */}
-      <UnifiedImageUpload
-        context="cover"
-        label="Cover Image"
-        description="Add a cover image for your seller profile (recommended: 1200x400px)"
-        onUploadSuccess={(results) => {
-          if (results.length > 0) {
-            handleInputChange('coverImage', results[0].cdnUrl);
-          }
-        }}
-        onUploadError={(error) => {
-          console.error('Cover image upload error:', error);
-          addToast('Failed to upload cover image. Please try again.', 'error');
-        }}
-        initialImages={formData.coverImage ? [{
-          originalUrl: formData.coverImage,
-          cdnUrl: formData.coverImage,
-          thumbnails: { small: formData.coverImage, medium: formData.coverImage, large: formData.coverImage },
-          metadata: { width: 1200, height: 400, size: 0, format: 'jpeg' }
-        }] : []}
-        onRemoveImage={() => handleInputChange('coverImage', '')}
-        variant="compact"
-        className="mb-6"
-      />
-
-      {/* Store Logo - Using Unified Image Upload */}
-      <UnifiedImageUpload
-        context="profile"
-        label="Store Logo"
-        description="Add a logo for your store branding (recommended: square format)"
-        onUploadSuccess={(results) => {
-          if (results.length > 0) {
-            handleInputChange('logo', results[0].cdnUrl);
-          }
-        }}
-        onUploadError={(error) => {
-          console.error('Logo upload error:', error);
-          addToast('Failed to upload store logo. Please try again.', 'error');
-        }}
-        initialImages={formData.logo ? [{
-          originalUrl: formData.logo,
-          cdnUrl: formData.logo,
-          thumbnails: { small: formData.logo, medium: formData.logo, large: formData.logo },
-          metadata: { width: 400, height: 400, size: 0, format: 'jpeg' }
-        }] : []}
-        onRemoveImage={() => handleInputChange('logo', '')}
-        variant="compact"
-        className="mb-6"
-      />
-
-      {/* Bio */}
-      <div>
-        <label htmlFor="bio" className="block text-sm font-medium text-gray-300 mb-2">
-          Short Bio
-        </label>
-        <textarea
-          id="bio"
-          value={formData.bio}
-          onChange={(e) => handleInputChange('bio', e.target.value)}
-          rows={3}
-          className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none ${
-            errors.bio ? 'border-red-500' : 'border-gray-600'
-          }`}
-          placeholder="Tell buyers a bit about yourself..."
-          maxLength={500}
-        />
-        {errors.bio && (
-          <p className="mt-1 text-sm text-red-400">{errors.bio}</p>
-        )}
-        <div className="flex justify-between mt-1">
-          <p className="text-xs text-gray-400">
-            Optional: A brief introduction about yourself
-          </p>
-          <p className="text-xs text-gray-400">
-            {formData.bio.length}/500
-          </p>
-        </div>
-      </div>
-
-      {/* Store Description */}
-      <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-2">
-          Store Description
-        </label>
-        <textarea
-          id="description"
-          value={formData.description}
-          onChange={(e) => handleInputChange('description', e.target.value)}
-          rows={4}
-          className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none ${
-            errors.description ? 'border-red-500' : 'border-gray-600'
-          }`}
-          placeholder="Describe your store, what you sell, your values, etc..."
-          maxLength={1000}
-        />
-        {errors.description && (
-          <p className="mt-1 text-sm text-red-400">{errors.description}</p>
-        )}
-        <div className="flex justify-between mt-1">
-          <p className="text-xs text-gray-400">
-            Optional: Detailed description of your store and products
-          </p>
-          <p className="text-xs text-gray-400">
-            {formData.description.length}/1000
-          </p>
-        </div>
-      </div>
-
-      {/* Error Message */}
-      {submitError && (
-        <div className="bg-red-900/50 border border-red-700 rounded-lg p-4">
-          <div className="flex items-center">
-            <svg className="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <h4 className="text-red-300 font-medium">Error</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Display Name */}
+          <div>
+            <label htmlFor="displayName" className="block text-sm font-medium text-gray-300 mb-2">
+              Display Name *
+            </label>
+            <input
+              type="text"
+              id="displayName"
+              value={formData.displayName}
+              onChange={(e) => handleInputChange('displayName', e.target.value)}
+              className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.displayName ? 'border-red-500' : 'border-gray-600'
+                }`}
+              placeholder="Your name or username"
+              maxLength={50}
+            />
+            {errors.displayName && (
+              <p className="mt-1 text-sm text-red-400">{errors.displayName}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-400">
+              This is how other users will see you on the marketplace
+            </p>
           </div>
-          <p className="text-red-200 text-sm mt-2">{submitError}</p>
-          <p className="text-red-200 text-sm mt-2">
-            It seems there might be an issue with the backend service. Please try again later or contact support if the problem persists.
-          </p>
+
+          {/* Store Name */}
+          <div>
+            <label htmlFor="storeName" className="block text-sm font-medium text-gray-300 mb-2">
+              Store Name *
+            </label>
+            <input
+              type="text"
+              id="storeName"
+              value={formData.storeName}
+              onChange={(e) => handleInputChange('storeName', e.target.value)}
+              className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.storeName ? 'border-red-500' : 'border-gray-600'
+                }`}
+              placeholder="Your store or business name"
+              maxLength={100}
+            />
+            {errors.storeName && (
+              <p className="mt-1 text-sm text-red-400">{errors.storeName}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-400">
+              The name of your store or business on the marketplace
+            </p>
+          </div>
         </div>
-      )}
 
-      {/* Tips */}
-      <div className="bg-blue-900 bg-opacity-50 rounded-lg p-4">
-        <h4 className="text-blue-300 font-medium text-sm mb-2">💡 Profile Tips</h4>
-        <ul className="text-blue-200 text-sm space-y-1">
-          <li>• Use a clear, professional cover image to make your profile stand out</li>
-          <li>• Choose a memorable store name that reflects your brand</li>
-          <li>• Write a compelling bio that highlights your expertise</li>
-          <li>• Be authentic - buyers appreciate genuine sellers</li>
-        </ul>
-      </div>
+        {/* Cover Image - Using Unified Image Upload */}
+        <UnifiedImageUpload
+          context="cover"
+          label="Cover Image"
+          description="Add a cover image for your seller profile (recommended: 1200x400px)"
+          onUploadSuccess={(results) => {
+            if (results.length > 0) {
+              handleInputChange('coverImage', results[0].cdnUrl);
+            }
+          }}
+          onUploadError={(error) => {
+            console.error('Cover image upload error:', error);
+            addToast('Failed to upload cover image. Please try again.', 'error');
+          }}
+          initialImages={formData.coverImage ? [{
+            originalUrl: formData.coverImage,
+            cdnUrl: formData.coverImage,
+            thumbnails: { small: formData.coverImage, medium: formData.coverImage, large: formData.coverImage },
+            metadata: { width: 1200, height: 400, size: 0, format: 'jpeg' }
+          }] : []}
+          onRemoveImage={() => handleInputChange('coverImage', '')}
+          variant="compact"
+          className="mb-6"
+        />
 
-      {/* Submit Button */}
-      <div className="flex justify-end">
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={isSubmitting}
-          className="min-w-32"
-        >
-          {isSubmitting ? (
-            <div className="flex items-center">
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-              Saving...
-            </div>
-          ) : (
-            'Save Profile'
+        {/* Store Logo - Using Unified Image Upload */}
+        <UnifiedImageUpload
+          context="profile"
+          label="Store Logo"
+          description="Add a logo for your store branding (recommended: square format)"
+          onUploadSuccess={(results) => {
+            if (results.length > 0) {
+              handleInputChange('logo', results[0].cdnUrl);
+            }
+          }}
+          onUploadError={(error) => {
+            console.error('Logo upload error:', error);
+            addToast('Failed to upload store logo. Please try again.', 'error');
+          }}
+          initialImages={formData.logo ? [{
+            originalUrl: formData.logo,
+            cdnUrl: formData.logo,
+            thumbnails: { small: formData.logo, medium: formData.logo, large: formData.logo },
+            metadata: { width: 400, height: 400, size: 0, format: 'jpeg' }
+          }] : []}
+          onRemoveImage={() => handleInputChange('logo', '')}
+          variant="compact"
+          className="mb-6"
+        />
+
+        {/* Bio */}
+        <div>
+          <label htmlFor="bio" className="block text-sm font-medium text-gray-300 mb-2">
+            Short Bio
+          </label>
+          <textarea
+            id="bio"
+            value={formData.bio}
+            onChange={(e) => handleInputChange('bio', e.target.value)}
+            rows={3}
+            className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none ${errors.bio ? 'border-red-500' : 'border-gray-600'
+              }`}
+            placeholder="Tell buyers a bit about yourself..."
+            maxLength={500}
+          />
+          {errors.bio && (
+            <p className="mt-1 text-sm text-red-400">{errors.bio}</p>
           )}
-        </Button>
-      </div>
-    </form>
+          <div className="flex justify-between mt-1">
+            <p className="text-xs text-gray-400">
+              Optional: A brief introduction about yourself
+            </p>
+            <p className="text-xs text-gray-400">
+              {formData.bio.length}/500
+            </p>
+          </div>
+        </div>
+
+        {/* Store Description */}
+        <div>
+          <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-2">
+            Store Description
+          </label>
+          <textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => handleInputChange('description', e.target.value)}
+            rows={4}
+            className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none ${errors.description ? 'border-red-500' : 'border-gray-600'
+              }`}
+            placeholder="Describe your store, what you sell, your values, etc..."
+            maxLength={1000}
+          />
+          {errors.description && (
+            <p className="mt-1 text-sm text-red-400">{errors.description}</p>
+          )}
+          <div className="flex justify-between mt-1">
+            <p className="text-xs text-gray-400">
+              Optional: Detailed description of your store and products
+            </p>
+            <p className="text-xs text-gray-400">
+              {formData.description.length}/1000
+            </p>
+          </div>
+        </div>
+
+        {/* Error Message */}
+        {submitError && (
+          <div className="bg-red-900/50 border border-red-700 rounded-lg p-4">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h4 className="text-red-300 font-medium">Error</h4>
+            </div>
+            <p className="text-red-200 text-sm mt-2">{submitError}</p>
+            <p className="text-red-200 text-sm mt-2">
+              It seems there might be an issue with the backend service. Please try again later or contact support if the problem persists.
+            </p>
+          </div>
+        )}
+
+        {/* Tips */}
+        <div className="bg-blue-900 bg-opacity-50 rounded-lg p-4">
+          <h4 className="text-blue-300 font-medium text-sm mb-2">💡 Profile Tips</h4>
+          <ul className="text-blue-200 text-sm space-y-1">
+            <li>• Use a clear, professional cover image to make your profile stand out</li>
+            <li>• Choose a memorable store name that reflects your brand</li>
+            <li>• Write a compelling bio that highlights your expertise</li>
+            <li>• Be authentic - buyers appreciate genuine sellers</li>
+          </ul>
+        </div>
+
+        {/* Submit Button */}
+        <div className="flex justify-end">
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={isSubmitting}
+            className="min-w-32"
+          >
+            {isSubmitting ? (
+              <div className="flex items-center">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                Saving...
+              </div>
+            ) : (
+              'Save Profile'
+            )}
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 }
