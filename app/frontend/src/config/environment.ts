@@ -7,11 +7,11 @@ export const ENV_CONFIG = {
   // Backend API URL - Force localhost in development or when running on localhost
   BACKEND_URL: ((process.env.NODE_ENV === 'development' || isLocalhost) && !process.env.NEXT_PUBLIC_FORCE_REMOTE)
     ? 'http://localhost:10000'
-    : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'),
+    : (process.env.NEXT_PUBLIC_BACKEND_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:10000')),
 
   API_URL: ((process.env.NODE_ENV === 'development' || isLocalhost) && !process.env.NEXT_PUBLIC_FORCE_REMOTE)
     ? 'http://localhost:10000'
-    : (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'),
+    : (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:10000')),
 
   // WebSocket URL - derived from backend URL (Socket.IO will append /socket.io/)
   WS_URL: ((process.env.NODE_ENV === 'development' || isLocalhost) && !process.env.NEXT_PUBLIC_FORCE_REMOTE)
@@ -19,7 +19,7 @@ export const ENV_CONFIG = {
     : (process.env.NEXT_PUBLIC_WS_URL ||
       (process.env.NEXT_PUBLIC_BACKEND_URL
         ? `${process.env.NEXT_PUBLIC_BACKEND_URL.replace(/^http/, 'ws').replace(/\/$/, '')}`
-        : 'ws://localhost:10000')),
+        : (typeof window !== 'undefined' ? window.location.origin.replace(/^http/, 'ws') : 'ws://localhost:10000'))),
 
   // WalletConnect
   WALLETCONNECT_PROJECT_ID: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'd051afaee33392cccc42e141b9f7697b',

@@ -124,8 +124,9 @@ class RealTimeNotificationService {
   connect(userId: string, token: string): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
-        // Use Socket.IO client instead of raw WebSocket
-        const wsUrl = ENV_CONFIG.WS_URL || 'ws://localhost:10000';
+        // Use Socket.IO client
+        // Pass the HTTP/HTTPS URL, Socket.IO handles the WebSocket protocol automatically
+        const wsUrl = ENV_CONFIG.BACKEND_URL || 'http://localhost:10000';
 
         this.socket = io(wsUrl, {
           path: '/socket.io/',

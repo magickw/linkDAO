@@ -793,7 +793,7 @@ export class OrderService {
         image: productImage,
         category: product.mainCategory || product.categoryId || '',
         quantity: dbOrder.quantity || 1,
-        unitPrice: orderTotal,
+        unitPrice: items.length > 0 ? items[0].price : orderTotal,
         totalPrice: orderTotal,
         isPhysical: product.isPhysical ?? false,
         isService: product.isService ?? false,

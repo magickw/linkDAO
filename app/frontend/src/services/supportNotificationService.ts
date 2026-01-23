@@ -10,17 +10,19 @@ export interface SupportNotification {
   createdAt: Date;
 }
 
+import { ENV_CONFIG } from '../config/environment';
+
 class SupportNotificationService {
   private socket: Socket | null = null;
   private notifications: SupportNotification[] = [];
   private listeners: Set<(notifications: SupportNotification[]) => void> = new Set();
 
   connect(token: string): void {
-    const url = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+    const url = ENV_CONFIG.BACKEND_URL || 'http://localhost:10000';
     
     this.socket = io(url, {
       auth: { token },
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
     });
 
     this.socket.on('notification', (notification: SupportNotification) => {
