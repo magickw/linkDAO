@@ -14,7 +14,7 @@ import { Fragment } from 'react';
 import { base, baseSepolia, mainnet, polygon, arbitrum, sepolia } from '@/lib/wagmi';
 import { getTokensForChain, SUPPORTED_CHAINS } from '@/config/payment';
 import { getTokenLogoWithFallback } from '@/utils/tokenLogoUtils';
-import { TokenSwapModal } from '@/components/Wallet/TokenSwapModal';
+import SwapTokenModal from '@/components/WalletActions/SwapTokenModal';
 
 export default function Wallet() {
   const { isConnected } = useWeb3();
@@ -968,14 +968,18 @@ export default function Wallet() {
         </div>
       </div>
 
-      {/* Integrated Token Swap Modal */}
-      <TokenSwapModal
+      {/* Integrated Swap Token Modal */}
+      <SwapTokenModal
         isOpen={showTokenSwapModal}
         onClose={() => {
           setShowTokenSwapModal(false);
           setSwapTokenIn(null);
         }}
-        initialTokenIn={swapTokenIn}
+        tokens={tokens}
+        initialFromToken={swapTokenIn?.symbol}
+        onSwap={async () => {
+          await refresh();
+        }}
       />
     </Layout>
   );

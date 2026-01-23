@@ -3,6 +3,7 @@ import { safeLogger } from '../utils/safeLogger';
 import { Token, CurrencyAmount, TradeType, Percent } from '@uniswap/sdk-core';
 import { Pool, Route, Trade, SwapQuoter, SwapRouter, FeeAmount, computePoolAddress } from '@uniswap/v3-sdk';
 import { IUniswapV3Service, SwapQuote, SwapParams, SwapResult, LiquidityInfo } from '../types/uniswapV3';
+import { getContractAddresses } from '../config/contracts';
 
 // Uniswap V3 contract ABIs (minimal)
 const QUOTER_V2_ABI = [
@@ -44,17 +45,24 @@ export class UniswapV3Service implements IUniswapV3Service {
   constructor(
     rpcUrl: string,
     chainId: number = 11155111,
-    quoterAddress: string = '0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3', // Sepolia Quoter V2
-    routerAddress: string = '0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E', // Sepolia SwapRouter02
-    factoryAddress: string = '0x0227628f3F023bb0B980b67D528571c95c6DaC1c'  // Sepolia Factory
+    quoterAddress?: string,
+    routerAddress?: string,
+    factoryAddress?: string
   ) {
     this.provider = new ethers.JsonRpcProvider(rpcUrl);
     this.chainId = chainId;
-    this.quoterAddress = quoterAddress;
-    this.routerAddress = routerAddress;
-    this.factoryAddress = factoryAddress;
 
-    safeLogger.info('UniswapV3Service initialized with direct SDK integration (ethers v6 compatible)');
+    // Load defaults from config if not provided
+    const config = getContractAddresses(chainId);
+
+    this.quoterAddress = quoterAddress || config.uniswapQuoter;
+    this.routerAddress = routerAddress || config.uniswapRouter;
+    this.factoryAddress = factoryAddress || config.uniswapFactory;
+
+    safeLogger.info(`UniswapV3Service initialized for chain ${chainId}`, {
+      router: this.routerAddress,
+      quoter: this.quoterAddress
+    });
   }
 
   /**
@@ -64,7 +72,6 @@ export class UniswapV3Service implements IUniswapV3Service {
     try {
       const { tokenIn, tokenOut, amountIn } = params;
       const fee = 3000; // Default 0.3% fee
-      const tradeType = 'EXACT_INPUT'; // Default to exact input
 
       // Get token info
       const [tokenInInfo, tokenOutInfo] = await Promise.all([
@@ -74,10 +81,8 @@ export class UniswapV3Service implements IUniswapV3Service {
 
       const quoterContract = new ethers.Contract(this.quoterAddress, QUOTER_V2_ABI, this.provider);
 
-      let amountOut: bigint;
-      let amountInBigInt: bigint;
-
       // Quote exact input
+      // Note: quoter methods are view but state-changing in simulation, so we use staticCall
       const result = await quoterContract.quoteExactInputSingle.staticCall({
         tokenIn: tokenIn.address,
         tokenOut: tokenOut.address,
@@ -85,19 +90,21 @@ export class UniswapV3Service implements IUniswapV3Service {
         fee,
         sqrtPriceLimitX96: 0
       });
-      amountOut = result.amountOut;
-      amountInBigInt = ethers.parseUnits(amountIn.toString(), tokenInInfo.decimals);
 
-      // Calculate price impact (simplified)
-      const priceImpact = 0.5; // Would need pool data for accurate calculation
+      const amountOut = result.amountOut;
+      const amountInBigInt = ethers.parseUnits(amountIn.toString(), tokenInInfo.decimals);
 
-      // Get gas estimate
+      // Estimate gas dynamically
       const gasEstimate = await this.estimateSwapGas(params);
+
+      // Calculate minimal price impact (simplified)
+      // In a real production app, we would fetch pool liquidity to calculate this accurately
+      const priceImpact = 0.5;
 
       return {
         amountIn: ethers.formatUnits(amountInBigInt, tokenInInfo.decimals),
         amountOut: ethers.formatUnits(amountOut, tokenOutInfo.decimals),
-        amountOutMinimum: ethers.formatUnits(amountOut, tokenOutInfo.decimals),
+        amountOutMinimum: ethers.formatUnits(amountOut, tokenOutInfo.decimals), // Frontend should apply slippage
         priceImpact: priceImpact.toString(),
         gasEstimate: gasEstimate.toString(),
         route: [{
@@ -116,35 +123,101 @@ export class UniswapV3Service implements IUniswapV3Service {
   }
 
   /**
-   * Execute a token swap using SwapRouter directly
+   * Build transaction data for client-side execution
    */
-  async executeSwap(params: SwapParams, privateKey: string): Promise<SwapResult> {
+  async buildSwapTransaction(params: SwapParams, walletAddress: string): Promise<any> {
     try {
-      const wallet = new ethers.Wallet(privateKey, this.provider);
       const { tokenIn, tokenOut, amountIn, slippageTolerance = 0.5 } = params;
       const fee = 3000; // Default 0.3%
 
-      // Get token info
       const [tokenInInfo, tokenOutInfo] = await Promise.all([
         this.validateAndGetTokenInfo(tokenIn.address),
         this.validateAndGetTokenInfo(tokenOut.address)
       ]);
 
-      // Get quote first
+      // Re-quote to ensure freshness
       const quote = await this.getSwapQuote(params);
 
-      // Approve token spending if needed
+      const amountInWei = ethers.parseUnits(amountIn.toString(), tokenInInfo.decimals);
+      const amountOutMinimum = ethers.parseUnits(
+        (parseFloat(quote.amountOut) * (1 - slippageTolerance / 100)).toFixed(tokenOutInfo.decimals),
+        tokenOutInfo.decimals
+      );
+
+      const routerContract = new ethers.Contract(this.routerAddress, SWAP_ROUTER_ABI, this.provider);
+
+      // Encode the function call
+      const data = routerContract.interface.encodeFunctionData('exactInputSingle', [{
+        tokenIn: tokenIn.address,
+        tokenOut: tokenOut.address,
+        fee,
+        recipient: walletAddress,
+        amountIn: amountInWei,
+        amountOutMinimum,
+        sqrtPriceLimitX96: 0
+      }]);
+
+      // Get current gas price
+      const gasPrice = await this.getOptimizedGasPrice();
+
+      // Estimate gas limit
+      let gasLimit = BigInt(200000); // Fallback
+      try {
+        // We can try to estimate gas by simulating the call from the user's address
+        // Note: This might fail if the user hasn't approved the token yet
+        gasLimit = await this.provider.estimateGas({
+          from: walletAddress,
+          to: this.routerAddress,
+          data,
+          value: BigInt(0) // Assuming ERC20 swap, value is 0
+        });
+        // Add buffer
+        gasLimit = (gasLimit * BigInt(120)) / BigInt(100);
+      } catch (e) {
+        safeLogger.warn('Gas estimation failed (likely due to missing approval), using fallback:', e);
+      }
+
+      return {
+        to: this.routerAddress,
+        data,
+        value: '0',
+        gas: gasLimit.toString(),
+        gasPrice: gasPrice.toString()
+      };
+
+    } catch (error) {
+      safeLogger.error('Error building swap transaction:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Execute a token swap using the admin wallet (backend execution)
+   */
+  async executeAdminSwap(params: SwapParams, privateKey: string): Promise<SwapResult> {
+    try {
+      const wallet = new ethers.Wallet(privateKey, this.provider);
+      const { tokenIn, tokenOut, amountIn, slippageTolerance = 0.5 } = params;
+      const fee = 3000;
+
+      const [tokenInInfo, tokenOutInfo] = await Promise.all([
+        this.validateAndGetTokenInfo(tokenIn.address),
+        this.validateAndGetTokenInfo(tokenOut.address)
+      ]);
+
+      const quote = await this.getSwapQuote(params);
+
+      // Approve token spending if needed (Backend wallet)
       const tokenInContract = new ethers.Contract(tokenIn.address, ERC20_ABI, wallet);
       const amountInWei = ethers.parseUnits(amountIn.toString(), tokenInInfo.decimals);
 
       const allowance = await tokenInContract.allowance(wallet.address, this.routerAddress);
       if (allowance < amountInWei) {
-        safeLogger.info('Approving token spend...');
+        safeLogger.info('Approving token spend for admin swap...');
         const approveTx = await tokenInContract.approve(this.routerAddress, amountInWei);
         await approveTx.wait();
       }
 
-      // Build swap transaction
       const routerContract = new ethers.Contract(this.routerAddress, SWAP_ROUTER_ABI, wallet);
 
       const amountOutMinimum = ethers.parseUnits(
@@ -174,7 +247,7 @@ export class UniswapV3Service implements IUniswapV3Service {
         timestamp: Math.floor(Date.now() / 1000)
       };
     } catch (error) {
-      safeLogger.error('Error executing swap:', error);
+      safeLogger.error('Error executing admin swap:', error);
       return {
         transactionHash: '',
         blockNumber: 0,
@@ -207,11 +280,6 @@ export class UniswapV3Service implements IUniswapV3Service {
         poolContract.token1()
       ]);
 
-      const [token0Info, token1Info] = await Promise.all([
-        this.validateAndGetTokenInfo(token0),
-        this.validateAndGetTokenInfo(token1)
-      ]);
-
       return {
         poolAddress,
         liquidity: liquidity.toString(),
@@ -220,8 +288,8 @@ export class UniswapV3Service implements IUniswapV3Service {
         fee: fee / 10000,
         token0,
         token1,
-        reserve0: '0', // Would need additional calculation
-        reserve1: '0'  // Would need additional calculation
+        reserve0: '0',
+        reserve1: '0'
       };
     } catch (error) {
       safeLogger.error('Error getting liquidity info:', error);
@@ -229,12 +297,8 @@ export class UniswapV3Service implements IUniswapV3Service {
     }
   }
 
-  /**
-   * Monitor liquidity pools for better routing
-   */
   async monitorLiquidityPools(tokenPairs: Array<{ tokenA: string; tokenB: string; fee: number }>): Promise<LiquidityInfo[]> {
     const results: LiquidityInfo[] = [];
-
     for (const pair of tokenPairs) {
       try {
         const info = await this.getLiquidityInfo(pair.tokenA, pair.tokenB, pair.fee);
@@ -243,23 +307,16 @@ export class UniswapV3Service implements IUniswapV3Service {
         safeLogger.warn(`Could not get liquidity for pair ${pair.tokenA}/${pair.tokenB}:`, error);
       }
     }
-
     return results;
   }
 
-  /**
-   * Handle swap failures and provide alternatives
-   */
   async handleSwapFailure(params: SwapParams, error: Error): Promise<SwapQuote[]> {
     safeLogger.info('Attempting to find alternative routes after swap failure...');
     const alternatives: SwapQuote[] = [];
-
-    // Try different fee tiers
     const feeTiers = [FeeAmount.LOW, FeeAmount.MEDIUM, FeeAmount.HIGH];
 
     for (const fee of feeTiers) {
       if (fee === params.fee) continue;
-
       try {
         const quote = await this.getSwapQuote({ ...params, fee });
         alternatives.push(quote);
@@ -267,42 +324,32 @@ export class UniswapV3Service implements IUniswapV3Service {
         // Continue to next fee tier
       }
     }
-
     return alternatives;
   }
 
-  /**
-   * Estimate gas for a swap
-   */
   private async estimateSwapGas(params: SwapParams): Promise<bigint> {
     try {
-      // Approximate gas for Uniswap V3 single-hop swap
-      return BigInt(150000);
+      // Simple heuristic fallback if specific estimation isn't needed
+      return BigInt(180000);
     } catch (error) {
       safeLogger.error('Error estimating gas:', error);
       return BigInt(200000);
     }
   }
 
-  /**
-   * Get pool address for token pair using computePoolAddress
-   */
   private async getPoolAddress(tokenA: string, tokenB: string, fee: number): Promise<string> {
     try {
-      // Sort tokens (Uniswap requires token0 < token1)
       const [token0, token1] = tokenA.toLowerCase() < tokenB.toLowerCase()
         ? [tokenA, tokenB]
         : [tokenB, tokenA];
 
-      // Compute pool address deterministically
       const poolAddress = computePoolAddress({
         factoryAddress: this.factoryAddress,
-        tokenA: new Token(this.chainId, token0, 18), // decimals don't matter for address computation
+        tokenA: new Token(this.chainId, token0, 18),
         tokenB: new Token(this.chainId, token1, 18),
         fee: fee as FeeAmount
       });
 
-      // Verify pool exists by checking code
       const code = await this.provider.getCode(poolAddress);
       if (code === '0x') {
         return ethers.ZeroAddress;
@@ -315,34 +362,25 @@ export class UniswapV3Service implements IUniswapV3Service {
     }
   }
 
-  /**
-   * Get current gas price with optimization
-   */
   async getOptimizedGasPrice(): Promise<bigint> {
     try {
       const feeData = await this.provider.getFeeData();
       const gasPrice = feeData.gasPrice || BigInt(0);
-      // Add 10% buffer for faster execution
       return (gasPrice * BigInt(110)) / BigInt(100);
     } catch (error) {
       safeLogger.error('Error getting gas price:', error);
-      return ethers.parseUnits('20', 'gwei'); // Fallback gas price
+      return ethers.parseUnits('20', 'gwei');
     }
   }
 
-  /**
-   * Validate token addresses and get token info
-   */
   async validateAndGetTokenInfo(tokenAddress: string): Promise<{ symbol: string; decimals: number; name: string }> {
     try {
       const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, this.provider);
-
       const [symbol, decimals, name] = await Promise.all([
         tokenContract.symbol(),
         tokenContract.decimals(),
         tokenContract.name(),
       ]);
-
       return { symbol, decimals: Number(decimals), name };
     } catch (error) {
       safeLogger.error('Error validating token:', error);

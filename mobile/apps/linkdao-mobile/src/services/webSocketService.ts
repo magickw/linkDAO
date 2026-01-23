@@ -51,9 +51,11 @@ class WebSocketService {
     this.isConnecting = true;
 
     try {
-      this.socket = io(ENV.WS_URL, {
+      // Use BACKEND_URL instead of WS_URL - socket.io-client will automatically
+      // upgrade the protocol from HTTP to WS (or HTTPS to WSS)
+      this.socket = io(ENV.BACKEND_URL, {
         auth: { token: this.accessToken }, // Use accessToken for authentication
-        transports: ['websocket', 'polling'],
+        transports: ['websocket', 'polling'], // Allow fallback to polling
         reconnection: true,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,

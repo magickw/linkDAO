@@ -799,6 +799,10 @@ app.use('/api/messaging', messagingRoutes);
 import aiChatRoutes from './routes/aiChatRoutes';
 app.use('/api/ai-chat', aiChatRoutes);
 
+// DEX Swap Routes
+import dexRoutes from './routes/dexRoutes';
+app.use('/api/dex', dexRoutes);
+
 // Add redirect routes for legacy/alternative chat endpoints that frontend might be trying to access
 // Remove conflicting chat route registrations to prevent 404/500 errors
 // app.use('/api/chat', messagingRoutes);

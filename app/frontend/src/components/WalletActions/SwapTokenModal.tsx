@@ -19,6 +19,7 @@ interface SwapTokenModalProps {
   onClose: () => void;
   tokens: TokenBalance[];
   onSwap?: (fromToken: string, toToken: string, amount: number) => Promise<void>;
+  initialFromToken?: string;
 }
 
 // Helper to estimate decimals since TokenBalance might miss it
@@ -28,7 +29,7 @@ const getDecimals = (symbol: string) => {
   return 18;
 };
 
-export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: SwapTokenModalProps) {
+export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap, initialFromToken }: SwapTokenModalProps) {
   const { addToast } = useToast();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
@@ -36,7 +37,7 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
   const { currentChainId, ensureNetwork, isSwitching, getChainName, supportedChains } = useNetworkSwitch();
 
   const [gasFeeService, setGasFeeService] = useState<GasFeeService | null>(null);
-  const [fromToken, setFromToken] = useState(tokens[0]?.symbol || 'ETH');
+  const [fromToken, setFromToken] = useState(initialFromToken || tokens[0]?.symbol || 'ETH');
   const [toToken, setToToken] = useState('USDC');
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('');
@@ -136,6 +137,13 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
       setSelectedChainId(currentChainId);
     }
   }, [isOpen, currentChainId]);
+
+  // Set initial token when modal opens
+  useEffect(() => {
+    if (isOpen && initialFromToken) {
+      setFromToken(initialFromToken);
+    }
+  }, [isOpen, initialFromToken]);
 
   // Initialize gas fee service
   useEffect(() => {
@@ -322,7 +330,7 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
     try {
       // Use max uint256 for approval to save gas on future swaps
       const maxApproval = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
-      
+
       const hash = await writeContract({
         address: fromTokenAddress as `0x${string}`,
         abi: erc20Abi,
@@ -445,9 +453,9 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
   if (!isOpen) return null;
 
   // Determine if approval is needed
-  const needsApproval = !isEth && 
-    allowance !== undefined && 
-    fromAmount && 
+  const needsApproval = !isEth &&
+    allowance !== undefined &&
+    fromAmount &&
     parseFloat(formatUnits(allowance as bigint, getDecimals(fromToken))) < parseFloat(fromAmount) &&
     spenderAddress;
 
