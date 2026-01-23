@@ -4,10 +4,10 @@
  */
 
 import { apiClient } from './apiClient';
-import { 
-  AddressValidationResult, 
-  DiscountValidationResult, 
-  CheckoutRecommendation 
+import {
+    AddressValidationResult,
+    DiscountValidationResult,
+    CheckoutRecommendation
 } from '../types/checkout';
 
 export interface CheckoutSessionParams {
@@ -30,7 +30,18 @@ class CheckoutService {
      */
     async createSession(params: CheckoutSessionParams) {
         try {
-            const response = await apiClient.post('/api/checkout/session', params);
+            // Transform shipping address to match backend expectations
+            const transformedParams = {
+                ...params,
+                shippingAddress: {
+                    ...params.shippingAddress,
+                    street: params.shippingAddress.address1 || params.shippingAddress.street,
+                    name: `${params.shippingAddress.firstName} ${params.shippingAddress.lastName}`.trim(),
+                    phone: params.shippingAddress.phoneNumber || params.shippingAddress.phone
+                }
+            };
+
+            const response = await apiClient.post('/api/checkout/session', transformedParams);
             if (response.data && response.data.success) {
                 return response.data.data;
             }
@@ -47,7 +58,18 @@ class CheckoutService {
      */
     async processCheckout(params: ProcessCheckoutParams) {
         try {
-            const response = await apiClient.post('/api/checkout/process', params);
+            // Transform shipping address
+            const transformedParams = {
+                ...params,
+                shippingAddress: {
+                    ...params.shippingAddress,
+                    street: params.shippingAddress.address1 || params.shippingAddress.street,
+                    name: `${params.shippingAddress.firstName} ${params.shippingAddress.lastName}`.trim(),
+                    phone: params.shippingAddress.phoneNumber || params.shippingAddress.phone
+                }
+            };
+
+            const response = await apiClient.post('/api/checkout/process', transformedParams);
             if (response.data && response.data.success) {
                 return response.data.data;
             }
@@ -113,12 +135,12 @@ class CheckoutService {
      */
     async applyDiscount(code: string, cartTotal: number, items: any[]): Promise<DiscountValidationResult> {
         try {
-            const response = await apiClient.post('/api/checkout/discount', { 
-                code, 
+            const response = await apiClient.post('/api/checkout/discount', {
+                code,
                 cartTotal,
-                items 
+                items
             });
-            
+
             if (response.data && response.data.success) {
                 return {
                     isValid: true,
@@ -127,7 +149,7 @@ class CheckoutService {
                     code
                 };
             }
-            
+
             return {
                 isValid: false,
                 discountAmount: 0,
@@ -155,7 +177,7 @@ class CheckoutService {
             const response = await apiClient.post('/api/hybrid-payment/recommend-path', params);
             if (response.data && response.data.success) {
                 // Transform if necessary, or return as is if types match
-                return response.data.data; 
+                return response.data.data;
             }
             return null;
         } catch (error) {

@@ -41,14 +41,13 @@ export interface Cart {
 }
 
 export interface ShippingAddress {
-    fullName: string;
-    addressLine1: string;
-    addressLine2?: string;
+    name: string;
+    street: string;
     city: string;
     state: string;
     postalCode: string;
     country: string;
-    phoneNumber: string;
+    phone?: string;
 }
 
 export interface Order {
@@ -62,6 +61,8 @@ export interface Order {
     paymentMethod: 'crypto' | 'stripe';
     shippingAddress: ShippingAddress;
     trackingNumber?: string;
+    trackingCarrier?: string;
+    trackingUrl?: string;
     createdAt: string;
     updatedAt: string;
 }

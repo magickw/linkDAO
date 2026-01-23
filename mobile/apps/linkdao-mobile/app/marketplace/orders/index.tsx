@@ -150,7 +150,10 @@ export default function OrdersScreen() {
                             {order.trackingNumber && (
                                 <View style={styles.trackingInfo}>
                                     <Ionicons name="location-outline" size={16} color="#6b7280" />
-                                    <Text style={styles.trackingText}>Tracking: {order.trackingNumber}</Text>
+                                    <Text style={styles.trackingText}>
+                                        {order.trackingCarrier ? `${order.trackingCarrier}: ` : 'Tracking: '}
+                                        {order.trackingNumber}
+                                    </Text>
                                 </View>
                             )}
 

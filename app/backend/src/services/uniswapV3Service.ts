@@ -42,6 +42,8 @@ export class UniswapV3Service implements IUniswapV3Service {
   private routerAddress: string;
   private factoryAddress: string;
 
+  private wrappedNativeToken: string;
+
   // Cache for token info to reduce RPC calls and avoid rate limits
   private tokenCache: Map<string, { symbol: string; decimals: number; name: string }> = new Map();
 
@@ -52,7 +54,8 @@ export class UniswapV3Service implements IUniswapV3Service {
     routerAddress?: string,
     factoryAddress?: string
   ) {
-    this.provider = new ethers.JsonRpcProvider(rpcUrl);
+    // Disable batching to avoid "Batch of more than 3 requests" errors on free RPCs
+    this.provider = new ethers.JsonRpcProvider(rpcUrl, undefined, { batchMaxCount: 1 });
     this.chainId = chainId;
 
     // Load defaults from config if not provided
@@ -61,6 +64,7 @@ export class UniswapV3Service implements IUniswapV3Service {
     this.quoterAddress = quoterAddress || config.uniswapQuoter;
     this.routerAddress = routerAddress || config.uniswapRouter;
     this.factoryAddress = factoryAddress || config.uniswapFactory;
+    this.wrappedNativeToken = config.wrappedNativeToken;
 
     safeLogger.info(`UniswapV3Service initialized for chain ${chainId}`, {
       router: this.routerAddress,
@@ -84,11 +88,15 @@ export class UniswapV3Service implements IUniswapV3Service {
 
       const quoterContract = new ethers.Contract(this.quoterAddress, QUOTER_V2_ABI, this.provider);
 
+      // Handle Native ETH -> WETH wrapping for contract calls
+      const tokenInAddr = tokenIn.address === ethers.ZeroAddress ? this.wrappedNativeToken : tokenIn.address;
+      const tokenOutAddr = tokenOut.address === ethers.ZeroAddress ? this.wrappedNativeToken : tokenOut.address;
+
       // Quote exact input
       // Note: quoter methods are view but state-changing in simulation, so we use staticCall
       const result = await quoterContract.quoteExactInputSingle.staticCall({
-        tokenIn: tokenIn.address,
-        tokenOut: tokenOut.address,
+        tokenIn: tokenInAddr,
+        tokenOut: tokenOutAddr,
         amountIn: ethers.parseUnits(amountIn.toString(), tokenInInfo.decimals),
         fee,
         sqrtPriceLimitX96: 0
@@ -111,10 +119,10 @@ export class UniswapV3Service implements IUniswapV3Service {
         priceImpact: priceImpact.toString(),
         gasEstimate: gasEstimate.toString(),
         route: [{
-          tokenIn: tokenIn.address,
+          tokenIn: tokenIn.address, // Keep original address for frontend
           tokenOut: tokenOut.address,
           fee: fee / 10000,
-          pool: await this.getPoolAddress(tokenIn.address, tokenOut.address, fee)
+          pool: await this.getPoolAddress(tokenInAddr, tokenOutAddr, fee)
         }],
         blockNumber: await this.provider.getBlockNumber(),
         timestamp: Math.floor(Date.now() / 1000)
@@ -151,10 +159,15 @@ export class UniswapV3Service implements IUniswapV3Service {
 
       const routerContract = new ethers.Contract(this.routerAddress, SWAP_ROUTER_ABI, this.provider);
 
+      // Handle Native ETH -> WETH wrapping for router calls
+      const isNativeIn = tokenIn.address === ethers.ZeroAddress;
+      const tokenInAddr = isNativeIn ? this.wrappedNativeToken : tokenIn.address;
+      const tokenOutAddr = tokenOut.address === ethers.ZeroAddress ? this.wrappedNativeToken : tokenOut.address;
+
       // Encode the function call
       const data = routerContract.interface.encodeFunctionData('exactInputSingle', [{
-        tokenIn: tokenIn.address,
-        tokenOut: tokenOut.address,
+        tokenIn: tokenInAddr,
+        tokenOut: tokenOutAddr,
         fee,
         recipient: walletAddress,
         amountIn: amountInWei,
@@ -174,7 +187,7 @@ export class UniswapV3Service implements IUniswapV3Service {
           from: walletAddress,
           to: this.routerAddress,
           data,
-          value: BigInt(0) // Assuming ERC20 swap, value is 0
+          value: isNativeIn ? amountInWei : BigInt(0)
         });
         // Add buffer
         gasLimit = (gasLimit * BigInt(120)) / BigInt(100);
@@ -185,7 +198,7 @@ export class UniswapV3Service implements IUniswapV3Service {
       return {
         to: this.routerAddress,
         data,
-        value: '0',
+        value: isNativeIn ? amountInWei.toString() : '0',
         gas: gasLimit.toString(),
         gasPrice: gasPrice.toString()
       };
@@ -212,18 +225,25 @@ export class UniswapV3Service implements IUniswapV3Service {
 
       const quote = await this.getSwapQuote(params);
 
-      // Approve token spending if needed (Backend wallet)
-      const tokenInContract = new ethers.Contract(tokenIn.address, ERC20_ABI, wallet);
-      const amountInWei = ethers.parseUnits(amountIn.toString(), tokenInInfo.decimals);
-
-      const allowance = await tokenInContract.allowance(wallet.address, this.routerAddress);
-      if (allowance < amountInWei) {
-        safeLogger.info('Approving token spend for admin swap...');
-        const approveTx = await tokenInContract.approve(this.routerAddress, amountInWei);
-        await approveTx.wait();
-      }
+      // Handle Native ETH -> WETH wrapping for admin swap
+      const isNativeIn = tokenIn.address === ethers.ZeroAddress;
+      const tokenInAddr = isNativeIn ? this.wrappedNativeToken : tokenIn.address;
+      const tokenOutAddr = tokenOut.address === ethers.ZeroAddress ? this.wrappedNativeToken : tokenOut.address;
 
       const routerContract = new ethers.Contract(this.routerAddress, SWAP_ROUTER_ABI, wallet);
+
+      // Approve token spending if needed (only for ERC20, not Native ETH)
+      const amountInWei = ethers.parseUnits(amountIn.toString(), tokenInInfo.decimals);
+
+      if (!isNativeIn) {
+        const tokenInContract = new ethers.Contract(tokenIn.address, ERC20_ABI, wallet);
+        const allowance = await tokenInContract.allowance(wallet.address, this.routerAddress);
+        if (allowance < amountInWei) {
+          safeLogger.info('Approving token spend for admin swap...');
+          const approveTx = await tokenInContract.approve(this.routerAddress, amountInWei);
+          await approveTx.wait();
+        }
+      }
 
       const amountOutMinimum = ethers.parseUnits(
         (parseFloat(quote.amountOut) * (1 - slippageTolerance / 100)).toFixed(tokenOutInfo.decimals),
@@ -231,13 +251,15 @@ export class UniswapV3Service implements IUniswapV3Service {
       );
 
       const tx = await routerContract.exactInputSingle({
-        tokenIn: tokenIn.address,
-        tokenOut: tokenOut.address,
+        tokenIn: tokenInAddr,
+        tokenOut: tokenOutAddr,
         fee,
         recipient: wallet.address,
         amountIn: amountInWei,
         amountOutMinimum,
         sqrtPriceLimitX96: 0
+      }, {
+        value: isNativeIn ? amountInWei : BigInt(0)
       });
 
       const receipt = await tx.wait();
@@ -384,9 +406,9 @@ export class UniswapV3Service implements IUniswapV3Service {
         throw new Error('Token address is required');
       }
 
-      // Check for zero address
+      // Check for zero address (Native Token)
       if (tokenAddress === ethers.ZeroAddress) {
-        throw new Error(`Invalid token address: ${tokenAddress}`);
+        return { symbol: 'ETH', decimals: 18, name: 'Ether' };
       }
 
       // Check cache first

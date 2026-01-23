@@ -9,7 +9,7 @@ import { ENV } from '../constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../store';
 
-type WebSocketEvent =
+export type WebSocketEvent =
   | 'connected'
   | 'disconnected'
   | 'new_post'

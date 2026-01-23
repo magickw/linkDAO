@@ -56,6 +56,7 @@ export type { CreatePostData, PostsResponse } from './postsService';
 export type { CreateCommunityData, JoinCommunityResponse } from './communitiesService';
 export type { CreateMessageData, CreateConversationData } from './messagingService';
 export type { WebSocketEvent } from './webSocketService';
+export type { Product, Cart, CartItem, Order, ShippingAddress } from './marketplaceService';
 export type { BiometricAuthResult, BiometricConfig } from './biometricService';
 export type { CacheEntry, OfflineAction } from './offlineManager';
 export type { PushNotificationConfig, NotificationPermissions } from './pushNotificationService';

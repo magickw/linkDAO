@@ -55,7 +55,7 @@ export class DEXTradingController {
       // Note: We need a way to validate tokens via multi-chain service, or assume addresses are valid for the chain
       // For now, we'll construct the token info manually or use a helper if available.
       // Ideally, MultiChainDEXService should expose token validation.
-      
+
       // Let's use the current chain config to get common tokens, or just pass addresses if they are custom.
       // Since validateAndGetTokenInfo is on uniswapV3Service (the single one), we might need to expose it on MultiChainDEXService.
       // But let's proceed with using multiChainService.getSwapQuote which expects SwapParams.
@@ -96,12 +96,21 @@ export class DEXTradingController {
         }
       });
     } catch (error) {
-      safeLogger.error('Error getting swap quote:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get swap quote',
-        error: error.message
-      });
+      if (error.message && error.message.includes('Invalid token address')) {
+        safeLogger.warn('Swap Quote Client Error:', error.message);
+        res.status(400).json({
+          success: false,
+          message: 'Invalid token address',
+          error: error.message
+        });
+      } else {
+        safeLogger.error('Error getting swap quote:', error);
+        res.status(500).json({
+          success: false,
+          message: 'Failed to get swap quote',
+          error: error.message
+        });
+      }
     }
   }
 
@@ -161,12 +170,21 @@ export class DEXTradingController {
         }
       });
     } catch (error) {
-      safeLogger.error('Error getting token price:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get token price',
-        error: error.message
-      });
+      if (error.message && error.message.includes('Invalid token address')) {
+        safeLogger.warn('Token Price Client Error:', error.message);
+        res.status(400).json({
+          success: false,
+          message: 'Invalid token address',
+          error: error.message
+        });
+      } else {
+        safeLogger.error('Error getting token price:', error);
+        res.status(500).json({
+          success: false,
+          message: 'Failed to get token price',
+          error: error.message
+        });
+      }
     }
   }
 
@@ -378,7 +396,11 @@ export class DEXTradingController {
         }
       });
     } catch (error) {
-      safeLogger.error('Error validating token:', error);
+      if (error.message && error.message.includes('Invalid token address')) {
+        safeLogger.warn('Token Validation Client Error:', error.message);
+      } else {
+        safeLogger.error('Error validating token:', error);
+      }
       res.status(400).json({
         success: false,
         message: 'Invalid token address',
