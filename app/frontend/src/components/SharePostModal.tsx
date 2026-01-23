@@ -219,7 +219,13 @@ export default function SharePostModal({
         addToast('Link copied to clipboard!', 'success');
       }
     }
-  ];
+  ].filter(option => {
+    // Exclude 'Share to Community' if post doesn't have a title (e.g. statuses)
+    if (option.id === 'community') {
+      return !!post.title;
+    }
+    return true;
+  });
 
   // Handle internal sharing (to timeline or community)
   const handleInternalShare = async (shareType: string) => {
