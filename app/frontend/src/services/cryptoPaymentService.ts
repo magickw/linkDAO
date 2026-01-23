@@ -5,7 +5,8 @@ import {
   formatUnits,
 
   erc20Abi,
-  Hash
+  Hash,
+  encodeFunctionData
 } from 'viem';
 import {
   PaymentRequest,
@@ -758,7 +759,7 @@ export class CryptoPaymentService {
   }
 
   /**
-   * Encode the createEscrow function call data
+   * Encode the createEscrow function call data using viem's encodeFunctionData for safety
    */
   private encodeEscrowCallData(
     orderId: bigint,
@@ -768,31 +769,18 @@ export class CryptoPaymentService {
     deliveryDeadline: bigint,
     resolutionMethod: number
   ): string {
-    // Function signature for createEscrow(uint256,address,address,uint256,uint256,uint8)
-    const functionSignature = this.keccak256('createEscrow(uint256,address,address,uint256,uint256,uint8)');
-
-    // Encode parameters (each parameter is 32 bytes)
-    const orderIdPadded = orderId.toString(16).padStart(64, '0');
-    const sellerPadded = seller.slice(2).padStart(64, '0');
-    const tokenPadded = token.slice(2).padStart(64, '0');
-    const amountPadded = amount.toString(16).padStart(64, '0');
-    const deliveryDeadlinePadded = deliveryDeadline.toString(16).padStart(64, '0');
-    const resolutionMethodPadded = resolutionMethod.toString(16).padStart(64, '0');
-
-    return functionSignature + orderIdPadded + sellerPadded + tokenPadded + amountPadded + deliveryDeadlinePadded + resolutionMethodPadded;
-  }
-
-  /**
-   * Simple keccak256 hash implementation for function signature
-   */
-  private keccak256(data: string): string {
-    // This is a simplified version - in production you'd use a proper crypto library
-    // For now, we'll use a known function signature hash
-    const knownSignatures: Record<string, string> = {
-      'createEscrow(uint256,address,address,uint256,uint256,uint8)': '0x8c8a9d5e'
-    };
-
-    return knownSignatures[data] || '0x00000000';
+    return encodeFunctionData({
+      abi: enhancedEscrowABI,
+      functionName: 'createEscrow',
+      args: [
+        orderId,
+        seller as `0x${string}`,
+        token as `0x${string}`,
+        amount,
+        deliveryDeadline,
+        resolutionMethod
+      ]
+    });
   }
 
   /**
