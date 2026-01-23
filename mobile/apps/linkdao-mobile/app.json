@@ -1,70 +1,76 @@
 {
-    "expo": {
-        "name": "LinkDAO",
-        "slug": "linkdao-mobile",
-        "scheme": "linkdao",
-        "version": "1.0.1",
-        "orientation": "portrait",
-        "icon": "./assets/icon.png",
-        "userInterfaceStyle": "automatic",
-        "runtimeVersion": {
-            "policy": "appVersion"
-        },
-        "updates": {
-            "url": "https://u.expo.dev/d051afaee33392cccc42e141b9f7697b"
-        },
-        "splash": {
-            "image": "./assets/splash-icon.png",
-            "resizeMode": "contain",
-            "backgroundColor": "#3b82f6"
-        },
-        "assetBundlePatterns": [
-            "**/*"
-        ],
-        "ios": {
-            "supportsTablet": true,
-            "bundleIdentifier": "io.linkdao.mobile",
-            "associatedDomains": [
-                "applinks:linkdao.io",
-                "applinks:www.linkdao.io"
-            ]
-        },
-        "android": {
-            "adaptiveIcon": {
-                "foregroundImage": "./assets/adaptive-icon.png",
-                "backgroundColor": "#ffffff"
+  "expo": {
+    "name": "LinkDAO",
+    "slug": "linkdao-mobile",
+    "scheme": "linkdao",
+    "version": "1.0.1",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d051afaee33392cccc42e141b9f7697b"
+    },
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#3b82f6"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "io.linkdao.mobile",
+      "associatedDomains": [
+        "applinks:linkdao.io",
+        "applinks:www.linkdao.io"
+      ]
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "io.linkdao.mobile",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "linkdao.io",
+              "pathPrefix": "/oauth-callback"
             },
-            "package": "io.linkdao.mobile",
-            "intentFilters": [
-                {
-                    "action": "VIEW",
-                    "autoVerify": true,
-                    "data": [
-                        {
-                            "scheme": "https",
-                            "host": "linkdao.io",
-                            "pathPrefix": "/oauth-callback"
-                        },
-                        {
-                            "scheme": "linkdao",
-                            "host": "oauth-callback"
-                        }
-                    ],
-                    "category": [
-                        "BROWSABLE",
-                        "DEFAULT"
-                    ]
-                }
-            ]
-        },
-        "web": {
-            "favicon": "./assets/logo.png"
-        },
-        "plugins": [
-            "expo-router"
-        ],
-        "experiments": {
-            "typedRoutes": false
+            {
+              "scheme": "linkdao",
+              "host": "oauth-callback"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
+      ]
+    },
+    "web": {
+      "favicon": "./assets/logo.png"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d593b52d-271a-437b-95e5-b29aec4dfbe7"
+      }
     }
+  }
 }
