@@ -22,6 +22,7 @@ export interface UseCommunityInteractionsReturn {
   // Posting functions
   createPost: (params: {
     communityId: string;
+    communityIds?: string[];
     title: string;
     content: string;
     mediaUrls?: string[];
@@ -147,6 +148,7 @@ export function useCommunityInteractions(): UseCommunityInteractionsReturn {
 
   const createPost = useCallback(async (params: {
     communityId: string;
+    communityIds?: string[];
     title: string;
     content: string;
     mediaUrls?: string[];

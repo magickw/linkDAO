@@ -10,10 +10,15 @@ import {
   FileText,
   MessageSquare,
   HelpCircle,
-  Megaphone
+  Megaphone,
+  Users,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import RichTextEditor from '@/components/EnhancedPostComposer/RichTextEditor';
 import { useCommunityInteractions } from '../../hooks/useCommunityInteractions';
+import { CommunityService } from '../../services/communityService';
+import { Community } from '../../models/Community';
 
 interface CommunityPostCreatorProps {
   communityId: string;
@@ -50,7 +55,39 @@ export default function CommunityPostCreator({
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [mediaInput, setMediaInput] = useState('');
 
+  // Cross-posting state
+  const [availableCommunities, setAvailableCommunities] = useState<Community[]>([]);
+  const [selectedCommunityIds, setSelectedCommunityIds] = useState<string[]>([]);
+  const [showCommunitySelector, setShowCommunitySelector] = useState(false);
+  const [loadingCommunities, setLoadingCommunities] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch user's communities for cross-posting
+  React.useEffect(() => {
+    const fetchCommunities = async () => {
+      try {
+        setLoadingCommunities(true);
+        const response = await CommunityService.getMyCommunities(1, 100);
+        // Filter out current community
+        setAvailableCommunities(response.communities.filter(c => c.id !== communityId));
+      } catch (err) {
+        console.error('Failed to fetch communities:', err);
+      } finally {
+        setLoadingCommunities(false);
+      }
+    };
+
+    fetchCommunities();
+  }, [communityId]);
+
+  const toggleCommunitySelection = (id: string) => {
+    setSelectedCommunityIds(prev =>
+      prev.includes(id)
+        ? prev.filter(cId => cId !== id)
+        : [...prev, id]
+    );
+  };
 
   const getPostTypeIcon = (type: string) => {
     switch (type) {
@@ -102,6 +139,7 @@ export default function CommunityPostCreator({
       content: content.trim(),
       tags,
       mediaUrls,
+      communityIds: selectedCommunityIds, // Include cross-posted communities
       postType
     });
 
@@ -111,6 +149,7 @@ export default function CommunityPostCreator({
       setContent('');
       setTags([]);
       setMediaUrls([]);
+      setSelectedCommunityIds([]);
       setPostType(allowedPostTypes.find(t => t.enabled)?.id || 'discussion');
 
       // Dispatch event to notify other components that a post was created
@@ -184,8 +223,8 @@ export default function CommunityPostCreator({
                   type="button"
                   onClick={() => setPostType(type.id)}
                   className={`p-3 rounded-lg border-2 transition-colors ${postType === type.id
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                    : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                     }`}
                 >
                   <div className="flex items-center space-x-2">
@@ -326,6 +365,81 @@ export default function CommunityPostCreator({
           )}
         </div>
 
+
+
+        {/* Cross-posting Section */}
+        {
+          availableCommunities.length > 0 && (
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowCommunitySelector(!showCommunitySelector)}
+                className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              >
+                <Users className="w-4 h-4" />
+                <span>
+                  Post to other communities
+                  {selectedCommunityIds.length > 0 && ` (${selectedCommunityIds.length} selected)`}
+                </span>
+                <svg
+                  className={`w-4 h-4 transition-transform ${showCommunitySelector ? 'rotate-180' : ''}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {showCommunitySelector && (
+                <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-lg max-h-48 overflow-y-auto">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                    Select additional communities to post this content to:
+                  </p>
+                  <div className="space-y-2">
+                    {loadingCommunities ? (
+                      <div className="text-center py-2 text-sm text-gray-500">Loading communities...</div>
+                    ) : availableCommunities.length === 0 ? (
+                      <div className="text-center py-2 text-sm text-gray-500">No other communities joined</div>
+                    ) : (
+                      availableCommunities.map(community => (
+                        <div
+                          key={community.id}
+                          onClick={() => toggleCommunitySelection(community.id)}
+                          className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                        >
+                          {selectedCommunityIds.includes(community.id) ? (
+                            <CheckSquare className="w-5 h-5 text-blue-600 dark:text-blue-500" />
+                          ) : (
+                            <Square className="w-5 h-5 text-gray-400" />
+                          )}
+
+                          <div className="flex items-center space-x-2">
+                            {community.icon ? (
+                              <img
+                                src={community.icon}
+                                alt={community.name}
+                                className="w-6 h-6 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-xs font-bold text-blue-800 dark:text-blue-200">
+                                {community.name.substring(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                            <span className="text-sm text-gray-800 dark:text-gray-200 font-medium">
+                              {community.name}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        }
+
         {/* Submit Button */}
         <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
           {onCancel && (
@@ -346,7 +460,7 @@ export default function CommunityPostCreator({
             <span>{loading ? 'Creating...' : 'Create Post'}</span>
           </button>
         </div>
-      </form>
-    </div>
+      </form >
+    </div >
   );
 }

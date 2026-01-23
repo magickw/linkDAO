@@ -33,13 +33,6 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
   const isMountedRef = useRef(true);
 
   useEffect(() => {
-    // In development mode, skip wallet login bridge entirely
-    // Mock auth is handled in _layout.tsx
-    if (__DEV__) {
-      console.log('🧪 WalletLoginBridge: Disabled in development mode');
-      return;
-    }
-
     isMountedRef.current = true;
 
     console.log('WalletLoginBridge: useEffect triggered', {

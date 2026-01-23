@@ -165,17 +165,11 @@ class AuthService {
         return { nonce, message };
       }
 
-      console.warn('⚠️ Backend response not successful, using fallback');
-      // Fallback nonce generation
-      const fallbackNonce = `fallback_nonce_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const fallbackMessage = `Sign this message to authenticate with LinkDAO: ${Date.now()}`;
-      return { nonce: fallbackNonce, message: fallbackMessage };
+      console.warn('⚠️ Backend response not successful');
+      throw new Error('Failed to retrieve authentication nonce from server');
     } catch (error) {
       console.error('❌ Failed to get nonce from backend:', error);
-      // Fallback nonce generation
-      const fallbackNonce = `fallback_nonce_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const fallbackMessage = `Sign this message to authenticate with LinkDAO: ${Date.now()}`;
-      return { nonce: fallbackNonce, message: fallbackMessage };
+      throw error;
     }
   }
 

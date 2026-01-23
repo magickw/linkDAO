@@ -490,4 +490,22 @@ export class PostService {
       throw error;
     }
   }
+
+  static async sharePostToCommunity(originalPostId: string, targetCommunityId: string, author: string): Promise<Post> {
+    try {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${originalPostId}/share`, {
+        method: 'POST',
+        headers: await enhancedAuthService.getAuthHeaders(),
+        body: JSON.stringify({
+          targetCommunityId,
+          author
+        })
+      });
+
+      return this.handleResponse(response, 'Failed to share post to community');
+    } catch (error) {
+      console.error('Error sharing post to community:', error);
+      throw error;
+    }
+  }
 }

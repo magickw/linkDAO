@@ -38,6 +38,7 @@ export interface CreatePostInput {
   tags?: string[];
   onchainRef?: string;
   communityId?: string;
+  communityIds?: string[]; // For posting to multiple communities
   isRepost?: boolean;
   mediaUrls?: string[];
   location?: {

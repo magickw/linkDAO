@@ -29,7 +29,7 @@ export class PostController {
     try {
       console.log('POST /api/posts - Creating post');
 
-      const { content, author, type = 'text', visibility = 'public', tags, media, parentId, onchainRef, shareToSocialMedia } = req.body;
+      const { content, author, type = 'text', visibility = 'public', tags, media, parentId, onchainRef, shareToSocialMedia, communityIds, communityId } = req.body;
 
       if (!content || content.trim() === '') {
         return res.status(400).json({
@@ -53,7 +53,9 @@ export class PostController {
         media,
         parentId,
         onchainRef,
-        shareToSocialMedia
+        shareToSocialMedia,
+        communityId,
+        communityIds
       };
 
       // Create post using PostService
@@ -391,6 +393,40 @@ export class PostController {
       return res.status(500).json({
         success: false,
         error: error.message || 'Failed to create repost'
+      });
+    }
+  }
+
+  async sharePost(req: Request, res: Response): Promise<Response> {
+    try {
+      const { id } = req.params; // Original post ID
+      const { targetCommunityId, author } = req.body;
+
+      if (!targetCommunityId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Target community ID is required'
+        });
+      }
+
+      if (!author) {
+        return res.status(400).json({
+          success: false,
+          error: 'Author address is required'
+        });
+      }
+
+      const post = await this.postService.sharePostToCommunity(id, targetCommunityId, author);
+
+      return res.status(201).json({
+        success: true,
+        data: post
+      });
+    } catch (error: any) {
+      console.error('Error sharing post:', error);
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to share post'
       });
     }
   }

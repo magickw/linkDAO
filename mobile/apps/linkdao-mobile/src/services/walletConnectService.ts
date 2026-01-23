@@ -389,12 +389,7 @@ class WalletService {
       }
 
       // For other providers or as a fallback in development
-      console.warn('⚠️ No real signer for current provider, using fallback (development mode)');
-      const wallet = ethers.Wallet.createRandom();
-      const signature = await wallet.signMessage(message);
-      
-      console.log('✅ Message signed (fallback mode)');
-      return signature;
+      throw new Error('No signer available for current provider');
     } catch (error) {
       console.error('❌ Failed to sign message:', error);
       throw error;

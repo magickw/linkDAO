@@ -1,12 +1,12 @@
 import { CommunityService } from './communityService';
 import { CommunityMembershipService } from './communityMembershipService';
-import { 
-  Community, 
-  CreateCommunityInput 
+import {
+  Community,
+  CreateCommunityInput
 } from '../models/Community';
-import { 
-  CommunityMembership, 
-  CreateCommunityMembershipInput 
+import {
+  CommunityMembership,
+  CreateCommunityMembershipInput
 } from '../models/CommunityMembership';
 import { ModerationQueue as ModerationQueueItem } from '../types/auth';
 import { requestManager } from './requestManager';
@@ -31,6 +31,7 @@ export interface CommunityAnalyticsResponse {
 
 export interface CreatePostInput {
   communityId: string;
+  communityIds?: string[];
   title: string;
   content: string;
   tags?: string[];
@@ -74,6 +75,7 @@ export interface LeaveCommunityRequest {
 
 export interface CreatePostRequest {
   communityId: string;
+  communityIds?: string[]; // For multi-community posting
   authorAddress: string;
   title: string;
   content: string;
@@ -120,27 +122,27 @@ export class CommunityInteractionService {
       if (!input.communityId) {
         throw new Error('Community ID is required');
       }
-      
+
       if (!input.title || input.title.trim().length < 1) {
         throw new Error('Post title is required');
       }
-      
+
       if (!input.content || input.content.trim().length < 1) {
         throw new Error('Post content is required');
       }
-      
+
       if (input.title.trim().length > 200) {
         throw new Error('Post title must be less than 200 characters');
       }
-      
+
       if (input.content.trim().length > 10000) {
         throw new Error('Post content must be less than 10,000 characters');
       }
-      
+
       if (input.tags && input.tags.length > 10) {
         throw new Error('Cannot have more than 10 tags');
       }
-      
+
       if (input.mediaUrls && input.mediaUrls.length > 5) {
         throw new Error('Cannot have more than 5 media URLs');
       }
@@ -166,9 +168,9 @@ export class CommunityInteractionService {
       return response.success;
     } catch (error) {
       console.error('Error creating post:', error);
-      
+
       // TODO: Implement error tracking when analyticsService is available
-      
+
       return false;
     }
   }
@@ -182,7 +184,7 @@ export class CommunityInteractionService {
       if (!content || content.trim().length < 20) {
         throw new Error('Content must be at least 20 characters for title generation');
       }
-      
+
       if (content.trim().length > 10000) {
         throw new Error('Content is too long for title generation');
       }
@@ -211,7 +213,7 @@ export class CommunityInteractionService {
       if (!topic || topic.trim().length < 5) {
         throw new Error('Topic must be at least 5 characters for content generation');
       }
-      
+
       if (topic.trim().length > 200) {
         throw new Error('Topic is too long for content generation');
       }
@@ -240,7 +242,7 @@ export class CommunityInteractionService {
       if (!content || content.trim().length < 30) {
         throw new Error('Content must be at least 30 characters for tag generation');
       }
-      
+
       if (content.trim().length > 10000) {
         throw new Error('Content is too long for tag generation');
       }
@@ -269,7 +271,7 @@ export class CommunityInteractionService {
       if (!content || content.trim().length < 50) {
         throw new Error('Content must be at least 50 characters for improvement');
       }
-      
+
       if (content.trim().length > 10000) {
         throw new Error('Content is too long for improvement');
       }
@@ -306,9 +308,9 @@ export class CommunityInteractionService {
       return response.success;
     } catch (error) {
       console.error('Error joining community:', error);
-      
+
       // TODO: Implement error tracking when analyticsService is available
-      
+
       return false;
     }
   }
@@ -330,9 +332,9 @@ export class CommunityInteractionService {
       return response.success;
     } catch (error) {
       console.error('Error leaving community:', error);
-      
+
       // TODO: Implement error tracking when analyticsService is available
-      
+
       return false;
     }
   }
@@ -349,7 +351,7 @@ export class CommunityInteractionService {
   }> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
-    
+
     try {
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${request.communityId}/join`, {
         method: 'POST',
@@ -361,18 +363,18 @@ export class CommunityInteractionService {
         }),
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       const result = await response.json();
-      
+
       if (!response.ok) {
         return {
           success: false,
           message: result.error || 'Failed to join community'
         };
       }
-      
+
       return {
         success: true,
         data: result.data,
@@ -380,14 +382,14 @@ export class CommunityInteractionService {
       };
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         return {
           success: false,
           message: 'Request timeout'
         };
       }
-      
+
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Failed to join community'
@@ -406,7 +408,7 @@ export class CommunityInteractionService {
   }> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
-    
+
     try {
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${request.communityId}/leave`, {
         method: 'POST',
@@ -418,32 +420,32 @@ export class CommunityInteractionService {
         }),
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       const result = await response.json();
-      
+
       if (!response.ok) {
         return {
           success: false,
           message: result.error || 'Failed to leave community'
         };
       }
-      
+
       return {
         success: true,
         message: 'Successfully left community'
       };
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         return {
           success: false,
           message: 'Request timeout'
         };
       }
-      
+
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Failed to leave community'
@@ -463,11 +465,11 @@ export class CommunityInteractionService {
   }> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // Longer timeout for post creation
-    
+
     try {
       // Get authentication headers
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${request.communityId}/posts`, {
         method: 'POST',
         headers: authHeaders,
@@ -477,22 +479,23 @@ export class CommunityInteractionService {
           content: request.content,
           mediaUrls: request.mediaUrls,
           tags: request.tags,
-          postType: request.postType
+          postType: request.postType,
+          communityIds: request.communityIds
         }),
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       const result = await response.json();
-      
+
       if (!response.ok) {
         return {
           success: false,
           message: result.error || 'Failed to create post'
         };
       }
-      
+
       return {
         success: true,
         data: result.data,
@@ -500,14 +503,14 @@ export class CommunityInteractionService {
       };
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         return {
           success: false,
           message: 'Request timeout'
         };
       }
-      
+
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Failed to create post'
@@ -530,11 +533,11 @@ export class CommunityInteractionService {
   }> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // Longer timeout for AI operations
-    
+
     try {
       // Get authentication headers
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${request.communityId}/posts/ai-assisted`, {
         method: 'POST',
         headers: authHeaders,
@@ -550,18 +553,18 @@ export class CommunityInteractionService {
         }),
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       const result = await response.json();
-      
+
       if (!response.ok) {
         return {
           success: false,
           message: result.error || 'Failed to process AI request'
         };
       }
-      
+
       return {
         success: true,
         data: result.data,
@@ -569,14 +572,14 @@ export class CommunityInteractionService {
       };
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         return {
           success: false,
           message: 'Request timeout'
         };
       }
-      
+
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Failed to process AI request'
@@ -595,11 +598,11 @@ export class CommunityInteractionService {
   }> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
-    
+
     try {
       // Get authentication headers
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${action.communityId}/moderate`, {
         method: 'POST',
         headers: authHeaders,
@@ -613,32 +616,32 @@ export class CommunityInteractionService {
         }),
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       const result = await response.json();
-      
+
       if (!response.ok) {
         return {
           success: false,
           message: result.error || 'Failed to perform moderation action'
         };
       }
-      
+
       return {
         success: true,
         message: 'Moderation action completed successfully'
       };
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         return {
           success: false,
           message: 'Request timeout'
         };
       }
-      
+
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Failed to perform moderation action'
@@ -657,11 +660,11 @@ export class CommunityInteractionService {
   }> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
-    
+
     try {
       // Get authentication headers
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${settingsUpdate.communityId}/settings`, {
         method: 'PUT',
         headers: authHeaders,
@@ -671,32 +674,32 @@ export class CommunityInteractionService {
         }),
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       const result = await response.json();
-      
+
       if (!response.ok) {
         return {
           success: false,
           message: result.error || 'Failed to update community settings'
         };
       }
-      
+
       return {
         success: true,
         message: 'Community settings updated successfully'
       };
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         return {
           success: false,
           message: 'Request timeout'
         };
       }
-      
+
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Failed to update community settings'
@@ -717,10 +720,10 @@ export class CommunityInteractionService {
   }> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
-    
+
     try {
       const response = await fetch(
-          `${BACKEND_API_BASE_URL}/api/communities/${communityId}/moderation-queue?moderator=${moderatorAddress}`,
+        `${BACKEND_API_BASE_URL}/api/communities/${communityId}/moderation-queue?moderator=${moderatorAddress}`,
         {
           method: 'GET',
           headers: {
@@ -729,18 +732,18 @@ export class CommunityInteractionService {
           signal: controller.signal,
         }
       );
-      
+
       clearTimeout(timeoutId);
-      
+
       const result = await response.json();
-      
+
       if (!response.ok) {
         return {
           success: false,
           message: result.error || 'Failed to fetch moderation queue'
         };
       }
-      
+
       return {
         success: true,
         data: result.queue || [],
@@ -748,14 +751,14 @@ export class CommunityInteractionService {
       };
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         return {
           success: false,
           message: 'Request timeout'
         };
       }
-      
+
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Failed to fetch moderation queue'
@@ -780,7 +783,7 @@ export class CommunityInteractionService {
   }> {
     try {
       const membership = await CommunityMembershipService.getMembership(communityId, userAddress);
-      
+
       if (!membership) {
         return {
           success: true,
@@ -791,10 +794,10 @@ export class CommunityInteractionService {
           }
         };
       }
-      
+
       const isModerator = ['moderator', 'admin', 'owner'].includes(membership.role);
       const isAdmin = ['admin', 'owner'].includes(membership.role);
-      
+
       const permissions = [];
       if (isModerator) {
         permissions.push('moderate_posts', 'moderate_comments', 'warn_users');
@@ -802,7 +805,7 @@ export class CommunityInteractionService {
       if (isAdmin) {
         permissions.push('ban_users', 'update_settings', 'manage_moderators');
       }
-      
+
       return {
         success: true,
         data: {
