@@ -250,11 +250,7 @@ function SellerOnboardingComponent({ onComplete }: SellerOnboardingProps) {
 
   return (
     <TierProvider walletAddress={address!}>
-      <TierAwareComponent
-        requiredAction={TIER_ACTIONS.CREATE_LISTING}
-        showUpgradePrompt={false}
-        className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4"
-      >
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
         <SellerOnboardingContent
           onComplete={onComplete}
           profile={profile}
@@ -270,7 +266,7 @@ function SellerOnboardingComponent({ onComplete }: SellerOnboardingProps) {
           isCompleted={isCompleted}
           progress={progress}
         />
-      </TierAwareComponent>
+      </div>
     </TierProvider>
   );
 }

@@ -733,7 +733,9 @@ export class CryptoPaymentService {
       gasEstimate = await this.gasFeeService.estimateGasFees(
         escrowAddress,
         escrowData,
-        token.isNative ? amount : 0n
+        token.isNative ? amount : 0n,
+        'standard',
+        buyerAddress
       );
     } catch (error) {
       console.error('Escrow gas estimation failed:', error);

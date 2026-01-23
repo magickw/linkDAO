@@ -6,7 +6,7 @@ export class GasFeeService {
   private priceCache = new Map<string, { price: number; timestamp: number }>();
   private readonly CACHE_DURATION = 60000; // 1 minute
 
-  constructor(private publicClient: PublicClient) {}
+  constructor(private publicClient: PublicClient) { }
 
   /**
    * Estimate gas fees for a transaction
@@ -15,27 +15,28 @@ export class GasFeeService {
     to: string,
     data: string,
     value: bigint = 0n,
-    priority: 'slow' | 'standard' | 'fast' | 'instant' = 'standard'
+    priority: 'slow' | 'standard' | 'fast' | 'instant' = 'standard',
+    account?: string
   ): Promise<GasFeeEstimate> {
     try {
       // Estimate gas limit
-      const gasLimit = await this.estimateGasLimit(to, data, value);
-      
+      const gasLimit = await this.estimateGasLimit(to, data, value, account);
+
       // Get gas prices
       const gasPrices = await this.getGasPrices();
-      
+
       // Apply priority multiplier
       const multiplier = PAYMENT_CONFIG.GAS_PRICE_MULTIPLIERS[priority];
-      
+
       let estimate: GasFeeEstimate;
-      
+
       // Check if chain supports EIP-1559
       if (gasPrices.maxFeePerGas && gasPrices.maxPriorityFeePerGas) {
         // Use BigInt arithmetic to avoid floating-point precision errors
         const multiplierBigInt = BigInt(Math.floor(multiplier * 100));
         const maxFeePerGas = (gasPrices.maxFeePerGas * multiplierBigInt) / 100n;
         const maxPriorityFeePerGas = (gasPrices.maxPriorityFeePerGas * multiplierBigInt) / 100n;
-        
+
         estimate = {
           gasLimit,
           gasPrice: gasPrices.gasPrice,
@@ -47,7 +48,7 @@ export class GasFeeService {
         // Use BigInt arithmetic to avoid floating-point precision errors
         const multiplierBigInt = BigInt(Math.floor(multiplier * 100));
         const gasPrice = (gasPrices.gasPrice * multiplierBigInt) / 100n;
-        
+
         estimate = {
           gasLimit,
           gasPrice,
@@ -74,30 +75,32 @@ export class GasFeeService {
   private async estimateGasLimit(
     to: string,
     data: string,
-    value: bigint = 0n
+    value: bigint = 0n,
+    account?: string
   ): Promise<bigint> {
     try {
       const gasEstimate = await this.publicClient.estimateGas({
         to: to as `0x${string}`,
         data: data as `0x${string}`,
-        value
+        value,
+        account: account as `0x${string}` | undefined
       });
 
       // Add buffer to gas estimate using BigInt arithmetic to avoid floating-point precision errors
       const bufferBigInt = BigInt(Math.floor(PAYMENT_CONFIG.GAS_LIMIT_BUFFER * 100));
       let gasLimitWithBuffer = (gasEstimate * bufferBigInt) / 100n;
-      
+
       // Ensure gas limit doesn't exceed security or network limits
       console.log('[GasFeeService] Using enhanced gas estimation logic v2');
       const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
       const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)
       const maxGasLimit = securityMaxGasLimit < networkMaxGasLimit ? securityMaxGasLimit : networkMaxGasLimit;
-      
+
       if (gasLimitWithBuffer > maxGasLimit) {
         console.warn(`Gas limit ${gasLimitWithBuffer} exceeds maximum ${maxGasLimit}, reducing to maximum`);
         return maxGasLimit;
       }
-      
+
       return gasLimitWithBuffer;
     } catch (error) {
       console.error('Gas limit estimation failed:', error);
@@ -105,7 +108,7 @@ export class GasFeeService {
       // INCREASED: Use 300,000 as default to support contract interactions if estimation fails
       const bufferBigInt = BigInt(Math.floor(PAYMENT_CONFIG.GAS_LIMIT_BUFFER * 100));
       let defaultGasLimit = (300000n * bufferBigInt) / 100n;
-      
+
       // Ensure default doesn't exceed security or network limits
       const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
       const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)
@@ -113,7 +116,7 @@ export class GasFeeService {
       if (defaultGasLimit > maxGasLimit) {
         defaultGasLimit = maxGasLimit;
       }
-      
+
       return defaultGasLimit;
     }
   }
@@ -129,12 +132,12 @@ export class GasFeeService {
       });
 
       const block = await this.publicClient.getBlock({ blockTag: 'latest' });
-      
+
       if (block.baseFeePerGas) {
         // EIP-1559 chain
         const baseFee = block.baseFeePerGas;
         const priorityFees = feeHistory.reward?.[0] || [parseGwei('1'), parseGwei('2'), parseGwei('3')];
-        
+
         const maxPriorityFeePerGas = priorityFees[1]; // Use median
         const maxFeePerGas = baseFee * 2n + maxPriorityFeePerGas;
 
@@ -162,7 +165,7 @@ export class GasFeeService {
   private async getETHPriceUSD(): Promise<number | null> {
     const cacheKey = 'eth-usd';
     const cached = this.priceCache.get(cacheKey);
-    
+
     if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
       return cached.price;
     }
@@ -172,19 +175,19 @@ export class GasFeeService {
       const response = await fetch(
         'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd'
       );
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch ETH price');
       }
 
       const data = await response.json();
       const price = data.ethereum?.usd;
-      
+
       if (typeof price === 'number') {
         this.priceCache.set(cacheKey, { price, timestamp: Date.now() });
         return price;
       }
-      
+
       return null;
     } catch (error) {
       console.error('Failed to fetch ETH price:', error);
@@ -227,9 +230,9 @@ export class GasFeeService {
     instant: GasFeeEstimate;
   }> {
     const baseEstimate = await this.estimateGasFees('0x0000000000000000000000000000000000000000', '0x');
-    
+
     const recommendations = {} as any;
-    
+
     for (const priority of ['slow', 'standard', 'fast', 'instant'] as const) {
       recommendations[priority] = await this.estimateGasFees(
         '0x0000000000000000000000000000000000000000',
@@ -238,7 +241,7 @@ export class GasFeeService {
         priority
       );
     }
-    
+
     return recommendations;
   }
 
@@ -247,11 +250,11 @@ export class GasFeeService {
    */
   formatGasFeeUserFriendly(estimate: GasFeeEstimate): string {
     const formatted = this.formatGasFee(estimate);
-    
+
     if (formatted.totalCostUSD) {
       return `${formatted.totalCost} ETH (~${formatted.totalCostUSD})`;
     }
-    
+
     return `${formatted.totalCost} ETH`;
   }
 }
