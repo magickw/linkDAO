@@ -291,8 +291,39 @@ class AdminService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error in performAdminAction:', error);
       return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  async getEscrowStatus(orderId: string, chainId?: number): Promise<{
+    exists: boolean;
+    seller: string;
+    buyer: string;
+    amount: string;
+    token: string;
+    createdAt: number;
+    duration: number;
+    status: number;
+    winner: string;
+    statusLabel: string;
+  } | null> {
+    try {
+      const queryParams = new URLSearchParams();
+      if (chainId) queryParams.append('chainId', chainId.toString());
+
+      const response = await fetch(`${this.baseUrl}/api/admin/orders/${orderId}/escrow-status?${queryParams}`, {
+        headers: await this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch escrow status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.data || null;
+    } catch (error) {
+      console.error('Error in getEscrowStatus:', error);
+      return null;
     }
   }
 

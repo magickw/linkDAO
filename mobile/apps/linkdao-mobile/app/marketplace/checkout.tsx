@@ -29,6 +29,7 @@ export default function CheckoutScreen() {
   
   // Local state for inputs to avoid too many dispatches on typing
   const [discountInput, setDiscountInput] = useState('');
+  const [escrowEnabled, setEscrowEnabled] = useState(true);
 
   const subtotal = getTotalPrice();
   const shipping = 0 as number; // In a real app, this would come from shipping service
@@ -231,6 +232,12 @@ export default function CheckoutScreen() {
   // Simplified payment methods for UI (map to full types in reducer)
   const paymentMethods = [
     {
+      id: PaymentMethodType.X402,
+      name: 'X402 Protocol',
+      icon: 'flash',
+      description: 'Gas-optimized crypto payment',
+    },
+    {
       id: PaymentMethodType.STABLECOIN_USDC,
       name: 'USDC (Crypto)',
       icon: 'logo-usd',
@@ -430,13 +437,34 @@ export default function CheckoutScreen() {
             </TouchableOpacity>
           ))}
 
-          {/* Crypto Wallet Info */}
-          {state.selectedPaymentMethod?.method.type === PaymentMethodType.STABLECOIN_USDC && (
-            <View style={styles.walletInfo}>
-              <Ionicons name="information-circle" size={16} color="#3b82f6" />
-              <Text style={styles.walletInfoText}>
-                You will be prompted to sign a transaction with your wallet to complete the purchase.
-              </Text>
+          {/* Crypto Wallet Info & Escrow */}
+          {state.selectedPaymentMethod?.method.type !== PaymentMethodType.FIAT_STRIPE && state.selectedPaymentMethod && (
+            <View>
+              <View style={styles.walletInfo}>
+                <Ionicons name="information-circle" size={16} color="#3b82f6" />
+                <Text style={styles.walletInfoText}>
+                  {state.selectedPaymentMethod.method.type === PaymentMethodType.X402 
+                    ? 'X402 Protocol optimizes gas fees by bundling your transaction.'
+                    : 'You will be prompted to sign a transaction with your wallet.'}
+                </Text>
+              </View>
+              
+              <TouchableOpacity 
+                style={styles.escrowToggle}
+                onPress={() => setEscrowEnabled(!escrowEnabled)}
+              >
+                <View style={styles.escrowInfo}>
+                  <Text style={styles.escrowTitle}>Escrow Protection</Text>
+                  <Text style={styles.escrowDesc}>
+                    {escrowEnabled 
+                      ? 'Funds are held securely until order delivery' 
+                      : 'Direct payment to seller (Higher risk)'}
+                  </Text>
+                </View>
+                <View style={[styles.toggleTrack, escrowEnabled && styles.toggleTrackActive]}>
+                  <View style={[styles.toggleThumb, escrowEnabled && styles.toggleThumbActive]} />
+                </View>
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -507,6 +535,21 @@ export default function CheckoutScreen() {
             </Text>
             <Text style={styles.summaryValue}>${tax.toFixed(2)}</Text>
           </View>
+
+          {/* Fee Breakdown */}
+          {state.selectedPaymentMethod?.costEstimate?.platformFee > 0 && (
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Platform Fee</Text>
+              <Text style={styles.summaryValue}>${state.selectedPaymentMethod.costEstimate.platformFee.toFixed(2)}</Text>
+            </View>
+          )}
+          
+          {state.selectedPaymentMethod?.costEstimate?.gasFee > 0 && (
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Network Fee (Est.)</Text>
+              <Text style={styles.summaryValue}>${state.selectedPaymentMethod.costEstimate.gasFee.toFixed(2)}</Text>
+            </View>
+          )}
           
           {state.discountAmount > 0 && (
             <View style={styles.summaryRow}>
@@ -519,7 +562,9 @@ export default function CheckoutScreen() {
 
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>${Math.max(0, total).toFixed(2)}</Text>
+            <Text style={styles.totalValue}>
+              ${(total + (state.selectedPaymentMethod?.costEstimate?.gasFee || 0) + (state.selectedPaymentMethod?.costEstimate?.platformFee || 0)).toFixed(2)}
+            </Text>
           </View>
         </View>
 
@@ -853,5 +898,49 @@ const styles = StyleSheet.create({
       color: '#10b981',
       fontSize: 14,
       marginTop: 4,
+  },
+  escrowToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f9fafb',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  escrowInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  escrowTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 2,
+  },
+  escrowDesc: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  toggleTrack: {
+    width: 44,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#d1d5db',
+    padding: 2,
+  },
+  toggleTrackActive: {
+    backgroundColor: '#10b981',
+  },
+  toggleThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#ffffff',
+  },
+  toggleThumbActive: {
+    transform: [{ translateX: 20 }],
   }
 });

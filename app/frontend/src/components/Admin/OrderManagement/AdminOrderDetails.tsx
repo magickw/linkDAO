@@ -19,6 +19,8 @@ export function AdminOrderDetails({ orderId, onBack }: AdminOrderDetailsProps) {
     const [actionLoading, setActionLoading] = useState(false);
     const [showReceipt, setShowReceipt] = useState(false);
     const [receipt, setReceipt] = useState<any>(null);
+    const [escrowStatus, setEscrowStatus] = useState<any>(null);
+    const [escrowLoading, setEscrowLoading] = useState(false);
 
     useEffect(() => {
         loadOrderDetails();

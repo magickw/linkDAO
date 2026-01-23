@@ -8,12 +8,19 @@ import { adminConfigurationService } from "../services/adminConfigurationService
 import { eq, desc, sql } from "drizzle-orm";
 import { users, disputes, marketplaceUsers, sellerVerifications, moderationCases, communityGovernanceProposals } from "../db/schema";
 import { AuthenticatedRequest } from "../middleware/adminAuthMiddleware";
+import { EnhancedEscrowService } from "../services/enhancedEscrowService";
 
 export class AdminController {
   private auditLoggingService: AuditLoggingService;
+  private enhancedEscrowService: EnhancedEscrowService;
 
   constructor() {
     this.auditLoggingService = new AuditLoggingService();
+    this.enhancedEscrowService = new EnhancedEscrowService(
+      process.env.RPC_URL || 'https://sepolia.drpc.org',
+      process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || '',
+      process.env.MARKETPLACE_CONTRACT_ADDRESS || ''
+    );
   }
 
   // Policy Configuration Methods
@@ -941,6 +948,33 @@ export class AdminController {
     } catch (error) {
       safeLogger.error(`Error in performAdminAction for ${req.params.id}:`, error);
       res.status(500).json({ error: 'Failed to perform admin action' });
+    }
+  }
+
+  // Get On-Chain Escrow Status
+  async getEscrowStatus(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { chainId } = req.query;
+
+      const adminReq = req as AuthenticatedRequest;
+      if (!adminReq.user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      if (!id) {
+        return res.status(400).json({ error: 'Escrow ID is required' });
+      }
+
+      const status = await this.enhancedEscrowService.getEscrowStatusOnChain(
+        id,
+        chainId ? parseInt(chainId as string) : undefined
+      );
+
+      res.json({ success: true, data: status });
+    } catch (error) {
+      safeLogger.error(`Error fetching escrow status for ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to fetch escrow status' });
     }
   }
 }

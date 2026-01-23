@@ -91,6 +91,9 @@ router.use('/sellers', requirePermission('marketplace.seller_review'), sellerRou
 // Dispute Resolution Routes (with disputes.view permission)
 router.use('/disputes', requirePermission('disputes.view'), disputeRoutes);
 
+// Escrow Status Route (requires disputes.view or orders.view permission)
+router.get('/orders/:id/escrow-status', requirePermission('disputes.view'), adminController.getEscrowStatus.bind(adminController));
+
 // User Management Routes (with users.view permission)
 router.use('/users', requirePermission('users.view'), userRoutes);
 

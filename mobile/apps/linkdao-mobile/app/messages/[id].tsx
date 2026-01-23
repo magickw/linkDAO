@@ -18,6 +18,29 @@ interface Message {
   content: string;
   timestamp: string;
   read: boolean;
+  replyToId?: string;
+  replyTo?: {
+    senderName?: string;
+    content?: string;
+    fromAddress?: string;
+  };
+  quotedMessageId?: string;
+  metadata?: {
+    quotedMessageId?: string;
+    [key: string]: any;
+  };
+  attachments?: Array<{
+    type: 'image' | 'file' | 'nft' | 'transaction';
+    url: string;
+    name?: string;
+    preview?: string;
+    metadata?: any;
+  }>;
+  reactions?: Array<{
+    emoji: string;
+    count: number;
+    users: string[];
+  }>;
 }
 
 export default function ChatInterfaceScreen() {
@@ -192,6 +215,45 @@ export default function ChatInterfaceScreen() {
                   isMyMessage(message) ? styles.messageBubbleMe : styles.messageBubbleOther,
                 ]}
               >
+                {/* Reply Reference */}
+                {message.replyToId && (
+                  <View style={[
+                    styles.replyContainer,
+                    isMyMessage(message) ? styles.replyContainerMe : styles.replyContainerOther
+                  ]}>
+                    <View style={styles.replyBar} />
+                    <View style={styles.replyContent}>
+                      <Text style={[styles.replyAuthor, isMyMessage(message) && styles.replyTextMe]}>
+                        Replying to {message.replyTo?.senderName || 'Original message'}
+                      </Text>
+                      <Text style={[styles.replyBody, isMyMessage(message) && styles.replyTextMe]} numberOfLines={1}>
+                        {message.replyTo?.content || 'Original message...'}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Quote Reference */}
+                {(message.quotedMessageId || message.metadata?.quotedMessageId) && (
+                  <View style={[
+                    styles.quoteContainer,
+                    isMyMessage(message) ? styles.quoteContainerMe : styles.quoteContainerOther
+                  ]}>
+                    <Text style={[styles.quoteText, isMyMessage(message) && styles.replyTextMe]}>
+                      "{message.content.split('\n')[0]}..."
+                    </Text>
+                  </View>
+                )}
+
+                {/* Image Attachments */}
+                {message.attachments && message.attachments.filter(a => a.type === 'image').map((attachment, idx) => (
+                  <View key={idx} style={styles.imageAttachmentContainer}>
+                    <View style={styles.imagePlaceholder}>
+                      <Ionicons name="image-outline" size={24} color="#9ca3af" />
+                    </View>
+                  </View>
+                ))}
+
                 <Text
                   style={[
                     styles.messageText,
@@ -365,6 +427,68 @@ const styles = StyleSheet.create({
   messageBubbleOther: {
     backgroundColor: '#f3f4f6',
     borderBottomLeftRadius: 4,
+  },
+  replyContainer: {
+    flexDirection: 'row',
+    marginBottom: 8,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  replyContainerMe: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  replyContainerOther: {
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+  },
+  replyBar: {
+    width: 4,
+    backgroundColor: '#3b82f6',
+  },
+  replyContent: {
+    padding: 8,
+    flex: 1,
+  },
+  replyAuthor: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#3b82f6',
+    marginBottom: 2,
+  },
+  replyBody: {
+    fontSize: 12,
+    color: '#4b5563',
+    fontStyle: 'italic',
+  },
+  replyTextMe: {
+    color: '#ffffff',
+  },
+  quoteContainer: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#d1d5db',
+    paddingLeft: 8,
+    marginBottom: 8,
+  },
+  quoteContainerMe: {
+    borderLeftColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  quoteText: {
+    fontSize: 13,
+    color: '#6b7280',
+    fontStyle: 'italic',
+  },
+  imageAttachmentContainer: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 8,
+    backgroundColor: '#e5e7eb',
+  },
+  imagePlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   messageText: {
     fontSize: 15,

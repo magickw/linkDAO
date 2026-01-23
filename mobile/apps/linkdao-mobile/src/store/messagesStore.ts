@@ -13,8 +13,30 @@ export interface Message {
   timestamp: string;
   isRead: boolean;
   isOwn: boolean;
-  contentType?: 'text' | 'image' | 'file' | 'voice';
+  contentType?: 'text' | 'image' | 'file' | 'voice' | 'post_share';
   replyToId?: string;
+  replyTo?: {
+    senderName?: string;
+    content?: string;
+    fromAddress?: string;
+  };
+  quotedMessageId?: string;
+  metadata?: {
+    quotedMessageId?: string;
+    [key: string]: any;
+  };
+  attachments?: Array<{
+    type: 'image' | 'file' | 'nft' | 'transaction';
+    url: string;
+    name?: string;
+    preview?: string;
+    metadata?: any;
+  }>;
+  reactions?: Array<{
+    emoji: string;
+    count: number;
+    users: string[];
+  }>;
   editedAt?: string;
   deliveryStatus?: 'sent' | 'delivered' | 'read';
 }
