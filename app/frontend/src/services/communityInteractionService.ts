@@ -798,7 +798,7 @@ export class CommunityInteractionService {
       const isModerator = ['moderator', 'admin', 'owner'].includes(membership.role);
       const isAdmin = ['admin', 'owner'].includes(membership.role);
 
-      const permissions = [];
+      const permissions: string[] = [];
       if (isModerator) {
         permissions.push('moderate_posts', 'moderate_comments', 'warn_users');
       }

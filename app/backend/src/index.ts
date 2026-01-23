@@ -1445,7 +1445,8 @@ httpServer.listen(PORT, () => {
 
       // WebSocket services - enabled on High Resource (Pro) and non-constrained environments
       // Render Pro (4GB RAM, 2 CPU) can easily handle WebSocket connections
-      const forceEnableWebSockets = process.env.FORCE_ENABLE_WEBSOCKETS === 'true';
+      // FORCE ENABLE for stability unless explicitly disabled
+      const forceEnableWebSockets = process.env.FORCE_ENABLE_WEBSOCKETS !== 'false';
       const enableWebSockets = !process.env.DISABLE_WEBSOCKETS && (forceEnableWebSockets || isHighResource || (!isSevereResourceConstrained || isRenderStandard));
 
       if (enableWebSockets) {

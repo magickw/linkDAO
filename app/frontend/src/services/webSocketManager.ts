@@ -227,19 +227,19 @@ const getAuthToken = (): string => {
 // Helper function to initialize WebSocketManager with default config
 export const initializeWebSocketManager = async (walletAddress: string): Promise<WebSocketManager> => {
   const backendUrl = ENV_CONFIG.BACKEND_URL || 'http://localhost:10000';
-  const wsUrl = backendUrl.replace(/^http/, 'ws');
+  // Socket.IO client handles protocol upgrade (HTTP -> WS), so we use the HTTP URL
   const authToken = getAuthToken();
 
   const config: WebSocketConfig = {
     primary: {
-      url: wsUrl,
+      url: backendUrl,
       walletAddress,
       autoReconnect: true,
       reconnectAttempts: 10,
       reconnectDelay: 1000
     },
     liveChat: {
-      url: `${wsUrl}/chat/user`,
+      url: backendUrl, // Use root namespace as configured in backend
       options: {
         auth: {
           token: authToken

@@ -7,6 +7,7 @@
 import { io, Socket } from 'socket.io-client';
 import { ENV } from '../constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuthStore } from '../store';
 
 type WebSocketEvent =
   | 'connected'
@@ -70,18 +71,21 @@ class WebSocketService {
   }
 
   /**
-   * Get access token from AsyncStorage
+   * Get access token from AuthStore
    */
   private async getAccessToken(): Promise<string | null> {
     try {
-      const token = await AsyncStorage.getItem('accessToken');
-      if (!token) {
-        // Fallback to other token keys
-        const authToken = await AsyncStorage.getItem('authToken');
-        const sessionToken = await AsyncStorage.getItem('token');
-        return authToken || sessionToken || null;
-      }
-      return token;
+      // Get token directly from Zustand store state
+      const token = useAuthStore.getState().token;
+      if (token) return token;
+
+      // Fallback: Check AsyncStorage for legacy tokens or manual storage
+      const storedToken = await AsyncStorage.getItem('accessToken');
+      if (storedToken) return storedToken;
+
+      const authToken = await AsyncStorage.getItem('authToken');
+      const sessionToken = await AsyncStorage.getItem('token');
+      return authToken || sessionToken || null;
     } catch (error) {
       console.error('[WebSocket] Error getting access token:', error);
       return null;

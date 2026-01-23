@@ -2257,7 +2257,7 @@ export class DatabaseService {
         .where(
           and(
             eq(schema.orderCancellations.status, 'pending'),
-            lte(schema.orderCancellations.requestedAt, cutoff)
+            lte(schema.orderCancellations.createdAt, cutoff)
           )
         );
     });

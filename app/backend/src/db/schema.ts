@@ -1214,7 +1214,8 @@ export const orderCancellations = pgTable("order_cancellations", {
   reason: text("reason"),
   description: text("description"),
   status: varchar("status", { length: 32 }).default("pending"), // 'pending', 'approved', 'denied', 'auto_approved'
-  requestedAt: timestamp("requested_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
   respondedAt: timestamp("responded_at"),
   responseReason: text("response_reason"),
   refundStatus: varchar("refund_status", { length: 32 }), // 'pending', 'processing', 'completed', 'failed'
@@ -1222,7 +1223,7 @@ export const orderCancellations = pgTable("order_cancellations", {
 }, (t) => ({
   orderIdx: index("order_cancellations_order_id_idx").on(t.orderId),
   statusIdx: index("order_cancellations_status_idx").on(t.status),
-  requestedAtIdx: index("order_cancellations_requested_at_idx").on(t.requestedAt)
+  createdAtIdx: index("order_cancellations_created_at_idx").on(t.createdAt)
 }));
 
 // Delivery Estimates

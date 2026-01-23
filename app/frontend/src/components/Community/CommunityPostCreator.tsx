@@ -415,9 +415,9 @@ export default function CommunityPostCreator({
                           )}
 
                           <div className="flex items-center space-x-2">
-                            {community.icon ? (
+                            {community.avatar ? (
                               <img
-                                src={community.icon}
+                                src={community.avatar}
                                 alt={community.name}
                                 className="w-6 h-6 rounded-full object-cover"
                               />
