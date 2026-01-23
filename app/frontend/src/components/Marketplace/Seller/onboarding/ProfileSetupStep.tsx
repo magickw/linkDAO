@@ -5,6 +5,8 @@ import { Button } from '../../../../design-system';
 import { useToast } from '../../../../context/ToastContext';
 import { UnifiedImageUpload } from '../ImageUpload/UnifiedImageUpload';
 import { useAccount } from 'wagmi';
+import { ensService } from '../../../../services/ensService';
+import { Loader2, Globe } from 'lucide-react';
 
 interface ProfileSetupStepProps {
   onComplete: (data: any) => void;
@@ -184,6 +186,8 @@ const DragDropUpload: React.FC<DragDropUploadProps> = ({
 };
 
 export function ProfileSetupStep({ onComplete, data, profile }: ProfileSetupStepProps) {
+  const { address: walletAddress } = useAccount();
+  const [isImportingENS, setIsImportingENS] = useState(false);
   const [formData, setFormData] = useState({
     displayName: data?.displayName || profile?.storeName || '',
     storeName: data?.storeName || profile?.storeName || '',
@@ -197,7 +201,41 @@ export function ProfileSetupStep({ onComplete, data, profile }: ProfileSetupStep
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const { addToast } = useToast();
-  const { address: walletAddress } = useAccount(); // Get the connected wallet address
+
+  const handleImportENS = async () => {
+    if (!walletAddress) return;
+    
+    setIsImportingENS(true);
+    try {
+      const ensName = await ensService.reverseResolveENS(walletAddress);
+      
+      if (!ensName) {
+        addToast('No ENS name found for this wallet address', 'info');
+        return;
+      }
+
+      const resolved = await ensService.resolveENS(ensName);
+      
+      if (resolved.profile) {
+        const p = resolved.profile;
+        setFormData(prev => ({
+          ...prev,
+          displayName: p.name || prev.displayName,
+          storeName: p.name ? `${p.name.replace('.eth', '')}'s Store` : prev.storeName,
+          bio: p.description || prev.bio,
+          logo: p.avatar || prev.logo,
+        }));
+        addToast(`Successfully imported data from ${ensName}!`, 'success');
+      } else {
+        addToast(`Found ENS name (${ensName}) but no additional profile data`, 'info');
+      }
+    } catch (error) {
+      console.error('ENS import failed:', error);
+      addToast('Failed to import from ENS. Please try manual entry.', 'error');
+    } finally {
+      setIsImportingENS(false);
+    }
+  };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -309,7 +347,41 @@ export function ProfileSetupStep({ onComplete, data, profile }: ProfileSetupStep
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="space-y-6">
+      {/* ENS Import Header */}
+      <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <h4 className="text-white font-semibold flex items-center gap-2">
+            <Globe className="w-4 h-4 text-blue-400" />
+            Web3 Identity Sync
+          </h4>
+          <p className="text-gray-400 text-xs mt-1">
+            Pre-fill your profile details from your ENS domain
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleImportENS}
+          disabled={isImportingENS || !walletAddress}
+          className="w-full sm:w-auto border-blue-500/50 hover:bg-blue-500/10 text-blue-400"
+        >
+          {isImportingENS ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" />
+              Syncing...
+            </>
+          ) : (
+            <>
+              <Globe className="w-3.5 h-3.5 mr-2" />
+              Import from ENS
+            </>
+          )}
+        </Button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Display Name */}
         <div>

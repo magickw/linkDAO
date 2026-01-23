@@ -397,7 +397,12 @@ export class CryptoPaymentService {
           transaction.updatedAt = new Date();
         }
       } catch (error) {
-        console.error('Transaction monitoring error:', error);
+        // Ignore receipt not found errors as they are expected pending states
+        if (error instanceof Error && error.name === 'TransactionReceiptNotFoundError') {
+          // just wait
+        } else {
+          console.error('Transaction monitoring error:', error);
+        }
 
         // Retry if we haven't exceeded max attempts
         if (attempts < maxAttempts) {

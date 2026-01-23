@@ -699,10 +699,14 @@ export class UnifiedCheckoutService {
     error?: string;
   }> {
     try {
+      // Get auth token
+      const token = this.getAuthToken();
+
       const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/orders/${orderId}/verify-transaction`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
         },
         body: JSON.stringify({
           escrowId,
