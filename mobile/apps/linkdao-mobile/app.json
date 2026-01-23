@@ -11,7 +11,7 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/d051afaee33392cccc42e141b9f7697b"
+      "url": "https://u.expo.dev/d593b52d-271a-437b-95e5-b29aec4dfbe7"
     },
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -24,7 +24,12 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "io.linkdao.mobile",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "associatedDomains": [
+        "applinks:linkdao.io",
+        "applinks:www.linkdao.io",
         "applinks:linkdao.io",
         "applinks:www.linkdao.io"
       ]
@@ -36,6 +41,25 @@
       },
       "package": "io.linkdao.mobile",
       "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "linkdao.io",
+              "pathPrefix": "/oauth-callback"
+            },
+            {
+              "scheme": "linkdao",
+              "host": "oauth-callback"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
         {
           "action": "VIEW",
           "autoVerify": true,
