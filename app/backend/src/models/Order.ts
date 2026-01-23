@@ -184,6 +184,7 @@ export interface MarketplaceOrder {
 
   // Additional properties for order tracking
   trackingNumber?: string;
+  trackingUrl?: string;
   trackingCarrier?: string;
   estimatedDelivery?: string;
   actualDelivery?: string;

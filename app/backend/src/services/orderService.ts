@@ -323,16 +323,9 @@ export class OrderService {
 
       // Update order with shipping information
       await databaseService.updateOrder(orderId, {
-        status: 'shipped'
-      });
-
-      // Update shipping info in database
-      await this.updateOrderShipping(orderId, {
-        ...order.shippingAddress!,
+        status: 'shipped',
         trackingNumber: trackingInfo.trackingNumber,
-        carrier: shippingInfo.carrier,
-        service: shippingInfo.service,
-        estimatedDelivery: trackingInfo.estimatedDelivery
+        trackingCarrier: shippingInfo.carrier
       });
 
       // Create order event
@@ -812,8 +805,25 @@ export class OrderService {
       serviceDeliverables,
       serviceCompletedAt: dbOrder.serviceCompletedAt?.toISOString(),
       buyerConfirmedAt: dbOrder.buyerConfirmedAt?.toISOString(),
-      serviceNotes: dbOrder.serviceNotes
+      serviceNotes: dbOrder.serviceNotes,
+
+      // Tracking Info
+      trackingNumber: dbOrder.trackingNumber || dbOrder.tracking_number,
+      trackingCarrier: dbOrder.trackingCarrier || dbOrder.tracking_carrier,
+      trackingUrl: this.getTrackingUrl(dbOrder.trackingNumber || dbOrder.tracking_number, dbOrder.trackingCarrier || dbOrder.tracking_carrier)
     };
+  }
+
+  private getTrackingUrl(trackingNumber?: string, carrier?: string): string | undefined {
+    if (!trackingNumber) return undefined;
+
+    const c = (carrier || '').toLowerCase();
+    if (c.includes('usps')) return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${trackingNumber}`;
+    if (c.includes('ups')) return `https://www.ups.com/track?tracknum=${trackingNumber}`;
+    if (c.includes('fedex')) return `https://www.fedex.com/fedextrack/?trknbr=${trackingNumber}`;
+    if (c.includes('dhl')) return `https://www.dhl.com/en/express/tracking.html?AWB=${trackingNumber}`;
+
+    return undefined;
   }
 
   private formatAddress(addressData: any) {
