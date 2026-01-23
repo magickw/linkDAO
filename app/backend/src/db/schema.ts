@@ -1279,6 +1279,14 @@ export const orders = pgTable("orders", {
   paymentDetails: text("payment_details"), // JSON object with payment-specific data
   shippingAddress: text("shipping_address"), // JSON object with shipping details
   billingAddress: text("billing_address"), // JSON object with billing details
+  // Individual shipping columns for better querying
+  shippingName: varchar("shipping_name", { length: 255 }),
+  shippingPhone: varchar("shipping_phone", { length: 50 }),
+  shippingStreet: text("shipping_street"),
+  shippingCity: varchar("shipping_city", { length: 100 }),
+  shippingState: varchar("shipping_state", { length: 100 }),
+  shippingPostalCode: varchar("shipping_postal_code", { length: 20 }),
+  shippingCountry: varchar("shipping_country", { length: 100 }),
   orderNotes: text("order_notes"),
   trackingNumber: varchar("tracking_number", { length: 100 }),
   trackingCarrier: varchar("tracking_carrier", { length: 50 }),
