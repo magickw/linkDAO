@@ -13,6 +13,7 @@ export interface SwapParams {
   recipient?: string;
   slippageTolerance?: number; // Percentage (0.5 = 0.5%)
   deadline?: number; // Unix timestamp
+  fee?: number; // Pool fee tier (e.g. 3000)
 }
 
 export interface SwapRoute {

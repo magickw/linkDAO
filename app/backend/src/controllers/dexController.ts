@@ -84,7 +84,11 @@ export class DexController {
 
         } catch (error: any) {
             safeLogger.error('DEX Quote Error:', error);
-            res.status(500).json({ error: error.message });
+            if (error.message && error.message.includes('Invalid token address')) {
+                res.status(400).json({ error: error.message });
+            } else {
+                res.status(500).json({ error: error.message });
+            }
         }
     }
 
@@ -152,7 +156,11 @@ export class DexController {
 
         } catch (error: any) {
             safeLogger.error('DEX Build TX Error:', error);
-            res.status(500).json({ error: error.message });
+            if (error.message && error.message.includes('Invalid token address')) {
+                res.status(400).json({ error: error.message });
+            } else {
+                res.status(500).json({ error: error.message });
+            }
         }
     }
 

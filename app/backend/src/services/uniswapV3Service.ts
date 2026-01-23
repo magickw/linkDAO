@@ -42,6 +42,9 @@ export class UniswapV3Service implements IUniswapV3Service {
   private routerAddress: string;
   private factoryAddress: string;
 
+  // Cache for token info to reduce RPC calls and avoid rate limits
+  private tokenCache: Map<string, { symbol: string; decimals: number; name: string }> = new Map();
+
   constructor(
     rpcUrl: string,
     chainId: number = 11155111,
@@ -71,9 +74,9 @@ export class UniswapV3Service implements IUniswapV3Service {
   async getSwapQuote(params: SwapParams): Promise<SwapQuote> {
     try {
       const { tokenIn, tokenOut, amountIn } = params;
-      const fee = 3000; // Default 0.3% fee
+      const fee = params.fee || 3000; // Default 0.3% fee
 
-      // Get token info
+      // Get token info (uses cache if available)
       const [tokenInInfo, tokenOutInfo] = await Promise.all([
         this.validateAndGetTokenInfo(tokenIn.address),
         this.validateAndGetTokenInfo(tokenOut.address)
@@ -130,6 +133,8 @@ export class UniswapV3Service implements IUniswapV3Service {
       const { tokenIn, tokenOut, amountIn, slippageTolerance = 0.5 } = params;
       const fee = 3000; // Default 0.3%
 
+      // Logic optimization: check tokens first (cached), but strict validation should happen in getSwapQuote too.
+      // We keep these calls because they are now cheap (cached) and provide the decimals needed for parsing below.
       const [tokenInInfo, tokenOutInfo] = await Promise.all([
         this.validateAndGetTokenInfo(tokenIn.address),
         this.validateAndGetTokenInfo(tokenOut.address)
@@ -194,7 +199,7 @@ export class UniswapV3Service implements IUniswapV3Service {
   /**
    * Execute a token swap using the admin wallet (backend execution)
    */
-  async executeAdminSwap(params: SwapParams, privateKey: string): Promise<SwapResult> {
+  async executeSwap(params: SwapParams, privateKey: string): Promise<SwapResult> {
     try {
       const wallet = new ethers.Wallet(privateKey, this.provider);
       const { tokenIn, tokenOut, amountIn, slippageTolerance = 0.5 } = params;
@@ -375,15 +380,45 @@ export class UniswapV3Service implements IUniswapV3Service {
 
   async validateAndGetTokenInfo(tokenAddress: string): Promise<{ symbol: string; decimals: number; name: string }> {
     try {
+      if (!tokenAddress) {
+        throw new Error('Token address is required');
+      }
+
+      // Check for zero address
+      if (tokenAddress === ethers.ZeroAddress) {
+        throw new Error(`Invalid token address: ${tokenAddress}`);
+      }
+
+      // Check cache first
+      if (this.tokenCache.has(tokenAddress)) {
+        return this.tokenCache.get(tokenAddress)!;
+      }
+
+      // Check if address is a valid contract
+      const code = await this.provider.getCode(tokenAddress);
+      if (code === '0x') {
+        throw new Error(`Invalid token address (not a contract): ${tokenAddress}`);
+      }
+
       const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, this.provider);
       const [symbol, decimals, name] = await Promise.all([
         tokenContract.symbol(),
         tokenContract.decimals(),
         tokenContract.name(),
       ]);
-      return { symbol, decimals: Number(decimals), name };
+
+      const tokenInfo = { symbol, decimals: Number(decimals), name };
+
+      // Cache the result
+      this.tokenCache.set(tokenAddress, tokenInfo);
+
+      return tokenInfo;
     } catch (error) {
       safeLogger.error('Error validating token:', error);
+      // Re-throw specific errors or wrap them
+      if (error instanceof Error && error.message.includes('Invalid token address')) {
+        throw error;
+      }
       throw new Error(`Invalid token address: ${tokenAddress}`);
     }
   }
