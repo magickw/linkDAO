@@ -4,11 +4,16 @@
  */
 
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert, Modal, TextInput, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { cartStore } from '../../../src/store/cartStore';
+import { aiRecommendationService, Recommendation } from '../../../src/services/aiRecommendationService';
+import { reviewService, Review } from '../../../src/services/reviewService';
+
+const { width } = Dimensions.get('window');
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -17,6 +22,15 @@ export default function ProductDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  
+  // New state for enhancements
+  const [similarItems, setSimilarItems] = useState<Recommendation[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   const addToCart = cartStore((state) => state.addToCart);
   const cartItems = cartStore((state) => state.items);
@@ -24,6 +38,7 @@ export default function ProductDetailScreen() {
   useEffect(() => {
     if (id) {
       loadProduct();
+      loadAdditionalData();
     }
   }, [id]);
 
@@ -47,8 +62,24 @@ export default function ProductDetailScreen() {
     }
   };
 
+  const loadAdditionalData = async () => {
+    try {
+      const [similar, productReviews] = await Promise.all([
+        aiRecommendationService.getSimilarItems(id as string, 'product', 6),
+        reviewService.getReviewsForProduct(id as string)
+      ]);
+      setSimilarItems(similar);
+      setReviews(productReviews);
+    } catch (error) {
+      console.error('Failed to load additional data:', error);
+    }
+  };
+
   const handleAddToCart = () => {
     if (!product) return;
+    
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    
     addToCart({
       id: product.id,
       name: product.title,
@@ -60,7 +91,7 @@ export default function ProductDetailScreen() {
 
     Alert.alert(
       'Added to Cart',
-      `${product.name} has been added to your cart`,
+      `${product.title} has been added to your cart`,
       [
         { text: 'Continue Shopping', style: 'cancel' },
         {
@@ -72,31 +103,69 @@ export default function ProductDetailScreen() {
   };
 
   const handleBuyNow = () => {
+    if (!product) return;
+    
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    
     addToCart({
       id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.images[0],
+      name: product.title,
+      price: product.priceAmount,
+      image: product.images && product.images.length > 0 ? product.images[0] : null,
       quantity,
-      seller: product.seller.name,
+      seller: product.seller?.storeName || product.seller?.displayName || 'Unknown Seller',
     });
     router.push('/marketplace/checkout');
   };
 
   const decreaseQuantity = () => {
     if (quantity > 1) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setQuantity(quantity - 1);
     }
   };
 
   const increaseQuantity = () => {
-    if (quantity < product.stock) {
+    if (quantity < (product.inventory || product.stock)) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setQuantity(quantity + 1);
     }
   };
 
   const handleContactSeller = () => {
     router.push(`/messages/new?seller=${product.seller.id}`);
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewTitle.trim() || !reviewComment.trim()) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    setSubmittingReview(true);
+    try {
+      const result = await reviewService.submitReview({
+        revieweeId: product.seller.id,
+        rating: reviewRating,
+        title: reviewTitle,
+        comment: reviewComment,
+      });
+
+      if (result.success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert('Success', 'Your review has been submitted!');
+        setShowReviewModal(false);
+        setReviewTitle('');
+        setReviewComment('');
+        loadAdditionalData(); // Refresh reviews
+      } else {
+        Alert.alert('Error', result.error || 'Failed to submit review');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setSubmittingReview(false);
+    }
   };
 
   const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
@@ -185,10 +254,10 @@ export default function ProductDetailScreen() {
 
           {/* Stock Status */}
           <View style={styles.stockContainer}>
-            {product.inventory > 0 ? (
+            {(product.inventory || product.stock) > 0 ? (
               <>
                 <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-                <Text style={styles.stockText}>In Stock ({product.inventory} available)</Text>
+                <Text style={styles.stockText}>In Stock ({product.inventory || product.stock} available)</Text>
               </>
             ) : (
               <>
@@ -270,8 +339,130 @@ export default function ProductDetailScreen() {
               <Text style={styles.contactButtonText}>Contact</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Reviews Section */}
+          <View style={styles.reviewsSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Customer Reviews</Text>
+              <TouchableOpacity onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowReviewModal(true); }}>
+                <Text style={styles.writeReviewText}>Write a Review</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {reviews.length === 0 ? (
+              <View style={styles.emptyReviews}>
+                <Ionicons name="star-outline" size={40} color="#d1d5db" />
+                <Text style={styles.emptyReviewsText}>No reviews yet. Be the first to review!</Text>
+              </View>
+            ) : (
+              reviews.map((review) => (
+                <View key={review.id} style={styles.reviewCard}>
+                  <View style={styles.reviewHeader}>
+                    <View style={styles.reviewerInfo}>
+                      <View style={styles.reviewerAvatar}>
+                        <Ionicons name="person" size={16} color="#9ca3af" />
+                      </View>
+                      <Text style={styles.reviewerName}>{review.reviewerName}</Text>
+                    </View>
+                    <View style={styles.reviewStars}>
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Ionicons key={s} name="star" size={12} color={s <= review.rating ? "#f59e0b" : "#d1d5db"} />
+                      ))}
+                    </View>
+                  </View>
+                  <Text style={styles.reviewTitle}>{review.title}</Text>
+                  <Text style={styles.reviewComment}>{review.comment}</Text>
+                  <Text style={styles.reviewDate}>{new Date(review.createdAt).toLocaleDateString()}</Text>
+                </View>
+              ))
+            )}
+          </View>
+
+          {/* AI Recommendations Section */}
+          {similarItems.length > 0 && (
+            <View style={styles.similarSection}>
+              <Text style={styles.sectionTitle}>Similar Items You May Like</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.similarScroll}>
+                {similarItems.map((item) => (
+                  <TouchableOpacity 
+                    key={item.id} 
+                    style={styles.similarCard}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      router.push(`/marketplace/product/${item.itemId}`);
+                    }}
+                  >
+                    <Image source={{ uri: item.metadata?.thumbnail }} style={styles.similarImage} />
+                    <View style={styles.similarInfo}>
+                      <Text style={styles.similarTitle} numberOfLines={1}>{item.title}</Text>
+                      <Text style={styles.similarReason}>{item.reason}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
         </View>
       </ScrollView>
+
+      {/* Review Modal */}
+      <Modal visible={showReviewModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Write a Review</Text>
+              <TouchableOpacity onPress={() => setShowReviewModal(false)}>
+                <Ionicons name="close" size={24} color="#1f2937" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.ratingSelector}>
+              <Text style={styles.label}>Your Rating</Text>
+              <View style={styles.starsRow}>
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <TouchableOpacity key={s} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setReviewRating(s); }}>
+                    <Ionicons name={s <= reviewRating ? "star" : "star-outline"} size={32} color="#f59e0b" />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Review Title</Text>
+              <TextInput
+                style={styles.textInput}
+                value={reviewTitle}
+                onChangeText={setReviewTitle}
+                placeholder="Summarize your experience"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Detailed Review</Text>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={reviewComment}
+                onChangeText={setReviewComment}
+                placeholder="What did you like or dislike?"
+                multiline
+                numberOfLines={4}
+              />
+            </View>
+
+            <TouchableOpacity 
+              style={[styles.submitButton, submittingReview && styles.disabledButton]}
+              onPress={handleSubmitReview}
+              disabled={submittingReview}
+            >
+              {submittingReview ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.submitButtonText}>Submit Review</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Bottom Action Bar */}
       <View style={styles.bottomBar}>
@@ -293,15 +484,15 @@ export default function ProductDetailScreen() {
         <TouchableOpacity
           style={styles.addToCartButton}
           onPress={handleAddToCart}
-          disabled={product.inventory <= 0}
+          disabled={(product.inventory || product.stock) <= 0}
         >
-          <Ionicons name="cart" size={20} color={product.inventory <= 0 ? "#9ca3af" : "#ffffff"} />
-          <Text style={[styles.addToCartButtonText, product.inventory <= 0 && { color: "#9ca3af" }]}>Add to Cart</Text>
+          <Ionicons name="cart" size={20} color={(product.inventory || product.stock) <= 0 ? "#9ca3af" : "#ffffff"} />
+          <Text style={[styles.addToCartButtonText, (product.inventory || product.stock) <= 0 && { color: "#9ca3af" }]}>Add to Cart</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.buyNowButton, product.inventory <= 0 && { backgroundColor: '#9ca3af' }]}
+          style={[styles.buyNowButton, (product.inventory || product.stock) <= 0 && { backgroundColor: '#9ca3af' }]}
           onPress={handleBuyNow}
-          disabled={product.inventory <= 0}
+          disabled={(product.inventory || product.stock) <= 0}
         >
           <Text style={styles.buyNowButtonText}>Buy Now</Text>
         </TouchableOpacity>
@@ -472,6 +663,18 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 12,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  writeReviewText: {
+    color: '#3b82f6',
+    fontWeight: '600',
+    fontSize: 14,
+  },
   description: {
     fontSize: 16,
     color: '#4b5563',
@@ -584,6 +787,176 @@ const styles = StyleSheet.create({
     color: '#3b82f6',
     marginLeft: 4,
   },
+  // Reviews Styles
+  reviewsSection: {
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+    marginTop: 24,
+  },
+  emptyReviews: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyReviewsText: {
+    color: '#9ca3af',
+    marginTop: 8,
+    fontSize: 14,
+  },
+  reviewCard: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  reviewerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reviewerAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  reviewerName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  reviewStars: {
+    flexDirection: 'row',
+  },
+  reviewTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  reviewComment: {
+    fontSize: 14,
+    color: '#4b5563',
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: '#9ca3af',
+  },
+  // Similar Items Styles
+  similarSection: {
+    marginTop: 24,
+    paddingBottom: 32,
+  },
+  similarScroll: {
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
+  },
+  similarCard: {
+    width: 160,
+    marginRight: 16,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+    overflow: 'hidden',
+  },
+  similarImage: {
+    width: '100%',
+    height: 120,
+    backgroundColor: '#f9fafb',
+  },
+  similarInfo: {
+    padding: 10,
+  },
+  similarTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  similarReason: {
+    fontSize: 11,
+    color: '#3b82f6',
+    fontStyle: 'italic',
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1f2937',
+  },
+  ratingSelector: {
+    marginBottom: 24,
+  },
+  starsRow: {
+    flexDirection: 'row',
+    marginTop: 12,
+    gap: 8,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  textInput: {
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    color: '#1f2937',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  submitButton: {
+    backgroundColor: '#3b82f6',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  // Bottom Bar Styles
   bottomBar: {
     flexDirection: 'row',
     alignItems: 'center',

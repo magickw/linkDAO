@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useStripe } from '@stripe/stripe-react-native';
+import * as Haptics from 'expo-haptics';
 import { cartStore } from '../../src/store';
 import { useAuthStore } from '../../src/store';
 import { checkoutService } from '../../src/services/checkoutService';
@@ -54,6 +55,7 @@ export default function CheckoutScreen() {
   };
 
   const handleSelectSavedAddress = (addr: any) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const formattedAddress = {
       firstName: addr.firstName,
       lastName: addr.lastName,
@@ -138,12 +140,14 @@ export default function CheckoutScreen() {
       );
 
       if (result.isValid) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         dispatch({ 
           type: 'APPLY_DISCOUNT', 
           payload: { amount: result.discountAmount, code: result.code } 
         });
         Alert.alert('Success', `Discount code applied! Saved $${result.discountAmount.toFixed(2)}`);
       } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         dispatch({ type: 'SET_DISCOUNT_ERROR', payload: result.error || 'Invalid code' });
         Alert.alert('Invalid Code', result.error || 'This discount code cannot be used.');
       }
@@ -236,16 +240,13 @@ export default function CheckoutScreen() {
                   throw new Error(`Payment failed: ${paymentError.message}`);
               }
 
-              // Success! Payment is confirmed on Stripe side.
-              // Now tell backend to finalize the order.
-              // We pass a flag or the intent ID if possible.
-              // For now, we reuse processCheckout, assuming backend is idempotent or handles "already paid" checks if we pass the ID.
-              // If not, this might double-trigger logic, but without backend changes, this is the safest "client-side first" approach.
-              // We'll proceed to finalizing.
+              // Success!
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              
               (paymentDetails as any).paymentIntentId = paymentSheetParams.paymentIntent;
               (paymentDetails as any).prepaid = true; 
           } else {
-              // Fallback to Legacy Flow (Backend handles charging stored card or errors out)
+              // Fallback to Legacy Flow
               console.log('Using legacy payment flow (no native sheet params)');
           }
       }
@@ -261,6 +262,9 @@ export default function CheckoutScreen() {
 
       // Clear cart
       clearCart();
+      
+      // Success Haptic
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       // Show success message
       Alert.alert(
@@ -279,6 +283,7 @@ export default function CheckoutScreen() {
       );
     } catch (error: any) {
       console.error('Payment Error:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       const errorMessage = error.message || 'There was an error processing your payment. Please try again.';
       dispatch({ type: 'SET_ERROR', payload: errorMessage });
       Alert.alert('Payment Failed', errorMessage);
@@ -310,6 +315,7 @@ export default function CheckoutScreen() {
   ];
 
   const selectPaymentMethod = (id: PaymentMethodType) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       // Create a dummy PrioritizedPaymentMethod object for now to satisfy types
       // In a real implementation, we would call getPaymentRecommendation to get this
       const method = {
