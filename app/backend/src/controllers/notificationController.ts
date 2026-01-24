@@ -6,35 +6,89 @@
 import { Response } from 'express';
 import { NotificationService } from '../services/notificationService';
 import { AuthenticatedRequest } from '../middleware/auth';
+import { DatabaseService } from '../services/databaseService';
 
 export class NotificationController {
     private notificationService: NotificationService;
+    private databaseService: DatabaseService;
 
     constructor() {
         this.notificationService = new NotificationService();
+        this.databaseService = new DatabaseService();
     }
 
     /**
      * Register device token
-     * @deprecated Implementation missing in service
      */
     registerToken = async (req: AuthenticatedRequest, res: Response) => {
         try {
-            // const { token, platform, deviceInfo } = req.body;
-            // const userId = req.user!.walletAddress;
+            const { token, platform, deviceInfo } = req.body;
+            const userAddress = req.user!.walletAddress;
 
-            // Pending implementation in service
-            // await this.notificationService.registerToken({ ... });
+            if (!token || !platform) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Token and platform are required',
+                });
+            }
 
-            res.json({
-                success: true,
-                message: 'Device token registered (Stub)',
-            });
+            // Store token in database
+            const success = await this.databaseService.storePushToken(userAddress, token, platform);
+
+            if (success) {
+                res.json({
+                    success: true,
+                    message: 'Device token registered successfully',
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to register device token',
+                });
+            }
         } catch (error) {
             console.error('Error registering token:', error);
             res.status(500).json({
                 success: false,
                 error: 'Failed to register device token',
+            });
+        }
+    };
+
+    /**
+     * Unregister device token
+     */
+    unregisterToken = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const { token } = req.body;
+            const userAddress = req.user!.walletAddress;
+
+            if (!token) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Token is required',
+                });
+            }
+
+            // Remove token from database
+            const success = await this.databaseService.removePushToken(userAddress, token);
+
+            if (success) {
+                res.json({
+                    success: true,
+                    message: 'Device token unregistered successfully',
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to unregister device token',
+                });
+            }
+        } catch (error) {
+            console.error('Error unregistering token:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Failed to unregister device token',
             });
         }
     };

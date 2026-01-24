@@ -17,6 +17,10 @@ import { socialMediaService } from '../src/services/socialMediaService';
 import { setWalletAdapter } from '@linkdao/shared';
 import ErrorBoundary from '../src/components/ErrorBoundary';
 
+import { StripeProvider } from '@stripe/stripe-react-native';
+
+const STRIPE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_PLACEHOLDER';
+
 export default function RootLayout() {
   const { isAuthenticated } = useAuthStore();
   const [isReady, setIsReady] = useState(false);
@@ -104,25 +108,27 @@ export default function RootLayout() {
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
-          <StatusBar style="auto" />
-          {/* Auto-authentication bridge for wallet connections */}
-          <WalletLoginBridge
-            autoLogin={true}
-            walletAddress={walletAddress as string}
-            connector={connector as any}
-            onLoginSuccess={({ user }) => {
-              console.log('✅ Auto-login successful for:', user.address);
-            }}
-            onLoginError={(error) => {
-              console.error('❌ Auto-login failed:', error);
-            }}
-          />
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="auth" options={{ headerShown: false }} />
-            <Stack.Screen name="settings" options={{ headerShown: false }} />
-            <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
-          </Stack>
+          <StripeProvider publishableKey={STRIPE_KEY}>
+            <StatusBar style="auto" />
+            {/* Auto-authentication bridge for wallet connections */}
+            <WalletLoginBridge
+              autoLogin={true}
+              walletAddress={walletAddress as string}
+              connector={connector as any}
+              onLoginSuccess={({ user }) => {
+                console.log('✅ Auto-login successful for:', user.address);
+              }}
+              onLoginError={(error) => {
+                console.error('❌ Auto-login failed:', error);
+              }}
+            />
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="auth" options={{ headerShown: false }} />
+              <Stack.Screen name="settings" options={{ headerShown: false }} />
+              <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
+            </Stack>
+          </StripeProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </ErrorBoundary>

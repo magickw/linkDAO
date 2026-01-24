@@ -10,6 +10,8 @@ import { signMessageWithWallet } from './walletAdapter';
 export interface AuthUser {
   id: string;
   address: string;
+  walletAddress?: string;
+  ens?: string;
   handle?: string;
   displayName?: string;
   email?: string;
@@ -31,6 +33,9 @@ export interface AuthResponse {
   token?: string;
   user?: AuthUser;
   error?: string;
+  requires2FA?: boolean;
+  userId?: string;
+  walletAddress?: string;
 }
 
 export interface LoginCredentials {
@@ -149,14 +154,14 @@ class AuthService {
       let nonce: string | undefined;
       let message: string | undefined;
 
-      if (response.data && response.data.data) {
-        // Backend is returning { success: true, data: { success: true, data: { nonce, message } } }
-        nonce = response.data.data.nonce;
-        message = response.data.data.message;
-      } else if (response.data) {
+      if (response && (response as any).data) {
         // Backend is returning { success: true, data: { nonce, message } }
-        nonce = response.data.nonce;
-        message = response.data.message;
+        nonce = (response as any).data.nonce;
+        message = (response as any).data.message;
+      } else {
+        // Backend is returning { nonce, message } directly in response
+        nonce = (response as any).nonce;
+        message = (response as any).message;
       }
 
       if (nonce && message) {
@@ -189,6 +194,7 @@ class AuthService {
     return {
       id: userData?.id || `user_${address}`,
       address: address,
+      walletAddress: address,
       handle: userData?.handle || `user_${address.slice(0, 6)}`,
       ens: userData?.ens,
       email: userData?.email,

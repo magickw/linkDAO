@@ -20,10 +20,23 @@ router.post(
     authMiddleware,
     [
         body('token').isString().notEmpty(),
-        body('platform').isIn(['ios', 'android']),
+        body('platform').isIn(['ios', 'android', 'web', 'expo']),
         body('deviceInfo').optional().isObject(),
     ],
     controller.registerToken
+);
+
+/**
+ * POST /api/notifications/unregister
+ * Unregister device token for push notifications
+ */
+router.post(
+    '/unregister',
+    authMiddleware,
+    [
+        body('token').isString().notEmpty(),
+    ],
+    controller.unregisterToken
 );
 
 /**

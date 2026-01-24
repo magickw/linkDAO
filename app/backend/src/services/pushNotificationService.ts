@@ -135,36 +135,42 @@ export class PushNotificationService {
         throw new Error('Invalid subscription data');
       }
 
-      // Check if subscription already exists
-      // Using raw SQL since table is not in schema
-      const existingSubscription = await db.execute(sql`
-        SELECT * FROM push_notification_subscriptions 
-        WHERE user_address = ${userId} AND endpoint = ${subscription.endpoint}
+      // Extract token from endpoint (for Expo push tokens, it's the full endpoint)
+      const token = subscription.endpoint;
+
+      // Extract platform from endpoint or userAgent
+      let platform = 'web';
+      if (userAgent) {
+        if (userAgent.includes('ios') || userAgent.includes('iPhone') || userAgent.includes('iPad')) {
+          platform = 'ios';
+        } else if (userAgent.includes('android')) {
+          platform = 'android';
+        }
+      } else if (subscription.endpoint.includes('exp.host')) {
+        platform = 'expo';
+      }
+
+      // Check if token already exists
+      const existingToken = await db.execute(sql`
+        SELECT * FROM push_tokens 
+        WHERE user_address = ${userId} AND token = ${token}
         LIMIT 1
       `);
 
-      if (existingSubscription.length > 0) {
-        // Update existing subscription
-        await db.execute(sql`
-          UPDATE push_notification_subscriptions 
-          SET keys = ${JSON.stringify(subscription.keys)},
-              user_agent = ${userAgent || ''},
-              is_active = true,
-              last_used_at = ${new Date()},
-              updated_at = ${new Date()}
-          WHERE id = ${existingSubscription[0]?.id}
-        `);
-      } else {
-        // Create new subscription
-        await db.execute(sql`
-          INSERT INTO push_notification_subscriptions 
-          (user_address, endpoint, keys, user_agent, is_active, created_at, last_used_at)
-          VALUES (${userId}, ${subscription.endpoint}, ${JSON.stringify(subscription.keys)}, 
-                  ${userAgent || ''}, true, ${new Date()}, ${new Date()})
-        `);
+      if (existingToken.length > 0) {
+        // Token already exists, no need to insert again
+        safeLogger.info(`Push token already registered for user: ${userId}`);
+        return true;
       }
 
-      safeLogger.info(`Device subscription registered for user: ${userId}`);
+      // Create new token entry
+      await db.execute(sql`
+        INSERT INTO push_tokens 
+        (user_address, token, platform, created_at)
+        VALUES (${userId}, ${token}, ${platform}, ${new Date()})
+      `);
+
+      safeLogger.info(`Push token registered for user: ${userId}, platform: ${platform}`);
       return true;
     } catch (error) {
       safeLogger.error('Error registering device subscription:', error);
@@ -175,12 +181,12 @@ export class PushNotificationService {
   // Unregister a device subscription
   async unregisterDeviceSubscription(userId: string, endpoint: string): Promise<boolean> {
     try {
-await db.execute(sql`
-        DELETE FROM push_notification_subscriptions 
-        WHERE user_address = ${userId} AND endpoint = ${endpoint}
+      await db.execute(sql`
+        DELETE FROM push_tokens 
+        WHERE user_address = ${userId} AND token = ${endpoint}
       `);
 
-      safeLogger.info(`Device subscription unregistered for user: ${userId}`);
+      safeLogger.info(`Push token unregistered for user: ${userId}`);
       return true;
     } catch (error) {
       safeLogger.error('Error unregistering device subscription:', error);
@@ -271,14 +277,14 @@ await db.execute(sql`
         return { success: 0, failed: 0 };
       }
 
-      // Get user's active device subscriptions
-      const subscriptions = await db.execute(sql`
-        SELECT * FROM push_notification_subscriptions 
-        WHERE user_address = ${payload.userId} AND is_active = true
+      // Get user's push tokens from push_tokens table
+      const tokens = await db.execute(sql`
+        SELECT * FROM push_tokens 
+        WHERE user_address = ${payload.userId}
       `);
 
-      if (subscriptions.length === 0) {
-        safeLogger.info(`No active subscriptions found for user: ${payload.userId}`);
+      if (tokens.length === 0) {
+        safeLogger.info(`No push tokens found for user: ${payload.userId}`);
         return { success: 0, failed: 0 };
       }
 
@@ -286,15 +292,16 @@ await db.execute(sql`
       let failedCount = 0;
 
       // Send notification to each device
-      for (const subscription of subscriptions) {
+      for (const tokenRecord of tokens) {
         try {
-          const result = await this.sendWebPushNotification(subscription, {
+          const result = await this.sendWebPushNotification(tokenRecord, {
             title: payload.title,
             body: payload.message,
             data: {
               type: payload.type,
               communityId: payload.communityId,
               postId: payload.postId,
+              actionUrl: payload.data?.actionUrl,
               ...payload.data
             },
             icon: payload.data?.icon || '/icon-192x192.png',
@@ -306,25 +313,18 @@ await db.execute(sql`
 
           if (result.success) {
             successCount++;
-            // Update last used timestamp
-            await db.execute(sql`
-              UPDATE push_notification_subscriptions 
-              SET last_used_at = NOW() 
-              WHERE id = ${subscription.id}
-            `);
           } else {
             failedCount++;
-            // If subscription is invalid, deactivate it
+            // If token is invalid, remove it
             if (result.error === 'invalid_subscription') {
               await db.execute(sql`
-                UPDATE push_notification_subscriptions 
-                SET is_active = false, updated_at = ${new Date()}
-                WHERE id = ${subscription.id}
+                DELETE FROM push_tokens 
+                WHERE id = ${tokenRecord.id}
               `);
             }
           }
         } catch (error) {
-          safeLogger.error(`Failed to send push notification to subscription ${subscription.id}:`, error);
+          safeLogger.error(`Failed to send push notification to token ${tokenRecord.id}:`, error);
           failedCount++;
         }
       }

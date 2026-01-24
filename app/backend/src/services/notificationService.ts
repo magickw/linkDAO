@@ -2,6 +2,8 @@ import { DatabaseService } from './databaseService';
 import { safeLogger } from '../utils/safeLogger';
 import { OrderNotification } from '../models/Order';
 import { getWebSocketService } from './webSocketService';
+import { DatabaseService } from './databaseService';
+import { pushNotificationService } from './pushNotificationService';
 
 const databaseService = new DatabaseService();
 
@@ -535,16 +537,19 @@ export class NotificationService {
         return;
       }
 
-      // Implementation would use your push service (FCM, APNS, etc.)
-      safeLogger.info(`Push notification to ${userAddress}:`, { title, message, actionUrl });
+      // Use pushNotificationService to send notifications
+      const result = await pushNotificationService.sendToUser(userAddress, {
+        title,
+        body: message,
+        actionUrl,
+        data: { actionUrl }
+      });
 
-      // Example implementation:
-      // const pushService = PushNotificationService.getInstance();
-      // await pushService.sendToTokens(pushTokens, {
-      //   title,
-      //   body: message,
-      //   data: { actionUrl }
-      // });
+      if (result) {
+        safeLogger.info(`Push notification sent successfully to ${userAddress}:`, { title, message });
+      } else {
+        safeLogger.warn(`Push notification failed for user ${userAddress}`);
+      }
     } catch (error) {
       safeLogger.error('Error sending push notification:', error);
     }

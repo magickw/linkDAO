@@ -196,7 +196,7 @@ export default function UserAnalyticsPage() {
                 <Text style={styles.sectionTitle}>Tipping Activity</Text>
                 <View style={styles.tippingCard}>
                   <View style={styles.tippingItem}>
-                    <Ionicons name="arrow-up-circle" size={24} color={THEMESuccess} />
+                    <Ionicons name="arrow-up-circle" size={24} color={THEME.colors.success} />
                     <Text style={styles.tippingValue}>{social.tipsSent}</Text>
                     <Text style={styles.tippingLabel}>Tips Sent</Text>
                   </View>

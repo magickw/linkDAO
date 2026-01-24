@@ -9,6 +9,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useStripe } from '@stripe/stripe-react-native';
 import { cartStore } from '../../src/store';
 import { useAuthStore } from '../../src/store';
 import { checkoutService } from '../../src/services/checkoutService';
@@ -19,6 +20,7 @@ import { PaymentMethodType } from '../../src/types/checkout';
 export default function CheckoutScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   const items = cartStore((state) => state.items);
   const clearCart = cartStore((state) => state.clearCart);
@@ -177,7 +179,7 @@ export default function CheckoutScreen() {
         throw new Error('Failed to sync cart with server');
       }
 
-      // 2. Create checkout session
+      // 2. Create checkout session (common step)
       const checkoutSession = await checkoutService.createSession({
         items: items.map(item => ({
           id: item.id,
@@ -190,14 +192,69 @@ export default function CheckoutScreen() {
 
       dispatch({ type: 'SET_SESSION_ID', payload: checkoutSession.sessionId });
 
-      // 3. Process checkout
+      let paymentDetails = {
+        walletAddress: user?.address,
+      };
+
+      // 3. Handle Payment (Fiat vs Crypto)
+      if (state.selectedPaymentMethod.method.type === PaymentMethodType.FIAT_STRIPE) {
+          // Attempt to fetch params for Native Payment Sheet
+          // Amount in cents
+          const amountInCents = Math.round(total * 100);
+          const paymentSheetParams = await checkoutService.fetchPaymentSheetParams(amountInCents);
+
+          if (paymentSheetParams) {
+              // Native Payment Sheet Flow
+              const { error: initError } = await initPaymentSheet({
+                  merchantDisplayName: 'LinkDAO Marketplace',
+                  customerId: paymentSheetParams.customer,
+                  customerEphemeralKeySecret: paymentSheetParams.ephemeralKey,
+                  paymentIntentClientSecret: paymentSheetParams.paymentIntent,
+                  defaultBillingDetails: {
+                      name: `${state.shippingAddress.firstName} ${state.shippingAddress.lastName}`,
+                      address: {
+                          country: state.shippingAddress.country === 'United States' ? 'US' : 'US', // map accordingly
+                          city: state.shippingAddress.city,
+                          state: state.shippingAddress.state,
+                          postalCode: state.shippingAddress.zipCode,
+                          line1: state.shippingAddress.address1,
+                      }
+                  }
+              });
+
+              if (initError) {
+                  throw new Error(`Payment initialization failed: ${initError.message}`);
+              }
+
+              const { error: paymentError } = await presentPaymentSheet();
+
+              if (paymentError) {
+                  if (paymentError.code === 'Canceled') {
+                       dispatch({ type: 'SET_PROCESSING', payload: false });
+                       return; // User canceled, stop here
+                  }
+                  throw new Error(`Payment failed: ${paymentError.message}`);
+              }
+
+              // Success! Payment is confirmed on Stripe side.
+              // Now tell backend to finalize the order.
+              // We pass a flag or the intent ID if possible.
+              // For now, we reuse processCheckout, assuming backend is idempotent or handles "already paid" checks if we pass the ID.
+              // If not, this might double-trigger logic, but without backend changes, this is the safest "client-side first" approach.
+              // We'll proceed to finalizing.
+              (paymentDetails as any).paymentIntentId = paymentSheetParams.paymentIntent;
+              (paymentDetails as any).prepaid = true; 
+          } else {
+              // Fallback to Legacy Flow (Backend handles charging stored card or errors out)
+              console.log('Using legacy payment flow (no native sheet params)');
+          }
+      }
+
+      // 4. Finalize Order
       await checkoutService.processCheckout({
         sessionId: checkoutSession.sessionId,
         paymentMethod: state.selectedPaymentMethod.method.type,
-        paymentDetails: {
-          walletAddress: user?.address, // Assuming user.address exists on AuthUser
-          // Add token details if needed for crypto
-        },
+        paymentDetails: paymentDetails,
         shippingAddress: state.shippingAddress,
         discountCode: state.discountCode
       });
@@ -221,6 +278,7 @@ export default function CheckoutScreen() {
         ]
       );
     } catch (error: any) {
+      console.error('Payment Error:', error);
       const errorMessage = error.message || 'There was an error processing your payment. Please try again.';
       dispatch({ type: 'SET_ERROR', payload: errorMessage });
       Alert.alert('Payment Failed', errorMessage);

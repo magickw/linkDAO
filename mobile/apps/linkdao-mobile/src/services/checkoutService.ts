@@ -81,6 +81,32 @@ class CheckoutService {
     }
 
     /**
+     * Fetch parameters for Stripe Payment Sheet
+     */
+    async fetchPaymentSheetParams(amount: number, currency: string = 'usd') {
+        try {
+            const response = await apiClient.post('/api/checkout/payment-intent', {
+                amount,
+                currency
+            });
+            
+            if (response.data && response.data.success) {
+                return {
+                    paymentIntent: response.data.data.clientSecret,
+                    ephemeralKey: response.data.data.ephemeralKey,
+                    customer: response.data.data.customer,
+                    publishableKey: response.data.data.publishableKey
+                };
+            }
+            throw new Error('Failed to fetch payment params');
+        } catch (error) {
+            console.error('[Checkout] Error fetching payment sheet params:', error);
+            // Return null to allow fallback to legacy flow
+            return null;
+        }
+    }
+
+    /**
      * Get user's saved shipping addresses
      */
     async getSavedAddresses() {

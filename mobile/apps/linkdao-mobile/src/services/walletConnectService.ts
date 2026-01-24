@@ -7,7 +7,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Linking, Platform } from 'react-native';
 import { ethers } from 'ethers';
-import * as BackgroundTimer from 'react-native-background-timer';
+import { MetaMaskSDK } from '@metamask/sdk-react-native';
 
 const STORAGE_KEY = 'wallet_connection';
 
@@ -33,35 +33,27 @@ class WalletService {
    */
   async initialize() {
     try {
-      // Try to initialize MetaMask SDK
+      // Initialize MetaMask SDK
       try {
-        const MetaMaskSDKModule = await import('@metamask/sdk-react-native');
-        // Handle various export types: named, default, or direct
-        const MetaMaskSDK = MetaMaskSDKModule.MetaMaskSDK || MetaMaskSDKModule.default || MetaMaskSDKModule;
+        this.sdk = new MetaMaskSDK({
+          openDefaultInpage: false,
+          dappMetadata: {
+            name: 'LinkDAO Mobile',
+            url: 'https://linkdao.io',
+          },
+          // Enable communication between the SDK and MetaMask
+          communicationServerUrl: 'https://metamask-sdk-socket.metafi.codefi.network/',
+          checkInstallationImmediately: false,
+          i18nOptions: {
+            enabled: true,
+          },
+        });
         
-        if (MetaMaskSDK && typeof MetaMaskSDK === 'function') {
-          this.metamaskSDKAvailable = true;
-          this.sdk = new MetaMaskSDK({
-            openDefaultInpage: false,
-            dappMetadata: {
-              name: 'LinkDAO Mobile',
-              url: 'https://linkdao.io',
-            },
-            // Enable communication between the SDK and MetaMask
-            communicationServerUrl: 'https://metamask-sdk-socket.metafi.codefi.network/',
-            checkInstallationImmediately: false,
-            i18nOptions: {
-              enabled: true,
-            },
-          });
-          this.ethereum = this.sdk.getProvider();
-          console.log('✅ MetaMask SDK initialized');
-        } else {
-          console.warn('⚠️ MetaMask SDK not available (invalid export), using fallback. Module keys:', Object.keys(MetaMaskSDKModule));
-          this.metamaskSDKAvailable = false;
-        }
+        this.ethereum = this.sdk.getProvider();
+        this.metamaskSDKAvailable = true;
+        console.log('✅ MetaMask SDK initialized');
       } catch (sdkError) {
-        console.warn('⚠️ Failed to import MetaMask SDK:', sdkError);
+        console.error('⚠️ Failed to initialize MetaMask SDK:', sdkError);
         this.metamaskSDKAvailable = false;
       }
       
@@ -70,7 +62,7 @@ class WalletService {
       await this.restoreConnection();
     } catch (error) {
       console.error('❌ Failed to initialize wallet service:', error);
-      throw error;
+      // Don't throw here, allowing the app to continue even if initialization has partial failures
     }
   }
 
@@ -106,18 +98,22 @@ class WalletService {
           throw new Error(`Unsupported wallet provider: ${provider}`);
       }
 
-      this._isConnected = true;
-      this.currentProvider = provider;
-      this.activeConnection = {
-        provider,
-        address,
-        chainId: 1, // Default to Ethereum mainnet
-        timestamp: Date.now(),
-      };
+      // If we got an address (synchronously), set up the connection
+      // Note: Some deep link flows might not return here immediately
+      if (address) {
+        this._isConnected = true;
+        this.currentProvider = provider;
+        this.activeConnection = {
+          provider,
+          address,
+          chainId: 1, // Default to Ethereum mainnet
+          timestamp: Date.now(),
+        };
 
-      await this.saveConnection(this.activeConnection);
+        await this.saveConnection(this.activeConnection);
+        console.log(`✅ Connected to ${provider}:`, address);
+      }
 
-      console.log(`✅ Connected to ${provider}:`, address);
       return address;
     } catch (error) {
       console.error(`❌ Failed to connect to ${provider}:`, error);
@@ -125,36 +121,43 @@ class WalletService {
     }
   }
 
-      /**
-       * Connect to MetaMask Mobile
-       */
-      private async connectMetaMask(): Promise<string> {
-        try {
-          if (!this.metamaskSDKAvailable || !this.ethereum) {
-            throw new Error('MetaMask SDK not available. Please install MetaMask mobile app or use a different wallet provider.');
-          }
-  
-          console.log('🦊 Connecting to MetaMask via SDK...');
-    
-          // Request accounts from MetaMask
-          const accounts = await this.ethereum.request({
-            method: 'eth_requestAccounts',
-            params: [],
-          });
-  
-          if (!accounts || accounts.length === 0) {
-            throw new Error('No accounts returned from MetaMask');
-          }
-  
-          const address = accounts[0];
-          console.log('📱 MetaMask connected via SDK:', address);
-          
-          return address;
-        } catch (error) {
-          console.error('❌ Failed to connect to MetaMask:', error);
-          throw error;
+  /**
+   * Connect to MetaMask Mobile
+   */
+  private async connectMetaMask(): Promise<string> {
+    try {
+      if (!this.metamaskSDKAvailable || !this.ethereum) {
+        // Try to re-initialize if it failed initially
+        console.log('🔄 Attempting to re-initialize MetaMask SDK...');
+        await this.initialize();
+        if (!this.metamaskSDKAvailable || !this.ethereum) {
+           throw new Error('MetaMask SDK not available. Please ensure the app is installed.');
         }
-      }  /**
+      }
+
+      console.log('🦊 Connecting to MetaMask via SDK...');
+
+      // Request accounts from MetaMask
+      const accounts = await this.ethereum.request({
+        method: 'eth_requestAccounts',
+        params: [],
+      });
+
+      if (!accounts || accounts.length === 0) {
+        throw new Error('No accounts returned from MetaMask');
+      }
+
+      const address = accounts[0];
+      console.log('📱 MetaMask connected via SDK:', address);
+      
+      return address;
+    } catch (error) {
+      console.error('❌ Failed to connect to MetaMask:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Connect via WalletConnect
    * Uses deep linking to connect to WalletConnect-compatible wallets
    */
@@ -162,43 +165,23 @@ class WalletService {
     try {
       console.log('🔗 Connecting via WalletConnect...');
 
-      // WalletConnect deep link scheme
       const wcScheme = 'wc:';
-
-      // Create a WalletConnect URI
-      // In a production implementation, you'd generate a proper WalletConnect URI
-      // with your dapp's metadata and redirect to the wallet
       const dappName = 'LinkDAO Mobile';
-      const dappUrl = 'https://linkdao.io';
-      const description = 'Connect your wallet to LinkDAO';
+      
+      // Using a basic V1-style link for compatibility fallback, 
+      // but ideally this should be upgraded to V2 with a proper Project ID
+      const wcUri = `${wcScheme}${encodeURIComponent(dappName)}@1?bridge=https://bridge.walletconnect.org&key=${Date.now()}`;
 
-      // For now, we'll use a simplified approach
-      // In production, you'd use @walletconnect/web3provider or similar
-      const wcUri = `${wcScheme}${dappName}@1?bridge=https://bridge.walletconnect.org&key=${Date.now()}`;
-
-      // Try to open with a generic WalletConnect deep link
-      // This will prompt the user to choose a WalletConnect-compatible wallet
       const canOpen = await Linking.canOpenURL(wcUri);
       if (canOpen) {
         await Linking.openURL(wcUri);
+        // Note: This flow is incomplete without a socket listener
+        // We return a placeholder to indicate the action was taken, but the UI 
+        // will need to handle the fact that we don't have the address yet.
+        throw new Error('Please authorize in your wallet app. (Note: Full WalletConnect V2 support is pending update)');
       } else {
-        // Fallback: Try to open via universal link or prompt user
-        // For now, throw specific error
-        throw new Error('No WalletConnect-compatible wallet found. Please install a wallet like MetaMask, Rainbow, or Trust Wallet.');
+        throw new Error('No WalletConnect-compatible wallet found.');
       }
-
-      // Note: In a real implementation, you'd need to:
-      // 1. Generate a proper WalletConnect URI with your dapp's metadata
-      // 2. Set up a WebSocket connection to handle the WalletConnect session
-      // 3. Handle the callback when the user approves the connection
-      // 4. Store the session for future use
-
-      throw new Error(
-        'WalletConnect connection requires additional setup. ' +
-        'Please use MetaMask for now or complete the WalletConnect implementation.\n' +
-        'To implement WalletConnect, install @walletconnect/web3provider and set up the session handling.'
-      );
-
     } catch (error) {
       console.error('❌ WalletConnect connection failed:', error);
       throw error;
@@ -206,154 +189,64 @@ class WalletService {
   }
 
   /**
+   * Connect to Coinbase Wallet
+   */
+  private async connectCoinbase(): Promise<string> {
+    try {
+      console.log('🔷 Connecting to Coinbase Wallet...');
+      const cbWalletScheme = 'cbwallet://';
+      const isInstalled = await Linking.canOpenURL(cbWalletScheme);
 
-       * Connect to Coinbase Wallet
-
-       * Uses deep linking to connect to Coinbase Wallet mobile app
-
-       */
-
-      private async connectCoinbase(): Promise<string> {
-
-        try {
-
-          console.log('🔷 Connecting to Coinbase Wallet...');
-
-  
-
-          // Coinbase Wallet deep link scheme
-
-          const cbWalletScheme = 'cbwallet://';
-
-  
-
-          // Check if Coinbase Wallet is installed
-
-          const isInstalled = await Linking.canOpenURL(cbWalletScheme);
-
-  
-
-          if (!isInstalled) {
-
-            // Redirect to App Store if not installed
-
-            const appStoreUrl = Platform.OS === 'ios'
-
-              ? 'https://apps.apple.com/app/coinbase-wallet/id1278383455'
-
-              : 'https://play.google.com/store/apps/details?id=org.toshi';
-
-  
-
-            throw new Error(
-
-              'Coinbase Wallet is not installed. Please install it from the app store first.\n' +
-
-              `Download from: ${appStoreUrl}`
-
-            );
-
-          }
-
-  
-
-          // Create a deep link to connect to Coinbase Wallet
-
-          // Using WalletConnect protocol for connection
-
-          const dappName = 'LinkDAO Mobile';
-
-          const dappUrl = 'https://linkdao.io';
-
-  
-
-          // For now, we'll use a simple deep link approach
-
-          // In production, you'd want to use WalletConnect protocol
-
-          const deepLink = `${cbWalletScheme}connect?dappName=${encodeURIComponent(dappName)}&dappUrl=${encodeURIComponent(dappUrl)}`;
-
-  
-
-          // Open Coinbase Wallet
-
-          await Linking.openURL(deepLink);
-
-  
-
-          // Note: In a real implementation, you'd need to handle the callback
-
-          // from Coinbase Wallet when the user approves the connection
-
-          // This would require setting up a custom URL scheme in your app
-
-  
-
-          throw new Error(
-
-            'Coinbase Wallet connection requires additional setup. ' +
-
-            'Please use MetaMask for now or complete the deep link callback implementation.'
-
-          );
-
-  
-
-        } catch (error) {
-
-          console.error('❌ Failed to connect to Coinbase Wallet:', error);
-
-          throw error;
-
-        }
-
+      if (!isInstalled) {
+        const appStoreUrl = Platform.OS === 'ios'
+          ? 'https://apps.apple.com/app/coinbase-wallet/id1278383455'
+          : 'https://play.google.com/store/apps/details?id=org.toshi';
+        
+        // Open store
+        await Linking.openURL(appStoreUrl);
+        throw new Error('Redirecting to install Coinbase Wallet...');
       }
+
+      const dappName = 'LinkDAO Mobile';
+      const dappUrl = 'https://linkdao.io';
+      // Basic deep link attempt
+      const deepLink = `${cbWalletScheme}wager?dappName=${encodeURIComponent(dappName)}&dappUrl=${encodeURIComponent(dappUrl)}`;
+
+      await Linking.openURL(deepLink);
+      
+      // We can't synchronously get the address without a callback handler.
+      // We throw a helpful message to the user.
+      throw new Error('Opened Coinbase Wallet. Please confirm connection. (Full integration pending)');
+
+    } catch (error) {
+      console.error('❌ Failed to connect to Coinbase Wallet:', error);
+      throw error;
+    }
+  }
 
   /**
    * Connect to Trust Wallet
-   * Uses deep linking to connect to Trust Wallet mobile app
    */
   private async connectTrust(): Promise<string> {
     try {
       console.log('🛡️ Connecting to Trust Wallet...');
-
-      // Trust Wallet deep link scheme
       const trustWalletScheme = 'trust://';
-
-      // Check if Trust Wallet is installed
       const isInstalled = await Linking.canOpenURL(trustWalletScheme);
 
       if (!isInstalled) {
-        // Redirect to App Store if not installed
-        const appStoreUrl = Platform.OS === 'ios'
+         const appStoreUrl = Platform.OS === 'ios'
           ? 'https://apps.apple.com/app/trust-crypto-bitcoin-wallet/id1288339409'
           : 'https://play.google.com/store/apps/details?id=com.wallet.crypto.trustapp';
-
-        throw new Error(
-          'Trust Wallet is not installed. Please install it from the app store first.\n' +
-          `Download from: ${appStoreUrl}`
-        );
+         await Linking.openURL(appStoreUrl);
+         throw new Error('Redirecting to install Trust Wallet...');
       }
 
-      // Create a deep link to connect to Trust Wallet
       const dappName = 'LinkDAO Mobile';
       const dappUrl = 'https://linkdao.io';
+      const deepLink = `${trustWalletScheme}open?dappName=${encodeURIComponent(dappName)}&dappUrl=${encodeURIComponent(dappUrl)}`;
 
-      // Trust Wallet uses WalletConnect protocol
-      // For now, we'll use a simple deep link approach
-      const deepLink = `${trustWalletScheme}connect?dappName=${encodeURIComponent(dappName)}&dappUrl=${encodeURIComponent(dappUrl)}`;
-
-      // Open Trust Wallet
       await Linking.openURL(deepLink);
-
-      // Note: In a real implementation, you'd need to handle the callback
-      // from Trust Wallet when the user approves the connection
-      // This would require setting up a custom URL scheme in your app
-
-      throw new Error(
-        'Trust Wallet connection requires additional setup. ' +
-        'Please use MetaMask for now or complete the deep link callback implementation.'
-      );
+      throw new Error('Opened Trust Wallet. Please confirm connection. (Full integration pending)');
 
     } catch (error) {
       console.error('❌ Failed to connect to Trust Wallet:', error);
@@ -365,7 +258,18 @@ class WalletService {
    * Connect to Rainbow Wallet
    */
   private async connectRainbow(): Promise<string> {
-    throw new Error('Rainbow Wallet integration not yet implemented. Please use MetaMask for now.');
+     // Similar fallback pattern
+     try {
+       const scheme = 'rainbow://';
+       const isInstalled = await Linking.canOpenURL(scheme);
+       if(isInstalled) {
+         await Linking.openURL(scheme);
+         throw new Error('Opened Rainbow Wallet. (Integration pending)');
+       }
+       throw new Error('Rainbow Wallet not installed.');
+     } catch (e) {
+       throw e;
+     }
   }
 
   /**
@@ -381,12 +285,18 @@ class WalletService {
   async signMessage(message: string, address: string): Promise<string> {
     try {
       if (!this._isConnected || !this.activeConnection || this.activeConnection.address.toLowerCase() !== address.toLowerCase()) {
-        throw new Error('Wallet not connected or address mismatch');
+        // Attempt to reconnect if using MetaMask and we have the provider
+        if (this.currentProvider === 'metamask' && this.ethereum) {
+           console.log('⚠️ Connection state lost, attempting to re-use provider...');
+           // proceed to try signing
+        } else {
+           throw new Error('Wallet not connected or address mismatch');
+        }
       }
 
-      console.log('🔐 Signing message with', this.activeConnection.provider, ':', message);
+      console.log('🔐 Signing message with', this.currentProvider, ':', message);
 
-      if (this.activeConnection.provider === 'metamask' && this.ethereum) {
+      if (this.currentProvider === 'metamask' && this.ethereum) {
         // Use MetaMask SDK provider to sign
         const signature = await this.ethereum.request({
           method: 'personal_sign',
@@ -397,7 +307,6 @@ class WalletService {
         return signature;
       }
 
-      // For other providers or as a fallback in development
       throw new Error('No signer available for current provider');
     } catch (error) {
       console.error('❌ Failed to sign message:', error);
@@ -410,13 +319,13 @@ class WalletService {
    */
   async sendTransaction(tx: ethers.TransactionRequest): Promise<string> {
     try {
-      if (!this._isConnected || !this.activeConnection || !this.ethereum) {
+      if (!this._isConnected && !this.ethereum) {
         throw new Error('Wallet not connected');
       }
 
       console.log('💸 Sending transaction to:', tx.to);
 
-      if (this.activeConnection.provider === 'metamask') {
+      if (this.currentProvider === 'metamask' || this.ethereum) {
         const hash = await this.ethereum.request({
           method: 'eth_sendTransaction',
           params: [tx],
@@ -437,13 +346,28 @@ class WalletService {
    * Switch network/chain
    */
   async switchChain(chainId: number): Promise<void> {
-    if (!this._isConnected || !this.activeConnection) {
-      throw new Error('Wallet not connected');
+    if (!this._isConnected) {
+       // try to proceed if we have ethereum provider
+       if (!this.ethereum) throw new Error('Wallet not connected');
     }
 
     console.log('🔄 Switching to chain:', chainId);
-    this.activeConnection.chainId = chainId;
-    await this.saveConnection(this.activeConnection);
+    if (this.activeConnection) {
+        this.activeConnection.chainId = chainId;
+        await this.saveConnection(this.activeConnection);
+    }
+    
+    // Attempt to switch via provider if supported
+    try {
+        const hexChainId = `0x${chainId.toString(16)}`;
+        await this.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: hexChainId }],
+        });
+    } catch(e) {
+        console.warn('Failed to switch chain on provider:', e);
+    }
+
     console.log('✅ Chain switched');
   }
 
@@ -457,6 +381,14 @@ class WalletService {
       this.activeConnection = null;
       this.currentProvider = null;
       await this.clearConnection();
+      
+      // Optionally disconnect from SDK if supported
+      if (this.sdk) {
+          try {
+              this.sdk.terminate();
+          } catch (e) { console.warn('Error terminating SDK', e); }
+      }
+      
       console.log(`✅ Disconnected from ${provider}`);
     } catch (error) {
       console.error('❌ Failed to disconnect wallet:', error);

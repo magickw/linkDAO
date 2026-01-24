@@ -98,6 +98,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="earn"
+        options={{
+          title: 'Earn',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="ribbon" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="marketplace"
         options={{
           title: 'Marketplace',

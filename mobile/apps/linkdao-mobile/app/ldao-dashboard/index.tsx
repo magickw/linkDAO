@@ -162,7 +162,7 @@ export default function LDAODashboardScreen() {
           <Ionicons name="rocket-outline" size={32} color="#8b5cf6" />
           <View style={styles.actionText}>
             <Text style={styles.actionTitle}>Grow Your Portfolio</Text>
-            <Text style={actionSubtitle}>Buy LDAO tokens to participate in governance and earn rewards</Text>
+            <Text style={styles.actionSubtitle}>Buy LDAO tokens to participate in governance and earn rewards</Text>
           </View>
         </View>
         <TouchableOpacity style={styles.actionButton} onPress={handleBuyTokens}>

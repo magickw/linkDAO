@@ -2432,6 +2432,59 @@ export class DatabaseService {
     });
   }
 
+  async storePushToken(userAddress: string, token: string, platform: string): Promise<boolean> {
+    return this.executeQuery(async () => {
+      try {
+        // Check if token already exists for this user
+        const existing = await this.db.select()
+          .from(schema.pushTokens)
+          .where(
+            and(
+              eq(schema.pushTokens.userAddress, userAddress),
+              eq(schema.pushTokens.token, token)
+            )
+          )
+          .limit(1);
+
+        if (existing.length > 0) {
+          // Token already exists, no need to insert again
+          return true;
+        }
+
+        // Insert new token
+        await this.db.insert(schema.pushTokens).values({
+          userAddress,
+          token,
+          platform,
+          createdAt: new Date()
+        });
+
+        return true;
+      } catch (error) {
+        safeLogger.error('Error storing push token:', error);
+        return false;
+      }
+    });
+  }
+
+  async removePushToken(userAddress: string, token: string): Promise<boolean> {
+    return this.executeQuery(async () => {
+      try {
+        await this.db.delete(schema.pushTokens)
+          .where(
+            and(
+              eq(schema.pushTokens.userAddress, userAddress),
+              eq(schema.pushTokens.token, token)
+            )
+          );
+        return true;
+      } catch (error) {
+        safeLogger.error('Error removing push token:', error);
+        return false;
+      }
+    });
+  }
+
   async deleteOldNotifications(cutoffDate: Date) {
     return this.executeQuery(async () => {
       const deleted = await this.db.delete(schema.notifications)
