@@ -581,8 +581,28 @@ export class OrderService {
       }
 
       if (action === 'approve') {
-        // Issue refund logic would go here
-        // For now, assuming refund is handled externally or strictly via update
+        // Issue on-chain refund if it's a crypto payment
+        if (order.paymentMethod === 'crypto' && order.escrowId) {
+          try {
+            const escrow = await databaseService.getEscrowById(order.escrowId);
+            if (escrow && escrow.onChainId) {
+              // Get chain ID from order metadata if available, otherwise default to Sepolia
+              let chainId = 11155111; 
+              if (order.metadata && typeof order.metadata === 'object' && (order.metadata as any).chainId) {
+                chainId = Number((order.metadata as any).chainId);
+              }
+              
+              await this.enhancedEscrowService.refundBuyerOnChain(escrow.onChainId, chainId);
+              safeLogger.info(`On-chain refund triggered for order ${orderId} (escrow: ${escrow.onChainId})`);
+            } else {
+              safeLogger.warn(`On-chain ID missing for escrow ${order.escrowId}, manual refund required`);
+            }
+          } catch (error) {
+            safeLogger.error(`Failed to trigger on-chain refund for order ${orderId}:`, error);
+            // We continue with DB update even if on-chain refund fails to maintain system state consistency,
+            // but the error is logged for manual intervention.
+          }
+        }
 
         // Update cancellation status
         await databaseService.updateCancellationStatus(cancellationRequest.id, 'approved', resolutionNotes);

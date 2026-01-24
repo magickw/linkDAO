@@ -80,6 +80,7 @@ export class EnhancedEscrowService {
     "function autoResolveDispute(uint256 escrowId) external",
     "function castVote(uint256 escrowId, bool forBuyer) external",
     "function resolveDisputeByArbitrator(uint256 escrowId, bool buyerWins) external",
+    "function refundBuyer(uint256 escrowId) external",
     "function getEscrow(uint256 escrowId) external view returns (address seller, address buyer, uint256 amount, address token, uint256 createdAt, uint256 duration, uint8 status, address winner)",
     "function getDetailedReputation(address user) external view returns (uint256 totalScore, uint256 successfulTransactions, uint256 disputedTransactions, uint256 arbitrationWins, uint256 arbitrationLosses)",
     "function getEscrowChainId(uint256 escrowId) external view returns (uint256)"
@@ -749,7 +750,14 @@ export class EnhancedEscrowService {
             const parsedLog = this.enhancedEscrowContract.interface.parseLog(log);
             if (parsedLog && parsedLog.name === 'EscrowCreated') {
               escrowCreated = true;
-              safeLogger.info(`Found EscrowCreated event for escrow ${escrowId}`);
+              const onChainId = parsedLog.args[0].toString();
+              safeLogger.info(`Found EscrowCreated event for escrow ${escrowId}, on-chain ID: ${onChainId}`);
+              
+              // Update database with on-chain ID
+              await databaseService.updateEscrow(escrowId, {
+                onChainId: onChainId
+              });
+              
               break;
             }
           } catch (logError) {
@@ -1339,6 +1347,43 @@ export class EnhancedEscrowService {
       safeLogger.info(`Successfully retried ${operation} for escrow ${escrowId}`);
     } catch (error) {
       safeLogger.error(`Error retrying ${operation} for escrow ${escrowId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Refund buyer on-chain using the escrow contract
+   * @param escrowId On-chain escrow ID
+   * @param chainId Chain ID
+   */
+  async refundBuyerOnChain(escrowId: string | number | bigint, chainId: number): Promise<{ transactionHash: string }> {
+    try {
+      if (!process.env.REFUND_WALLET_PRIVATE_KEY) {
+        throw new Error('REFUND_WALLET_PRIVATE_KEY not configured');
+      }
+
+      const provider = this.getProviderForChain(chainId);
+      const wallet = new ethers.Wallet(process.env.REFUND_WALLET_PRIVATE_KEY, provider);
+      
+      const contracts = this.getContractsForChain(chainId);
+      if (!contracts.escrow) {
+        throw new Error(`Escrow contract not configured for chain ${chainId}`);
+      }
+
+      const escrowContractWithSigner = contracts.escrow.connect(wallet) as any;
+      
+      const onChainEscrowId = BigInt(escrowId.toString());
+
+      safeLogger.info(`Calling refundBuyer on-chain for escrow ID: ${onChainEscrowId}`);
+      
+      const tx = await escrowContractWithSigner.refundBuyer(onChainEscrowId);
+      const receipt = await tx.wait();
+      
+      safeLogger.info(`On-chain refund successful for escrow ID ${onChainEscrowId}: ${receipt.hash}`);
+      
+      return { transactionHash: receipt.hash };
+    } catch (error) {
+      safeLogger.error(`Failed to refund buyer on-chain for escrow ID ${escrowId}:`, error);
       throw error;
     }
   }

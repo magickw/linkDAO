@@ -165,6 +165,7 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
 
     mapping(uint256 => address) public disputeInitiator; // escrowId => who opened the dispute
     mapping(uint256 => uint256) public emergencyRefundTimelocks; // escrowId => timestamp when refund can be executed
+    mapping(address => bool) public authorizedPlatformAddresses;
     
     // Events
     event EscrowCreated(uint256 indexed escrowId, address indexed buyer, address indexed seller, uint256 amount);
@@ -188,6 +189,7 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
     event DisputeBondForfeited(uint256 indexed escrowId, address indexed loser, uint256 amount, address indexed winner);
     event DisputeBondConfigUpdated(uint256 newPercentage, bool required);
     event UserSuspended(address indexed user, uint256 duration, string reason);
+    event PlatformAddressAuthorized(address indexed platformAddress, bool authorized);
     
     // Modifiers
     modifier escrowExists(uint256 escrowId) {
@@ -1026,6 +1028,17 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
     }
 
     /**
+     * @notice Authorize or deauthorize a platform address
+     * @param platformAddress Address to authorize/deauthorize
+     * @param authorized Whether the address is authorized
+     */
+    function authorizePlatformAddress(address platformAddress, bool authorized) external onlyOwner {
+        require(platformAddress != address(0), "Invalid platform address");
+        authorizedPlatformAddresses[platformAddress] = authorized;
+        emit PlatformAddressAuthorized(platformAddress, authorized);
+    }
+
+    /**
      * @notice Configure dispute bond settings
      * @param newPercentage New bond percentage in basis points (e.g., 500 = 5%)
      * @param required Whether bonds are required
@@ -1103,6 +1116,51 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
         }
 
         emit DeadlineRefund(escrowId, escrow.buyer, escrow.amount, "Delivery deadline exceeded");
+    }
+
+    /**
+     * @notice Refund buyer (called by seller or authorized platform address)
+     * @param escrowId ID of the escrow
+     */
+    function refundBuyer(uint256 escrowId) external nonReentrant escrowExists(escrowId) onlySameChain(escrowId) {
+        Escrow storage escrow = escrows[escrowId];
+        
+        require(
+            msg.sender == escrow.seller || 
+            authorizedPlatformAddresses[msg.sender] || 
+            msg.sender == owner(),
+            "Not authorized to refund"
+        );
+        
+        require(
+            escrow.status != EscrowStatus.CANCELLED &&
+            escrow.status != EscrowStatus.DELIVERY_CONFIRMED &&
+            escrow.status != EscrowStatus.RESOLVED_BUYER_WINS &&
+            escrow.status != EscrowStatus.RESOLVED_SELLER_WINS,
+            "Invalid status for refund"
+        );
+
+        // Funds are locked if in these states
+        bool fundsLocked = (
+            escrow.status == EscrowStatus.FUNDS_LOCKED ||
+            escrow.status == EscrowStatus.READY_FOR_RELEASE ||
+            escrow.status == EscrowStatus.DISPUTE_OPENED
+        );
+
+        escrow.status = EscrowStatus.CANCELLED;
+        escrow.resolvedAt = block.timestamp;
+
+        // Return NFT to seller if deposited
+        if (escrow.nftDeposited) {
+            _transferNFT(escrowId, escrow.seller);
+        }
+
+        // Return funds to buyer if locked
+        if (fundsLocked) {
+             _releaseFunds(escrowId, escrow.buyer);
+        }
+
+        emit EscrowResolved(escrowId, EscrowStatus.CANCELLED, escrow.buyer);
     }
 
     /**

@@ -5,11 +5,13 @@ import { eq, and, lt, isNull, or } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { refundPaymentService, RefundResult } from './refundPaymentService';
 import { NotificationService } from './notificationService';
+import { EnhancedEscrowService } from './enhancedEscrowService';
 
 const notificationService = new NotificationService();
 
 interface ExpiredEscrow {
   id: string;
+  onChainId?: string | null;
   buyerId: string;
   sellerId: string;
   amount: string;
@@ -37,11 +39,20 @@ export class EscrowSchedulerService {
   private isRunning: boolean = false;
   private expiryCheckTask: cron.ScheduledTask | null = null;
   private sellerReleaseTask: cron.ScheduledTask | null = null;
+  private enhancedEscrowService: EnhancedEscrowService;
 
   // Default escrow duration in days (if not specified per escrow)
   private readonly DEFAULT_ESCROW_DURATION_DAYS = 14;
   // Grace period after delivery confirmation before auto-release (in hours)
   private readonly AUTO_RELEASE_GRACE_PERIOD_HOURS = 48;
+
+  constructor() {
+    this.enhancedEscrowService = new EnhancedEscrowService(
+      process.env.RPC_URL || 'https://sepolia.drpc.org',
+      process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || '',
+      process.env.MARKETPLACE_CONTRACT_ADDRESS || ''
+    );
+  }
 
   /**
    * Start all scheduled tasks
@@ -173,6 +184,7 @@ export class EscrowSchedulerService {
 
       return expiredEscrows.map(e => ({
         id: e.id.toString(),
+        onChainId: e.onChainId,
         buyerId: e.buyerId || '',
         sellerId: e.sellerId || '',
         amount: e.amount || '0',
@@ -211,8 +223,28 @@ export class EscrowSchedulerService {
       // Process refund based on payment method
       let refundResult: RefundResult;
 
-      if (escrow.tokenAddress || escrow.paymentMethod === 'crypto') {
-        // Crypto refund
+      if (escrow.onChainId && (escrow.tokenAddress || escrow.paymentMethod === 'crypto')) {
+        // Preferred on-chain refund via escrow contract
+        try {
+          // Get chain ID from escrow metadata or default
+          const chainId = 11155111; 
+          const tx = await this.enhancedEscrowService.refundBuyerOnChain(escrow.onChainId, chainId);
+          refundResult = {
+            success: true,
+            transactionHash: tx.transactionHash,
+            provider: 'blockchain-escrow'
+          };
+        } catch (error: any) {
+          safeLogger.error(`On-chain escrow refund failed for ${escrow.id}, falling back to wallet refund:`, error);
+          // Fallback to legacy wallet refund if escrow call fails
+          refundResult = await refundPaymentService.processBlockchainRefund(
+            buyer.walletAddress,
+            escrow.amount,
+            escrow.tokenAddress
+          );
+        }
+      } else if (escrow.tokenAddress || escrow.paymentMethod === 'crypto') {
+        // Legacy crypto refund if no on-chain ID
         refundResult = await refundPaymentService.processBlockchainRefund(
           buyer.walletAddress,
           escrow.amount,

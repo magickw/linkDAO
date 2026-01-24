@@ -1154,6 +1154,7 @@ export const escrows = pgTable("escrows", {
   stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
   paypalCaptureId: varchar("paypal_capture_id", { length: 255 }),
   tokenAddress: varchar("token_address", { length: 66 }),
+  onChainId: varchar("on_chain_id", { length: 255 }),
   // Resolution details
   resolution: text("resolution"),
 });
