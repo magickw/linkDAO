@@ -1869,24 +1869,75 @@ export class CommunityService {
       // Validate input - increased limit for rich text
       validateLength(content, 50000, 'Post content');
 
-      // Check if user is a member of the community
+      // 1. Check if community exists and its public status
+      const communityResult = await db
+        .select({ 
+          id: communities.id, 
+          isPublic: communities.isPublic,
+          memberCount: communities.memberCount 
+        })
+        .from(communities)
+        .where(eq(communities.id, communityId))
+        .limit(1);
+
+      if (communityResult.length === 0) {
+        throw new Error('Community not found');
+      }
+
+      const community = communityResult[0];
+
+      // 2. Check membership or eligibility to post
       const membershipResult = await db
-        .select({ role: communityMembers.role })
+        .select({ role: communityMembers.role, isActive: communityMembers.isActive })
         .from(communityMembers)
         .where(
           and(
             eq(communityMembers.communityId, communityId),
-            eq(communityMembers.userAddress, normalizedAuthorAddress),
-            eq(communityMembers.isActive, true)
+            eq(communityMembers.userAddress, normalizedAuthorAddress)
           )
         )
         .limit(1);
 
-      if (membershipResult.length === 0) {
-        throw new Error('User is not a member of this community');
+      const isMember = membershipResult.length > 0 && membershipResult[0].isActive;
+
+      if (!isMember) {
+        // If not a member, check if the community is public
+        if (!community.isPublic) {
+          throw new Error('This community is private. You must be a member to post.');
+        }
+
+        // Auto-join the user to the public community
+        safeLogger.info(`Auto-joining user ${normalizedAuthorAddress} to public community ${communityId} upon posting`);
+        
+        await db
+          .insert(communityMembers)
+          .values({
+            communityId: communityId,
+            userAddress: normalizedAuthorAddress,
+            role: 'member',
+            reputation: 0,
+            contributions: 0,
+            isActive: true,
+          })
+          .onConflictDoUpdate({
+            target: [communityMembers.communityId, communityMembers.userAddress],
+            set: { isActive: true, updatedAt: new Date() }
+          });
+
+        // Update community member count
+        await db
+          .update(communities)
+          .set({
+            memberCount: community.memberCount + 1,
+            updatedAt: new Date()
+          })
+          .where(eq(communities.id, communityId));
+      } else if (membershipResult[0].role === 'banned') {
+        // Explicitly check for banned status if we implement it in the role field
+        throw new Error('You are blocked from posting in this community.');
       }
 
-      // Get the user ID from the users table
+      // 3. Get or create user ID from the users table
       const userResult = await db
         .select({ id: users.id })
         .from(users)

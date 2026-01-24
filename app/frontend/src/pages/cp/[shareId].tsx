@@ -161,8 +161,8 @@ export default function CommunityPostSharePage() {
     return (
         <Layout title={post.title || 'Community Post'}>
             {getMetaTags()}
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pt-0 lg:pt-6">
+                <div className="mx-auto max-w-screen-2xl px-0 sm:px-2 lg:px-4">
                     <PostDetail
                         post={post}
                         community={community}

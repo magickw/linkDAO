@@ -77,15 +77,19 @@ export default function SharePostModal({
 
   // Community sharing state
   const [userCommunities, setUserCommunities] = useState<Community[]>([]);
+  const [searchResults, setSearchResults] = useState<Community[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loadingCommunities, setLoadingCommunities] = useState(false);
+  const [isSearchingCommunities, setIsSearchingCommunities] = useState(false);
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
 
+  // Initial fetch of user's communities
   useEffect(() => {
-    if (isOpen && address) {
+    if (isOpen && address && selectedOption === 'community') {
       const fetchCommunities = async () => {
         try {
           setLoadingCommunities(true);
-          const response = await CommunityService.getMyCommunities(1, 100);
+          const response = await CommunityService.getMyCommunities(1, 10);
           setUserCommunities(response.communities);
         } catch (error) {
           console.error('Failed to fetch communities:', error);
@@ -95,7 +99,28 @@ export default function SharePostModal({
       };
       fetchCommunities();
     }
-  }, [isOpen, address]);
+  }, [isOpen, address, selectedOption]);
+
+  // Search communities when search term changes
+  useEffect(() => {
+    const searchTimer = setTimeout(async () => {
+      if (searchTerm.trim().length >= 2) {
+        try {
+          setIsSearchingCommunities(true);
+          const results = await CommunityService.searchCommunities(searchTerm);
+          setSearchResults(results);
+        } catch (error) {
+          console.error('Search failed:', error);
+        } finally {
+          setIsSearchingCommunities(false);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(searchTimer);
+  }, [searchTerm]);
 
   // Generate share URL
   const getPostUrl = () => {
@@ -398,56 +423,142 @@ export default function SharePostModal({
 
         {/* Community Selection */}
         {selectedOption === 'community' && (
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 max-h-60 overflow-y-auto">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
               Select a community to share to:
             </h4>
 
-            {loadingCommunities ? (
-              <div className="text-center py-4 text-sm text-gray-500">Loading communities...</div>
-            ) : userCommunities.length === 0 ? (
-              <div className="text-center py-4 text-sm text-gray-500">
-                You haven't joined any communities yet.
+            {/* Search Input */}
+            <div className="relative mb-4">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search public communities..."
+                className="w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                {isSearchingCommunities ? (
+                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : searchTerm ? (
+                  <button onClick={() => setSearchTerm('')} className="hover:text-gray-600 dark:hover:text-gray-200">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                )}
               </div>
-            ) : (
-              <div className="space-y-2">
-                {userCommunities.map(community => (
-                  <div
-                    key={community.id}
-                    onClick={() => setSelectedCommunityId(community.id)}
-                    className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${selectedCommunityId === community.id
-                      ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'
-                      : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
-                  >
-                    <div className="flex-shrink-0">
-                      {community.avatar ? (
-                        <img
-                          src={community.avatar}
-                          alt={community.name}
-                          className="w-8 h-8 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-xs font-bold text-blue-800 dark:text-blue-200">
-                          {community.name.substring(0, 2).toUpperCase()}
-                        </div>
+            </div>
+
+            {/* Results List */}
+            <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+              {searchTerm.length >= 2 ? (
+                searchResults.length === 0 && !isSearchingCommunities ? (
+                  <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
+                    No communities found for "{searchTerm}"
+                  </div>
+                ) : (
+                  searchResults.map(community => (
+                    <div
+                      key={community.id}
+                      onClick={() => setSelectedCommunityId(community.id)}
+                      className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-all duration-200 ${selectedCommunityId === community.id
+                        ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-500 ring-1 ring-primary-500'
+                        : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                    >
+                      <div className="flex-shrink-0">
+                        {community.avatar ? (
+                          <img
+                            src={community.avatar}
+                            alt={community.name}
+                            className="w-10 h-10 rounded-full object-cover shadow-sm"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-secondary-500 flex items-center justify-center text-xs font-bold text-white shadow-sm">
+                            {community.name.substring(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                          {community.name}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          {community.memberCount.toLocaleString()} members
+                        </p>
+                      </div>
+                      {selectedCommunityId === community.id && (
+                        <CheckSquare className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {community.name}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {community.memberCount} members
-                      </p>
+                  ))
+                )
+              ) : (
+                <>
+                  {loadingCommunities ? (
+                    <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
+                      <svg className="animate-spin h-6 w-6 mx-auto mb-2 opacity-50" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Loading your communities...
                     </div>
-                    {selectedCommunityId === community.id && (
-                      <CheckSquare className="w-5 h-5 text-blue-600 dark:text-blue-500" />
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+                  ) : userCommunities.length === 0 ? (
+                    <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
+                      <Users className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                      Search for communities to share to
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 dark:text-gray-500 mb-2 px-1">Your Communities</p>
+                      {userCommunities.map(community => (
+                        <div
+                          key={community.id}
+                          onClick={() => setSelectedCommunityId(community.id)}
+                          className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-all duration-200 ${selectedCommunityId === community.id
+                            ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-500 ring-1 ring-primary-500'
+                            : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                            }`}
+                        >
+                          <div className="flex-shrink-0">
+                            {community.avatar ? (
+                              <img
+                                src={community.avatar}
+                                alt={community.name}
+                                className="w-10 h-10 rounded-full object-cover shadow-sm"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-secondary-500 flex items-center justify-center text-xs font-bold text-white shadow-sm">
+                                {community.name.substring(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                              {community.name}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                              {community.memberCount.toLocaleString()} members
+                            </p>
+                          </div>
+                          {selectedCommunityId === community.id && (
+                            <CheckSquare className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                          )}
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         )}
 

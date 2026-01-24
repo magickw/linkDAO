@@ -5,7 +5,18 @@ import { Community } from '@/models/Community';
 import { CommunityMembership } from '@/models/CommunityMembership';
 import CommunityPostCardEnhanced from './CommunityPostCardEnhanced';
 import EnhancedCommentSystem from '../EnhancedCommentSystem';
-import { ArrowLeft, Share2, Users, ExternalLink } from 'lucide-react';
+import CommunityAvatar from './CommunityAvatar';
+import { 
+  ArrowLeft, 
+  Share2, 
+  Users, 
+  ExternalLink, 
+  MessageCircle,
+  Clock,
+  Shield,
+  Calendar,
+  Info
+} from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/context/ToastContext';
 
@@ -45,100 +56,198 @@ export default function PostDetail({
 
   const communitySlug = community.slug || community.id || 'community';
   const shareId = post.shareId || post.id;
-  const canonicalUrl = `/communities/${encodeURIComponent(communitySlug)}/posts/${shareId}`;
 
-  return (
-    <div className={`space-y-6 ${className}`}>
-      {isStandalone && (
-        <>
-          {/* Header with navigation */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => router.back()}
-                className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors duration-200"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back</span>
-              </button>
-              <Link
-                href={`/communities/${encodeURIComponent(communitySlug)}`}
-                className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200"
-              >
-                <Users className="w-4 h-4" />
-                <span>{community.displayName || community.name}</span>
-              </Link>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleCopyShareLink}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
-              >
-                <Share2 className="w-4 h-4" />
-                <span>Share</span>
-              </button>
-            </div>
+  if (!isStandalone) {
+    return (
+      <div className={`space-y-4 ${className}`}>
+        <CommunityPostCardEnhanced
+          post={{
+            ...post,
+            commentCount: commentCount
+          }}
+          community={community}
+          userMembership={userMembership}
+          onVote={onVote}
+          onReaction={onReaction}
+          onTip={onTip}
+          isStandalone={isStandalone}
+          className="shadow-sm border-gray-200 dark:border-gray-700"
+        />
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="p-4 border-b border-gray-100 dark:border-gray-700">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <MessageCircle className="w-5 h-5" />
+              Comments ({commentCount})
+            </h2>
           </div>
+          <div className="p-4">
+            <EnhancedCommentSystem
+              postId={post.id}
+              postType="community"
+              communityId={community.id}
+              userMembership={userMembership}
+              onCommentCountChange={setCommentCount}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-          {/* Community context banner */}
-          <div className="bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 rounded-lg p-4 border border-primary-200 dark:border-primary-700">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
-                  <Users className="w-5 h-5 text-white" />
+  // Standalone Reddit-style layout
+  return (
+    <div className={`grid grid-cols-1 lg:grid-cols-12 gap-6 ${className}`}>
+      {/* Left Navigation Sidebar - Hidden on mobile */}
+      <div className="hidden lg:block lg:col-span-3">
+        <div className="sticky top-24 space-y-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <button
+              onClick={() => router.back()}
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-md transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Go Back</span>
+            </button>
+            <Link
+              href={`/communities/${encodeURIComponent(communitySlug)}`}
+              className="w-full flex items-center gap-3 px-3 py-2 mt-1 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors"
+            >
+              <Users className="w-4 h-4" />
+              <span>{community.displayName || community.name}</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Column */}
+      <div className="col-span-1 lg:col-span-6 space-y-4">
+        {/* Mobile Header */}
+        <div className="lg:hidden flex items-center justify-between p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 -mx-4 -mt-8 mb-4">
+          <button onClick={() => router.back()} className="text-gray-600 dark:text-gray-400">
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <div className="flex items-center gap-2">
+            <CommunityAvatar avatar={community.avatar} name={community.name} size="sm" />
+            <span className="font-bold text-gray-900 dark:text-white truncate max-w-[150px]">
+              {community.displayName || community.name}
+            </span>
+          </div>
+          <button onClick={handleCopyShareLink} className="text-gray-600 dark:text-gray-400">
+            <Share2 className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Post Card - Exactly the same as feed but prominent */}
+        <CommunityPostCardEnhanced
+          post={{
+            ...post,
+            commentCount: commentCount
+          }}
+          community={community}
+          userMembership={userMembership}
+          onVote={onVote}
+          onReaction={onReaction}
+          onTip={onTip}
+          isStandalone={isStandalone}
+          className="shadow-md"
+        />
+
+        {/* Comments Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="p-4 border-b border-gray-100 dark:border-gray-700">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <MessageCircle className="w-5 h-5" />
+              Comments ({commentCount})
+            </h2>
+          </div>
+          <div className="p-4">
+            <EnhancedCommentSystem
+              postId={post.id}
+              postType="community"
+              communityId={community.id}
+              userMembership={userMembership}
+              onCommentCountChange={setCommentCount}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Right Sidebar - Community Info */}
+      <div className="col-span-1 lg:col-span-3 space-y-4">
+        <div className="sticky top-24 space-y-4">
+          {/* About Community */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="bg-primary-600 h-12"></div>
+            <div className="px-4 pb-4">
+              <div className="flex items-center gap-3 -mt-6 mb-3">
+                <div className="bg-white dark:bg-gray-800 rounded-full p-1 ring-4 ring-white dark:ring-gray-800">
+                  <CommunityAvatar avatar={community.avatar} name={community.name} size="lg" />
                 </div>
-                <div>
-                  <h3 className="font-semibold text-primary-900 dark:text-primary-100">
+                <div className="mt-6">
+                  <h3 className="font-bold text-gray-900 dark:text-white">
                     {community.displayName || community.name}
                   </h3>
-                  <p className="text-sm text-primary-700 dark:text-primary-300">
-                    Post by u/{post.authorProfile?.handle || (typeof post.author === 'string' ? `${post.author.slice(0, 6)}...${post.author.slice(-4)}` : 'Anonymous')}
-                  </p>
                 </div>
               </div>
+              
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-4">
+                {community.description || 'No description available'}
+              </p>
+
+              <div className="space-y-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500 flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Members
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {community.memberCount?.toLocaleString() || 0}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500 flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Created
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {community.createdAt ? new Date(community.createdAt).toLocaleDateString() : 'Recently'}
+                  </span>
+                </div>
+              </div>
+
               <Link
                 href={`/communities/${encodeURIComponent(communitySlug)}`}
-                className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors duration-200 font-medium"
+                className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-sm font-medium transition-colors"
               >
-                View Community →
+                Go to Community
               </Link>
             </div>
           </div>
-        </>
-      )}
 
-      {/* Main Post Card */}
-      <CommunityPostCardEnhanced
-        post={{
-          ...post,
-          commentCount: commentCount // Sync count
-        }}
-        community={community}
-        userMembership={userMembership}
-        onVote={onVote}
-        onReaction={onReaction}
-        onTip={onTip}
-        className="shadow-lg border-gray-200 dark:border-gray-700"
-      />
-
-      {/* Unified Comments Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            Comments
-            <span className="text-sm font-normal text-gray-500">({commentCount})</span>
-          </h2>
-        </div>
-        <div className="p-6 pt-0">
-          <EnhancedCommentSystem
-            postId={post.id}
-            postType="community"
-            communityId={community.id}
-            userMembership={userMembership}
-            onCommentCountChange={setCommentCount}
-            className="mt-4"
-          />
+          {/* Community Rules */}
+          {community.rules && community.rules.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+              <h3 className="font-bold text-gray-900 dark:text-white text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
+                <Shield className="w-4 h-4 text-blue-500" />
+                Community Rules
+              </h3>
+              <div className="space-y-3">
+                {community.rules.slice(0, 5).map((rule, index) => (
+                  <div key={index} className="text-xs text-gray-600 dark:text-gray-400 border-b border-gray-50 dark:border-gray-700/50 pb-2 last:border-0 last:pb-0">
+                    <p className="font-semibold text-gray-800 dark:text-gray-200 mb-0.5">
+                      {index + 1}. {rule.title || `Rule ${index + 1}`}
+                    </p>
+                    {rule.description && (
+                      <p className="line-clamp-2 opacity-80">{rule.description}</p>
+                    )}
+                    {!rule.title && typeof rule === 'string' && (
+                      <p>{rule}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

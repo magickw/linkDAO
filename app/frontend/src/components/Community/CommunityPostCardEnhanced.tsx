@@ -46,6 +46,7 @@ interface CommunityPostCardEnhancedProps {
   onOpenPost?: (post: EnhancedPost, communitySlug: string) => void;
   className?: string;
   isLoading?: boolean;
+  isStandalone?: boolean;
 }
 
 function CommunityPostCardEnhanced({
@@ -58,7 +59,8 @@ function CommunityPostCardEnhanced({
   onComment,
   onOpenPost,
   className = '',
-  isLoading = false
+  isLoading = false,
+  isStandalone = false
 }: CommunityPostCardEnhancedProps) {
   const router = useRouter();
   const { address, isConnected, hasWallet } = useWeb3();
@@ -186,9 +188,9 @@ function CommunityPostCardEnhanced({
             <RichContentPreview
               content={post.content}
               contentType="html"
-              maxLines={6}
-              isExpanded={isExpanded}
-              onToggleExpand={() => setIsExpanded(!isExpanded)}
+              maxLines={isStandalone ? undefined : 6}
+              isExpanded={isStandalone || isExpanded}
+              onToggleExpand={() => !isStandalone && setIsExpanded(!isExpanded)}
               className="mb-4"
             />
             
