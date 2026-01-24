@@ -906,6 +906,24 @@ export class OrderService {
           notificationService.sendOrderNotification(order.sellerWalletAddress, 'ORDER_COMPLETED', orderId, { recipientType: 'seller' })
         ]);
         break;
+      case OrderStatus.DISPUTED:
+        await Promise.all([
+          notificationService.sendOrderNotification(order.buyerWalletAddress, 'DISPUTE_INITIATED', orderId, { recipientType: 'buyer' }),
+          notificationService.sendOrderNotification(order.sellerWalletAddress, 'DISPUTE_INITIATED', orderId, { recipientType: 'seller' })
+        ]);
+        break;
+      case OrderStatus.CANCELLATION_REQUESTED:
+        await Promise.all([
+          notificationService.sendOrderNotification(order.buyerWalletAddress, 'CANCELLATION_REQUESTED', orderId, { recipientType: 'buyer' }),
+          notificationService.sendOrderNotification(order.sellerWalletAddress, 'CANCELLATION_REQUESTED', orderId, { recipientType: 'seller' })
+        ]);
+        break;
+      case OrderStatus.CANCELLED:
+        await Promise.all([
+          notificationService.sendOrderNotification(order.buyerWalletAddress, 'CANCELLATION_APPROVED', orderId, { recipientType: 'buyer' }),
+          notificationService.sendOrderNotification(order.sellerWalletAddress, 'CANCELLATION_APPROVED', orderId, { recipientType: 'seller' })
+        ]);
+        break;
     }
   }
 

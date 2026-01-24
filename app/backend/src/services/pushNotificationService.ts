@@ -28,6 +28,11 @@ interface NotificationPreferences {
   proposalResults: boolean;
   moderatorActions: boolean;
   systemUpdates: boolean;
+  orderUpdates: boolean;
+  orderStatusChanges: boolean;
+  orderDeliveryUpdates: boolean;
+  orderPaymentUpdates: boolean;
+  orderDisputeUpdates: boolean;
 }
 
 interface DeviceSubscription {
@@ -46,7 +51,10 @@ interface DeviceSubscription {
 
 interface NotificationPayload {
   userId: string;
-  type: 'community_update' | 'new_post' | 'mention' | 'reply' | 'community_invite' | 'governance_proposal' | 'proposal_result' | 'moderator_action' | 'system_update' | 'generic';
+  type: 'community_update' | 'new_post' | 'mention' | 'reply' | 'community_invite' | 'governance_proposal' | 'proposal_result' | 'moderator_action' | 'system_update' | 'generic' | 
+        'order_created' | 'order_received' | 'payment_received' | 'order_processing' | 'order_shipped' | 'order_delivered' | 'order_completed' | 
+        'dispute_initiated' | 'dispute_resolved' | 'cancellation_requested' | 'cancellation_approved' | 'cancellation_rejected' | 'cancellation_auto_approved' |
+        'delivery_confirmed' | 'payment_released';
   communityId?: string;
   postId?: string;
   title: string;
@@ -216,7 +224,12 @@ export class PushNotificationService {
           governanceProposals: true,
           proposalResults: true,
           moderatorActions: false,
-          systemUpdates: true
+          systemUpdates: true,
+          orderUpdates: true,
+          orderStatusChanges: true,
+          orderDeliveryUpdates: true,
+          orderPaymentUpdates: true,
+          orderDisputeUpdates: true
         };
 
         await db.execute(sql`
@@ -241,7 +254,12 @@ export class PushNotificationService {
         governanceProposals: true,
         proposalResults: true,
         moderatorActions: false,
-        systemUpdates: true
+        systemUpdates: true,
+        orderUpdates: true,
+        orderStatusChanges: true,
+        orderDeliveryUpdates: true,
+        orderPaymentUpdates: true,
+        orderDisputeUpdates: true
       };
     }
   }
@@ -547,8 +565,59 @@ export class PushNotificationService {
         return preferences.moderatorActions;
       case 'system_update':
         return preferences.systemUpdates;
+      // Order notifications
+      case 'order_created':
+      case 'order_received':
+      case 'order_processing':
+      case 'order_shipped':
+      case 'order_delivered':
+      case 'order_completed':
+        return preferences.orderStatusChanges;
+      case 'payment_received':
+      case 'payment_released':
+        return preferences.orderPaymentUpdates;
+      case 'delivery_confirmed':
+        return preferences.orderDeliveryUpdates;
+      case 'dispute_initiated':
+      case 'dispute_resolved':
+        return preferences.orderDisputeUpdates;
+      case 'cancellation_requested':
+      case 'cancellation_approved':
+      case 'cancellation_rejected':
+      case 'cancellation_auto_approved':
+        return preferences.orderUpdates;
       default:
         return true;
+    }
+  }
+
+  // Send order-specific push notification
+  async sendOrderNotification(userAddress: string, orderNotification: {
+    type: 'order_created' | 'order_received' | 'payment_received' | 'order_processing' | 'order_shipped' | 'order_delivered' | 'order_completed' | 'dispute_initiated' | 'dispute_resolved' | 'cancellation_requested' | 'cancellation_approved' | 'cancellation_rejected' | 'cancellation_auto_approved';
+    title: string;
+    message: string;
+    orderId: string;
+    data?: Record<string, any>;
+    priority?: 'low' | 'normal' | 'high';
+  }): Promise<boolean> {
+    try {
+      const result = await this.sendPushNotification({
+        userId: userAddress,
+        type: orderNotification.type,
+        title: orderNotification.title,
+        message: orderNotification.message,
+        data: {
+          orderId: orderNotification.orderId,
+          actionUrl: `/orders/${orderNotification.orderId}`,
+          ...orderNotification.data
+        },
+        priority: orderNotification.priority || 'normal'
+      });
+
+      return result.success > 0;
+    } catch (error) {
+      safeLogger.error('Error sending order push notification:', error);
+      return false;
     }
   }
 

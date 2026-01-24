@@ -2,7 +2,6 @@ import { DatabaseService } from './databaseService';
 import { safeLogger } from '../utils/safeLogger';
 import { OrderNotification } from '../models/Order';
 import { getWebSocketService } from './webSocketService';
-import { DatabaseService } from './databaseService';
 import { pushNotificationService } from './pushNotificationService';
 
 const databaseService = new DatabaseService();
@@ -205,7 +204,11 @@ export class NotificationService {
 
       // Send push notification if enabled
       if (await this.shouldSendPush(userAddress, type)) {
-        await this.sendPushNotification(userAddress, template.title, message, actionUrl);
+        await this.sendPushNotification(userAddress, template.title, message, actionUrl, {
+          ...metadata,
+          type: type,
+          orderId: orderId
+        });
       }
 
     } catch (error) {
@@ -527,7 +530,8 @@ export class NotificationService {
     userAddress: string,
     title: string,
     message: string,
-    actionUrl?: string
+    actionUrl?: string,
+    metadata?: any
   ): Promise<void> {
     try {
       // Get user push tokens from database
@@ -537,12 +541,35 @@ export class NotificationService {
         return;
       }
 
-      // Use pushNotificationService to send notifications
+      // Check if this is an order notification
+      if (metadata?.orderId && metadata?.type) {
+        const orderType = metadata.type.toLowerCase().replace('order_', '');
+        const validOrderTypes = ['created', 'received', 'processing', 'shipped', 'delivered', 'completed', 'dispute_initiated', 'dispute_resolved', 'cancellation_requested', 'cancellation_approved', 'cancellation_rejected', 'cancellation_auto_approved', 'payment_received', 'payment_released', 'delivery_confirmed'];
+        
+        if (validOrderTypes.includes(orderType)) {
+          const result = await pushNotificationService.sendOrderNotification(userAddress, {
+            type: `order_${orderType}` as any,
+            title,
+            message,
+            orderId: metadata.orderId,
+            data: { actionUrl, ...metadata }
+          });
+          
+          if (result) {
+            safeLogger.info(`Order push notification sent successfully to ${userAddress}:`, { title, message, type: orderType });
+          } else {
+            safeLogger.warn(`Order push notification failed for user ${userAddress}`);
+          }
+          return;
+        }
+      }
+
+      // Use generic push notification for non-order notifications
       const result = await pushNotificationService.sendToUser(userAddress, {
         title,
         body: message,
         actionUrl,
-        data: { actionUrl }
+        data: { actionUrl, ...metadata }
       });
 
       if (result) {
