@@ -8,7 +8,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Refres
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useCommunitiesStore } from '../../src/store';
+import { useCommunitiesStore, useNotificationStore } from '../../src/store';
 import { communitiesService } from '../../src/services/communitiesService';
 import { notificationService } from '../../src/services/notificationService';
 import CreateCommunityModal from '../../src/components/CreateCommunityModal';
@@ -46,17 +46,17 @@ export default function CommunitiesScreen() {
   const joinCommunity = useCommunitiesStore((state) => state.joinCommunity);
   const leaveCommunity = useCommunitiesStore((state) => state.leaveCommunity);
 
+  const notifications = useNotificationStore((state) => state.notifications);
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
+  const fetchNotifications = useNotificationStore((state) => state.fetchNotifications);
+  const markAllAsReadOnServer = useNotificationStore((state) => state.markAllAsReadOnServer);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBridge, setShowBridge] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'discover' | 'my-communities'>('discover');
-  const [hasUnread, setHasUnread] = useState(true);
-
-  // Mock activity data
-  /* Notifications are fetched from the server now */
-  const [notifications, setNotifications] = useState<any[]>([]);
 
   useEffect(() => {
     loadCommunities();
@@ -65,10 +65,7 @@ export default function CommunitiesScreen() {
 
   const loadNotifications = async () => {
     try {
-      const data = await notificationService.getNotifications();
-      setNotifications(data);
-      const unreadCount = data.filter(n => !n.read).length;
-      setHasUnread(unreadCount > 0);
+      await fetchNotifications();
     } catch (error) {
       console.error('Failed to load notifications:', error);
     }
@@ -145,7 +142,7 @@ export default function CommunitiesScreen() {
             onPress={() => setShowNotifications(true)}
           >
             <Ionicons name="notifications-outline" size={24} color="#1f2937" />
-            {hasUnread && <View style={styles.notificationBadge} />}
+            {unreadCount > 0 && <View style={styles.notificationBadge} />}
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.createButton}
@@ -396,9 +393,7 @@ export default function CommunitiesScreen() {
               style={styles.markAllReadButton}
               onPress={async () => {
                 try {
-                  await notificationService.markAllAsRead();
-                  setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-                  setHasUnread(false);
+                  await markAllAsReadOnServer();
                 } catch (e) {
                   console.error(e);
                 }

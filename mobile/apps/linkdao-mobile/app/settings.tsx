@@ -8,7 +8,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Pl
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useAuthStore, useSettingsStore } from '../src/store';
+import { useAuthStore, useSettingsStore, useNotificationStore } from '../src/store';
 import { authService } from '@linkdao/shared';
 import { isBiometricAvailable, getBiometricConfig, enableBiometrics, disableBiometrics, getBiometryTypeName } from '../src/services';
 import { offlineManager } from '../src/services';
@@ -39,6 +39,10 @@ export default function SettingsScreen() {
     setProfileStats,
   } = useSettingsStore();
 
+  const notificationPreferences = useNotificationStore((state) => state.preferences);
+  const updatePreferences = useNotificationStore((state) => state.updatePreferences);
+  const fetchPreferences = useNotificationStore((state) => state.fetchPreferences);
+
   const [activeTab, setActiveTab] = useState<TabType>('profile');
   const [localBiometricEnabled, setLocalBiometricEnabled] = useState(false);
   const [biometricType, setBiometricType] = useState<string | null>(null);
@@ -49,6 +53,7 @@ export default function SettingsScreen() {
     loadBiometricStatus();
     loadCacheSize();
     setEmail(user?.email || '');
+    fetchPreferences();
   }, [user]);
 
   const loadBiometricStatus = async () => {
@@ -312,6 +317,78 @@ export default function SettingsScreen() {
           <Switch
             value={notificationsEnabled}
             onValueChange={setNotificationsEnabled}
+            trackColor={{ false: '#d1d5db', true: '#3b82f6' }}
+            thumbColor={Platform.OS === 'android' ? '#ffffff' : undefined}
+          />
+        </View>
+        <View style={styles.settingItem}>
+          <View style={styles.settingInfo}>
+            <Text style={styles.settingTitle}>Comments</Text>
+            <Text style={styles.settingDescription}>Get notified when someone comments</Text>
+          </View>
+          <Switch
+            value={notificationPreferences.comments}
+            onValueChange={(value) => updatePreferences({ comments: value })}
+            trackColor={{ false: '#d1d5db', true: '#3b82f6' }}
+            thumbColor={Platform.OS === 'android' ? '#ffffff' : undefined}
+          />
+        </View>
+        <View style={styles.settingItem}>
+          <View style={styles.settingInfo}>
+            <Text style={styles.settingTitle}>Reactions</Text>
+            <Text style={styles.settingDescription}>Get notified when someone reacts</Text>
+          </View>
+          <Switch
+            value={notificationPreferences.reactions}
+            onValueChange={(value) => updatePreferences({ reactions: value })}
+            trackColor={{ false: '#d1d5db', true: '#3b82f6' }}
+            thumbColor={Platform.OS === 'android' ? '#ffffff' : undefined}
+          />
+        </View>
+        <View style={styles.settingItem}>
+          <View style={styles.settingInfo}>
+            <Text style={styles.settingTitle}>Tips</Text>
+            <Text style={styles.settingDescription}>Get notified when you receive tips</Text>
+          </View>
+          <Switch
+            value={notificationPreferences.tips}
+            onValueChange={(value) => updatePreferences({ tips: value })}
+            trackColor={{ false: '#d1d5db', true: '#3b82f6' }}
+            thumbColor={Platform.OS === 'android' ? '#ffffff' : undefined}
+          />
+        </View>
+        <View style={styles.settingItem}>
+          <View style={styles.settingInfo}>
+            <Text style={styles.settingTitle}>Mentions</Text>
+            <Text style={styles.settingDescription}>Get notified when you're mentioned</Text>
+          </View>
+          <Switch
+            value={notificationPreferences.mentions}
+            onValueChange={(value) => updatePreferences({ mentions: value })}
+            trackColor={{ false: '#d1d5db', true: '#3b82f6' }}
+            thumbColor={Platform.OS === 'android' ? '#ffffff' : undefined}
+          />
+        </View>
+        <View style={styles.settingItem}>
+          <View style={styles.settingInfo}>
+            <Text style={styles.settingTitle}>Community Updates</Text>
+            <Text style={styles.settingDescription}>Get notified about community activity</Text>
+          </View>
+          <Switch
+            value={notificationPreferences.communityUpdates}
+            onValueChange={(value) => updatePreferences({ communityUpdates: value })}
+            trackColor={{ false: '#d1d5db', true: '#3b82f6' }}
+            thumbColor={Platform.OS === 'android' ? '#ffffff' : undefined}
+          />
+        </View>
+        <View style={styles.settingItem}>
+          <View style={styles.settingInfo}>
+            <Text style={styles.settingTitle}>Moderation</Text>
+            <Text style={styles.settingDescription}>Get notified about moderation actions</Text>
+          </View>
+          <Switch
+            value={notificationPreferences.moderation}
+            onValueChange={(value) => updatePreferences({ moderation: value })}
             trackColor={{ false: '#d1d5db', true: '#3b82f6' }}
             thumbColor={Platform.OS === 'android' ? '#ffffff' : undefined}
           />

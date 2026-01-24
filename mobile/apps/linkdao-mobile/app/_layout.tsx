@@ -14,6 +14,7 @@ import { useAuthStore } from '../src/store';
 import { WalletLoginBridge } from '../src/components/WalletLoginBridge';
 import { walletService } from '../src/services/walletConnectService';
 import { socialMediaService } from '../src/services/socialMediaService';
+import { notificationService } from '../src/services/notificationService';
 import { setWalletAdapter } from '@linkdao/shared';
 import ErrorBoundary from '../src/components/ErrorBoundary';
 
@@ -53,6 +54,17 @@ export default function RootLayout() {
 
     initWalletService();
 
+    // Initialize notification service
+    const initNotificationService = async () => {
+      try {
+        await notificationService.initialize();
+        console.log('✅ Notification service initialized');
+      } catch (error) {
+        console.error('❌ Failed to initialize notification service:', error);
+      }
+    };
+
+    initNotificationService();
 
     // Set up deep link listener for OAuth callbacks
     const handleDeepLink = async (event: { url: string }) => {
@@ -84,6 +96,7 @@ export default function RootLayout() {
 
     return () => {
       subscription.remove();
+      notificationService.cleanup();
     };
   }, []);
 
