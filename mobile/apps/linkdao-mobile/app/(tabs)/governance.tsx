@@ -161,7 +161,7 @@ export default function GovernanceTabScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+    backgroundColor: THEME.colors.background.default,
   },
   header: {
     flexDirection: 'row',
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   content: {
     flex: 1,
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
   actionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginTop: 8,
   },
   actionDescription: {
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginBottom: 12,
   },
   loadingContainer: {
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
   proposalTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginBottom: 12,
     lineHeight: 22,
   },

@@ -100,7 +100,7 @@ export default function UserAnalyticsPage() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color={THEME.colors.text} />
+          <Ionicons name="arrow-back" size={24} color={THEME.colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Analytics</Text>
         <TouchableOpacity onPress={onRefresh} style={styles.headerButton}>
@@ -305,7 +305,7 @@ export default function UserAnalyticsPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+    backgroundColor: THEME.colors.background.default,
   },
   header: {
     flexDirection: 'row',
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   tabsContainer: {
     flexDirection: 'row',
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginTop: 20,
     marginBottom: 12,
   },
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   activityCard: {
     flexDirection: 'row',
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
   activityValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   activityLabel: {
     fontSize: 12,
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
   },
   insightText: {
     fontSize: 14,
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     lineHeight: 20,
   },
   tippingCard: {
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
   tippingValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginTop: 8,
   },
   tippingLabel: {
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
   contentTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginBottom: 4,
   },
   contentStats: {
@@ -599,7 +599,7 @@ const styles = StyleSheet.create({
   scoreLevel: {
     fontSize: 16,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginBottom: 12,
   },
   progressBar: {
@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 12,
     fontSize: 14,
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     lineHeight: 20,
   },
 });

@@ -33,85 +33,22 @@ export default function BookmarksScreen() {
   const loadBookmarks = async () => {
     setLoading(true);
     try {
-      // In production, fetch from API
-      const mockPosts = [
-        {
-          id: '1',
-          content: 'Exploring the future of decentralized finance and its impact on traditional banking systems',
-          author: { id: '1', name: 'Alice', avatar: '#3b82f6' },
-          likes: 156,
-          comments: 42,
-          timestamp: '2 hours ago',
-          bookmarkedAt: '2024-01-10T10:30:00Z',
-        },
-        {
-          id: '2',
-          content: 'Latest NFT trends and market analysis for Q4 2024',
-          author: { id: '2', name: 'Charlie', avatar: '#f59e0b' },
-          likes: 89,
-          comments: 15,
-          timestamp: '5 hours ago',
-          bookmarkedAt: '2024-01-09T14:20:00Z',
-        },
-        {
-          id: '3',
-          content: 'A deep dive into smart contract security best practices',
-          author: { id: '3', name: 'David', avatar: '#10b981' },
-          likes: 234,
-          comments: 67,
-          timestamp: '1 day ago',
-          bookmarkedAt: '2024-01-08T09:15:00Z',
-        },
-      ];
-
-      const mockCommunities = [
-        {
-          id: '1',
-          name: 'Web3 Developers',
-          handle: 'web3dev',
-          description: 'A community for Web3 developers to share knowledge',
-          members: 1234,
-          image: '#3b82f6',
-          bookmarkedAt: '2024-01-10T10:30:00Z',
-        },
-        {
-          id: '2',
-          name: 'DeFi Explorers',
-          handle: 'defiexplorers',
-          description: 'Discover and discuss DeFi protocols',
-          members: 5678,
-          image: '#8b5cf6',
-          bookmarkedAt: '2024-01-09T14:20:00Z',
-        },
-      ];
-
-      const mockUsers = [
-        {
-          id: '1',
-          name: 'Alice Johnson',
-          handle: 'alicej',
-          bio: 'Blockchain researcher and developer',
-          avatar: '#3b82f6',
-          bookmarkedAt: '2024-01-10T10:30:00Z',
-        },
-        {
-          id: '2',
-          name: 'Bob Smith',
-          handle: 'bobsmith',
-          bio: 'DeFi enthusiast',
-          avatar: '#10b981',
-          bookmarkedAt: '2024-01-09T14:20:00Z',
-        },
-      ];
-
-      setBookmarks({
-        posts: mockPosts,
-        communities: mockCommunities,
-        users: mockUsers,
-      });
+      // Fetch bookmarks from backend
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/bookmarks`);
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        setBookmarks({
+          posts: result.data.posts || [],
+          communities: result.data.communities || [],
+          users: result.data.users || [],
+        });
+      } else {
+        setBookmarks({ posts: [], communities: [], users: [] });
+      }
     } catch (error) {
       console.error('Failed to load bookmarks:', error);
-      Alert.alert('Error', 'Failed to load bookmarks');
+      setBookmarks({ posts: [], communities: [], users: [] });
     } finally {
       setLoading(false);
     }

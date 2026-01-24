@@ -614,7 +614,7 @@ export default function GovernancePage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+    backgroundColor: THEME.colors.background.default,
   },
   header: {
     flexDirection: 'row',
@@ -629,7 +629,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   votingPowerBadge: {
     flexDirection: 'row',
@@ -686,7 +686,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginBottom: 8,
   },
   sectionDescription: {
@@ -756,7 +756,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   statusBadge: {
     paddingHorizontal: 8,
@@ -813,7 +813,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontSize: 12,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -852,7 +852,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   charitySection: {
     padding: 16,
@@ -888,7 +888,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginBottom: 8,
   },
   input: {
@@ -898,8 +898,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: THEME.colors.text,
-    backgroundColor: THEME.colors.background,
+    color: THEME.colors.text.primary,
+    backgroundColor: THEME.colors.background.default,
   },
   textArea: {
     height: 100,
@@ -922,7 +922,7 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   submitButton: {
     backgroundColor: THEME.colors.success,
@@ -955,7 +955,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginTop: 8,
   },
   statLabel: {
@@ -979,7 +979,7 @@ const styles = StyleSheet.create({
   insightTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginLeft: 8,
   },
   insightText: {
@@ -998,7 +998,7 @@ const styles = StyleSheet.create({
   proposalStatsTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginBottom: 12,
   },
   proposalStatRow: {
@@ -1021,7 +1021,7 @@ const styles = StyleSheet.create({
   proposalStatValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginTop: 4,
   },
   viewFullAnalyticsButton: {

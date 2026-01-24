@@ -68,7 +68,7 @@ class AIRecommendationService {
       return this.transformRecommendations(data.recommendations || data || []);
     } catch (error) {
       console.error('Error fetching recommendations:', error);
-      return this.getMockRecommendations(type);
+      return [];
     }
   }
 
@@ -82,7 +82,7 @@ class AIRecommendationService {
       return this.transformRecommendations(data.trending || data || []);
     } catch (error) {
       console.error('Error fetching trending:', error);
-      return this.getMockTrending(limit);
+      return [];
     }
   }
 
@@ -112,7 +112,7 @@ class AIRecommendationService {
       return this.transformRecommendations(data.communities || data || []);
     } catch (error) {
       console.error('Error fetching community recommendations:', error);
-      return this.getMockCommunityRecommendations();
+      return [];
     }
   }
 
@@ -169,92 +169,6 @@ class AIRecommendationService {
       reason: item.reason || '',
       metadata: item.metadata || {},
     }));
-  }
-
-  // Mock data for development
-  private getMockRecommendations(type?: string): Recommendation[] {
-    const allRecommendations: Recommendation[] = [
-      {
-        id: '1',
-        type: 'post',
-        itemId: 'post-1',
-        title: 'Understanding DeFi Yield Farming Strategies',
-        description: 'A comprehensive guide to maximizing returns through yield farming protocols...',
-        score: 0.95,
-        reason: 'Based on your interest in DeFi and blockchain',
-        metadata: {
-          category: 'education',
-          tags: ['defi', 'yield', 'farming', 'blockchain'],
-          author: '0x1234...5678',
-        },
-      },
-      {
-        id: '2',
-        type: 'community',
-        itemId: 'community-1',
-        title: 'DeFi Enthusiasts',
-        description: 'Join 15,000+ members discussing the latest in decentralized finance...',
-        score: 0.92,
-        reason: 'Popular community matching your interests',
-        metadata: {
-          category: 'defi',
-          tags: ['defi', 'trading', 'investing'],
-        },
-      },
-      {
-        id: '3',
-        type: 'product',
-        itemId: 'product-1',
-        title: 'Hardware Wallet Bundle',
-        description: 'Secure your crypto with this premium hardware wallet package...',
-        score: 0.88,
-        reason: 'Trending in security products',
-        metadata: {
-          category: 'security',
-          tags: ['hardware', 'wallet', 'security'],
-        },
-      },
-      {
-        id: '4',
-        type: 'post',
-        itemId: 'post-2',
-        title: 'NFT Market Analysis: Q4 2025',
-        description: 'Deep dive into NFT market trends and predictions for the coming quarter...',
-        score: 0.85,
-        reason: 'Popular in your communities',
-        metadata: {
-          category: 'nft',
-          tags: ['nft', 'market', 'analysis'],
-          author: '0x8765...4321',
-        },
-      },
-      {
-        id: '5',
-        type: 'user',
-        itemId: 'user-1',
-        title: 'Crypto Analyst Pro',
-        description: 'Expert insights and market analysis from a trusted source...',
-        score: 0.82,
-        reason: 'Highly followed by similar users',
-        metadata: {
-          category: 'analysis',
-          tags: ['crypto', 'analysis', 'trading'],
-        },
-      },
-    ];
-
-    if (type) {
-      return allRecommendations.filter((r) => r.type === type);
-    }
-    return allRecommendations;
-  }
-
-  private getMockTrending(limit: number): Recommendation[] {
-    return this.getMockRecommendations().slice(0, limit);
-  }
-
-  private getMockCommunityRecommendations(): Recommendation[] {
-    return this.getMockRecommendations('community');
   }
 }
 

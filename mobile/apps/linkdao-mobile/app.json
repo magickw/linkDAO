@@ -27,15 +27,30 @@
       "config": {
         "usesNonExemptEncryption": false
       },
-      "associatedDomains": [
-        "applinks:linkdao.io",
-        "applinks:www.linkdao.io",
-        "applinks:linkdao.io",
-        "applinks:www.linkdao.io"
-      ]
-    },
-    "android": {
-      "adaptiveIcon": {
+                  "associatedDomains": [
+                      "applinks:linkdao.io",
+                      "applinks:www.linkdao.io",
+                      "applinks:linkdao.io",
+                      "applinks:www.linkdao.io"
+                  ],
+                  "infoPlist": {
+                      "LSApplicationQueriesSchemes": [
+                          "metamask",
+                          "wc",
+                          "trust",
+                          "safe",
+                          "rainbow",
+                          "cbwallet",
+                          "zerion",
+                          "imtoken",
+                          "spot",
+                          "omni",
+                          "dfw",
+                          "tpoutside"
+                      ]
+                  }
+              },
+              "android": {      "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },

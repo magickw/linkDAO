@@ -108,7 +108,7 @@ export default function NFTMarketplacePage() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>NFT Marketplace</Text>
         <TouchableOpacity style={styles.headerButton}>
-          <Ionicons name="search" size={24} color={THEME.colors.text} />
+          <Ionicons name="search" size={24} color={THEME.colors.text.primary} />
         </TouchableOpacity>
       </View>
 
@@ -163,7 +163,7 @@ export default function NFTMarketplacePage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+    backgroundColor: THEME.colors.background.default,
   },
   header: {
     flexDirection: 'row',
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   headerButton: {
     width: 40,
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   seeAll: {
     fontSize: 14,
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   collectionStats: {
     fontSize: 12,
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   nftName: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginBottom: 4,
   },
   nftCollection: {
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   priceValue: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   priceCurrency: {
     fontSize: 12,

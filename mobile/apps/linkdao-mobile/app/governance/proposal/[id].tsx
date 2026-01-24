@@ -193,7 +193,7 @@ export default function ProposalDetailPage() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color={THEME.colors.text} />
+          <Ionicons name="arrow-back" size={24} color={THEME.colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Proposal Details</Text>
         <View style={styles.headerButton} />
@@ -469,7 +469,7 @@ export default function ProposalDetailPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+    backgroundColor: THEME.colors.background.default,
   },
   header: {
     flexDirection: 'row',
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   content: {
     flex: 1,
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
   proposalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     lineHeight: 28,
   },
   aiButton: {
@@ -594,7 +594,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 16,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   aiAnalysisContent: {},
   aiAnalysisSection: {
@@ -609,11 +609,11 @@ const styles = StyleSheet.create({
   aiAnalysisValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   aiAnalysisText: {
     fontSize: 14,
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     lineHeight: 20,
   },
   recommendationBadge: {
@@ -635,7 +635,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 8,
     fontSize: 14,
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     lineHeight: 20,
   },
   card: {
@@ -647,7 +647,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginBottom: 12,
   },
   voteBars: {
@@ -664,12 +664,12 @@ const styles = StyleSheet.create({
   voteBarLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   voteBarValue: {
     fontSize: 12,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   voteBar: {
     height: 24,
@@ -703,7 +703,7 @@ const styles = StyleSheet.create({
   metricValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   detailRow: {
     flexDirection: 'row',
@@ -719,11 +719,11 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   description: {
     fontSize: 14,
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     lineHeight: 22,
   },
   votingCard: {
@@ -735,7 +735,7 @@ const styles = StyleSheet.create({
   votingTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginBottom: 16,
     textAlign: 'center',
   },

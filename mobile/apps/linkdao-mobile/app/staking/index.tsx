@@ -388,7 +388,7 @@ export default function StakingPage() {
                 {actionModal === 'stake' ? 'Stake Tokens' : 'Unstake Tokens'}
               </Text>
               <TouchableOpacity onPress={() => setActionModal(null)} style={styles.modalCloseButton}>
-                <Ionicons name="close" size={24} color={THEME.colors.text} />
+                <Ionicons name="close" size={24} color={THEME.colors.text.primary} />
               </TouchableOpacity>
             </View>
 
@@ -440,7 +440,7 @@ export default function StakingPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+    backgroundColor: THEME.colors.background.default,
   },
   header: {
     flexDirection: 'row',
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   refreshButton: {
     width: 40,
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   rewardsValue: {
     color: THEME.colors.success,
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 13,
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     lineHeight: 18,
     marginBottom: 4,
   },
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginBottom: 12,
   },
   poolCard: {
@@ -563,7 +563,7 @@ const styles = StyleSheet.create({
   poolName: {
     fontSize: 16,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   riskBadge: {
     marginLeft: 8,
@@ -606,7 +606,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   userStakeInfo: {
     backgroundColor: THEME.colors.gray + '10',
@@ -629,7 +629,7 @@ const styles = StyleSheet.create({
   userStakeValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   userStakeStatLabel: {
     fontSize: 11,
@@ -652,7 +652,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontSize: 12,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   modalContainer: {
     flex: 1,
@@ -674,7 +674,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   modalCloseButton: {
     width: 32,
@@ -691,7 +691,7 @@ const styles = StyleSheet.create({
   modalPoolName: {
     fontSize: 16,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginBottom: 4,
   },
   modalPoolDetails: {
@@ -704,7 +704,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginBottom: 8,
   },
   input: {
@@ -713,7 +713,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   inputHint: {
     fontSize: 12,

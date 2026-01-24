@@ -119,7 +119,18 @@ export class DEXTradingController {
    */
   async getTokenPrice(req: Request, res: Response): Promise<void> {
     try {
-      const { tokenInAddress, tokenOutAddress, amountIn = '1' } = req.query;
+      let { tokenInAddress, tokenOutAddress, amountIn = '1' } = req.query;
+      const { tokenAddress } = req.params;
+
+      // Handle path parameter case (single token price in USD/Native)
+      if (tokenAddress) {
+        tokenInAddress = tokenAddress as string;
+        // Default to USDC on Sepolia or Mainnet for price reference
+        // Sepolia USDC: 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238 (Circle Testnet USDC)
+        // Mainnet USDC: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+        // Ideally this should be config-driven per chain
+        tokenOutAddress = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
+      }
 
       if (!tokenInAddress || !tokenOutAddress) {
         res.status(400).json({

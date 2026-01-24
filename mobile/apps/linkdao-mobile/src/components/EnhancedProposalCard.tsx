@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     lineHeight: 22,
   },
   description: {
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
   },
   aiAnalysisText: {
     fontSize: 12,
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     flex: 1,
   },
   recommendationBadge: {

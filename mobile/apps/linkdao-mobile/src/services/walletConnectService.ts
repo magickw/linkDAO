@@ -35,7 +35,9 @@ class WalletService {
     try {
       // Try to initialize MetaMask SDK
       try {
-        const { MetaMaskSDK } = await import('@metamask/sdk-react-native');
+        const MetaMaskSDKModule = await import('@metamask/sdk-react-native');
+        // Handle various export types: named, default, or direct
+        const MetaMaskSDK = MetaMaskSDKModule.MetaMaskSDK || MetaMaskSDKModule.default || MetaMaskSDKModule;
         
         if (MetaMaskSDK && typeof MetaMaskSDK === 'function') {
           this.metamaskSDKAvailable = true;
@@ -55,7 +57,7 @@ class WalletService {
           this.ethereum = this.sdk.getProvider();
           console.log('✅ MetaMask SDK initialized');
         } else {
-          console.warn('⚠️ MetaMask SDK not available, using fallback');
+          console.warn('⚠️ MetaMask SDK not available (invalid export), using fallback. Module keys:', Object.keys(MetaMaskSDKModule));
           this.metamaskSDKAvailable = false;
         }
       } catch (sdkError) {
@@ -176,7 +178,14 @@ class WalletService {
 
       // Try to open with a generic WalletConnect deep link
       // This will prompt the user to choose a WalletConnect-compatible wallet
-      await Linking.openURL(wcUri);
+      const canOpen = await Linking.canOpenURL(wcUri);
+      if (canOpen) {
+        await Linking.openURL(wcUri);
+      } else {
+        // Fallback: Try to open via universal link or prompt user
+        // For now, throw specific error
+        throw new Error('No WalletConnect-compatible wallet found. Please install a wallet like MetaMask, Rainbow, or Trust Wallet.');
+      }
 
       // Note: In a real implementation, you'd need to:
       // 1. Generate a proper WalletConnect URI with your dapp's metadata

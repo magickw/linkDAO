@@ -65,14 +65,6 @@ export default function RegisterScreen() {
     router.push('/auth/wallet-connect');
   };
 
-  const generateSignature = () => {
-    // This would integrate with a wallet provider like WalletConnect or native wallet
-    // For now, simulate signature generation
-    const mockSignature = `0x${Math.random().toString(16).substr(2, 64)}`;
-    setSignature(mockSignature);
-    Alert.alert('Success', 'Signature generated successfully');
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -160,9 +152,6 @@ export default function RegisterScreen() {
                 onChangeText={setSignature}
                 autoCapitalize="none"
               />
-              <TouchableOpacity onPress={generateSignature}>
-                <Ionicons name="create-outline" size={20} color="#3b82f6" />
-              </TouchableOpacity>
             </View>
 
             {/* Register Button */}

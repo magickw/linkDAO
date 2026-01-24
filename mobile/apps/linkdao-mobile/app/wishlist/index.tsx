@@ -39,36 +39,17 @@ export default function WishlistScreen() {
   const loadWishlist = async () => {
     try {
       setLoading(true);
-      // TODO: Call API to load wishlist
-      // Mock data for now
-      setWishlist([
-        {
-          id: '1',
-          productId: 'p1',
-          productName: 'Premium Wireless Headphones',
-          productImage: 'https://via.placeholder.com/150',
-          price: '149.99',
-          originalPrice: '199.99',
-          sellerName: 'TechStore',
-          sellerId: 's1',
-          inStock: true,
-          addedAt: new Date().toISOString(),
-          discount: 25,
-        },
-        {
-          id: '2',
-          productId: 'p2',
-          productName: 'Smart Watch Pro',
-          productImage: 'https://via.placeholder.com/150',
-          price: '299.99',
-          sellerName: 'GadgetHub',
-          sellerId: 's2',
-          inStock: true,
-          addedAt: new Date(Date.now() - 86400000).toISOString(),
-        },
-      ]);
+      const response = await fetch(`${API_BASE_URL}/api/user/wishlists`);
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        setWishlist(result.data || []);
+      } else {
+        setWishlist([]);
+      }
     } catch (error) {
       console.error('Failed to load wishlist:', error);
+      setWishlist([]);
     } finally {
       setLoading(false);
     }

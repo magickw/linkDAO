@@ -313,7 +313,7 @@ export default function SupportPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+    backgroundColor: THEME.colors.background.default,
   },
   header: {
     flexDirection: 'row',
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   headerButton: {
     width: 40,
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
   ticketSubject: {
     fontSize: 16,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginBottom: 4,
   },
   statusBadge: {
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   faqCard: {
     backgroundColor: THEME.colors.white,
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginRight: 8,
   },
   faqBody: {
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
   },
   faqAnswer: {
     fontSize: 14,
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     lineHeight: 20,
     marginBottom: 12,
   },
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
   chatTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginTop: 12,
     marginBottom: 8,
   },
@@ -594,7 +594,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 14,
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginBottom: 6,
   },
 });

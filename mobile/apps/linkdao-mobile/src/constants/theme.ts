@@ -26,10 +26,21 @@ export const THEME = {
     },
 
     // Backgrounds
-    background: '#f9fafb',
+    background: {
+      default: '#f9fafb',
+      light: '#ffffff',
+      cardLight: '#ffffff',
+      card: '#ffffff',
+    },
 
     // Text
-    text: '#111827',
+    text: {
+      primary: '#111827',
+      secondary: '#6b7280',
+      tertiary: '#9ca3af',
+      muted: '#9ca3af',
+      white: '#ffffff',
+    },
   },
 
   spacing: {

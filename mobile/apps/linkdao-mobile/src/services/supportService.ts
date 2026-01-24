@@ -159,7 +159,7 @@ class SupportService {
       return this.transformFAQs(data.faqs || data || []);
     } catch (error) {
       console.error('Error fetching FAQs:', error);
-      return this.getMockFAQs();
+      return [];
     }
   }
 
@@ -173,7 +173,7 @@ class SupportService {
       return data.categories || data || [];
     } catch (error) {
       console.error('Error fetching categories:', error);
-      return this.getMockCategories();
+      return [];
     }
   }
 
@@ -272,73 +272,6 @@ class SupportService {
       views: item.views || 0,
       order: item.order,
     }));
-  }
-
-  // Mock data for development
-  private getMockFAQs(): FAQ[] {
-    return [
-      {
-        id: '1',
-        question: 'How do I connect my wallet?',
-        answer: 'To connect your wallet, tap the wallet icon in the top right corner of the app. You can connect with MetaMask, Coinbase Wallet, or any other Web3 wallet that supports WalletConnect.',
-        category: 'wallet',
-        helpful: 45,
-        views: 234,
-      },
-      {
-        id: '2',
-        question: 'How do I participate in governance?',
-        answer: 'Go to the Governance tab to view active proposals. You can vote on proposals if you hold LDAO tokens. Your voting power is determined by your token holdings and staking activity.',
-        category: 'governance',
-        helpful: 38,
-        views: 189,
-      },
-      {
-        id: '3',
-        question: 'How do I become a seller?',
-        answer: 'To become a seller, navigate to the Marketplace tab and tap on "Become a Seller". You will need to complete the seller onboarding process, which includes providing your store information and passing verification.',
-        category: 'marketplace',
-        helpful: 52,
-        views: 312,
-      },
-      {
-        id: '4',
-        question: 'How do I tip content creators?',
-        answer: 'You can tip posts, comments, or users directly by tapping the tip button on any post card. Tips are sent in LDAO tokens and the creator receives them instantly.',
-        category: 'tipping',
-        helpful: 29,
-        views: 156,
-      },
-      {
-        id: '5',
-        question: 'What is the reputation system?',
-        answer: 'The reputation system rewards active and helpful community members. You earn reputation points by creating quality content, engaging with others, and receiving positive feedback. Higher reputation unlocks special badges and privileges.',
-        category: 'reputation',
-        helpful: 41,
-        views: 198,
-      },
-      {
-        id: '6',
-        question: 'How do I delegate my voting power?',
-        answer: 'You can delegate your voting power to another community member in the Governance tab. This allows trusted representatives to vote on your behalf while you maintain ownership of your tokens.',
-        category: 'governance',
-        helpful: 22,
-        views: 134,
-      },
-    ];
-  }
-
-  private getMockCategories(): SupportCategory[] {
-    return [
-      { id: 'general', name: 'General', description: 'General questions and help' },
-      { id: 'wallet', name: 'Wallet', description: 'Wallet connection and transactions' },
-      { id: 'governance', name: 'Governance', description: 'Voting and delegation' },
-      { id: 'marketplace', name: 'Marketplace', description: 'Buying and selling' },
-      { id: 'tipping', name: 'Tipping', description: 'Tipping and rewards' },
-      { id: 'reputation', name: 'Reputation', description: 'Reputation system' },
-      { id: 'account', name: 'Account', description: 'Account settings and security' },
-      { id: 'technical', name: 'Technical', description: 'Technical issues and bugs' },
-    ];
   }
 }
 

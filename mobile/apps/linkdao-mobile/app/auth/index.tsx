@@ -75,24 +75,6 @@ export default function LoginScreen() {
     router.push('/auth/wallet-connect');
   };
 
-  const handleClearStorage = () => {
-    Alert.alert(
-      'Clear Storage',
-      'This will clear all stored authentication data. Are you sure?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: () => {
-            clearStorage();
-            Alert.alert('Success', 'Storage cleared. Please refresh the app.');
-          },
-        },
-      ]
-    );
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -147,12 +129,6 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* Debug - Clear Storage */}
-          <TouchableOpacity style={styles.debugButton} onPress={handleClearStorage}>
-            <Ionicons name="trash-outline" size={16} color="#9ca3af" />
-            <Text style={styles.debugButtonText}>Clear Storage (Debug)</Text>
-          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -256,17 +232,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#3b82f6',
     fontWeight: '600',
-  },
-  debugButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 16,
-    padding: 12,
-  },
-  debugButtonText: {
-    fontSize: 12,
-    color: '#9ca3af',
-    marginLeft: 8,
   },
 });

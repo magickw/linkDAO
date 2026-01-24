@@ -2252,14 +2252,27 @@ export class DatabaseService {
       const cutoff = new Date();
       cutoff.setHours(cutoff.getHours() - hoursOld);
 
-      return await this.db.select()
-        .from(schema.orderCancellations)
-        .where(
-          and(
-            eq(schema.orderCancellations.status, 'pending'),
-            lte(schema.orderCancellations.createdAt, cutoff)
-          )
-        );
+      try {
+        return await this.db.select()
+          .from(schema.orderCancellations)
+          .where(
+            and(
+              eq(schema.orderCancellations.status, 'pending'),
+              lte(schema.orderCancellations.createdAt, cutoff)
+            )
+          );
+      } catch (error: any) {
+        // Handle migration failure case: fallback to legacy 'requested_at' column
+        if (error.code === '42703') { // undefined_column
+          safeLogger.warn('Legacy schema detected for order_cancellations, trying requested_at column');
+          return await this.db.execute(sql`
+            SELECT * FROM order_cancellations 
+            WHERE status = 'pending' 
+            AND requested_at <= ${cutoff.toISOString()}
+          `);
+        }
+        throw error;
+      }
     });
   }
 

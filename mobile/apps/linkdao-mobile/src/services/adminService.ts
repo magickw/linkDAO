@@ -88,7 +88,7 @@ class AdminService {
       };
     } catch (error) {
       console.error('Error fetching admin stats:', error);
-      return this.getMockStats();
+      return null;
     }
   }
 
@@ -322,20 +322,6 @@ class AdminService {
       reviewedBy: item.reviewedBy,
       rejectionReason: item.rejectionReason,
     }));
-  }
-
-  // Mock data for development
-  private getMockStats(): AdminStats {
-    return {
-      totalUsers: 12453,
-      activeUsers: 3241,
-      totalPosts: 45678,
-      totalCommunities: 234,
-      pendingReports: 12,
-      pendingSellerApplications: 5,
-      todaySignups: 47,
-      todayPosts: 156,
-    };
   }
 }
 

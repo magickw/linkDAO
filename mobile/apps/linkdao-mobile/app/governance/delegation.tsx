@@ -207,7 +207,7 @@ export default function DelegationPage() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color={THEME.colors.text} />
+          <Ionicons name="arrow-back" size={24} color={THEME.colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Delegate Voting Power</Text>
         <View style={styles.headerButton} />
@@ -312,7 +312,7 @@ export default function DelegationPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+    backgroundColor: THEME.colors.background.default,
   },
   header: {
     flexDirection: 'row',
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   content: {
     flex: 1,
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginBottom: 12,
   },
   votingPowerContainer: {
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginBottom: 8,
   },
   input: {
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   inputHint: {
     fontSize: 12,
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
   delegatorAddress: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   revokeButton: {
     flexDirection: 'row',
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   lockedBadge: {
     flexDirection: 'row',
@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 14,
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     lineHeight: 20,
     marginBottom: 8,
   },

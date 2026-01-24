@@ -113,7 +113,7 @@ export default function CreateTicketPage() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-          <Ionicons name="close" size={24} color={THEME.colors.text} />
+          <Ionicons name="close" size={24} color={THEME.colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Create Support Ticket</Text>
         <TouchableOpacity
@@ -237,7 +237,7 @@ export default function CreateTicketPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+    backgroundColor: THEME.colors.background.default,
   },
   header: {
     flexDirection: 'row',
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   submitButton: {
     backgroundColor: THEME.colors.primary + '10',
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginBottom: 8,
   },
   input: {
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   textArea: {
     height: 200,
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   categoryLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginTop: 6,
   },
   selectedCategoryLabel: {
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
   priorityLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   infoCard: {
     backgroundColor: THEME.colors.primary + '5',
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 13,
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     lineHeight: 18,
     marginBottom: 4,
   },

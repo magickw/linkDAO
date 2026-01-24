@@ -27,7 +27,6 @@ export default function FeedScreen() {
   const setLoading = usePostsStore((state) => state.setLoading);
   const setError = usePostsStore((state) => state.setError);
   const updatePost = usePostsStore((state) => state.updatePost);
-  const clearStorage = useAuthStore((state) => state.clearStorage);
   const user = useAuthStore((state) => state.user);
 
   // Local state
@@ -233,25 +232,6 @@ export default function FeedScreen() {
       console.error('Error creating post:', error);
       throw error; // Re-throw to let PostComposer handle the error
     }
-  };
-
-  // Clear storage (dev only)
-  const handleClearStorage = () => {
-    Alert.alert(
-      'Clear Storage',
-      'This will clear all local data. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: async () => {
-            await clearStorage();
-            Alert.alert('Success', 'Storage cleared');
-          },
-        },
-      ]
-    );
   };
 
   // Format timestamp
@@ -460,7 +440,7 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+    backgroundColor: THEME.colors.background.default,
   },
   newPostsBanner: {
     position: 'absolute',
@@ -501,7 +481,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     letterSpacing: -0.5,
   },
   headerActions: {
@@ -606,7 +586,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginBottom: THEME.spacing.md,
   },
   centerContainer: {
@@ -622,7 +602,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '700',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginTop: 16,
   },
   emptySubtext: {
@@ -648,7 +628,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -713,7 +693,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   backToTopButton: {
     position: 'absolute',

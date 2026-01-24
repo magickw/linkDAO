@@ -40,15 +40,25 @@ class PostsService {
    * Get feed posts
    */
   async getFeed(page: number = 1, limit: number = 20): Promise<PostsResponse> {
-    const response = await apiClient.get<{ posts: Post[]; hasMore: boolean; nextCursor?: string }>(
-      `/api/posts?page=${page}&limit=${limit}`
+    // The apiClient returns { success: boolean, data: T }, where T is the Axios response body.
+    // The backend returns { success: boolean, data: { posts: ..., pagination: ... } }.
+    // So we need to access response.data.data to get the actual content.
+    const response = await apiClient.get<any>(
+      `/api/feed?page=${page}&limit=${limit}`
     );
 
-    if (response.success && response.data) {
+    if (response.success && response.data && response.data.data) {
+      const feedData = response.data.data;
+      
+      // Calculate hasMore from pagination if available
+      const hasMore = feedData.pagination 
+        ? feedData.pagination.page < feedData.pagination.totalPages
+        : (feedData.hasMore || false);
+
       return {
-        posts: response.data.posts,
-        hasMore: response.data.hasMore,
-        nextCursor: response.data.nextCursor,
+        posts: feedData.posts || [],
+        hasMore: hasMore,
+        nextCursor: feedData.nextCursor,
       };
     }
 
@@ -59,10 +69,17 @@ class PostsService {
    * Get post by ID
    */
   async getPost(id: string): Promise<Post | null> {
-    const response = await apiClient.get<Post>(`/api/posts/${id}`);
+    const response = await apiClient.get<any>(`/api/posts/${id}`);
 
+    // Handle nested response: response.data (axios body) -> response.data.data (payload) -> response.data.data.post (actual object)
+    // Or sometimes just response.data.data if the endpoint returns the object directly
     if (response.success && response.data) {
-      return response.data;
+        if (response.data.data && response.data.data.post) {
+            return response.data.data.post;
+        }
+        if (response.data.data) {
+            return response.data.data;
+        }
     }
 
     return null;
@@ -72,10 +89,10 @@ class PostsService {
    * Create new post
    */
   async createPost(data: CreatePostData): Promise<Post | null> {
-    const response = await apiClient.post<Post>('/api/posts', data);
+    const response = await apiClient.post<any>('/api/posts', data);
 
-    if (response.success && response.data) {
-      return response.data;
+    if (response.success && response.data && response.data.data) {
+      return response.data.data;
     }
 
     return null;
@@ -85,10 +102,10 @@ class PostsService {
    * Update post
    */
   async updatePost(id: string, data: Partial<CreatePostData>): Promise<Post | null> {
-    const response = await apiClient.put<Post>(`/api/posts/${id}`, data);
+    const response = await apiClient.put<any>(`/api/posts/${id}`, data);
 
-    if (response.success && response.data) {
-      return response.data;
+    if (response.success && response.data && response.data.data) {
+      return response.data.data;
     }
 
     return null;
@@ -122,15 +139,21 @@ class PostsService {
    * Get community posts
    */
   async getCommunityPosts(communityId: string, page: number = 1, limit: number = 20): Promise<PostsResponse> {
-    const response = await apiClient.get<{ posts: Post[]; hasMore: boolean; nextCursor?: string }>(
+    const response = await apiClient.get<any>(
       `/api/communities/${communityId}/posts?page=${page}&limit=${limit}`
     );
 
-    if (response.success && response.data) {
+    if (response.success && response.data && response.data.data) {
+      const feedData = response.data.data;
+      
+      const hasMore = feedData.pagination 
+        ? feedData.pagination.page < feedData.pagination.totalPages
+        : (feedData.hasMore || false);
+
       return {
-        posts: response.data.posts,
-        hasMore: response.data.hasMore,
-        nextCursor: response.data.nextCursor,
+        posts: feedData.posts || [],
+        hasMore: hasMore,
+        nextCursor: feedData.nextCursor,
       };
     }
 

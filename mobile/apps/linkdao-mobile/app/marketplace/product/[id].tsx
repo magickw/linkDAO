@@ -3,7 +3,7 @@
  * Display full product information with add to cart functionality
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,7 @@ import { cartStore } from '../../../src/store/cartStore';
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -20,55 +21,41 @@ export default function ProductDetailScreen() {
   const addToCart = cartStore((state) => state.addToCart);
   const cartItems = cartStore((state) => state.items);
 
-  // Mock product data - in production, fetch from API
-  const product = {
-    id: id || '1',
-    name: 'Web3 Development Course',
-    description: 'Complete course on Web3 development including Solidity, smart contracts, and dApp development. Learn from industry experts and build real-world projects.',
-    price: 99,
-    originalPrice: 199,
-    discount: 50,
-    images: ['#3b82f6', '#8b5cf6', '#10b981'],
-    seller: {
-      id: '1',
-      name: 'Dev Academy',
-      avatar: '#3b82f6',
-      rating: 4.8,
-      reviews: 234,
-      verified: true,
-    },
-    category: 'Courses',
-    tags: ['Web3', 'Blockchain', 'Solidity', 'Smart Contracts'],
-    inStock: true,
-    stock: 50,
-    features: [
-      '20+ hours of video content',
-      'Hands-on projects',
-      'Certificate of completion',
-      'Lifetime access',
-      'Community support',
-      '1-on-1 mentorship',
-    ],
-    specifications: {
-      'Duration': '20 hours',
-      'Level': 'Intermediate',
-      'Language': 'English',
-      'Format': 'Online',
-      'Access': 'Lifetime',
-    },
-    rating: 4.7,
-    reviews: 156,
-    sold: 1234,
+  useEffect(() => {
+    if (id) {
+      loadProduct();
+    }
+  }, [id]);
+
+  const loadProduct = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/marketplace/listings/${id}`);
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        setProduct(result.data);
+      } else {
+        Alert.alert('Error', 'Product not found');
+        router.back();
+      }
+    } catch (error) {
+      console.error('Failed to load product:', error);
+      Alert.alert('Error', 'Failed to connect to server');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAddToCart = () => {
+    if (!product) return;
     addToCart({
       id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.images[0],
+      name: product.title,
+      price: product.priceAmount,
+      image: product.images && product.images.length > 0 ? product.images[0] : null,
       quantity,
-      seller: product.seller.name,
+      seller: product.seller?.storeName || product.seller?.displayName || 'Unknown Seller',
     });
 
     Alert.alert(
@@ -114,6 +101,19 @@ export default function ProductDetailScreen() {
 
   const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#3b82f6" />
+          <Text style={styles.loadingText}>Loading product...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!product) return null;
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -135,9 +135,15 @@ export default function ProductDetailScreen() {
       <ScrollView style={styles.content}>
         {/* Product Images */}
         <View style={styles.imageContainer}>
-          <View style={[styles.mainImage, { backgroundColor: product.images[selectedImageIndex] }]} />
+          {product.images && product.images.length > 0 ? (
+            <Image source={{ uri: product.images[selectedImageIndex] }} style={styles.mainImage} />
+          ) : (
+            <View style={[styles.mainImage, { backgroundColor: '#f3f4f6', justifyContent: 'center', alignItems: 'center' }]}>
+              <Ionicons name="image-outline" size={64} color="#9ca3af" />
+            </View>
+          )}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.thumbnails}>
-            {product.images.map((color, index) => (
+            {product.images?.map((url: string, index: number) => (
               <TouchableOpacity
                 key={index}
                 onPress={() => setSelectedImageIndex(index)}
@@ -146,7 +152,7 @@ export default function ProductDetailScreen() {
                   selectedImageIndex === index && styles.thumbnailSelected,
                 ]}
               >
-                <View style={[styles.thumbnailImage, { backgroundColor: color }]} />
+                <Image source={{ uri: url }} style={styles.thumbnailImage} />
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -154,36 +160,35 @@ export default function ProductDetailScreen() {
 
         {/* Product Info */}
         <View style={styles.productInfo}>
-          <View style={styles.categoryTag}>
-            <Text style={styles.categoryText}>{product.category}</Text>
-          </View>
-          <Text style={styles.productName}>{product.name}</Text>
+          {product.category && (
+            <View style={styles.categoryTag}>
+              <Text style={styles.categoryText}>{product.category.name || product.category}</Text>
+            </View>
+          )}
+          <Text style={styles.productName}>{product.title}</Text>
           <View style={styles.ratingContainer}>
             <Ionicons name="star" size={16} color="#f59e0b" />
-            <Text style={styles.ratingText}>{product.rating}</Text>
-            <Text style={styles.reviewsText}>({product.reviews} reviews)</Text>
-            <Text style={styles.soldText}>• {product.sold} sold</Text>
+            <Text style={styles.ratingText}>{product.seller?.rating || 0}</Text>
+            <Text style={styles.reviewsText}>({product.views || 0} views)</Text>
+            <Text style={styles.soldText}>• {product.soldCount || 0} sold</Text>
           </View>
 
           {/* Price */}
           <View style={styles.priceContainer}>
-            <Text style={styles.price}>${product.price}</Text>
-            {product.originalPrice && (
-              <Text style={styles.originalPrice}>${product.originalPrice}</Text>
-            )}
-            {product.discount && (
+            <Text style={styles.price}>${product.priceAmount}</Text>
+            {product.discountAmount > 0 && (
               <View style={styles.discountBadge}>
-                <Text style={styles.discountText}>{product.discount}% OFF</Text>
+                <Text style={styles.discountText}>SALE</Text>
               </View>
             )}
           </View>
 
           {/* Stock Status */}
           <View style={styles.stockContainer}>
-            {product.inStock ? (
+            {product.inventory > 0 ? (
               <>
                 <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-                <Text style={styles.stockText}>In Stock ({product.stock} available)</Text>
+                <Text style={styles.stockText}>In Stock ({product.inventory} available)</Text>
               </>
             ) : (
               <>
@@ -198,47 +203,62 @@ export default function ProductDetailScreen() {
           <Text style={styles.description}>{product.description}</Text>
 
           {/* Features */}
-          <Text style={styles.sectionTitle}>Features</Text>
-          {product.features.map((feature, index) => (
-            <View key={index} style={styles.featureItem}>
-              <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-              <Text style={styles.featureText}>{feature}</Text>
-            </View>
-          ))}
+          {product.metadata?.features && product.metadata.features.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>Features</Text>
+              {product.metadata.features.map((feature: string, index: number) => (
+                <View key={index} style={styles.featureItem}>
+                  <Ionicons name="checkmark-circle" size={16} color="#10b981" />
+                  <Text style={styles.featureText}>{feature}</Text>
+                </View>
+              ))}
+            </>
+          )}
 
           {/* Specifications */}
-          <Text style={styles.sectionTitle}>Specifications</Text>
-          {Object.entries(product.specifications).map(([key, value]) => (
-            <View key={key} style={styles.specRow}>
-              <Text style={styles.specKey}>{key}</Text>
-              <Text style={styles.specValue}>{value}</Text>
-            </View>
-          ))}
+          {product.metadata?.specifications && Object.keys(product.metadata.specifications).length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>Specifications</Text>
+              {Object.entries(product.metadata.specifications).map(([key, value]: [string, any]) => (
+                <View key={key} style={styles.specRow}>
+                  <Text style={styles.specKey}>{key}</Text>
+                  <Text style={styles.specValue}>{String(value)}</Text>
+                </View>
+              ))}
+            </>
+          )}
 
           {/* Tags */}
-          <View style={styles.tagsContainer}>
-            {product.tags.map((tag, index) => (
-              <View key={index} style={styles.tag}>
-                <Text style={styles.tagText}>#{tag}</Text>
-              </View>
-            ))}
-          </View>
+          {product.tags && product.tags.length > 0 && (
+            <View style={styles.tagsContainer}>
+              {product.tags.map((tag: string, index: number) => (
+                <View key={index} style={styles.tag}>
+                  <Text style={styles.tagText}>#{tag}</Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           {/* Seller Info */}
           <View style={styles.sellerContainer}>
             <View style={styles.sellerInfo}>
-              <View style={[styles.sellerAvatar, { backgroundColor: product.seller.avatar }]} />
+              {product.seller?.avatar ? (
+                <Image source={{ uri: product.seller.avatar }} style={styles.sellerAvatar} />
+              ) : (
+                <View style={[styles.sellerAvatar, { backgroundColor: '#3b82f6', justifyContent: 'center', alignItems: 'center' }]}>
+                  <Ionicons name="person" size={24} color="#ffffff" />
+                </View>
+              )}
               <View style={styles.sellerDetails}>
                 <View style={styles.sellerNameRow}>
-                  <Text style={styles.sellerName}>{product.seller.name}</Text>
-                  {product.seller.verified && (
+                  <Text style={styles.sellerName}>{product.seller?.storeName || product.seller?.displayName || 'Unknown Seller'}</Text>
+                  {product.seller?.verified && (
                     <Ionicons name="checkmark-circle" size={16} color="#3b82f6" />
                   )}
                 </View>
                 <View style={styles.sellerRating}>
                   <Ionicons name="star" size={14} color="#f59e0b" />
-                  <Text style={styles.sellerRatingText}>{product.seller.rating}</Text>
-                  <Text style={styles.sellerReviewsText}>({product.seller.reviews} reviews)</Text>
+                  <Text style={styles.sellerRatingText}>{product.seller?.rating || 0}</Text>
                 </View>
               </View>
             </View>
@@ -273,13 +293,15 @@ export default function ProductDetailScreen() {
         <TouchableOpacity
           style={styles.addToCartButton}
           onPress={handleAddToCart}
+          disabled={product.inventory <= 0}
         >
-          <Ionicons name="cart" size={20} color="#ffffff" />
-          <Text style={styles.addToCartButtonText}>Add to Cart</Text>
+          <Ionicons name="cart" size={20} color={product.inventory <= 0 ? "#9ca3af" : "#ffffff"} />
+          <Text style={[styles.addToCartButtonText, product.inventory <= 0 && { color: "#9ca3af" }]}>Add to Cart</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.buyNowButton}
+          style={[styles.buyNowButton, product.inventory <= 0 && { backgroundColor: '#9ca3af' }]}
           onPress={handleBuyNow}
+          disabled={product.inventory <= 0}
         >
           <Text style={styles.buyNowButtonText}>Buy Now</Text>
         </TouchableOpacity>
@@ -617,5 +639,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6b7280',
   },
 });

@@ -52,7 +52,7 @@ class StakingService {
       return data.pools || data || [];
     } catch (error) {
       console.error('Error fetching staking pools:', error);
-      return this.getMockPools();
+      return [];
     }
   }
 
@@ -191,72 +191,6 @@ class StakingService {
       console.error('Error fetching token balance:', error);
       return 0;
     }
-  }
-
-  // Mock data methods
-  private getMockPools(): StakingPool[] {
-    return [
-      {
-        id: '1',
-        name: 'Flexible Staking',
-        token: 'LDAO',
-        apy: 5.5,
-        tvl: 2500000,
-        minStake: 100,
-        lockPeriod: 0,
-        risk: 'low',
-        rewardsToken: 'LDAO',
-        rewardRate: 0.00015,
-      },
-      {
-        id: '2',
-        name: '30-Day Lock',
-        token: 'LDAO',
-        apy: 8.2,
-        tvl: 1800000,
-        minStake: 500,
-        lockPeriod: 30,
-        risk: 'low',
-        rewardsToken: 'LDAO',
-        rewardRate: 0.00022,
-      },
-      {
-        id: '3',
-        name: '90-Day Lock',
-        token: 'LDAO',
-        apy: 12.5,
-        tvl: 1200000,
-        minStake: 1000,
-        lockPeriod: 90,
-        risk: 'medium',
-        rewardsToken: 'LDAO',
-        rewardRate: 0.00034,
-      },
-      {
-        id: '4',
-        name: '180-Day Lock',
-        token: 'LDAO',
-        apy: 18.0,
-        tvl: 800000,
-        minStake: 2000,
-        lockPeriod: 180,
-        risk: 'medium',
-        rewardsToken: 'LDAO',
-        rewardRate: 0.00049,
-      },
-      {
-        id: '5',
-        name: '1-Year Lock',
-        token: 'LDAO',
-        apy: 25.0,
-        tvl: 500000,
-        minStake: 5000,
-        lockPeriod: 365,
-        risk: 'high',
-        rewardsToken: 'LDAO',
-        rewardRate: 0.00068,
-      },
-    ];
   }
 }
 

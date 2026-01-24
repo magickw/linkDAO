@@ -33,165 +33,22 @@ export default function TrendingScreen() {
   const loadTrending = async () => {
     setLoading(true);
     try {
-      // In production, fetch from API
-      const mockPosts = [
-        {
-          id: '1',
-          content: 'Breaking: Major DeFi protocol announces new liquidity mining program with $10M rewards',
-          author: { id: '1', name: 'CryptoNews', avatar: '#ef4444', verified: true },
-          likes: 1234,
-          comments: 234,
-          shares: 56,
-          timestamp: '1 hour ago',
-          trendingScore: 98,
-        },
-        {
-          id: '2',
-          content: 'The future of DAO governance is here: New on-chain voting mechanism with quadratic funding',
-          author: { id: '2', name: 'DAOExpert', avatar: '#3b82f6', verified: true },
-          likes: 987,
-          comments: 156,
-          shares: 45,
-          timestamp: '2 hours ago',
-          trendingScore: 95,
-        },
-        {
-          id: '3',
-          content: 'NFT market analysis: Why blue-chip collections are seeing renewed interest',
-          author: { id: '3', name: 'NFTAnalyst', avatar: '#8b5cf6', verified: false },
-          likes: 756,
-          comments: 89,
-          shares: 34,
-          timestamp: '3 hours ago',
-          trendingScore: 92,
-        },
-        {
-          id: '4',
-          content: 'Layer 2 scaling solutions comparison: Optimism vs Arbitrum vs zkSync',
-          author: { id: '4', name: 'TechDeepDive', avatar: '#10b981', verified: true },
-          likes: 654,
-          comments: 112,
-          shares: 67,
-          timestamp: '4 hours ago',
-          trendingScore: 89,
-        },
-        {
-          id: '5',
-          content: 'Web3 social media revolution: How decentralized platforms are changing content creation',
-          author: { id: '5', name: 'SocialWeb3', avatar: '#f59e0b', verified: false },
-          likes: 543,
-          comments: 78,
-          shares: 23,
-          timestamp: '5 hours ago',
-          trendingScore: 86,
-        },
-      ];
-
-      const mockCommunities = [
-        {
-          id: '1',
-          name: 'DeFi Degens',
-          handle: 'defidegens',
-          description: 'High-yield DeFi strategies and discussions',
-          members: 45678,
-          posts: 123456,
-          image: '#ef4444',
-          trendingScore: 99,
-          growth: '+23%',
-        },
-        {
-          id: '2',
-          name: 'NFT Artists',
-          handle: 'nftartists',
-          description: 'Showcase and discover NFT art',
-          members: 34567,
-          posts: 98765,
-          image: '#8b5cf6',
-          trendingScore: 97,
-          growth: '+18%',
-        },
-        {
-          id: '3',
-          name: 'Smart Contract Devs',
-          handle: 'scdevs',
-          description: 'Solidity and smart contract development',
-          members: 23456,
-          posts: 87654,
-          image: '#3b82f6',
-          trendingScore: 94,
-          growth: '+15%',
-        },
-        {
-          id: '4',
-          name: 'DAO Governance',
-          handle: 'daogov',
-          description: 'Discuss DAO governance and proposals',
-          members: 18765,
-          posts: 65432,
-          image: '#10b981',
-          trendingScore: 91,
-          growth: '+12%',
-        },
-      ];
-
-      const mockTopics = [
-        {
-          id: '1',
-          name: 'DeFi',
-          posts: 123456,
-          growth: '+25%',
-          image: '#ef4444',
-          trendingScore: 100,
-        },
-        {
-          id: '2',
-          name: 'NFTs',
-          posts: 98765,
-          growth: '+20%',
-          image: '#8b5cf6',
-          trendingScore: 98,
-        },
-        {
-          id: '3',
-          name: 'Layer 2',
-          posts: 87654,
-          growth: '+18%',
-          image: '#3b82f6',
-          trendingScore: 96,
-        },
-        {
-          id: '4',
-          name: 'DAO',
-          posts: 76543,
-          growth: '+15%',
-          image: '#10b981',
-          trendingScore: 94,
-        },
-        {
-          id: '5',
-          name: 'Web3',
-          posts: 65432,
-          growth: '+12%',
-          image: '#f59e0b',
-          trendingScore: 92,
-        },
-        {
-          id: '6',
-          name: 'Smart Contracts',
-          posts: 54321,
-          growth: '+10%',
-          image: '#ec4899',
-          trendingScore: 90,
-        },
-      ];
-
-      setTrending({
-        posts: mockPosts,
-        communities: mockCommunities,
-        topics: mockTopics,
-      });
+      // Fetch trending data from backend
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/feed/trending`);
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        setTrending({
+          posts: result.data.posts || [],
+          communities: result.data.communities || [],
+          topics: result.data.topics || [],
+        });
+      } else {
+        setTrending({ posts: [], communities: [], topics: [] });
+      }
     } catch (error) {
       console.error('Failed to load trending:', error);
+      setTrending({ posts: [], communities: [], topics: [] });
     } finally {
       setLoading(false);
     }

@@ -184,7 +184,7 @@ export default function TicketDetailPage() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color={THEME.colors.text} />
+          <Ionicons name="arrow-back" size={24} color={THEME.colors.text.primary} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle} numberOfLines={1}>{ticket.subject}</Text>
@@ -259,7 +259,7 @@ export default function TicketDetailPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+    backgroundColor: THEME.colors.background.default,
   },
   loadingContainer: {
     flex: 1,
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   headerSubtitle: {
     fontSize: 12,
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   },
   ticketDescription: {
     fontSize: 14,
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
     lineHeight: 20,
   },
   messagesContainer: {
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     color: THEME.colors.white,
   },
   supportMessageText: {
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   messageTime: {
     fontSize: 11,
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
     maxHeight: 100,
     fontSize: 16,
-    color: THEME.colors.text,
+    color: THEME.colors.text.primary,
   },
   sendButton: {
     width: 40,

@@ -77,7 +77,7 @@ const tokenValidation = [
  * @desc Get swap quote for token pair
  * @access Private
  */
-router.post('/quote', csrfProtection,  authMiddleware, swapQuoteValidation, async (req, res) => {
+router.post('/quote', csrfProtection, authMiddleware, swapQuoteValidation, async (req, res) => {
   await dexTradingController.getSwapQuote(req, res);
 });
 
@@ -87,6 +87,18 @@ router.post('/quote', csrfProtection,  authMiddleware, swapQuoteValidation, asyn
  * @access Public
  */
 router.get('/price', tokenPriceValidation, async (req, res) => {
+  await dexTradingController.getTokenPrice(req, res);
+});
+
+/**
+ * @route GET /api/dex/price/:tokenAddress
+ * @desc Get real-time price for a single token
+ * @access Public
+ */
+router.get('/price/:tokenAddress', [
+  param('tokenAddress').isEthereumAddress().withMessage('Invalid token address'),
+  query('chainId').optional().isInt().withMessage('Chain ID must be integer')
+], async (req, res) => {
   await dexTradingController.getTokenPrice(req, res);
 });
 
@@ -104,7 +116,7 @@ router.get('/liquidity', liquidityValidation, async (req, res) => {
  * @desc Monitor multiple liquidity pools
  * @access Private
  */
-router.post('/liquidity/monitor', csrfProtection,  authMiddleware, [
+router.post('/liquidity/monitor', csrfProtection, authMiddleware, [
   body('tokenPairs')
     .isArray({ min: 1 })
     .withMessage('Token pairs must be a non-empty array'),
@@ -126,7 +138,7 @@ router.post('/liquidity/monitor', csrfProtection,  authMiddleware, [
  * @desc Get gas estimate for swap
  * @access Private
  */
-router.post('/gas-estimate', csrfProtection,  authMiddleware, [
+router.post('/gas-estimate', csrfProtection, authMiddleware, [
   body('tokenInAddress')
     .isEthereumAddress()
     .withMessage('Invalid token in address'),
@@ -145,7 +157,7 @@ router.post('/gas-estimate', csrfProtection,  authMiddleware, [
  * @desc Get alternative DEX routes
  * @access Private
  */
-router.post('/alternatives', csrfProtection,  authMiddleware, swapQuoteValidation, async (req, res) => {
+router.post('/alternatives', csrfProtection, authMiddleware, swapQuoteValidation, async (req, res) => {
   await dexTradingController.getAlternativeRoutes(req, res);
 });
 
@@ -163,7 +175,7 @@ router.get('/validate/:tokenAddress', tokenValidation, async (req, res) => {
  * @desc Switch to a different blockchain network
  * @access Private
  */
-router.post('/switch-network', csrfProtection,  authMiddleware, [
+router.post('/switch-network', csrfProtection, authMiddleware, [
   body('chainId')
     .isInt({ min: 1 })
     .withMessage('Valid chain ID is required')
@@ -185,7 +197,7 @@ router.get('/networks', async (req, res) => {
  * @desc Compare prices across multiple chains
  * @access Private
  */
-router.post('/compare-chains', csrfProtection,  authMiddleware, [
+router.post('/compare-chains', csrfProtection, authMiddleware, [
   body('tokenInAddress')
     .isEthereumAddress()
     .withMessage('Invalid token in address'),
@@ -208,7 +220,7 @@ router.post('/compare-chains', csrfProtection,  authMiddleware, [
  * @desc Get cross-chain swap quote
  * @access Private
  */
-router.post('/cross-chain-quote', csrfProtection,  authMiddleware, [
+router.post('/cross-chain-quote', csrfProtection, authMiddleware, [
   body('sourceChain')
     .isInt({ min: 1 })
     .withMessage('Valid source chain ID is required'),
@@ -247,7 +259,7 @@ router.get('/gas-fees', [
  * @desc Get best chain for a specific swap
  * @access Private
  */
-router.post('/best-chain', csrfProtection,  authMiddleware, [
+router.post('/best-chain', csrfProtection, authMiddleware, [
   body('tokenInAddress')
     .isEthereumAddress()
     .withMessage('Invalid token in address'),

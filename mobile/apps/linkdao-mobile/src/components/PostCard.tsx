@@ -6,6 +6,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { THEME } from '../constants/theme';
 import { LiquidGlassTheme, createGlassStyle } from '../constants/liquidGlassTheme';
 import { Post } from '../store/postsStore';
 import TipButton from './TipButton';
