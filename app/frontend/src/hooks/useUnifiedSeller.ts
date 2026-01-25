@@ -1,6 +1,6 @@
 /**
  * Unified Seller Hooks
- * 
+ *
  * React hooks for managing seller data using the unified interfaces
  * and providing consistent data access across all seller components.
  */
@@ -22,6 +22,7 @@ import {
 
 import { unifiedSellerService } from '@/services/unifiedSellerService';
 import { SellerAPIError, SellerErrorType } from '@/services/unifiedSellerAPIClient';
+import { normalizeAddress } from '@/utils/addressUtils';
 
 // ============================================================================
 // SELLER PROFILE HOOKS
@@ -29,7 +30,8 @@ import { SellerAPIError, SellerErrorType } from '@/services/unifiedSellerAPIClie
 
 export function useUnifiedSeller(walletAddress?: string) {
   const { address } = useAccount();
-  const effectiveAddress = walletAddress || address;
+  // Normalize wallet address to lowercase for consistent processing
+  const effectiveAddress = normalizeAddress(walletAddress || address);
 
   // Debug logging
   useEffect(() => {
@@ -144,7 +146,8 @@ export function useUnifiedSeller(walletAddress?: string) {
 
 export function useUnifiedSellerListings(walletAddress?: string) {
   const { address } = useAccount();
-  const effectiveAddress = walletAddress || address;
+  // Normalize wallet address to lowercase for consistent processing
+  const effectiveAddress = normalizeAddress(walletAddress || address);
 
   const {
     data: listings,
@@ -230,7 +233,8 @@ export function useUnifiedSellerListings(walletAddress?: string) {
 
 export function useUnifiedSellerDashboard(walletAddress?: string) {
   const { address } = useAccount();
-  const effectiveAddress = walletAddress || address;
+  // Normalize wallet address to lowercase for consistent processing
+  const effectiveAddress = normalizeAddress(walletAddress || address);
 
   const {
     data: dashboard,
@@ -296,7 +300,8 @@ export function useUnifiedSellerDashboard(walletAddress?: string) {
 
 export function useUnifiedSellerOrders(walletAddress?: string) {
   const { address } = useAccount();
-  const effectiveAddress = walletAddress || address;
+  // Normalize wallet address to lowercase for consistent processing
+  const effectiveAddress = normalizeAddress(walletAddress || address);
 
   const {
     data: orders,
@@ -350,7 +355,8 @@ export function useUnifiedSellerOrders(walletAddress?: string) {
 
 export function useUnifiedSellerAnalytics(walletAddress?: string) {
   const { address } = useAccount();
-  const effectiveAddress = walletAddress || address;
+  // Normalize wallet address to lowercase for consistent processing
+  const effectiveAddress = normalizeAddress(walletAddress || address);
 
   const {
     data: analytics,
@@ -419,7 +425,8 @@ export function useSellerTiers() {
 
 export function useUnifiedSellerOnboarding(walletAddress?: string) {
   const { address } = useAccount();
-  const effectiveAddress = walletAddress || address;
+  // Normalize wallet address to lowercase for consistent processing
+  const effectiveAddress = normalizeAddress(walletAddress || address);
 
   const {
     data: onboardingSteps,
@@ -476,7 +483,8 @@ export function useUnifiedSellerOnboarding(walletAddress?: string) {
  */
 export function useUnifiedSellerData(walletAddress?: string) {
   const { address } = useAccount();
-  const effectiveAddress = walletAddress || address;
+  // Normalize wallet address to lowercase for consistent processing
+  const effectiveAddress = normalizeAddress(walletAddress || address);
 
   const profile = useUnifiedSeller(effectiveAddress);
   const listings = useUnifiedSellerListings(effectiveAddress);
