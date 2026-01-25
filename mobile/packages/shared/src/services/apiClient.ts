@@ -113,8 +113,19 @@ class ApiClient {
    */
   async get<T = any>(url: string, config?: InternalAxiosRequestConfig): Promise<ApiResponse<T>> {
     try {
-      const response = await this.instance.get<T>(url, config);
-      return { success: true, data: response.data };
+      const response = await this.instance.get<any>(url, config);
+      const backendData = response.data;
+      
+      // If backend returns { success: true, data: ... }, extract the data
+      if (backendData && typeof backendData === 'object' && 'success' in backendData) {
+        if (backendData.success) {
+          return { success: true, data: backendData.data as T };
+        } else {
+          return { success: false, error: backendData.message || backendData.error || 'API Error' };
+        }
+      }
+      
+      return { success: true, data: backendData as T };
     } catch (error) {
       return { success: false, error: (error as ApiError).message };
     }
@@ -125,8 +136,18 @@ class ApiClient {
    */
   async post<T = any>(url: string, data?: any, config?: InternalAxiosRequestConfig): Promise<ApiResponse<T>> {
     try {
-      const response = await this.instance.post<T>(url, data, config);
-      return { success: true, data: response.data };
+      const response = await this.instance.post<any>(url, data, config);
+      const backendData = response.data;
+      
+      if (backendData && typeof backendData === 'object' && 'success' in backendData) {
+        if (backendData.success) {
+          return { success: true, data: backendData.data as T };
+        } else {
+          return { success: false, error: backendData.message || backendData.error || 'API Error' };
+        }
+      }
+      
+      return { success: true, data: backendData as T };
     } catch (error) {
       return { success: false, error: (error as ApiError).message };
     }
@@ -137,8 +158,18 @@ class ApiClient {
    */
   async put<T = any>(url: string, data?: any, config?: InternalAxiosRequestConfig): Promise<ApiResponse<T>> {
     try {
-      const response = await this.instance.put<T>(url, data, config);
-      return { success: true, data: response.data };
+      const response = await this.instance.put<any>(url, data, config);
+      const backendData = response.data;
+      
+      if (backendData && typeof backendData === 'object' && 'success' in backendData) {
+        if (backendData.success) {
+          return { success: true, data: backendData.data as T };
+        } else {
+          return { success: false, error: backendData.message || backendData.error || 'API Error' };
+        }
+      }
+      
+      return { success: true, data: backendData as T };
     } catch (error) {
       return { success: false, error: (error as ApiError).message };
     }
@@ -149,8 +180,18 @@ class ApiClient {
    */
   async patch<T = any>(url: string, data?: any, config?: InternalAxiosRequestConfig): Promise<ApiResponse<T>> {
     try {
-      const response = await this.instance.patch<T>(url, data, config);
-      return { success: true, data: response.data };
+      const response = await this.instance.patch<any>(url, data, config);
+      const backendData = response.data;
+      
+      if (backendData && typeof backendData === 'object' && 'success' in backendData) {
+        if (backendData.success) {
+          return { success: true, data: backendData.data as T };
+        } else {
+          return { success: false, error: backendData.message || backendData.error || 'API Error' };
+        }
+      }
+      
+      return { success: true, data: backendData as T };
     } catch (error) {
       return { success: false, error: (error as ApiError).message };
     }
@@ -161,8 +202,18 @@ class ApiClient {
    */
   async delete<T = any>(url: string, config?: InternalAxiosRequestConfig): Promise<ApiResponse<T>> {
     try {
-      const response = await this.instance.delete<T>(url, config);
-      return { success: true, data: response.data };
+      const response = await this.instance.delete<any>(url, config);
+      const backendData = response.data;
+      
+      if (backendData && typeof backendData === 'object' && 'success' in backendData) {
+        if (backendData.success) {
+          return { success: true, data: backendData.data as T };
+        } else {
+          return { success: false, error: backendData.message || backendData.error || 'API Error' };
+        }
+      }
+      
+      return { success: true, data: backendData as T };
     } catch (error) {
       return { success: false, error: (error as ApiError).message };
     }

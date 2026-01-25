@@ -78,12 +78,12 @@ class MarketplaceService {
             ...(category && { category }),
         });
 
-        const response = await apiClient.get<{ products: Product[] }>(
+        const response = await apiClient.get<any>(
             `/api/marketplace/products?${params}`
         );
 
         if (response.success && response.data) {
-            return response.data.products;
+            return response.data.products || response.data;
         }
 
         return [];
@@ -175,12 +175,12 @@ class MarketplaceService {
      * Get user orders
      */
     async getOrders(page: number = 1, limit: number = 20): Promise<Order[]> {
-        const response = await apiClient.get<{ orders: Order[] }>(
+        const response = await apiClient.get<any>(
             `/api/marketplace/orders?page=${page}&limit=${limit}`
         );
 
         if (response.success && response.data) {
-            return response.data.orders;
+            return response.data.orders || response.data;
         }
 
         return [];
@@ -203,12 +203,12 @@ class MarketplaceService {
      * Search products
      */
     async searchProducts(query: string): Promise<Product[]> {
-        const response = await apiClient.get<{ products: Product[] }>(
+        const response = await apiClient.get<any>(
             `/api/marketplace/search?q=${encodeURIComponent(query)}`
         );
 
         if (response.success && response.data) {
-            return response.data.products;
+            return response.data.products || response.data;
         }
 
         return [];

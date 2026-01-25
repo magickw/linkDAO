@@ -49,24 +49,42 @@ class ApiClient {
         );
     }
 
+    private handleResponse<T>(response: AxiosResponse): any {
+        const backendData = response.data;
+        // If backend returns { success: true, data: ... }, extract the data
+        if (backendData && typeof backendData === 'object' && 'success' in backendData) {
+            if (backendData.success) {
+                return { ...response, data: backendData.data as T };
+            } else {
+                throw new Error(backendData.message || backendData.error || 'API Error');
+            }
+        }
+        return response;
+    }
+
     async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-        return this.client.get<T>(url, config);
+        const response = await this.client.get<T>(url, config);
+        return this.handleResponse<T>(response);
     }
 
     async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-        return this.client.post<T>(url, data, config);
+        const response = await this.client.post<T>(url, data, config);
+        return this.handleResponse<T>(response);
     }
 
     async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-        return this.client.put<T>(url, data, config);
+        const response = await this.client.put<T>(url, data, config);
+        return this.handleResponse<T>(response);
     }
 
     async patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-        return this.client.patch<T>(url, data, config);
+        const response = await this.client.patch<T>(url, data, config);
+        return this.handleResponse<T>(response);
     }
 
     async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-        return this.client.delete<T>(url, config);
+        const response = await this.client.delete<T>(url, config);
+        return this.handleResponse<T>(response);
     }
 }
 

@@ -70,26 +70,29 @@ export interface SellerTier {
 }
 
 class SellerAnalyticsService {
-  private baseUrl = `${ENV.BACKEND_URL}/api/seller/analytics`;
+  private baseUrl = `${ENV.BACKEND_URL}/api/marketplace/seller`;
 
   /**
    * Get seller performance metrics
    */
-  async getMetrics(timeframe: 'day' | 'week' | 'month' = 'week'): Promise<SellerMetrics | null> {
+  async getMetrics(walletAddress: string, timeframe: 'day' | 'week' | 'month' = 'week'): Promise<SellerMetrics | null> {
     try {
-      const response = await apiClient.get(`${this.baseUrl}/metrics`, { params: { timeframe } });
-      const data = response.data.data || response.data;
+      // Backend: GET /api/marketplace/seller/dashboard/:walletAddress
+      const response = await apiClient.get(`${this.baseUrl}/dashboard/${walletAddress.toLowerCase()}`);
+      const data = response.data;
+      if (!data) return null;
+
       return {
-        totalSales: data.totalSales || 0,
-        totalOrders: data.totalOrders || 0,
-        averageOrderValue: data.averageOrderValue || 0,
-        conversionRate: data.conversionRate || 0,
-        customerSatisfaction: data.customerSatisfaction || 0,
-        returnRate: data.returnRate || 0,
-        responseTime: data.responseTime || 0,
-        repeatCustomerRate: data.repeatCustomerRate || 0,
-        revenueGrowth: data.revenueGrowth || 0,
-        profitMargin: data.profitMargin || 0,
+        totalSales: data.sales?.total || 0,
+        totalOrders: data.orders?.total || 0,
+        averageOrderValue: data.analytics?.overview?.averageOrderValue || 0,
+        conversionRate: data.analytics?.overview?.conversionRate || 0,
+        customerSatisfaction: data.performance?.kpis?.customerSatisfaction?.value || 0,
+        returnRate: 0,
+        responseTime: data.performance?.kpis?.responseTime?.value || 0,
+        repeatCustomerRate: data.analytics?.buyers?.behavior?.repeatCustomers || 0,
+        revenueGrowth: data.analytics?.overview?.growthRate || 0,
+        profitMargin: 0,
       };
     } catch (error) {
       console.error('Error fetching seller metrics:', error);
@@ -101,15 +104,25 @@ class SellerAnalyticsService {
    * Get sales data over time
    */
   async getSalesData(
-    timeframe: 'day' | 'week' | 'month' = 'week',
+    walletAddress: string,
+    timeframe: '7d' | '30d' | '90d' | '1y' = '30d',
     limit: number = 30
   ): Promise<SalesData[]> {
     try {
-      const response = await apiClient.get(`${this.baseUrl}/sales`, {
-        params: { timeframe, limit }
-      });
-      const data = response.data.data || response.data;
-      return data.sales || data || [];
+      // Backend: GET /api/marketplace/seller/dashboard/analytics/:walletAddress?period=30d
+      const response = await apiClient.get(`${this.baseUrl}/dashboard/analytics/${walletAddress.toLowerCase()}?period=${timeframe}`);
+      const data = response.data;
+      
+      if (data && data.revenue && Array.isArray(data.revenue.byDay)) {
+        return data.revenue.byDay.map((item: any) => ({
+          date: item.date,
+          sales: Number(item.amount),
+          orders: 0, // Need to merge from orders.byDay if needed
+          revenue: Number(item.amount)
+        }));
+      }
+      
+      return [];
     } catch (error) {
       console.error('Error fetching sales data:', error);
       return [];
@@ -119,13 +132,23 @@ class SellerAnalyticsService {
   /**
    * Get top performing products
    */
-  async getTopProducts(limit: number = 5): Promise<TopProduct[]> {
+  async getTopProducts(walletAddress: string, limit: number = 5): Promise<TopProduct[]> {
     try {
-      const response = await apiClient.get(`${this.baseUrl}/top-products`, {
-        params: { limit }
-      });
-      const data = response.data.data || response.data;
-      return data.products || data || [];
+      // Use general analytics endpoint or dashboard data
+      const response = await apiClient.get(`${this.baseUrl}/dashboard/${walletAddress.toLowerCase()}`);
+      const data = response.data;
+      
+      if (data && data.analytics && data.analytics.sales && Array.isArray(data.analytics.sales.topPerforming)) {
+        return data.analytics.sales.topPerforming.map((p: any) => ({
+          productId: p.id,
+          title: p.title,
+          sales: 0,
+          revenue: p.price,
+          units: 0,
+          conversionRate: 0
+        }));
+      }
+      return [];
     } catch (error) {
       console.error('Error fetching top products:', error);
       return [];
@@ -135,11 +158,31 @@ class SellerAnalyticsService {
   /**
    * Get customer insights
    */
-  async getCustomerInsights(): Promise<CustomerInsight | null> {
+  async getCustomerInsights(walletAddress: string): Promise<CustomerInsight | null> {
     try {
-      const response = await apiClient.get(`${this.baseUrl}/customer-insights`);
-      const data = response.data.data || response.data;
-      return data;
+      const response = await apiClient.get(`${this.baseUrl}/dashboard/analytics/${walletAddress.toLowerCase()}`);
+      const data = response.data;
+      
+      if (data && data.buyers) {
+        return {
+          demographics: {
+            ageGroups: [],
+            locationDistribution: data.buyers.demographics?.countries?.map((c: any) => ({
+              country: c.country,
+              percentage: c.count
+            })) || []
+          },
+          preferences: {
+            topCategories: [],
+            priceRanges: []
+          },
+          behavior: {
+            averageSessionDuration: data.buyers.behavior?.averageSessionDuration || 0,
+            purchaseFrequency: data.buyers.behavior?.averageOrdersPerCustomer || 0
+          }
+        };
+      }
+      return null;
     } catch (error) {
       console.error('Error fetching customer insights:', error);
       return null;
@@ -149,11 +192,30 @@ class SellerAnalyticsService {
   /**
    * Get seller tier information
    */
-  async getSellerTier(): Promise<SellerTier | null> {
+  async getSellerTier(walletAddress: string): Promise<SellerTier | null> {
     try {
-      const response = await apiClient.get(`${this.baseUrl}/tier`);
-      const data = response.data.data || response.data;
-      return data;
+      // Backend: GET /api/marketplace/seller/:walletAddress/tier
+      const response = await apiClient.get(`${this.baseUrl}/${walletAddress.toLowerCase()}/tier`);
+      const data = response.data;
+      
+      // Get progress
+      const progressResponse = await apiClient.get(`${this.baseUrl}/${walletAddress.toLowerCase()}/tier/progress`);
+      const progressData = progressResponse.data;
+
+      if (data) {
+        return {
+          currentTier: data.tier || 'basic',
+          nextTier: progressData?.nextTier || null,
+          progressPercentage: progressData?.progressPercentage || 0,
+          requirements: [], // Map from progressData if available
+          benefits: data.benefits?.map((b: string) => ({
+            type: 'benefit',
+            description: b,
+            value: 'enabled'
+          })) || []
+        };
+      }
+      return null;
     } catch (error) {
       console.error('Error fetching seller tier:', error);
       return null;
@@ -163,7 +225,7 @@ class SellerAnalyticsService {
   /**
    * Get order statistics
    */
-  async getOrderStats(): Promise<{
+  async getOrderStats(walletAddress: string): Promise<{
     pending: number;
     processing: number;
     shipped: number;
@@ -171,14 +233,26 @@ class SellerAnalyticsService {
     returns: number;
   }> {
     try {
-      const response = await apiClient.get(`${this.baseUrl}/order-stats`);
-      const data = response.data.data || response.data;
+      const response = await apiClient.get(`${this.baseUrl}/dashboard/${walletAddress.toLowerCase()}`);
+      const data = response.data;
+      
+      if (data && data.orders && data.orders.summary) {
+        const s = data.orders.summary;
+        return {
+          pending: s.pending || 0,
+          processing: s.processing || 0,
+          shipped: s.shipped || 0,
+          delivered: s.delivered || 0,
+          returns: 0,
+        };
+      }
+      
       return {
-        pending: data.pending || 0,
-        processing: data.processing || 0,
-        shipped: data.shipped || 0,
-        delivered: data.delivered || 0,
-        returns: data.returns || 0,
+        pending: 0,
+        processing: 0,
+        shipped: 0,
+        delivered: 0,
+        returns: 0,
       };
     } catch (error) {
       console.error('Error fetching order stats:', error);

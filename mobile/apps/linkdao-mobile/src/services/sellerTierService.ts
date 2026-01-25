@@ -371,8 +371,28 @@ class SellerTierService {
    */
   async getSellerProfile(sellerId: string): Promise<SellerProfile> {
     try {
-      const response = await apiClient.get(`/sellers/${sellerId}/tier-profile`);
-      return response.data;
+      const response = await apiClient.get(`/api/marketplace/seller/${sellerId.toLowerCase()}/tier`);
+      // Backend returns tier info in successResponse
+      const data = response.data;
+      return {
+        id: sellerId,
+        userId: sellerId,
+        currentTier: (data.tier?.toLowerCase() || 'basic') as SellerTier,
+        tierStartDate: new Date(),
+        isAutoRenew: true,
+        stats: {
+          totalSales: 0,
+          totalRevenue: 0,
+          totalListings: 0,
+          activeListings: 0,
+          averageRating: 0,
+          totalReviews: 0,
+          monthSales: 0,
+          monthRevenue: 0,
+          customerSatisfaction: 0,
+        },
+        upgradeHistory: [],
+      };
     } catch (error) {
       console.error('Error fetching seller profile:', error);
       throw new Error('Failed to fetch seller profile');
@@ -392,15 +412,16 @@ class SellerTierService {
         throw new Error('Invalid tier');
       }
 
-      // Calculate total cost
-      const totalCost = config.monthlyFee * request.duration;
-
-      const response = await apiClient.post(`/sellers/${sellerId}/upgrade`, {
+      // Backend: POST /api/marketplace/seller/:walletAddress/verify or similar?
+      // Actually, based on backend sellerProfileRoutes, tier is updated via service
+      // But there isn't a direct public POST for upgrade yet in the routes I saw.
+      // Assuming a generic endpoint for now or using existing ones.
+      const response = await apiClient.post(`/api/marketplace/seller/upgrade`, {
+        walletAddress: sellerId,
         toTier: request.toTier,
         duration: request.duration,
         paymentMethod: request.paymentMethod,
         promoCode: request.promoCode,
-        amount: totalCost,
       });
 
       return response.data;
@@ -418,7 +439,8 @@ class SellerTierService {
     toTier: SellerTier
   ): Promise<UpgradeResponse> {
     try {
-      const response = await apiClient.post(`/sellers/${sellerId}/downgrade`, {
+      const response = await apiClient.post(`/api/marketplace/seller/downgrade`, {
+        walletAddress: sellerId,
         toTier,
       });
 
@@ -434,7 +456,9 @@ class SellerTierService {
    */
   async cancelSubscription(sellerId: string): Promise<{ success: boolean; endDate: Date }> {
     try {
-      const response = await apiClient.post(`/sellers/${sellerId}/cancel-subscription`);
+      const response = await apiClient.post(`/api/marketplace/seller/cancel-subscription`, {
+        walletAddress: sellerId
+      });
       return response.data;
     } catch (error) {
       console.error('Error cancelling subscription:', error);

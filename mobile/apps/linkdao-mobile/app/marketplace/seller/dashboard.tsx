@@ -177,6 +177,7 @@ export default function SellerDashboardScreen() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showOrderDetail, setShowOrderDetail] = useState(false);
   const [updatingOrderStatus, setUpdatingOrderStatus] = useState(false);
+  const [profileNotFound, setProfileNotFound] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -198,6 +199,7 @@ export default function SellerDashboardScreen() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      setProfileNotFound(false);
 
       const token = await getAuthToken();
       if (!token) {
@@ -225,11 +227,19 @@ export default function SellerDashboardScreen() {
         }),
       ]);
 
+      if (profileRes.status === 404) {
+        setProfileNotFound(true);
+        setLoading(false);
+        return;
+      }
+
       if (profileRes.ok) {
         const profileResult = await profileRes.json();
         if (profileResult.success && profileResult.data) {
           setProfile(profileResult.data);
           initializeFormData(profileResult.data);
+        } else {
+          setProfileNotFound(true);
         }
       }
 
@@ -1440,6 +1450,34 @@ export default function SellerDashboardScreen() {
       </View>
     </Modal>
   );
+
+  if (profileNotFound) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#1f2937" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Seller Dashboard</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.emptyState}>
+          <Ionicons name="storefront-outline" size={80} color="#3b82f6" />
+          <Text style={styles.emptyText}>Become a Seller</Text>
+          <Text style={styles.emptySubtext}>
+            Start selling your products on LinkDAO Marketplace.
+            Complete the onboarding process to set up your store.
+          </Text>
+          <TouchableOpacity
+            style={[styles.primaryButton, { paddingHorizontal: 32, marginTop: 24 }]}
+            onPress={() => router.push('/marketplace/seller/onboarding')}
+          >
+            <Text style={styles.primaryButtonText}>Start Onboarding</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>

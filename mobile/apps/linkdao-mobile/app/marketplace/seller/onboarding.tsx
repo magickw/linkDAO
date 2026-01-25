@@ -211,6 +211,9 @@ export default function SellerOnboardingScreen() {
 
     if (currentStep < ONBOARDING_STEPS.length - 1) {
       setCurrentStep(currentStep + 1);
+    } else {
+      // Last step completed (optional listing)
+      handleFinalSubmit();
     }
   };
 
@@ -223,6 +226,14 @@ export default function SellerOnboardingScreen() {
   };
 
   const handleSkip = () => {
+    const stepId = ONBOARDING_STEPS[currentStep].id;
+    
+    // If skipping first-listing, finalize onboarding
+    if (stepId === 'first-listing') {
+      handleFinalSubmit();
+      return;
+    }
+
     if (currentStep < ONBOARDING_STEPS.length - 1) {
       setCurrentStep(currentStep + 1);
     }
@@ -991,6 +1002,13 @@ export default function SellerOnboardingScreen() {
         onPress={() => router.push('/marketplace/seller/listings/create')}
       >
         <Text style={styles.secondaryButtonText}>Create First Listing</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.secondaryButton, { marginTop: 12, backgroundColor: 'transparent' }]}
+        onPress={handleSkip}
+      >
+        <Text style={[styles.secondaryButtonText, { color: '#3b82f6' }]}>Skip & Go to Dashboard</Text>
       </TouchableOpacity>
     </View>
   );
