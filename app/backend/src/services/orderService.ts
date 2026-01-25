@@ -830,7 +830,13 @@ export class OrderService {
       // Tracking Info
       trackingNumber: dbOrder.trackingNumber || dbOrder.tracking_number,
       trackingCarrier: dbOrder.trackingCarrier || dbOrder.tracking_carrier,
-      trackingUrl: this.getTrackingUrl(dbOrder.trackingNumber || dbOrder.tracking_number, dbOrder.trackingCarrier || dbOrder.tracking_carrier)
+      trackingUrl: this.getTrackingUrl(dbOrder.trackingNumber || dbOrder.tracking_number, dbOrder.trackingCarrier || dbOrder.tracking_carrier),
+
+      // Financial Details
+      taxAmount: dbOrder.taxAmount,
+      shippingCost: dbOrder.shippingCost,
+      platformFee: dbOrder.platformFee,
+      netRevenue: (parseFloat(dbOrder.amount || '0') - parseFloat(dbOrder.platformFee || '0')).toString()
     };
   }
 

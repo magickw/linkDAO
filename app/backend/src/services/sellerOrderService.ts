@@ -46,6 +46,11 @@ interface OrderWithBuyer {
   checkoutSessionId?: string;
   paymentMethod?: string;
   items?: any[];
+  taxAmount?: string;
+  shippingCost?: string;
+  platformFee?: string;
+  netRevenue?: string;
+  buyerName?: string;
 }
 
 /**
@@ -114,7 +119,12 @@ class SellerOrderService {
         escrowId: orders.escrowId,
         checkoutSessionId: orders.checkoutSessionId,
         paymentMethod: orders.paymentMethod,
+        taxAmount: orders.taxAmount,
+        shippingCost: orders.shippingCost,
+        platformFee: orders.platformFee,
         buyerAddress: users.walletAddress,
+        buyerDisplayName: users.displayName,
+        buyerHandle: users.handle,
       })
       .from(orders)
       .leftJoin(users, eq(orders.buyerId, users.id))
@@ -143,6 +153,14 @@ class SellerOrderService {
         escrowId: order.escrowId || undefined,
         checkoutSessionId: order.checkoutSessionId || undefined,
         paymentMethod: order.paymentMethod || undefined,
+        taxAmount: order.taxAmount?.toString() || '0',
+        shippingCost: order.shippingCost?.toString() || '0',
+        platformFee: order.platformFee?.toString() || '0',
+        netRevenue: (
+          parseFloat(order.amount || '0') - 
+          parseFloat(order.platformFee?.toString() || '0')
+        ).toString(),
+        buyerName: order.buyerDisplayName || order.buyerHandle || 'Unknown Buyer',
       })),
       total,
       page: Math.floor(offset / limit) + 1,

@@ -60,7 +60,7 @@ export default function CommunityPostPage() {
                 if (data.success && data.data) {
                     // Normalize data structure based on endpoint
                     const rawPost = isUuid ? data.data : data.data.post;
-                    
+
                     // Verify the community slug matches the post's community
                     if (rawPost.communitySlug && communitySlug && rawPost.communitySlug !== communitySlug) {
                         router.replace(`/communities/${encodeURIComponent(rawPost.communitySlug)}/posts/${shareId}`);
@@ -97,7 +97,7 @@ export default function CommunityPostPage() {
                             // This is a simplified check, in a real app use a proper membership service
                             const isCreator = communityData.creatorAddress?.toLowerCase() === address.toLowerCase();
                             const isMod = communityData.moderators?.some((m: string) => m.toLowerCase() === address.toLowerCase());
-                            
+
                             if (isCreator || isMod || communityData.isMember) {
                                 setUserMembership({
                                     id: `mem-${address}`,
@@ -191,7 +191,7 @@ export default function CommunityPostPage() {
             {getMetaTags()}
 
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pt-0 lg:pt-6">
-                <div className="mx-auto max-w-screen-2xl px-0 sm:px-2 lg:px-4">
+                <div className="w-full px-0 sm:px-2 lg:px-4">
                     <PostDetail
                         post={post}
                         community={community}

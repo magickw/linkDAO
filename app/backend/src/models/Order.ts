@@ -211,6 +211,12 @@ export interface MarketplaceOrder {
     serviceDurationMinutes?: number;
   };
   disputeId?: string;
+  
+  // Financial Details
+  taxAmount?: string;
+  shippingCost?: string;
+  platformFee?: string;
+  netRevenue?: string;
 
   // Service delivery fields
   isServiceOrder?: boolean;

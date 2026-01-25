@@ -571,18 +571,42 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
 
                             <div className="mb-4">
                                 <h4 className="text-sm font-semibold text-gray-300 mb-2">Items</h4>
-                                <ul className="space-y-1">
+                                <div className="space-y-3">
                                     {order.items && order.items.length > 0 ? (
                                         order.items.map((item, idx) => (
-                                            <li key={idx} className="text-sm text-gray-400 flex justify-between">
-                                                <span>{item.title}</span>
-                                                <span>x{item.quantity}</span>
-                                            </li>
+                                            <div key={idx} className="flex items-start gap-3 bg-gray-800/30 p-2 rounded border border-gray-700/30">
+                                                {/* Product Image */}
+                                                <div className="w-12 h-12 bg-gray-700 rounded overflow-hidden flex-shrink-0">
+                                                    {item.image ? (
+                                                        <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-gray-500">
+                                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                
+                                                {/* Details */}
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium text-white truncate">{item.title}</p>
+                                                    <div className="flex justify-between text-xs text-gray-400 mt-1">
+                                                        <span>Qty: {item.quantity}</span>
+                                                        <span>${item.price?.toFixed(2) || '0.00'} / unit</span>
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Total */}
+                                                <div className="text-right flex-shrink-0">
+                                                    <p className="text-sm font-bold text-white">
+                                                        ${((item.price || 0) * (item.quantity || 1)).toFixed(2)}
+                                                    </p>
+                                                </div>
+                                            </div>
                                         ))
                                     ) : (
-                                        <li className="text-sm text-gray-500 italic">No items details available</li>
+                                        <p className="text-sm text-gray-500 italic">No items details available</p>
                                     )}
-                                </ul>
+                                </div>
                             </div>
 
                             {/* Buyer Information */}
