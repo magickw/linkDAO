@@ -193,6 +193,8 @@ export class ProductService {
       tags: JSON.stringify(input.tags),
       shipping: input.shipping ? JSON.stringify(input.shipping) : null,
       nft: input.nft ? JSON.stringify(input.nft) : null,
+      sku: input.sku,
+      canonicalProductId: input.canonicalProductId,
     }).returning();
 
     const product = result[0];
@@ -388,6 +390,8 @@ export class ProductService {
       }
     }
     if (input.inventory !== undefined) updates.inventory = input.inventory;
+    if (input.sku !== undefined) updates.sku = input.sku;
+    if (input.canonicalProductId !== undefined) updates.canonicalProductId = input.canonicalProductId;
     if (input.tags !== undefined) {
       updates.tags = JSON.stringify(input.tags);
 
@@ -886,6 +890,8 @@ export class ProductService {
       tags: JSON.parse(dbProduct.tags || '[]'),
       shipping: dbProduct.shipping ? JSON.parse(dbProduct.shipping) : undefined,
       nft: dbProduct.nft ? JSON.parse(dbProduct.nft) : undefined,
+      sku: dbProduct.sku || undefined,
+      canonicalProductId: dbProduct.canonicalProductId || undefined,
       views: dbProduct.views || 0,
       favorites: dbProduct.favorites || 0,
       salesCount: dbProduct.salesCount || 0,

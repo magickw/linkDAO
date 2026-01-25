@@ -14,6 +14,8 @@ export interface CreateProductInput {
   tags: string[];
   shipping?: ShippingInfo;
   nft?: NFTInfo;
+  sku?: string;
+  canonicalProductId?: string;
 }
 
 export interface UpdateProductInput {
@@ -30,6 +32,8 @@ export interface UpdateProductInput {
   tags?: string[];
   shipping?: ShippingInfo;
   status?: ProductStatus;
+  sku?: string;
+  canonicalProductId?: string;
 }
 
 export interface ProductMetadata {
@@ -182,6 +186,8 @@ export interface Product {
   tags: string[];
   shipping?: ShippingInfo;
   nft?: NFTInfo;
+  sku?: string;
+  canonicalProductId?: string;
   views: number;
   favorites: number;
   salesCount: number;

@@ -4,6 +4,7 @@ import { csrfProtection } from '../middleware/csrfProtection';
 import { sellerProfileService } from '../services/sellerProfileService';
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '../utils/apiResponse';
 import { cachingMiddleware, rateLimitWithCache } from '../middleware/cachingMiddleware';
+import { sanitizeWalletAddress } from '../utils/inputSanitization';
 import {
   CreateSellerProfileRequest,
   UpdateSellerProfileRequest,
@@ -26,7 +27,7 @@ router.get('/seller/:walletAddress',
   cachingMiddleware.sellerProfileCache(),
   async (req: Request, res: Response) => {
     try {
-      const { walletAddress } = req.params;
+      let { walletAddress } = req.params;
 
       // Validate wallet address format - more flexible validation
       if (!walletAddress) {
@@ -35,10 +36,14 @@ router.get('/seller/:walletAddress',
         ], 'Wallet address required');
       }
 
-      // Basic validation - check if it looks like a wallet address
-      if (!/^0x[a-fA-F0-9]{40,42}$/.test(walletAddress) && !/^[a-zA-Z0-9]{40,44}$/.test(walletAddress)) {
-        console.warn('Invalid wallet address format received in seller profile request:', walletAddress);
-        // Still process the request but log the warning
+      // Normalize wallet address to lowercase for consistent processing
+      try {
+        walletAddress = sanitizeWalletAddress(walletAddress);
+      } catch (error) {
+        // If sanitization fails, just log a warning and try to process it
+        // This maintains backward compatibility with lenient validation
+        console.warn('Wallet address sanitization failed:', walletAddress);
+        walletAddress = walletAddress.toLowerCase();
       }
 
       const profile = await sellerProfileService.getProfile(walletAddress);
@@ -98,11 +103,13 @@ router.put('/seller/:walletAddress', csrfProtection,
   cachingMiddleware.invalidate('sellerProfile'),
   async (req: Request, res: Response) => {
     try {
-      const { walletAddress } = req.params;
+      let { walletAddress } = req.params;
       const updates: UpdateSellerProfileRequest = req.body;
 
-      // Validate wallet address format (0x + 40 hex characters = 42 total)
-      if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/i.test(walletAddress)) {
+      // Normalize wallet address to lowercase for consistent processing
+      try {
+        walletAddress = sanitizeWalletAddress(walletAddress);
+      } catch (error) {
         return validationErrorResponse(res, [
           { field: 'walletAddress', message: 'Invalid wallet address format' }
         ], 'Invalid wallet address');
@@ -176,12 +183,18 @@ router.post('/seller/profile', csrfProtection,
         ]);
       }
 
-      // Validate wallet address format (0x + 40 hex characters = 42 total)
-      if (!/^0x[a-fA-F0-9]{40}$/i.test(profileData.walletAddress)) {
+      // Normalize wallet address to lowercase for consistent processing
+      let normalizedAddress: string;
+      try {
+        normalizedAddress = sanitizeWalletAddress(profileData.walletAddress);
+      } catch (error) {
         return validationErrorResponse(res, [
           { field: 'walletAddress', message: 'Invalid wallet address format' }
         ]);
       }
+
+      // Update profileData with normalized address
+      profileData.walletAddress = normalizedAddress;
 
       // Validate ENS handle if provided
       if (profileData.ensHandle && !/^[a-zA-Z0-9-]+\.eth$/.test(profileData.ensHandle)) {
@@ -191,7 +204,7 @@ router.post('/seller/profile', csrfProtection,
       }
 
       // Check if profile already exists
-      const existingProfile = await sellerProfileService.getProfile(profileData.walletAddress);
+      const existingProfile = await sellerProfileService.getProfile(normalizedAddress);
 
       let profile: SellerProfile;
 
@@ -274,10 +287,19 @@ router.get('/seller/onboarding/:walletAddress',
   cachingMiddleware.cache('sellerProfile', { ttl: 180 }), // Cache for 3 minutes
   async (req: Request, res: Response) => {
     try {
-      const { walletAddress } = req.params;
+      let { walletAddress } = req.params;
 
       // Validate wallet address format (0x + 40 hex characters = 42 total)
-      if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/i.test(walletAddress)) {
+      if (!walletAddress) {
+        return validationErrorResponse(res, [
+          { field: 'walletAddress', message: 'Wallet address is required' }
+        ]);
+      }
+
+      // Normalize wallet address to lowercase for consistent processing
+      try {
+        walletAddress = sanitizeWalletAddress(walletAddress);
+      } catch (error) {
         return validationErrorResponse(res, [
           { field: 'walletAddress', message: 'Invalid wallet address format' }
         ]);
@@ -329,7 +351,7 @@ router.get('/seller/onboarding/:walletAddress',
  */
 router.put('/seller/onboarding/:walletAddress/:step', csrfProtection, async (req: Request, res: Response) => {
   try {
-    const { walletAddress, step } = req.params;
+    let { walletAddress, step } = req.params;
 
     // Handle different request body formats
     let completed: boolean;
@@ -343,8 +365,10 @@ router.put('/seller/onboarding/:walletAddress/:step', csrfProtection, async (req
       ]);
     }
 
-    // Validate wallet address format (0x + 40 hex characters = 42 total)
-    if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/i.test(walletAddress)) {
+    // Normalize wallet address to lowercase for consistent processing
+    try {
+      walletAddress = sanitizeWalletAddress(walletAddress);
+    } catch (error) {
       return validationErrorResponse(res, [
         { field: 'walletAddress', message: 'Invalid wallet address format' }
       ]);
@@ -428,10 +452,12 @@ router.get('/seller/:walletAddress/tier',
   cachingMiddleware.cache('sellerProfile', { ttl: 300 }), // Cache for 5 minutes
   async (req: Request, res: Response) => {
     try {
-      const { walletAddress } = req.params;
+      let { walletAddress } = req.params;
 
-      // Validate wallet address format (0x + 40 hex characters = 42 total)
-      if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/i.test(walletAddress)) {
+      // Normalize wallet address to lowercase for consistent processing
+      try {
+        walletAddress = sanitizeWalletAddress(walletAddress);
+      } catch (error) {
         return validationErrorResponse(res, [
           { field: 'walletAddress', message: 'Invalid wallet address format' }
         ]);
@@ -497,10 +523,12 @@ router.get('/seller/:walletAddress/tier/progress',
   cachingMiddleware.cache('sellerProfile', { ttl: 300 }), // Cache for 5 minutes
   async (req: Request, res: Response) => {
     try {
-      const { walletAddress } = req.params;
+      let { walletAddress } = req.params;
 
-      // Validate wallet address format (0x + 40 hex characters = 42 total)
-      if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/i.test(walletAddress)) {
+      // Normalize wallet address to lowercase for consistent processing
+      try {
+        walletAddress = sanitizeWalletAddress(walletAddress);
+      } catch (error) {
         return validationErrorResponse(res, [
           { field: 'walletAddress', message: 'Invalid wallet address format' }
         ]);
@@ -575,10 +603,12 @@ router.get('/seller/:walletAddress/messaging-analytics',
   cachingMiddleware.cache('sellerMessagingAnalytics', { ttl: 300 }),
   async (req: Request, res: Response) => {
     try {
-      const { walletAddress } = req.params;
+      let { walletAddress } = req.params;
 
-      // Basic validation
-      if (!walletAddress || !/^0x[a-fA-F0-9]{40,42}$/i.test(walletAddress)) {
+      // Normalize wallet address to lowercase for consistent processing
+      try {
+        walletAddress = sanitizeWalletAddress(walletAddress);
+      } catch (error) {
         return validationErrorResponse(res, [{ field: 'walletAddress', message: 'Invalid wallet address' }]);
       }
 

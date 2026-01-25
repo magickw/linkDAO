@@ -789,6 +789,8 @@ export const products = pgTable("products", {
   seoTitle: varchar("seo_title", { length: 255 }),
   seoDescription: text("seo_description"),
   seoKeywords: text("seo_keywords"), // JSON array of SEO keywords
+  sku: varchar("sku", { length: 100 }), // Stock Keeping Unit for inventory tracking
+  canonicalProductId: uuid("canonical_product_id"), // Reference to a master product in a global catalog
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 

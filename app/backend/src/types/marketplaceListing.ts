@@ -37,6 +37,8 @@ export interface MarketplaceListing {
   category?: string;
   isActive: boolean;
   shipping?: ShippingInfo | null;
+  sku?: string;
+  canonicalProductId?: string;
   createdAt: Date;
   updatedAt: Date;
   views?: number;
@@ -52,6 +54,8 @@ export interface CreateMarketplaceListingRequest {
   images?: string[];
   category?: string;
   inventory?: number;
+  sku?: string;
+  canonicalProductId?: string;
   shipping?: ShippingInfo;
 }
 
@@ -64,6 +68,8 @@ export interface UpdateMarketplaceListingRequest {
   category?: string;
   inventory?: number;
   isActive?: boolean;
+  sku?: string;
+  canonicalProductId?: string;
   shipping?: ShippingInfo;
 }
 

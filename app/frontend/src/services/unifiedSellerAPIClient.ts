@@ -168,8 +168,8 @@ export class UnifiedSellerAPIClient {
   // Standardized endpoint patterns
   private endpoints: SellerAPIEndpoints = {
     // Profile endpoints
-    getProfile: (walletAddress: string) => `${BACKEND_API_BASE_URL}/api/marketplace/seller/${walletAddress}`, // Public endpoint
-    updateProfile: (walletAddress: string) => `${BACKEND_API_BASE_URL}/api/marketplace/seller/${walletAddress}`, // Uses authenticated user
+    getProfile: (walletAddress: string) => `${BACKEND_API_BASE_URL}/api/marketplace/seller/${walletAddress.toLowerCase()}`, // Public endpoint
+    updateProfile: (walletAddress: string) => `${BACKEND_API_BASE_URL}/api/marketplace/seller/${walletAddress.toLowerCase()}`, // Uses authenticated user
     createProfile: () => `${BACKEND_API_BASE_URL}/api/marketplace/seller/profile`,
     updateProfileEnhanced: (walletAddress: string) => `${this.baseURL}/profile/enhanced`, // Uses authenticated user
     // Onboarding endpoints
@@ -177,8 +177,8 @@ export class UnifiedSellerAPIClient {
     updateOnboardingStep: (walletAddress: string, stepId: string) => `${this.baseURL}/onboarding/${stepId}`, // Uses authenticated user
 
     // Dashboard endpoints - NOTE: These use /api/marketplace/seller prefix, not /api/sellers
-    getDashboard: (walletAddress: string) => `${BACKEND_API_BASE_URL}/api/marketplace/seller/dashboard/${walletAddress}`,
-    getAnalytics: (walletAddress: string) => `${BACKEND_API_BASE_URL}/api/marketplace/seller/dashboard/analytics/${walletAddress}`,    // Listings endpoints
+    getDashboard: (walletAddress: string) => `${BACKEND_API_BASE_URL}/api/marketplace/seller/dashboard/${walletAddress.toLowerCase()}`,
+    getAnalytics: (walletAddress: string) => `${BACKEND_API_BASE_URL}/api/marketplace/seller/dashboard/analytics/${walletAddress.toLowerCase()}`,    // Listings endpoints
     getListings: (walletAddress: string) => `${this.baseURL}/listings`, // Backend uses authenticated user, not wallet address in URL
     getListingById: (listingId: string) => `${BACKEND_API_BASE_URL}/api/marketplace/seller/listings/detail/${listingId}`,
     createListing: () => `${this.baseURL}/listings`,
@@ -227,7 +227,7 @@ export class UnifiedSellerAPIClient {
     triggerTierEvaluation: () => `${this.baseURL}/tier/evaluate`,
     getTierCriteria: () => `${this.baseURL}/tier/criteria`,
     getTierEvaluationHistory: (walletAddress: string) => `${this.baseURL}/tier/history`, // Uses authenticated user
-    getTierUpgradeNotifications: (walletAddress: string) => `${this.baseURL}/tier/notifications/${walletAddress}`,
+    getTierUpgradeNotifications: (walletAddress: string) => `${this.baseURL}/tier/notifications/${walletAddress.toLowerCase()}`,
 
     // Workflow endpoints - specifically mounted at /api/sellers/workflow
     getWorkflowDashboard: () => `${BACKEND_API_BASE_URL}/api/sellers/workflow/dashboard`,

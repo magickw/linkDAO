@@ -200,6 +200,8 @@ export class MarketplaceListingsService {
           category: listing.categoryId || undefined,
           isActive: listing.status === 'active',
           shipping: parsedShipping,
+          sku: listing.sku || undefined,
+          canonicalProductId: listing.canonicalProductId || undefined,
           views: listing.views || 0,
           favorites: listing.favorites || 0,
           inventory: listing.inventory || 1,
@@ -254,6 +256,8 @@ export class MarketplaceListingsService {
               views: products.views,
               favorites: products.favorites,
               inventory: products.inventory,
+              sku: products.sku,
+              canonicalProductId: products.canonicalProductId,
               createdAt: products.createdAt,
               updatedAt: products.updatedAt,
             })
@@ -318,6 +322,8 @@ export class MarketplaceListingsService {
         category: listing.categoryId || undefined,
         isActive: listing.status === 'active',
         shipping: parsedShipping,
+        sku: listing.sku || undefined,
+        canonicalProductId: listing.canonicalProductId || undefined,
         views: listing.views || 0,
         favorites: listing.favorites || 0,
         inventory: listing.inventory || 1,
@@ -365,6 +371,8 @@ export class MarketplaceListingsService {
           images: JSON.stringify(listingData.images || []),
           metadata: JSON.stringify({}),
           inventory: listingData.inventory || 1,
+          sku: listingData.sku,
+          canonicalProductId: listingData.canonicalProductId,
           status: 'active',
           listingStatus: 'active',
           publishedAt: new Date(),
@@ -377,18 +385,6 @@ export class MarketplaceListingsService {
         })
         .returning();
 
-      if (result.length === 0) {
-        throw new Error('Failed to create marketplace listing');
-      }
-
-      const listing = result[0];
-      let parsedImages: string[] = [];
-      try {
-        parsedImages = listing.images ? JSON.parse(listing.images) : [];
-      } catch {
-        parsedImages = [];
-      }
-
       return {
         id: listing.id,
         sellerAddress: sellerAddress,
@@ -400,6 +396,8 @@ export class MarketplaceListingsService {
         category: listing.categoryId || undefined,
         isActive: listing.status === 'active',
         inventory: listing.inventory || 1,
+        sku: listing.sku || undefined,
+        canonicalProductId: listing.canonicalProductId || undefined,
         createdAt: listing.createdAt || new Date(),
         updatedAt: listing.updatedAt || new Date()
       };
@@ -441,6 +439,8 @@ export class MarketplaceListingsService {
       if (updateData.images !== undefined) updateValues.images = JSON.stringify(updateData.images);
       if (updateData.category !== undefined) updateValues.categoryId = updateData.category;
       if (updateData.inventory !== undefined) updateValues.inventory = updateData.inventory;
+      if (updateData.sku !== undefined) updateValues.sku = updateData.sku;
+      if (updateData.canonicalProductId !== undefined) updateValues.canonicalProductId = updateData.canonicalProductId;
       if (updateData.isActive !== undefined) {
         updateValues.status = updateData.isActive ? 'active' : 'inactive';
         if (updateData.isActive) {
@@ -477,6 +477,8 @@ export class MarketplaceListingsService {
         category: listing.categoryId || undefined,
         isActive: listing.status === 'active',
         inventory: listing.inventory || 1,
+        sku: listing.sku || undefined,
+        canonicalProductId: listing.canonicalProductId || undefined,
         createdAt: listing.createdAt || new Date(),
         updatedAt: listing.updatedAt || new Date()
       };
@@ -643,6 +645,8 @@ export class MarketplaceListingsService {
               views: products.views,
               favorites: products.favorites,
               inventory: products.inventory,
+              sku: products.sku,
+              canonicalProductId: products.canonicalProductId,
               createdAt: products.createdAt,
               updatedAt: products.updatedAt,
             })
@@ -710,6 +714,8 @@ export class MarketplaceListingsService {
           images: parsedImages,
           category: listing.categoryId || undefined,
           isActive: listing.status === 'active',
+          sku: listing.sku || undefined,
+          canonicalProductId: listing.canonicalProductId || undefined,
           views: listing.views || 0,
           favorites: listing.favorites || 0,
           inventory: listing.inventory || 1,

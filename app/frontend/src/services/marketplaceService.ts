@@ -25,6 +25,8 @@ export interface Product {
   tags: string[];
   shipping?: ShippingInfo;
   nft?: NFTInfo;
+  sku?: string;
+  canonicalProductId?: string;
   views: number;
   favorites: number;
   listingStatus: string;
@@ -41,6 +43,7 @@ export interface ProductMetadata {
   condition?: string;
   brand?: string;
   model?: string;
+  sku?: string;
   year?: string;
   dimensions?: string;
   weight?: string;
@@ -204,6 +207,8 @@ export interface CreateListingInput {
   metadataURI?: string;
   nftStandard?: 'ERC721' | 'ERC1155';
   tokenId?: string;
+  sku?: string;
+  canonicalProductId?: string;
 
   // For seller listing service
   walletAddress?: string;
@@ -237,6 +242,8 @@ export interface MarketplaceListing {
   isEscrowed: boolean;
   nftStandard?: 'ERC721' | 'ERC1155';
   tokenId?: string;
+  sku?: string;
+  canonicalProductId?: string;
   createdAt: string;
   updatedAt: string;
   // Auction-specific fields
