@@ -343,6 +343,18 @@ export class NotificationService {
   }
 
   /**
+   * Get total notification count for a user
+   */
+  async getTotalCount(userAddress: string): Promise<number> {
+    try {
+      return await databaseService.getTotalNotificationCount(userAddress);
+    } catch (error) {
+      safeLogger.error('Error getting total notification count:', error);
+      return 0;
+    }
+  }
+
+  /**
    * Update notification preferences
    */
   async updateNotificationPreferences(
@@ -488,24 +500,23 @@ export class NotificationService {
         return;
       }
 
-      const emailPayload = {
-        to: userProfile.email,
-        subject: title,
-        body: message,
+      // Import emailService here to avoid circular dependency issues
+      const { emailService } = await import('./emailService');
+
+      // Send email using the email service
+      const success = await emailService.sendOrderNotificationEmail(
+        userProfile.email,
+        title,
+        message,
         actionUrl,
-        receipt: receiptData
-      };
+        receiptData
+      );
 
-      // SIMULATION: In a real environment, this would call SendGrid/Mailgun/SES
-      safeLogger.info(`📧 SENDING EMAIL to ${userProfile.email}:`, JSON.stringify(emailPayload, null, 2));
-
-      // For demonstration/testing, we log that it would have been sent
-      console.log(`[EMAIL SERVICE] To: ${userProfile.email} | Subject: ${title}`);
-      
-      if (receiptData) {
-        console.log(`[EMAIL SERVICE] Receipt attached for Order ${receiptData.orderId}`);
+      if (success) {
+        safeLogger.info(`✅ Email sent successfully to ${userProfile.email}: ${title}`);
+      } else {
+        safeLogger.warn(`⚠️ Failed to send email to ${userProfile.email}: ${title}`);
       }
-
     } catch (error) {
       safeLogger.error('Error sending email notification:', error);
     }

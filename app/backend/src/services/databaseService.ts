@@ -2366,6 +2366,15 @@ export class DatabaseService {
     });
   }
 
+  async getTotalNotificationCount(userAddress: string) {
+    return this.executeQuery(async () => {
+      const result = await this.db.select({ count: sql`count(*)` })
+        .from(schema.notifications)
+        .where(eq(schema.notifications.userAddress, userAddress));
+      return parseInt(result[0]?.count || '0');
+    });
+  }
+
   async updateNotificationPreferences(userAddress: string, preferences: any) {
     return this.executeQuery(async () => {
       const [updated] = await this.db.insert(schema.notificationPreferences)

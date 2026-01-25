@@ -33,7 +33,11 @@ export const validateSellerAccess = (
     }
 
     // If accessing specific seller resources, verify ownership or admin access
-    if (walletAddress && walletAddress !== user.walletAddress && user.role !== 'admin') {
+    if (
+      walletAddress &&
+      walletAddress.toLowerCase() !== user.walletAddress.toLowerCase() &&
+      user.role !== 'admin'
+    ) {
       return ApiResponse.forbidden(res, 'Access denied. You can only access your own seller resources.');
     }
 

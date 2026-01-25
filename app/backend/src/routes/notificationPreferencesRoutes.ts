@@ -8,6 +8,7 @@ import {
   testNotification,
 } from '../controllers/notificationPreferencesController';
 import { authenticateToken } from '../middleware/auth';
+import { pushNotificationService } from '../services/pushNotificationService';
 import rateLimit from 'express-rate-limit';
 
 // Rate limiting for notification preferences endpoints
@@ -56,6 +57,37 @@ router.post('/push-token', csrfProtection,  registerPushToken);
  * @access  Private
  */
 router.delete('/push-token', csrfProtection,  unregisterPushToken);
+
+/**
+ * @route   GET /api/notification-preferences/vapid-public-key
+ * @desc    Get the VAPID public key for Web Push subscription
+ * @access  Private
+ */
+router.get('/vapid-public-key', (req, res) => {
+  try {
+    const publicKey = pushNotificationService.getVapidPublicKey();
+    const isEnabled = pushNotificationService.isWebPushEnabled();
+
+    if (!publicKey) {
+      return res.status(503).json({
+        success: false,
+        error: 'Web Push notifications are not configured on this server',
+        isEnabled: false
+      });
+    }
+
+    res.json({
+      success: true,
+      publicKey,
+      isEnabled
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve VAPID public key'
+    });
+  }
+});
 
 /**
  * @route   POST /api/notification-preferences/test

@@ -1779,6 +1779,92 @@ export class EmailService {
   }
 
   /**
+   * Send marketplace/order notification email
+   * Generic method for order notifications
+   */
+  async sendOrderNotificationEmail(
+    email: string,
+    subject: string,
+    message: string,
+    actionUrl?: string,
+    receipt?: any
+  ): Promise<boolean> {
+    const html = this.getOrderNotificationTemplate(subject, message, actionUrl, receipt);
+    return this.sendEmail({
+      to: email,
+      subject,
+      html,
+    });
+  }
+
+  /**
+   * Generate HTML template for order notification emails
+   */
+  private getOrderNotificationTemplate(
+    subject: string,
+    message: string,
+    actionUrl?: string,
+    receipt?: any
+  ): string {
+    const appUrl = process.env.FRONTEND_URL || 'https://linkdao.io';
+    const actionButton = actionUrl
+      ? `<a href="${appUrl}${actionUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">View Order</a>`
+      : '';
+
+    const receiptSection = receipt
+      ? `
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 24px 0;">
+          <h3 style="color: #1a1a1a; font-size: 16px; margin: 0 0 12px 0;">Order Details</h3>
+          <table style="width: 100%; border-collapse: collapse; color: #4a5568; font-size: 14px;">
+            ${receipt.orderId ? `<tr><td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;"><strong>Order ID:</strong></td><td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">${receipt.orderId}</td></tr>` : ''}
+            ${receipt.amount ? `<tr><td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;"><strong>Amount:</strong></td><td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">${receipt.amount} ${receipt.currency || 'USD'}</td></tr>` : ''}
+            ${receipt.productTitle ? `<tr><td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;"><strong>Product:</strong></td><td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">${receipt.productTitle}</td></tr>` : ''}
+            ${receipt.status ? `<tr><td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;"><strong>Status:</strong></td><td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">${receipt.status}</td></tr>` : ''}
+            ${receipt.trackingNumber ? `<tr><td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;"><strong>Tracking:</strong></td><td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">${receipt.trackingNumber}</td></tr>` : ''}
+          </table>
+        </div>
+      `
+      : '';
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${subject}</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f4f5f7;">
+        <div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">LinkDAO Marketplace</h1>
+          </div>
+
+          <div style="padding: 40px 30px;">
+            <h2 style="color: #1a1a1a; font-size: 24px; margin: 0 0 16px 0;">${subject}</h2>
+
+            <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+              ${message}
+            </p>
+
+            ${receiptSection}
+            ${actionButton}
+          </div>
+
+          <div style="background: #f8f9fa; padding: 30px 20px; text-align: center; border-radius: 0 0 8px 8px; margin-top: 30px;">
+            <p style="color: #6c757d; font-size: 14px; margin: 0 0 10px 0;">LinkDAO - Decentralized Marketplace</p>
+            <p style="color: #6c757d; font-size: 12px; margin: 0;">
+              This is an automated email. Please do not reply directly.
+              <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/notification-preferences" style="color: #667eea; text-decoration: none;">Manage notification preferences</a>
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  /**
    * Check if email service is enabled
    */
   isEnabled(): boolean {

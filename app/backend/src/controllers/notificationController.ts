@@ -178,6 +178,7 @@ export class NotificationController {
 
             const notifications = await this.notificationService.getUserNotifications(userId, limit, offset);
             const unreadCount = await this.notificationService.getUnreadCount(userId);
+            const totalCount = await this.notificationService.getTotalCount(userId);
 
             res.json({
                 success: true,
@@ -186,7 +187,7 @@ export class NotificationController {
                     pagination: {
                         page,
                         limit,
-                        total: unreadCount // Approximate
+                        total: totalCount
                     },
                     unreadCount
                 }

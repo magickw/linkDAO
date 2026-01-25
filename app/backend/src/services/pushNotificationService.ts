@@ -2,6 +2,7 @@ import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { users, communityMembers, communities, posts } from '../db/schema';
 import { eq, and, inArray, sql, ne } from 'drizzle-orm';
+import * as webpush from 'web-push';
 
 interface PushNotificationData {
   title: string;
@@ -70,12 +71,22 @@ export class PushNotificationService {
   private vapidPrivateKey: string;
 
   private constructor() {
-    // In production, these should be loaded from environment variables
+    // Load VAPID keys from environment variables
     this.vapidPublicKey = process.env.VAPID_PUBLIC_KEY || '';
     this.vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || '';
-    
+
     if (!this.vapidPublicKey || !this.vapidPrivateKey) {
-      safeLogger.warn('VAPID keys not configured. Push notifications will not work.');
+      safeLogger.warn('VAPID keys not configured. Web Push notifications will not work.');
+      safeLogger.warn('To generate VAPID keys, run: npx web-push generate-vapid-keys');
+      safeLogger.warn('Then set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in your .env file');
+    } else {
+      // Configure web-push with VAPID keys
+      webpush.setVapidDetails(
+        process.env.VAPID_SUBJECT || 'mailto:support@linkdao.io',
+        this.vapidPublicKey,
+        this.vapidPrivateKey
+      );
+      safeLogger.info('✅ Web Push service initialized with VAPID keys');
     }
   }
 
@@ -526,20 +537,66 @@ export class PushNotificationService {
   // Helper method to send Web Push notification
   private async sendWebPushNotification(subscription: any, payload: PushNotificationData): Promise<{ success: boolean; error?: string }> {
     try {
-      // This would use the web-push library in a real implementation
-      // For now, we'll simulate the behavior
-      
-      safeLogger.info(`Sending push notification to ${subscription.endpoint}`);
-      
-      // Simulate successful send
+      // Check if VAPID keys are configured
+      if (!this.vapidPublicKey || !this.vapidPrivateKey) {
+        safeLogger.warn('Skipping Web Push notification - VAPID keys not configured');
+        return { success: false, error: 'vapid_not_configured' };
+      }
+
+      // Prepare the Web Push payload
+      const pushPayload = {
+        notification: {
+          title: payload.title,
+          body: payload.body,
+          icon: payload.icon || '/icon-192x192.png',
+          badge: '/badge-72x72.png',
+          tag: payload.tag || 'default',
+          requireInteraction: payload.requireInteraction || false,
+          data: payload.data || {},
+          actions: payload.actions || [],
+        },
+      };
+
+      // Parse subscription if it's a string (stored as JSON)
+      let parsedSubscription = subscription;
+      if (typeof subscription === 'string') {
+        parsedSubscription = JSON.parse(subscription);
+      }
+
+      // Send the Web Push notification
+      const result = await webpush.sendNotification(
+        parsedSubscription,
+        JSON.stringify(pushPayload)
+      );
+
+      safeLogger.info(`✅ Web Push notification sent successfully to ${parsedSubscription.endpoint}`);
       return { success: true };
     } catch (error: any) {
-      safeLogger.error('Error sending Web Push notification:', error);
-      
-      if (error.name === 'PushError' && error.statusCode === 410) {
-        return { success: false, error: 'invalid_subscription' };
+      safeLogger.error('Error sending Web Push notification:', {
+        message: error.message,
+        statusCode: error.statusCode,
+        endpoint: subscription?.endpoint,
+      });
+
+      // Handle specific push service errors
+      if (error.statusCode === 410) {
+        // Subscription has been cancelled or expired
+        safeLogger.info('Push subscription expired (410), removing invalid subscription');
+        return { success: false, error: 'subscription_expired' };
       }
-      
+
+      if (error.statusCode === 404) {
+        // Not found - subscription is invalid
+        return { success: false, error: 'subscription_not_found' };
+      }
+
+      if (error.statusCode === 401 || error.statusCode === 403) {
+        // Unauthorized - VAPID keys may be invalid
+        safeLogger.error('Web Push authorization failed - check VAPID keys');
+        return { success: false, error: 'vapid_invalid' };
+      }
+
+      // Generic error
       return { success: false, error: 'send_failed' };
     }
   }
@@ -708,6 +765,20 @@ export class PushNotificationService {
       safeLogger.error('Error getting user notification stats:', error);
       return [];
     }
+  }
+
+  /**
+   * Get the VAPID public key for frontend subscription
+   */
+  getVapidPublicKey(): string {
+    return this.vapidPublicKey;
+  }
+
+  /**
+   * Check if Web Push is properly configured
+   */
+  isWebPushEnabled(): boolean {
+    return !!this.vapidPublicKey && !!this.vapidPrivateKey;
   }
 }
 

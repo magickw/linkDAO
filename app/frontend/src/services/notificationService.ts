@@ -14,7 +14,8 @@ import type {
 
 class NotificationService {
   private static instance: NotificationService;
-  private baseUrl = `${API_BASE_URL}/api/user-notifications`;
+  private baseUrl = `${API_BASE_URL}/api/notifications`;
+  private preferencesUrl = `${API_BASE_URL}/api/notification-preferences`;
 
   static getInstance(): NotificationService {
     if (!NotificationService.instance) {
@@ -266,7 +267,7 @@ class NotificationService {
    */
   async getPreferences(): Promise<NotificationPreferences> {
     try {
-      const response = await fetch(`${this.baseUrl}/preferences`, {
+      const response = await fetch(`${this.preferencesUrl}`, {
         headers: {
           'Authorization': `Bearer ${this.getAuthToken()}`,
         },
@@ -340,7 +341,7 @@ class NotificationService {
    */
   async updatePreferences(preferences: NotificationPreferences): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/preferences`, {
+      const response = await fetch(`${this.preferencesUrl}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -435,7 +436,7 @@ class NotificationService {
    */
   async subscribeToPush(subscription: PushSubscription): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/push-subscription`, {
+      const response = await fetch(`${this.preferencesUrl}/push-token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -460,7 +461,7 @@ class NotificationService {
    */
   async unsubscribeFromPush(): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/push-subscription`, {
+      const response = await fetch(`${this.preferencesUrl}/push-token`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${this.getAuthToken()}`,
@@ -481,7 +482,7 @@ class NotificationService {
    */
   async sendTestNotification(type: AppNotification['type']): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/test`, {
+      const response = await fetch(`${this.preferencesUrl}/test`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
