@@ -1,4 +1,5 @@
 import { requestManager } from './requestManager';
+import { enhancedAuthService } from './enhancedAuthService';
 
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
@@ -116,10 +117,6 @@ class AnalyticsService {
       this.restoreGeoCache();
     }
   }
-
-  /**
-   * Get overview metrics including GMV, user acquisition, and transaction success rates
-   */
   async getOverviewMetrics(startDate?: Date, endDate?: Date): Promise<AnalyticsMetrics> {
     try {
       const params = new URLSearchParams();
@@ -127,7 +124,7 @@ class AnalyticsService {
       if (endDate) params.append('endDate', endDate.toISOString());
 
       // Get auth token
-      const token = this.getAuthToken();
+      const token = enhancedAuthService.getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -165,7 +162,7 @@ class AnalyticsService {
       if (endDate) params.append('endDate', endDate.toISOString());
 
       // Get auth token
-      const token = this.getAuthToken();
+      const token = enhancedAuthService.getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -200,7 +197,7 @@ class AnalyticsService {
       if (endDate) params.append('endDate', endDate.toISOString());
 
       // Get auth token
-      const token = this.getAuthToken();
+      const token = enhancedAuthService.getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -237,7 +234,7 @@ class AnalyticsService {
       if (endDate) params.append('endDate', endDate.toISOString());
 
       // Get auth token
-      const token = this.getAuthToken();
+      const token = enhancedAuthService.getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -279,7 +276,7 @@ class AnalyticsService {
   async getMarketTrends(): Promise<MarketTrends> {
     try {
       // Get auth token
-      const token = this.getAuthToken();
+      const token = enhancedAuthService.getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -306,7 +303,7 @@ class AnalyticsService {
   async getAnomalies(): Promise<AnomalyAlert[]> {
     try {
       // Get auth token
-      const token = this.getAuthToken();
+      const token = enhancedAuthService.getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -328,7 +325,7 @@ class AnalyticsService {
   async getRealTimeStats(): Promise<RealTimeStats> {
     try {
       // Get auth token
-      const token = this.getAuthToken();
+      const token = enhancedAuthService.getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -359,7 +356,7 @@ class AnalyticsService {
   async getPlatformHealth(): Promise<any> {
     try {
       // Get auth token
-      const token = this.getAuthToken();
+      const token = enhancedAuthService.getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -466,7 +463,7 @@ class AnalyticsService {
   }): Promise<void> {
     try {
       // Get auth token
-      const token = this.getAuthToken();
+      const token = enhancedAuthService.getAuthToken();
       const headers: Record<string, string> = {
         'Content-Type': 'application/json'
       };
@@ -491,7 +488,7 @@ class AnalyticsService {
   async generateReport(reportType: string, parameters: any = {}): Promise<any> {
     try {
       // Get auth token
-      const token = this.getAuthToken();
+      const token = enhancedAuthService.getAuthToken();
       const headers: Record<string, string> = {
         'Content-Type': 'application/json'
       };
@@ -534,7 +531,7 @@ class AnalyticsService {
 
     try {
       // Get auth token
-      const token = this.getAuthToken();
+      const token = enhancedAuthService.getAuthToken();
       const headers: Record<string, string> = {};
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;

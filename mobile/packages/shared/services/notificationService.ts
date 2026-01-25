@@ -10,6 +10,7 @@ import type {
   GetNotificationsOptions,
   GetNotificationsResponse
 } from '../types/notifications';
+import { enhancedAuthService } from './enhancedAuthService';
 
 class NotificationService {
   private static instance: NotificationService;
@@ -37,7 +38,7 @@ class NotificationService {
 
       const response = await fetch(`${this.baseUrl}?${params.toString()}`, {
         headers: {
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
       });
 
@@ -86,7 +87,7 @@ class NotificationService {
     try {
       const response = await fetch(`${this.baseUrl}/unread-count`, {
         headers: {
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
       });
 
@@ -120,7 +121,7 @@ class NotificationService {
       const response = await fetch(`${this.baseUrl}/${notificationId}/read`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
       });
 
@@ -151,7 +152,7 @@ class NotificationService {
       const response = await fetch(`${this.baseUrl}/mark-all-read`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
       });
 
@@ -182,7 +183,7 @@ class NotificationService {
       const response = await fetch(`${this.baseUrl}/${notificationId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
       });
 
@@ -212,7 +213,7 @@ class NotificationService {
     try {
       const response = await fetch(`${this.baseUrl}/preferences`, {
         headers: {
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
       });
 
@@ -288,7 +289,7 @@ class NotificationService {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
         body: JSON.stringify(preferences),
       });
@@ -383,7 +384,7 @@ class NotificationService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
         body: JSON.stringify({
           subscription: subscription.toJSON(),
@@ -407,7 +408,7 @@ class NotificationService {
       const response = await fetch(`${this.baseUrl}/push-subscription`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
       });
 
@@ -429,7 +430,7 @@ class NotificationService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
         body: JSON.stringify({ type }),
       });
@@ -455,7 +456,7 @@ class NotificationService {
     try {
       const response = await fetch(`${this.baseUrl}/analytics?timeRange=${timeRange}`, {
         headers: {
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
       });
 
@@ -479,7 +480,7 @@ class NotificationService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
         body: JSON.stringify(notification),
       });

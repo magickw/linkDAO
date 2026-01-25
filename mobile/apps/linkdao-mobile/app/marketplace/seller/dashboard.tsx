@@ -24,6 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { enhancedAuthService } from '../../../../packages/shared/services/enhancedAuthService';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
@@ -183,25 +184,12 @@ export default function SellerDashboardScreen() {
     fetchDashboardData();
   }, []);
 
-  const getAuthToken = async (): Promise<string | null> => {
-    try {
-      // Try multiple possible storage keys
-      const token = await AsyncStorage.getItem('authToken')
-        || await AsyncStorage.getItem('auth_token')
-        || await AsyncStorage.getItem('jwt_token');
-      return token;
-    } catch (error) {
-      console.error('Error getting auth token:', error);
-      return null;
-    }
-  };
-
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       setProfileNotFound(false);
 
-      const token = await getAuthToken();
+      const token = await enhancedAuthService.getAuthToken();
       if (!token) {
         Alert.alert('Authentication Required', 'Please connect your wallet first');
         router.push('/auth');
@@ -347,7 +335,7 @@ export default function SellerDashboardScreen() {
 
   const uploadImage = async (uri: string, type: 'profile' | 'cover'): Promise<string | null> => {
     try {
-      const token = await getAuthToken();
+      const token = await enhancedAuthService.getAuthToken();
       if (!token) return null;
 
       const formData = new FormData();
@@ -381,7 +369,7 @@ export default function SellerDashboardScreen() {
     try {
       setSaving(true);
 
-      const token = await getAuthToken();
+      const token = await enhancedAuthService.getAuthToken();
       if (!token) return;
 
       const response = await fetch(`${API_BASE_URL}/api/sellers/profile`, {
@@ -413,7 +401,7 @@ export default function SellerDashboardScreen() {
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
       setUpdatingOrderStatus(true);
-      const token = await getAuthToken();
+      const token = await enhancedAuthService.getAuthToken();
       if (!token) return;
 
       const response = await fetch(`${API_BASE_URL}/api/sellers/orders/${orderId}/status`, {

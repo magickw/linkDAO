@@ -14,15 +14,7 @@ import {
   Package,
   Zap
 } from 'lucide-react';
-
-// Helper function to safely get authentication token
-const getAuthToken = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('linkdao_access_token') ||
-         localStorage.getItem('authToken') ||
-         localStorage.getItem('token') ||
-         localStorage.getItem('auth_token');
-};
+import { enhancedAuthService } from '@/services/enhancedAuthService';
 
 interface DigitalAsset {
   id: string;
@@ -232,7 +224,7 @@ const DigitalAssetManager: React.FC = () => {
       formData.append('streamingEnabled', uploadForm.streamingEnabled.toString());
       formData.append('watermarkEnabled', uploadForm.watermarkEnabled.toString());
 
-      const token = getAuthToken();
+      const token = enhancedAuthService.getAuthToken();
       if (!token) {
         throw new Error('Please log in to upload assets');
       }
@@ -278,7 +270,7 @@ const DigitalAssetManager: React.FC = () => {
 
     setLoading(true);
     try {
-      const token = getAuthToken();
+      const token = enhancedAuthService.getAuthToken();
       if (!token) {
         throw new Error('Please log in to create licenses');
       }

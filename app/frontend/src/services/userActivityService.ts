@@ -4,6 +4,8 @@
  * Implements requirements 4.7, 6.2, 6.3 from the interconnected social platform spec
  */
 
+import { enhancedAuthService } from './enhancedAuthService';
+
 export interface UserActivity {
   id: string;
   userId: string;
@@ -136,7 +138,7 @@ class UserActivityService {
         `${this.baseUrl}/metrics/${userAddress}?timeRange=${timeRange}`,
         {
           headers: {
-            'Authorization': `Bearer ${this.getAuthToken()}`,
+            'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
           },
         }
       );
@@ -188,7 +190,7 @@ class UserActivityService {
         `${this.baseUrl}/timeline/${userAddress}?${params.toString()}`,
         {
           headers: {
-            'Authorization': `Bearer ${this.getAuthToken()}`,
+            'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
           },
         }
       );
@@ -223,7 +225,7 @@ class UserActivityService {
         `${this.baseUrl}/recommendations/${userAddress}`,
         {
           headers: {
-            'Authorization': `Bearer ${this.getAuthToken()}`,
+            'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
           },
         }
       );
@@ -270,7 +272,7 @@ class UserActivityService {
         `/api/reputation/${userAddress}`,
         {
           headers: {
-            'Authorization': `Bearer ${this.getAuthToken()}`,
+            'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
           },
         }
       );
@@ -322,7 +324,7 @@ class UserActivityService {
         `${this.baseUrl}/analytics/${userAddress}?timeRange=${timeRange}`,
         {
           headers: {
-            'Authorization': `Bearer ${this.getAuthToken()}`,
+            'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
           },
         }
       );
@@ -367,7 +369,7 @@ class UserActivityService {
         `${this.baseUrl}/cross-feature-insights/${userAddress}`,
         {
           headers: {
-            'Authorization': `Bearer ${this.getAuthToken()}`,
+            'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
           },
         }
       );
@@ -402,7 +404,7 @@ class UserActivityService {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.getAuthToken()}`,
+            'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
           },
           body: JSON.stringify(preferences),
         }
@@ -455,7 +457,7 @@ class UserActivityService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
         body: JSON.stringify({ activities }),
       });

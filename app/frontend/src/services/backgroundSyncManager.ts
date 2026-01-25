@@ -4,6 +4,7 @@
  */
 
 import { OfflineAction, getOfflineActionQueue } from './offlineActionQueue';
+import { enhancedAuthService } from './enhancedAuthService';
 
 export interface SyncEventHandler {
   tag: string;
@@ -451,7 +452,7 @@ export class BackgroundSyncManager {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
+        'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`
       },
       body: JSON.stringify(data)
     });
@@ -466,7 +467,7 @@ export class BackgroundSyncManager {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
+        'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`
       },
       body: JSON.stringify(data)
     });
@@ -481,7 +482,7 @@ export class BackgroundSyncManager {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
+        'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`
       },
       body: JSON.stringify(data)
     });
@@ -496,7 +497,7 @@ export class BackgroundSyncManager {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
+        'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`
       },
       body: JSON.stringify(data)
     });
@@ -511,7 +512,7 @@ export class BackgroundSyncManager {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
+        'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`
       },
       body: JSON.stringify(data)
     });
@@ -526,7 +527,7 @@ export class BackgroundSyncManager {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
+        'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`
       },
       body: JSON.stringify(data)
     });

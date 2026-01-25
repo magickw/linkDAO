@@ -6,6 +6,7 @@
 import { getOfflineActionQueue, OfflineAction } from './offlineActionQueue';
 import { backgroundSyncManager } from './backgroundSyncManager';
 import { serviceWorkerCacheService } from './serviceWorkerCacheService';
+import { enhancedAuthService } from './enhancedAuthService';
 
 export interface BackgroundSyncIntegrationConfig {
   enableAutoSync: boolean;
@@ -254,7 +255,7 @@ export class BackgroundSyncIntegration {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
+        'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`
       },
       body: JSON.stringify(data)
     });
@@ -272,7 +273,7 @@ export class BackgroundSyncIntegration {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
+        'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`
       },
       body: JSON.stringify(data)
     });
@@ -290,7 +291,7 @@ export class BackgroundSyncIntegration {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
+        'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`
       },
       body: JSON.stringify(data)
     });
@@ -308,7 +309,7 @@ export class BackgroundSyncIntegration {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
+        'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`
       },
       body: JSON.stringify(data)
     });
@@ -326,7 +327,7 @@ export class BackgroundSyncIntegration {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
+        'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`
       },
       body: JSON.stringify(data)
     });
@@ -344,7 +345,7 @@ export class BackgroundSyncIntegration {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
+        'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`
       },
       body: JSON.stringify(data)
     });

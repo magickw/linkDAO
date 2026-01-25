@@ -8,6 +8,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Activi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
+import { enhancedAuthService } from '../../../../packages/shared/services/enhancedAuthService';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
@@ -59,7 +60,7 @@ export default function EditListingScreen() {
 
   const loadListing = async () => {
     try {
-      const token = await getAuthToken();
+      const token = await enhancedAuthService.getAuthToken();
       if (!token) {
         Alert.alert('Authentication Required', 'Please connect your wallet first');
         router.back();
@@ -111,7 +112,7 @@ export default function EditListingScreen() {
     try {
       setSaving(true);
 
-      const token = await getAuthToken();
+      const token = await enhancedAuthService.getAuthToken();
       if (!token) {
         Alert.alert('Authentication Required', 'Please connect your wallet first');
         return;
@@ -165,11 +166,6 @@ export default function EditListingScreen() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const getAuthToken = async (): Promise<string | null> => {
-    // TODO: Implement proper token retrieval
-    return null;
   };
 
   if (loading) {

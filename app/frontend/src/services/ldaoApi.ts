@@ -1,4 +1,5 @@
 import { ENV_CONFIG } from '@/config/environment';
+import { enhancedAuthService } from './enhancedAuthService';
 
 // Define types for LDAO dashboard data
 export interface LDAOStakingInfo {
@@ -79,16 +80,8 @@ export interface LDAODashboardData {
 // API functions for LDAO benefits
 const baseUrl = ENV_CONFIG.BACKEND_URL || 'http://localhost:10000';
 
-const getAuthToken = () => {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('linkdao_access_token') ||
-         localStorage.getItem('token') ||
-         localStorage.getItem('authToken') ||
-         localStorage.getItem('auth_token');
-};
-
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
-  const token = getAuthToken();
+  const token = enhancedAuthService.getAuthToken();
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...options.headers,

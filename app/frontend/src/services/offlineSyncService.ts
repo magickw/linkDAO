@@ -10,6 +10,7 @@ import {
   NotificationPriority 
 } from '../types/realTimeNotifications';
 import { LiveContentUpdate } from './communityRealTimeUpdateService';
+import { enhancedAuthService } from './enhancedAuthService';
 
 // Offline action types
 export interface OfflineAction {
@@ -604,7 +605,7 @@ export class OfflineSyncService {
   private async makeApiCall(url: string, options: RequestInit): Promise<Response> {
     const defaultHeaders = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${this.getAuthToken()}`
+      'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`
     };
 
     return fetch(url, {

@@ -5,6 +5,7 @@
  */
 
 import { SearchQuery, SearchResult } from '../components/Search/GlobalSearchInterface';
+import { enhancedAuthService } from './enhancedAuthService';
 
 interface SearchOptions {
   signal?: AbortSignal;
@@ -67,7 +68,7 @@ class GlobalSearchService {
 
       const response = await fetch(`${this.baseUrl}?${params.toString()}`, {
         headers: {
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
         signal: options.signal,
       });
@@ -102,7 +103,7 @@ class GlobalSearchService {
 
       const response = await fetch(`${this.baseUrl}/suggestions?${params.toString()}`, {
         headers: {
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
         signal: options.signal,
       });
@@ -126,7 +127,7 @@ class GlobalSearchService {
     try {
       const response = await fetch(`${this.baseUrl}/trending?timeRange=${timeRange}`, {
         headers: {
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
       });
 
@@ -151,7 +152,7 @@ class GlobalSearchService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
         body: JSON.stringify(savedSearch),
       });
@@ -172,7 +173,7 @@ class GlobalSearchService {
     try {
       const response = await fetch(`${this.baseUrl}/saved`, {
         headers: {
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
       });
 
@@ -199,7 +200,7 @@ class GlobalSearchService {
       const response = await fetch(`${this.baseUrl}/saved/${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
       });
 
@@ -226,7 +227,7 @@ class GlobalSearchService {
     try {
       const response = await fetch(`${this.baseUrl}/analytics?timeRange=${timeRange}`, {
         headers: {
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
       });
 
@@ -255,7 +256,7 @@ class GlobalSearchService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
         body: JSON.stringify({
           query,
@@ -286,7 +287,7 @@ class GlobalSearchService {
 
       const response = await fetch(`${this.baseUrl}/facets?${params.toString()}`, {
         headers: {
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
       });
 
@@ -324,7 +325,7 @@ class GlobalSearchService {
 
       const response = await fetch(`${this.baseUrl}/semantic?${params.toString()}`, {
         headers: {
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
       });
 
@@ -347,7 +348,7 @@ class GlobalSearchService {
     try {
       const response = await fetch(`${this.baseUrl}/recommendations?limit=${limit}`, {
         headers: {
-          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Authorization': `Bearer ${enhancedAuthService.getAuthToken()}`,
         },
       });
 

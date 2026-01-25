@@ -6,15 +6,7 @@ import { Heart, Plus, Edit, Trash2, Share2, TrendingDown, ShoppingCart, Star, Ar
 import Link from 'next/link';
 import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
-
-// Helper function to safely get authentication token
-const getAuthToken = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('linkdao_access_token') ||
-         localStorage.getItem('authToken') ||
-         localStorage.getItem('token') ||
-         localStorage.getItem('auth_token');
-};
+import { enhancedAuthService } from '@/services/enhancedAuthService';
 
 interface Wishlist {
     id: string;
@@ -71,7 +63,7 @@ export default function WishlistPage() {
     const fetchWishlists = async () => {
         try {
             setLoading(true);
-            const token = getAuthToken();
+            const token = enhancedAuthService.getAuthToken();
             if (!token) {
                 toast.error('Please log in to view your wishlists');
                 return;
@@ -103,7 +95,7 @@ export default function WishlistPage() {
 
     const fetchWishlistItems = async (wishlistId: string) => {
         try {
-            const token = getAuthToken();
+            const token = enhancedAuthService.getAuthToken();
             if (!token) {
                 toast.error('Please log in to view wishlist items');
                 return;
@@ -129,7 +121,7 @@ export default function WishlistPage() {
         if (!confirm('Are you sure you want to delete this wishlist?')) return;
 
         try {
-            const token = getAuthToken();
+            const token = enhancedAuthService.getAuthToken();
             if (!token) {
                 toast.error('Please log in to delete wishlists');
                 return;
@@ -157,7 +149,7 @@ export default function WishlistPage() {
         if (!selectedWishlist) return;
 
         try {
-            const token = getAuthToken();
+            const token = enhancedAuthService.getAuthToken();
             if (!token) {
                 toast.error('Please log in to remove items');
                 return;
@@ -517,7 +509,7 @@ function WishlistFormModal({ wishlist, onClose, onSave }: {
                 ? `/api/user/wishlists/${wishlist.id}`
                 : '/api/user/wishlists';
 
-            const token = getAuthToken();
+            const token = enhancedAuthService.getAuthToken();
             if (!token) {
                 toast.error('Please log in to save wishlists');
                 return;

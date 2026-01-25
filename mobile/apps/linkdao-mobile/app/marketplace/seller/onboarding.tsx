@@ -23,6 +23,7 @@ import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../../../src/store/authStore';
+import { enhancedAuthService } from '../../../../packages/shared/services/enhancedAuthService';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 const ONBOARDING_STORAGE_KEY = 'seller_onboarding_data';
@@ -192,17 +193,6 @@ export default function SellerOnboardingScreen() {
     }
   };
 
-  const getAuthToken = async (): Promise<string | null> => {
-    try {
-      // Get token from wallet context or secure storage
-      const token = await AsyncStorage.getItem('auth_token');
-      return token;
-    } catch (error) {
-      console.error('Failed to get auth token:', error);
-      return null;
-    }
-  };
-
   const handleStepComplete = (stepId: string) => {
     setFormData(prev => ({
       ...prev,
@@ -355,7 +345,7 @@ export default function SellerOnboardingScreen() {
     try {
       setLoading(true);
 
-      const token = await getAuthToken();
+      const token = await enhancedAuthService.getAuthToken();
       if (!token) {
         Alert.alert('Authentication Required', 'Please connect your wallet first');
         return;

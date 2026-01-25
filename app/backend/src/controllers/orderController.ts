@@ -80,37 +80,27 @@ export class OrderController {
    */
   async getMyOrders(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = (req as any).user.id;
-      const { status, limit = 50, offset = 0, role = 'buyer' } = req.query;
-
-      // Validate role if provided
-      if (role && role !== 'buyer' && role !== 'seller') {
-        throw new ValidationError('Invalid role. Must be "buyer" or "seller"');
+      const userAddress = req.user?.walletAddress;
+      if (!userAddress) {
+        return res.status(401).json({ message: 'Unauthorized: Wallet address not found' });
       }
 
-      // Use getOrdersByUserId which uses UUID directly
-      let orders = await orderService.getOrdersByUserId(userId, role as 'buyer' | 'seller');
+      const { status, limit = 50, offset = 0, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
 
-      // Filter by status if provided
-      if (status) {
-        orders = orders.filter(order => order.status === status);
-      }
+      const orders = await orderService.getOrdersByUser(
+        userAddress,
+        undefined, // role can be undefined for getMyOrders as user is both buyer and seller
+        { status: status as string },
+        sortBy as string,
+        sortOrder as 'asc' | 'desc',
+        parseInt(limit as string),
+        parseInt(offset as string)
+      );
 
-      // Apply pagination
-      const paginatedOrders = orders.slice(Number(offset), Number(offset) + Number(limit));
-
-      return res.json({
-        orders: paginatedOrders,
-        total: orders.length,
-        limit: Number(limit),
-        offset: Number(offset),
-        role: role
-      });
-    } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError(error.message);
+      return res.status(200).json(orders);
+    } catch (error) {
+      safeLogger.error('Error in getMyOrders:', error);
+      return res.status(500).json({ message: 'Failed to retrieve user orders' });
     }
   }
 
@@ -121,35 +111,44 @@ export class OrderController {
   async getOrdersByUser(req: Request, res: Response): Promise<Response> {
     try {
       const { userAddress } = req.params;
-      const { status, limit = 50, offset = 0, role } = req.query;
+      const { status, limit = 50, offset = 0, role, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
 
       // Validate role if provided
       if (role && role !== 'buyer' && role !== 'seller') {
-        throw new ValidationError('Invalid role. Must be "buyer" or "seller"');
+        return res.status(400).json({ message: "Invalid role specified. Must be 'buyer' or 'seller'." });
       }
 
-      let orders = await orderService.getOrdersByUser(userAddress, role as 'buyer' | 'seller' | undefined);
-
-      // Filter by status if provided
-      if (status) {
-        orders = orders.filter(order => order.status === status);
+      // Validate sortOrder if provided
+      if (sortOrder && sortOrder !== 'asc' && sortOrder !== 'desc') {
+        return res.status(400).json({ message: "Invalid sortOrder specified. Must be 'asc' or 'desc'." });
       }
 
-      // Apply pagination
-      const paginatedOrders = orders.slice(Number(offset), Number(offset) + Number(limit));
+      // Basic validation for limit and offset
+      const numLimit = parseInt(limit as string, 10);
+      const numOffset = parseInt(offset as string, 10);
 
-      return res.json({
-        orders: paginatedOrders,
-        total: orders.length,
-        limit: Number(limit),
-        offset: Number(offset),
-        role: role || 'all'
-      });
-    } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
+      if (isNaN(numLimit) || isNaN(numOffset)) {
+        return res.status(400).json({ message: "Invalid limit or offset." });
       }
-      throw new AppError(error.message);
+      
+      const filters = {
+        ...(status && { status: status as string }),
+      };
+
+      const orders = await orderService.getOrdersByUser(
+        userAddress, 
+        role as 'buyer' | 'seller',
+        filters,
+        sortBy as string,
+        sortOrder as 'asc' | 'desc',
+        numLimit,
+        numOffset
+      );
+      
+      return res.status(200).json(orders);
+    } catch (error) {
+      safeLogger.error('Error in getOrdersByUser controller:', error);
+      return res.status(500).json({ message: 'Internal server error' });
     }
   }
 

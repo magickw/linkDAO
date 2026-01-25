@@ -106,49 +106,6 @@ export class UnifiedCheckoutService {
     this.apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   }
 
-  /**
-   * Get authentication token from various storage locations
-   * This matches the pattern used in cartService and WalletLoginBridge
-   */
-  private getAuthToken(): string {
-    let token = '';
-
-    // Try to get from linkdao_session_data first (WalletLoginBridge pattern)
-    try {
-      const sessionDataStr = localStorage.getItem('linkdao_session_data');
-      if (sessionDataStr) {
-        const sessionData = JSON.parse(sessionDataStr);
-        token = sessionData.token || sessionData.accessToken || '';
-      }
-    } catch (error) {
-      // Don't clear session data - let auth service handle session management
-      console.warn('Failed to parse session data');
-    }
-
-    // Fallback to other possible token locations (cartService pattern)
-    if (!token) {
-      token = localStorage.getItem('token') ||
-        localStorage.getItem('authToken') ||
-        localStorage.getItem('auth_token') ||
-        localStorage.getItem('user_session') ||
-        sessionStorage.getItem('auth_token') ||
-        sessionStorage.getItem('token') ||
-        sessionStorage.getItem('authToken') ||
-        '';
-
-      // Also check cookies as a fallback if not found in storage
-      if (!token && typeof document !== 'undefined') {
-        const cookies = document.cookie.split(';');
-        const tokenCookie = cookies.find(c => c.trim().startsWith('token=') || c.trim().startsWith('auth_token='));
-        if (tokenCookie) {
-          token = tokenCookie.split('=')[1];
-        }
-      }
-    }
-
-    return token;
-  }
-
   private async shouldAttemptRequest(): Promise<boolean> {
     const now = Date.now();
 
@@ -566,7 +523,7 @@ export class UnifiedCheckoutService {
       const serializedRequest = convertBigIntToStrings(request);
 
       // Get auth token
-      const token = this.getAuthToken();
+      const token = enhancedAuthService.getAuthToken();
 
       const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/checkout`, {
         method: 'POST',
@@ -700,7 +657,7 @@ export class UnifiedCheckoutService {
   }> {
     try {
       // Get auth token
-      const token = this.getAuthToken();
+      const token = enhancedAuthService.getAuthToken();
 
       const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/orders/${orderId}/verify-transaction`, {
         method: 'POST',
@@ -951,7 +908,7 @@ export class UnifiedCheckoutService {
     const serializedBody = convertBigIntToStrings(requestBody);
 
     // Get auth token
-    const token = this.getAuthToken();
+    const token = enhancedAuthService.getAuthToken();
 
     // Call existing crypto payment processing
     const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/checkout`, {
@@ -1016,7 +973,7 @@ export class UnifiedCheckoutService {
     const serializedBody = convertBigIntToStrings(requestBody);
 
     // Get auth token
-    const token = this.getAuthToken();
+    const token = enhancedAuthService.getAuthToken();
 
     console.log('🔍 [processFiatPayment] Sending request to backend:', {
       url: `${this.apiBaseUrl}/api/hybrid-payment/checkout`,

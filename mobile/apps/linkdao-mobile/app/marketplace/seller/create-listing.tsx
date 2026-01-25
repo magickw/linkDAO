@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { enhancedAuthService } from '../../../../packages/shared/services/enhancedAuthService';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
@@ -103,7 +104,7 @@ const TOTAL_STEPS = 4;
     try {
       setLoading(true);
 
-      const token = await getAuthToken();
+      const token = await enhancedAuthService.getAuthToken();
       if (!token) {
         Alert.alert('Authentication Required', 'Please connect your wallet first');
         return;
@@ -200,11 +201,6 @@ const TOTAL_STEPS = 4;
       ...formData,
       images: formData.images.filter((_, i) => i !== index),
     });
-  };
-
-  const getAuthToken = async (): Promise<string | null> => {
-    // TODO: Implement proper token retrieval
-    return null;
   };
 
   const renderStep1 = () => (

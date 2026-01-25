@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
+import { enhancedAuthService } from '../../../packages/shared/services/enhancedAuthService';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
@@ -60,7 +61,7 @@ export default function LDAODashboardScreen() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const token = await getAuthToken();
+      const token = await enhancedAuthService.getAuthToken();
       if (!token) {
         Alert.alert('Authentication Required', 'Please connect your wallet first');
         router.replace('/auth');
@@ -117,11 +118,6 @@ export default function LDAODashboardScreen() {
 
   const handleBuyTokens = () => {
     router.push('/marketplace/seller/create-listing');
-  };
-
-  const getAuthToken = async (): Promise<string | null> => {
-    // TODO: Implement proper token retrieval
-    return null;
   };
 
   const renderTabButton = (tab: TabType, label: string, icon: string) => (

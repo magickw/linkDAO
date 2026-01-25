@@ -6,6 +6,7 @@
 
 import { notificationService } from './notificationService';
 import type { AppNotification } from '../types/notifications';
+import { enhancedAuthService } from './enhancedAuthService';
 
 // Order notification event types
 export type OrderNotificationEvent =
@@ -418,7 +419,7 @@ class OrderNotificationService {
     data: OrderNotificationData
   ): Promise<void> {
     try {
-      const token = this.getAuthToken();
+      const token = enhancedAuthService.getAuthToken();
 
       const response = await fetch(`${this.baseUrl}/api/orders/notifications`, {
         method: 'POST',
@@ -460,7 +461,7 @@ class OrderNotificationService {
    */
   async getOrderNotifications(orderId: string): Promise<AppNotification[]> {
     try {
-      const token = this.getAuthToken();
+      const token = enhancedAuthService.getAuthToken();
 
       const response = await fetch(`${this.baseUrl}/api/orders/${orderId}/notifications`, {
         headers: {

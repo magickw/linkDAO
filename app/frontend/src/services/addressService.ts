@@ -1,6 +1,7 @@
 import { API_BASE_URL } from '@/config/api';
 import { deduplicatedFetch } from '../utils/requestDeduplication';
 import { csrfService } from './csrfService';
+import { enhancedAuthService } from './enhancedAuthService';
 
 export interface Address {
     id: string;
@@ -47,7 +48,7 @@ export class AddressService {
      * Get all addresses for the authenticated user
      */
     static async getAddresses(token?: string): Promise<Address[]> {
-        const authToken = token || this.getAuthToken();
+        const authToken = token || enhancedAuthService.getAuthToken();
         if (!authToken) return [];
 
         try {
@@ -65,7 +66,7 @@ export class AddressService {
      * Create a new address
      */
     static async createAddress(input: CreateAddressInput): Promise<Address> {
-        const authToken = this.getAuthToken();
+        const authToken = enhancedAuthService.getAuthToken();
         if (!authToken) throw new Error('Not authenticated');
 
         try {
@@ -91,7 +92,7 @@ export class AddressService {
      * Update an address
      */
     static async updateAddress(id: string, input: UpdateAddressInput): Promise<Address> {
-        const authToken = this.getAuthToken();
+        const authToken = enhancedAuthService.getAuthToken();
         if (!authToken) throw new Error('Not authenticated');
 
         try {
@@ -117,7 +118,7 @@ export class AddressService {
      * Delete an address
      */
     static async deleteAddress(id: string): Promise<void> {
-        const authToken = this.getAuthToken();
+        const authToken = enhancedAuthService.getAuthToken();
         if (!authToken) throw new Error('Not authenticated');
 
         try {
@@ -140,7 +141,7 @@ export class AddressService {
      * Set default address
      */
     static async setDefaultAddress(id: string): Promise<Address> {
-        const authToken = this.getAuthToken();
+        const authToken = enhancedAuthService.getAuthToken();
         if (!authToken) throw new Error('Not authenticated');
 
         try {

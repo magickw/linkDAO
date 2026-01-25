@@ -1,6 +1,7 @@
 import { WebSocketClientService, initializeWebSocketClient, getWebSocketClient, shutdownWebSocketClient } from './webSocketClientService';
 import { io, Socket } from 'socket.io-client';
 import { ENV_CONFIG } from '@/config/environment';
+import { enhancedAuthService } from './enhancedAuthService';
 
 interface WebSocketConfig {
   primary: {
@@ -216,19 +217,11 @@ class WebSocketManager {
 // Export singleton instance
 export const webSocketManager = WebSocketManager.getInstance();
 
-// Helper function to get auth token from storage
-const getAuthToken = (): string => {
-  return localStorage.getItem('linkdao_access_token') ||
-    localStorage.getItem('token') ||
-    localStorage.getItem('authToken') ||
-    localStorage.getItem('auth_token') || '';
-};
-
 // Helper function to initialize WebSocketManager with default config
 export const initializeWebSocketManager = async (walletAddress: string): Promise<WebSocketManager> => {
   const backendUrl = ENV_CONFIG.BACKEND_URL || 'http://localhost:10000';
   // Socket.IO client handles protocol upgrade (HTTP -> WS), so we use the HTTP URL
-  const authToken = getAuthToken();
+  const authToken = enhancedAuthService.getAuthToken();
 
   const config: WebSocketConfig = {
     primary: {

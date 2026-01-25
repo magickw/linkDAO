@@ -1,9 +1,11 @@
 import {
   Order as MarketplaceOrder,
   OrderEvent,
-  OrderStatus
+  OrderStatus,
+  PaginatedOrders,
 } from '../types/order';
 import { orderNotificationService, OrderNotificationData } from './orderNotificationService';
+import { authService } from './authService';
 
 export interface OrderTrackingStatus {
   orderId: string;
@@ -26,73 +28,71 @@ export interface OrderTrackingStatus {
 
 class OrderService {
   private apiBaseUrl: string;
-  private authToken: string | null = null;
 
   constructor() {
     this.apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    this.checkAuthStatus();
-  }
-
-  // Check authentication status from localStorage or other sources
-  private checkAuthStatus(): void {
-    if (typeof window !== 'undefined') {
-      let token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || localStorage.getItem('user_session') || sessionStorage.getItem('auth_token') || sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
-
-      // Also check for linkdao_session_data (wallet authentication)
-      if (!token) {
-        try {
-          const sessionDataStr = localStorage.getItem('linkdao_session_data');
-          if (sessionDataStr) {
-            const sessionData = JSON.parse(sessionDataStr);
-            token = sessionData.token || sessionData.accessToken || '';
-          }
-        } catch (error) {
-          // Don't clear session data - let auth service handle session management
-          console.warn('Failed to parse linkdao_session_data');
-        }
-      }
-
-      this.authToken = token;
-    }
-  }
-
-  // Get authentication headers
-  private getAuthHeaders(): HeadersInit {
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
-
-    if (this.authToken) {
-      headers['Authorization'] = `Bearer ${this.authToken}`;
-    }
-
-    return headers;
   }
 
   /**
    * Get all orders for the current user
    */
-  async getOrdersByUser(userAddress: string): Promise<MarketplaceOrder[]> {
+  async getOrdersByUser(
+    userAddress: string,
+    {
+      page = 1,
+      limit = 10,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+      filters = {},
+    }: {
+      page?: number;
+      limit?: number;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+      filters?: any;
+    }
+  ): Promise<PaginatedOrders> {
     try {
-      // Refresh auth token
-      this.checkAuthStatus();
-
-      const response = await fetch(`${this.apiBaseUrl}/api/orders/user/${userAddress}`, {
-        method: 'GET',
-        headers: this.getAuthHeaders(),
-        credentials: 'include'
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        sortBy,
+        sortOrder,
+        ...filters,
       });
+
+      const response = await fetch(
+        `${this.apiBaseUrl}/api/orders/user/${userAddress}?${queryParams}`,
+        {
+          method: 'GET',
+          headers: authService.getAuthHeaders(),
+          credentials: 'include',
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Failed to fetch orders: ${response.status} ${response.statusText}`);
+        throw new Error(
+          errorData.message ||
+            `Failed to fetch orders: ${response.status} ${response.statusText}`
+        );
       }
 
       const data = await response.json();
       const orders = data.orders || [];
-      
+
       // Transform backend orders to frontend format
-      return orders.map((order: any) => this.transformOrder(order));
+      const transformedOrders = orders.map((order: any) =>
+        this.transformOrder(order)
+      );
+
+      return {
+        orders: transformedOrders,
+        total: data.total,
+        page: data.page,
+        limit: data.limit,
+        totalPages: data.totalPages,
+      };
     } catch (error) {
       console.error('Error fetching orders:', error);
       if (error instanceof Error) {
@@ -107,12 +107,9 @@ class OrderService {
    */
   async getOrderById(orderId: string): Promise<MarketplaceOrder | null> {
     try {
-      // Refresh auth token
-      this.checkAuthStatus();
-
       const response = await fetch(`${this.apiBaseUrl}/api/order-management/${orderId}`, {
         method: 'GET',
-        headers: this.getAuthHeaders(),
+        headers: authService.getAuthHeaders(),
         credentials: 'include'
       });
 
@@ -142,13 +139,10 @@ class OrderService {
    */
   async getOrderTrackingStatus(orderId: string): Promise<OrderTrackingStatus> {
     try {
-      // Refresh auth token
-      this.checkAuthStatus();
-
       // Get order details
       const orderResponse = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}`, {
         method: 'GET',
-        headers: this.getAuthHeaders(),
+        headers: authService.getAuthHeaders(),
         credentials: 'include'
       });
 
@@ -162,7 +156,7 @@ class OrderService {
       // Get order history/timeline
       const historyResponse = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/history`, {
         method: 'GET',
-        headers: this.getAuthHeaders(),
+        headers: authService.getAuthHeaders(),
         credentials: 'include'
       });
 
@@ -224,15 +218,12 @@ class OrderService {
    */
   async confirmDelivery(orderId: string, deliveryInfo: any): Promise<boolean> {
     try {
-      // Refresh auth token
-      this.checkAuthStatus();
-
       // Get order details first for notification
       const order = await this.getOrderById(orderId);
 
       const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/delivery/confirm`, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: authService.getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify({ deliveryInfo })
       });
@@ -278,14 +269,11 @@ class OrderService {
    */
   async releaseFunds(orderId: string): Promise<boolean> {
     try {
-      // Refresh auth token
-      this.checkAuthStatus();
-
       // This would typically be a specific endpoint, but for now we'll simulate
       // by updating the order status to completed
       const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/status`, {
         method: 'PUT',
-        headers: this.getAuthHeaders(),
+        headers: authService.getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify({ status: 'COMPLETED' })
       });
@@ -311,9 +299,6 @@ class OrderService {
    */
   async cancelOrder(orderId: string, reason?: string): Promise<{ success: boolean; refundInitiated?: boolean; message?: string }> {
     try {
-      // Refresh auth token
-      this.checkAuthStatus();
-
       // First get order details to check if it can be cancelled
       const order = await this.getOrderById(orderId);
       if (!order) {
@@ -327,7 +312,7 @@ class OrderService {
 
       const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/cancel`, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: authService.getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify({
           reason: reason || 'Cancelled by buyer',
@@ -383,15 +368,12 @@ class OrderService {
    */
   async openDispute(orderId: string, reason: string): Promise<boolean> {
     try {
-      // Refresh auth token
-      this.checkAuthStatus();
-
       // Get order details first for notification
       const order = await this.getOrderById(orderId);
 
       const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/dispute`, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: authService.getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify({
           initiatorAddress: '', // This would be filled with the user's address
@@ -472,15 +454,12 @@ class OrderService {
    */
   async addTrackingInfo(orderId: string, trackingNumber: string, carrier: string): Promise<boolean> {
     try {
-      // Refresh auth token
-      this.checkAuthStatus();
-
       // Get order details first for notification
       const order = await this.getOrderById(orderId);
 
       const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/shipping`, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: authService.getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify({
           trackingNumber,
@@ -614,12 +593,9 @@ class OrderService {
    */
   async getOrderAnalytics(userAddress: string, timeframe: 'week' | 'month' | 'year' = 'month'): Promise<any> {
     try {
-      // Refresh auth token
-      this.checkAuthStatus();
-
       const response = await fetch(`${this.apiBaseUrl}/api/orders/analytics/${userAddress}?timeframe=${timeframe}`, {
         method: 'GET',
-        headers: this.getAuthHeaders(),
+        headers: authService.getAuthHeaders(),
         credentials: 'include'
       });
 

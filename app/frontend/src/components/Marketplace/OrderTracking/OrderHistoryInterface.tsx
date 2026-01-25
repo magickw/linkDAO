@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { 
   Package, 
   Search, 
@@ -28,6 +29,8 @@ import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
 import { useToast } from '@/context/ToastContext';
 import { orderService } from '@/services/orderService';
+import { orderNotificationService } from '@/services/orderNotificationService';
+import { webSocketManager } from '@/services/webSocketManager';
 import { 
   Order, 
   OrderStatus, 
@@ -41,51 +44,7 @@ import OrderDetailModal from './OrderDetailModal';
 import OrderStatusBadge from './OrderStatusBadge';
 import OrderSearchFilters from './OrderSearchFilters';
 
-// Utility function to transform order data from service to component format
-const transformOrderData = (serviceOrder: any, walletAddress?: string): Order => {
-  return {
-    id: serviceOrder.id,
-    listingId: serviceOrder.id,
-    buyerAddress: walletAddress || '',
-    sellerAddress: serviceOrder.sellerAddress,
-    status: serviceOrder.status,
-    amount: serviceOrder.totalAmount.toString(),
-    paymentToken: serviceOrder.paymentMethod === 'crypto' ? 'USDC' : 'FIAT',
-    paymentMethod: serviceOrder.paymentMethod,
-    totalAmount: serviceOrder.totalAmount,
-    currency: serviceOrder.currency,
-    product: serviceOrder.product || {
-      id: serviceOrder.id || '1',
-      title: serviceOrder.product?.title || `Order #${serviceOrder.id}`,
-      description: serviceOrder.product?.description || '',
-      image: serviceOrder.product?.image || '/api/placeholder/400/400',
-      category: serviceOrder.product?.category || '',
-      quantity: serviceOrder.product?.quantity || 1,
-      unitPrice: serviceOrder.product?.unitPrice || serviceOrder.totalAmount || 0,
-      totalPrice: serviceOrder.product?.totalPrice || serviceOrder.totalAmount || 0
-    },
-    shippingAddress: serviceOrder.shippingAddress,
-    billingAddress: serviceOrder.billingAddress,
-    trackingNumber: serviceOrder.trackingNumber,
-    trackingCarrier: serviceOrder.trackingCarrier,
-    estimatedDelivery: serviceOrder.estimatedDelivery ? new Date(serviceOrder.estimatedDelivery).toISOString() : undefined,
-    actualDelivery: serviceOrder.actualDelivery,
-    deliveryConfirmation: serviceOrder.deliveryConfirmation,
-    orderNotes: serviceOrder.orderNotes,
-    orderMetadata: undefined,
-    createdAt: serviceOrder.createdAt,
-    updatedAt: serviceOrder.updatedAt || serviceOrder.createdAt,
-    timeline: [],
-    trackingInfo: undefined,
-    disputeId: undefined,
-    canConfirmDelivery: false,
-    canOpenDispute: false,
-    canCancel: false,
-    canRefund: false,
-    isEscrowProtected: false,
-    daysUntilAutoComplete: 0
-  };
-};
+
 
 interface OrderHistoryInterfaceProps {
   userType: 'buyer' | 'seller';
@@ -98,6 +57,7 @@ const OrderHistoryInterface = ({
 }: OrderHistoryInterfaceProps) => {
   const { address: walletAddress } = useAccount();
   const { addToast } = useToast();
+  const router = useRouter();
 
   // State management
   const [orders, setOrders] = useState<PaginatedOrders>({
@@ -139,25 +99,69 @@ const OrderHistoryInterface = ({
     }
   }, [walletAddress, userType, currentPage, sortBy, sortOrder, filters]);
 
+  // WebSocket integration for real-time order updates
+  useEffect(() => {
+    if (!walletAddress) return;
+
+    // Subscribe to order notifications
+    const unsubscribe = orderNotificationService.subscribe('all', (notification) => {
+      // Check if the notification is relevant to the current user
+      const isRelevant = 
+        notification.data.buyerAddress.toLowerCase() === walletAddress.toLowerCase() ||
+        notification.data.sellerAddress.toLowerCase() === walletAddress.toLowerCase();
+
+      if (isRelevant) {
+        // Refresh orders to show the latest state
+        loadOrders();
+        
+        // Show a toast notification for important events
+        const importantEvents = ['order_shipped', 'order_delivered', 'order_cancelled', 'order_disputed', 'delivery_confirmed'];
+        if (importantEvents.includes(notification.event)) {
+          addToast(
+            orderNotificationService.getNotificationConfig(notification.event)?.title || 'Order Update',
+            notification.data.productTitle,
+            'info'
+          );
+        }
+      }
+    });
+
+    // Initialize WebSocket connection if not already connected
+    if (!webSocketManager.isInitialized()) {
+      webSocketManager.initialize({
+        primary: {
+          url: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000',
+          walletAddress,
+          autoReconnect: true,
+          reconnectAttempts: 10,
+          reconnectDelay: 1000
+        }
+      }).catch(error => {
+        console.error('Failed to initialize WebSocket:', error);
+      });
+    }
+
+    // Cleanup on unmount
+    return () => {
+      unsubscribe();
+    };
+  }, [walletAddress]);
+
   const loadOrders = async () => {
+    if (!walletAddress) return;
     try {
       setLoading(true);
       setError(null);
-      
-      // Fetch orders for the current user
-      const result = await orderService.getOrdersByUser(walletAddress);
-      
-      // Transform the service Order type to the types/order.ts Order type
-      const transformedOrders = result.map(order => transformOrderData(order, walletAddress));
-      
-      const paginatedResult: PaginatedOrders = {
-        orders: transformedOrders,
-        total: transformedOrders.length,
+
+      const result = await orderService.getOrdersByUser(walletAddress, {
         page: currentPage,
         limit: displayPreferences.itemsPerPage,
-        totalPages: Math.ceil(transformedOrders.length / displayPreferences.itemsPerPage)
-      };
-      setOrders(paginatedResult);
+        sortBy,
+        sortOrder,
+        filters,
+      });
+
+      setOrders(result);
     } catch (error) {
       console.error('Error loading orders:', error);
       setError(error instanceof Error ? error.message : 'Failed to load orders');
@@ -172,45 +176,17 @@ const OrderHistoryInterface = ({
     setCurrentPage(1);
   };
 
-  const handleSearch = async (query: OrderSearchQuery) => {
-    try {
-      setLoading(true);
-      
-      // Fetch orders for the current user
-      const result = await orderService.getOrdersByUser(walletAddress);
-      
-      // Transform the service Order type to the types/order.ts Order type
-      const transformedOrders = result.map(order => transformOrderData(order, walletAddress));
-      
-      // Apply local filtering based on search query
-      const filteredOrders = transformedOrders.filter(order => {
-        if (query.orderId && !order.id.includes(query.orderId)) return false;
-        if (query.productTitle && !order.product?.title.toLowerCase().includes(query.productTitle.toLowerCase())) return false;
-        if (query.trackingNumber && !order.trackingNumber?.includes(query.trackingNumber)) return false;
-        return true;
-      });
-      
-      const paginatedResult: PaginatedOrders = {
-        orders: filteredOrders,
-        total: filteredOrders.length,
-        page: 1,
-        limit: displayPreferences.itemsPerPage,
-        totalPages: Math.ceil(filteredOrders.length / displayPreferences.itemsPerPage)
-      };
-      setOrders(paginatedResult);
-    } catch (error) {
-      console.error('Error searching orders:', error);
-      addToast('Failed to search orders', 'error');
-    } finally {
-      setLoading(false);
-    }
+  const handleSearch = (query: OrderSearchQuery) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+    setFilters(prev => ({ ...prev, ...query }));
   };
 
   const handleExportOrders = () => {
     try {
       const csvContent = [
         ['Order ID', 'Product Title', 'Amount', 'Status', 'Date', 'Tracking Number'].join(','),
-        ...filteredAndSortedOrders.map(order => [
+        ...orders.orders.map(order => [
           order.id,
           order.product.title,
           formatCurrency(order.totalAmount, order.currency),
@@ -280,40 +256,7 @@ const OrderHistoryInterface = ({
     }).format(numAmount);
   };
 
-  const filteredAndSortedOrders = useMemo(() => {
-    let result = [...orders.orders];
-    
-    // Apply sorting
-    result.sort((a, b) => {
-      let aValue: any, bValue: any;
-      
-      switch (sortBy) {
-        case 'amount':
-          aValue = parseFloat(a.amount);
-          bValue = parseFloat(b.amount);
-          break;
-        case 'status':
-          aValue = a.status;
-          bValue = b.status;
-          break;
-        case 'updatedAt':
-          aValue = new Date(a.updatedAt || a.createdAt);
-          bValue = new Date(b.updatedAt || b.createdAt);
-          break;
-        default:
-          aValue = new Date(a.createdAt);
-          bValue = new Date(b.createdAt);
-      }
-      
-      if (sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
-    
-    return result;
-  }, [orders.orders, sortBy, sortOrder]);
+
 
   if (loading && orders.orders.length === 0) {
     return (
@@ -427,7 +370,7 @@ const OrderHistoryInterface = ({
       </div>
 
       {/* Orders List */}
-      {filteredAndSortedOrders.length === 0 ? (
+      {orders.orders.length === 0 ? (
         <GlassPanel variant="primary" className="p-8 text-center">
           <Package size={48} className="mx-auto text-gray-400 mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
@@ -442,7 +385,7 @@ const OrderHistoryInterface = ({
         </GlassPanel>
       ) : (
         <div className="space-y-4">
-          {filteredAndSortedOrders.map((order) => {
+          {orders.orders.map((order) => {
             const StatusIcon = getStatusIcon(order.status);
             const statusColor = getStatusColor(order.status);
 
@@ -475,9 +418,12 @@ const OrderHistoryInterface = ({
                       {/* Order Details */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-3 mb-2">
-                          <h3 className={`font-semibold text-gray-900 dark:text-white truncate ${
-                            displayPreferences.compactView ? 'text-base' : 'text-lg'
-                          }`}>
+                          <h3 
+                            className={`font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 truncate cursor-pointer transition-colors ${
+                              displayPreferences.compactView ? 'text-base' : 'text-lg'
+                            }`}
+                            onClick={() => router.push(`/marketplace/orders/${order.id}`)}
+                          >
                             {order.product.title}
                           </h3>
                           
@@ -493,7 +439,13 @@ const OrderHistoryInterface = ({
                         }`}>
                           {displayPreferences.showColumns.orderId && (
                             <div>
-                              <span className="font-medium">Order ID:</span> {order.id.slice(0, 8)}...
+                              <span className="font-medium">Order ID:</span>{' '}
+                              <button 
+                                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline transition-colors"
+                                onClick={() => router.push(`/marketplace/orders/${order.id}`)}
+                              >
+                                {order.id.slice(0, 8)}...
+                              </button>
                             </div>
                           )}
                           
@@ -544,7 +496,10 @@ const OrderHistoryInterface = ({
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setSelectedOrder(order)}
+                          onClick={() => {
+                            setSelectedOrder(order);
+                            router.push(`/marketplace/orders/${order.id}`);
+                          }}
                         >
                           <Eye size={16} className="mr-2" />
                           View Details

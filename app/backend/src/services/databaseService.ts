@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import { safeLogger } from '../utils/safeLogger';
 import * as schema from "../db/schema";
-import { eq, and, or, ilike, desc, lt, gte, lte, sql, inArray } from "drizzle-orm";
+import { eq, and, or, ilike, desc, lt, gte, lte, sql, inArray, asc } from "drizzle-orm";
 import { ValidationHelper, ValidationError } from "../models/validation";
 import * as postgres from 'postgres';
 import * as dotenv from "dotenv";
@@ -105,29 +105,6 @@ export class DatabaseService {
     }
   }
   // User operations
-  async createUser(address: string, handle?: string, profileCid?: string) {
-    this.checkConnection();
-    try {
-      const result = await this.db.insert(schema.users).values({
-        walletAddress: address,
-        handle: handle || null,
-        profileCid: profileCid || null
-      })
-        .onConflictDoUpdate({
-          target: schema.users.walletAddress,
-          set: {
-            handle: handle || undefined, // Only update handle if provided
-            updatedAt: new Date()
-          }
-        })
-        .returning();
-
-      return result[0];
-    } catch (error) {
-      safeLogger.error("Error creating/updating user:", error);
-      throw error;
-    }
-  }
 
 
 
@@ -263,28 +240,7 @@ export class DatabaseService {
     }
   }
 
-  async getUserRepostIds(userId: string): Promise<Set<string>> {
-    try {
-      const regularReposts = await this.db
-        .select({ parentId: schema.posts.parentId })
-        .from(schema.posts)
-        .where(and(eq(schema.posts.authorId, userId), eq(schema.posts.isRepost, true)));
 
-      const statusReposts = await this.db
-        .select({ parentId: schema.statuses.parentId })
-        .from(schema.statuses)
-        .where(and(eq(schema.statuses.authorId, userId), eq(schema.statuses.isRepost, true)));
-
-      const ids = new Set<string>();
-      regularReposts.forEach((r: any) => { if (r.parentId) ids.add(r.parentId.toString()); });
-      statusReposts.forEach((r: any) => { if (r.parentId) ids.add(r.parentId.toString()); });
-
-      return ids;
-    } catch (error) {
-      safeLogger.error("Error getting user repost IDs:", error);
-      return new Set();
-    }
-  }
 
   async getStatusesByAuthor(authorId: string) {
     try {
@@ -591,53 +547,13 @@ export class DatabaseService {
   }
 
   // Follow operations
-  async followUser(followerId: string, followingId: string) {
-    try {
-      const result = await this.db.insert(schema.follows).values({
-        followerId,
-        followingId
-      }).returning();
 
-      return result[0];
-    } catch (error) {
-      safeLogger.error("Error following user:", error);
-      throw error;
-    }
-  }
 
-  async unfollowUser(followerId: string, followingId: string) {
-    try {
-      await this.db.delete(schema.follows).where(
-        and(
-          eq(schema.follows.followerId, followerId),
-          eq(schema.follows.followingId, followingId)
-        )
-      );
-    } catch (error) {
-      safeLogger.error("Error unfollowing user:", error);
-      throw error;
-    }
-  }
 
-  async getFollowers(userId: string) {
-    try {
-      return await this.db.select().from(schema.follows).where(eq(schema.follows.followingId, userId));
-    } catch (error) {
-      safeLogger.error("Error getting followers:", error);
-      // Return empty array instead of throwing to prevent crashes
-      return [];
-    }
-  }
 
-  async getFollowing(userId: string) {
-    try {
-      return await this.db.select().from(schema.follows).where(eq(schema.follows.followerId, userId));
-    } catch (error) {
-      safeLogger.error("Error getting following:", error);
-      // Return empty array instead of throwing to prevent crashes
-      return [];
-    }
-  }
+
+
+
 
   // Payment operations
   async createPayment(from: string, to: string, token: string, amount: string, txHash?: string, memo?: string) {
@@ -949,16 +865,7 @@ export class DatabaseService {
     }
   }
 
-  async getEscrowsByUser(userId: string) {
-    try {
-      return await this.db.select().from(schema.escrows).where(
-        or(eq(schema.escrows.buyerId, userId), eq(schema.escrows.sellerId, userId))
-      );
-    } catch (error) {
-      safeLogger.error("Error getting escrows by user:", error);
-      throw error;
-    }
-  }
+
 
   async updateEscrow(id: string, updates: Partial<typeof schema.escrows.$inferInsert>) {
     try {
@@ -1464,27 +1371,7 @@ export class DatabaseService {
     }
   }
 
-  async getReceiptsByUser(userAddress: string, limit: number = 50, offset: number = 0) {
-    try {
-      // Join with orders to filter by user
-      // This is a bit complex with current schema because orderReceipts doesn't have userAddress directly
-      // But we stored buyerInfo which might have it, or we join with orders
-      // For now, let's assume we can join with orders
-      return await this.db
-        .select({
-          receipt: schema.orderReceipts,
-          order: schema.orders
-        })
-        .from(schema.orderReceipts)
-        .leftJoin(schema.orders, eq(schema.orderReceipts.orderId, schema.orders.id))
-        .where(eq(schema.orders.buyerAddress, userAddress))
-        .limit(limit)
-        .offset(offset);
-    } catch (error) {
-      safeLogger.error("Error getting receipts by user:", error);
-      throw error;
-    }
-  }
+
 
   async updateReceiptStatus(id: string, status: string, metadata?: any) {
     try {
@@ -1503,21 +1390,93 @@ export class DatabaseService {
     }
   }
 
-  async getOrdersByUser(userId: string, role?: 'buyer' | 'seller') {
+  async getOrdersByUser(
+    userId: string,
+    role?: 'buyer' | 'seller',
+    filters: { status?: string } = {},
+    sortBy: string = 'createdAt',
+    sortOrder: 'asc' | 'desc' = 'desc',
+    limit: number = 50,
+    offset: number = 0
+  ) {
     try {
+      // Use a different approach: select orders first, then fetch related data separately
+      // This avoids the alias issue and still eliminates N+1 queries by batching
+      
+      let query = this.db.select().from(schema.orders);
+      
+      const whereClauses = [];
       if (role === 'buyer') {
-        return await this.db.select().from(schema.orders).where(
-          eq(schema.orders.buyerId, userId)
-        );
+        whereClauses.push(eq(schema.orders.buyerId, userId));
       } else if (role === 'seller') {
-        return await this.db.select().from(schema.orders).where(
-          eq(schema.orders.sellerId, userId)
-        );
+        whereClauses.push(eq(schema.orders.sellerId, userId));
+      } else {
+        whereClauses.push(or(eq(schema.orders.buyerId, userId), eq(schema.orders.sellerId, userId)));
       }
-      // Default: return all orders where user is buyer OR seller (for backwards compatibility)
-      return await this.db.select().from(schema.orders).where(
-        or(eq(schema.orders.buyerId, userId), eq(schema.orders.sellerId, userId))
-      );
+
+      if (filters.status) {
+        whereClauses.push(eq(schema.orders.status, filters.status));
+      }
+
+      if (whereClauses.length > 0) {
+        query = query.where(and(...whereClauses));
+      }
+
+      const sortColumn = schema.orders[sortBy] || schema.orders.createdAt;
+      query = query.orderBy(sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn));
+
+      query = query.limit(limit).offset(offset);
+
+      const orders = await query;
+      
+      // Collect all unique buyer and seller IDs
+      const buyerIds = [...new Set(orders.map(o => o.buyerId).filter(Boolean))];
+      const sellerIds = [...new Set(orders.map(o => o.sellerId).filter(Boolean))];
+      const productIds = [...new Set(orders.map(o => o.listingId).filter(Boolean))];
+      
+      // Fetch all related data in parallel
+      const [buyers, sellers, products] = await Promise.all([
+        buyerIds.length > 0 ? this.db.select().from(schema.users).where(inArray(schema.users.id, buyerIds)) : [],
+        sellerIds.length > 0 ? this.db.select().from(schema.users).where(inArray(schema.users.id, sellerIds)) : [],
+        productIds.length > 0 ? this.db.select().from(schema.products).where(inArray(schema.products.id, productIds)) : []
+      ]);
+      
+      // Create lookup maps
+      const buyerMap = new Map(buyers.map(b => [b.id, b]));
+      const sellerMap = new Map(sellers.map(s => [s.id, s]));
+      const productMap = new Map(products.map(p => [p.id, p]));
+      
+      // Combine data
+      return orders.map(order => ({
+        order,
+        buyer: order.buyerId ? buyerMap.get(order.buyerId) : null,
+        seller: order.sellerId ? sellerMap.get(order.sellerId) : null,
+        product: order.listingId ? productMap.get(order.listingId) : null
+      }));
+
+      const whereClauses = [];
+      if (role === 'buyer') {
+        whereClauses.push(eq(schema.orders.buyerId, userId));
+      } else if (role === 'seller') {
+        whereClauses.push(eq(schema.orders.sellerId, userId));
+      } else {
+        whereClauses.push(or(eq(schema.orders.buyerId, userId), eq(schema.orders.sellerId, userId)));
+      }
+
+      if (filters.status) {
+        whereClauses.push(eq(schema.orders.status, filters.status));
+      }
+
+      if (whereClauses.length > 0) {
+        query = query.where(and(...whereClauses));
+      }
+
+      const sortColumn = schema.orders[sortBy] || schema.orders.createdAt;
+      query = query.orderBy(sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn));
+
+      query = query.limit(limit).offset(offset);
+
+      return await query;
     } catch (error) {
       safeLogger.error("Error getting orders by user:", error);
       throw error;
@@ -1640,14 +1599,7 @@ export class DatabaseService {
     }
   }
 
-  async getDisputesByUser(userId: string) {
-    try {
-      return await this.db.select().from(schema.disputes).where(eq(schema.disputes.reporterId, userId));
-    } catch (error) {
-      safeLogger.error("Error getting disputes by user:", error);
-      throw error;
-    }
-  }
+
 
   async updateDispute(id: number, updates: Partial<typeof schema.disputes.$inferInsert>) {
     try {
@@ -1659,49 +1611,13 @@ export class DatabaseService {
     }
   }
 
-  async createUserReputation(address: string, score: string, daoApproved: boolean) {
-    try {
-      const result = await this.db.insert(schema.reputations).values({
-        walletAddress: address,
-        score,
-        daoApproved
-      }).returning();
 
-      return result[0];
-    } catch (error) {
-      safeLogger.error("Error creating user reputation:", error);
-      throw error;
-    }
-  }
 
-  async getUserReputation(address: string) {
-    try {
-      const result = await this.db.select().from(schema.reputations).where(eq(schema.reputations.walletAddress, address));
-      return result[0] || null;
-    } catch (error) {
-      safeLogger.error("Error getting user reputation:", error);
-      throw error;
-    }
-  }
 
-  async updateUserReputation(address: string, updates: Partial<typeof schema.reputations.$inferInsert>) {
-    try {
-      const result = await this.db.update(schema.reputations).set(updates).where(eq(schema.reputations.walletAddress, address)).returning();
-      return result[0] || null;
-    } catch (error) {
-      safeLogger.error("Error updating user reputation:", error);
-      throw error;
-    }
-  }
 
-  async getDAOApprovedVendors() {
-    try {
-      return await this.db.select().from(schema.reputations).where(eq(schema.reputations.daoApproved, true));
-    } catch (error) {
-      safeLogger.error("Error getting DAO approved vendors:", error);
-      throw error;
-    }
-  }
+
+
+
 
   // AI Moderation operations
   async createAIModeration(objectType: string, objectId: string, aiAnalysis?: string) {
@@ -1754,32 +1670,9 @@ export class DatabaseService {
   }
 
   // Search operations
-  async searchUsers(query: string, limit: number = 20, offset: number = 0): Promise<any[]> {
-    try {
-      const result = await this.db.select().from(schema.users).where(
-        or(
-          ilike(schema.users.handle, `%${query}%`),
-          ilike(schema.users.walletAddress, `%${query}%`)
-        )
-      ).limit(limit).offset(offset);
-      return result;
-    } catch (error) {
-      safeLogger.error("Error searching users:", error);
-      throw error;
-    }
-  }
 
-  async getRecentUsers(limit: number = 10) {
-    try {
-      const result = await this.db.select().from(schema.users)
-        .orderBy(desc(schema.users.createdAt))
-        .limit(limit);
-      return result;
-    } catch (error) {
-      safeLogger.error("Error getting recent users:", error);
-      throw error;
-    }
-  }
+
+
 
   // --- Product Category operations ---
   async createCategory(name: string, slug: string, description?: string, parentId?: string, path?: string, imageUrl?: string, sortOrder?: string) {
@@ -2321,16 +2214,7 @@ export class DatabaseService {
     });
   }
 
-  async getUserNotifications(userAddress: string, limit: number = 50, offset: number = 0) {
-    return this.executeQuery(async () => {
-      return await this.db.select()
-        .from(schema.notifications)
-        .where(eq(schema.notifications.userAddress, userAddress))
-        .orderBy(desc(schema.notifications.createdAt))
-        .limit(limit)
-        .offset(offset);
-    });
-  }
+
 
   async markNotificationAsRead(notificationId: string) {
     return this.executeQuery(async () => {
@@ -2396,21 +2280,7 @@ export class DatabaseService {
     });
   }
 
-  /**
-   * Get user wallet address by UUID
-   */
-  async getUserAddressById(userId: string): Promise<string | null> {
-    try {
-      const result = await this.db.select({ walletAddress: schema.users.walletAddress })
-        .from(schema.users)
-        .where(eq(schema.users.id, userId))
-        .limit(1);
-      return result[0]?.walletAddress || null;
-    } catch (error) {
-      safeLogger.error('Error fetching user address by ID:', error);
-      return null;
-    }
-  }
+
 
   async getNotificationPreferences(userAddress: string) {
     return this.executeQuery(async () => {
@@ -2432,14 +2302,7 @@ export class DatabaseService {
     });
   }
 
-  async getUserPushTokens(userAddress: string) {
-    return this.executeQuery(async () => {
-      const result = await this.db.select()
-        .from(schema.pushTokens)
-        .where(eq(schema.pushTokens.userAddress, userAddress));
-      return result.map((row: any) => row.token);
-    });
-  }
+
 
   async storePushToken(userAddress: string, token: string, platform: string): Promise<boolean> {
     return this.executeQuery(async () => {
@@ -2564,68 +2427,13 @@ export class DatabaseService {
     });
   }
 
-  /**
-   * Get all users with reputation data for ranking
-   */
-  async getAllUsersWithReputation(): Promise<Array<{
-    id: string;
-    walletAddress: string;
-    handle?: string;
-    reputationScore: string;
-  }>> {
-    return this.executeQuery(async () => {
-      const users = await this.db
-        .select({
-          id: schema.users.id,
-          walletAddress: schema.users.walletAddress,
-          handle: schema.users.handle,
-          reputationScore: schema.reputations.score
-        })
-        .from(schema.users)
-        .leftJoin(schema.reputations, eq(schema.users.walletAddress, schema.reputations.walletAddress))
-        .where(sql`${schema.reputations.score} IS NOT NULL`)
-        .orderBy(desc(schema.reputations.score));
 
-      return users.map((user: any) => ({
-        id: user.id,
-        walletAddress: user.walletAddress,
-        handle: user.handle || undefined,
-        reputationScore: user.reputationScore || 0
-      }));
-    });
-  }
 
-  /**
-   * Update user visibility boost based on reputation
-   */
-  async updateUserVisibilityBoost(userId: string, visibilityBoost: string): Promise<void> {
-    return this.executeQuery(async () => {
-      // This would update a visibility_boost field if it existed
-      // For now, we'll just log it as this field doesn't exist in current schema
-      safeLogger.info(`Updated visibility boost for user ${userId}: ${visibilityBoost}`);
-    });
-  }
 
-  async getUserByAddress(address: string) {
-    return this.executeQuery(async () => {
-      const normalizedAddress = address.toLowerCase();
-      const [user] = await this.db.select()
-        .from(schema.users)
-        .where(sql`LOWER(${schema.users.walletAddress}) = LOWER(${normalizedAddress})`)
-        .limit(1);
-      return user || null;
-    });
-  }
 
-  async getUserById(id: string) {
-    return this.executeQuery(async () => {
-      const [user] = await this.db.select()
-        .from(schema.users)
-        .where(eq(schema.users.id, id))
-        .limit(1);
-      return user || null;
-    });
-  }
+
+
+
 
   // Moderation Cases operations
   async createModerationCase(data: {
@@ -2703,35 +2511,7 @@ export class DatabaseService {
     }
   }
 
-  async getUserModerationCases(userId: string, options: {
-    page: number;
-    limit: number;
-    status?: string;
-  }) {
-    try {
-      let query = this.db.select().from(schema.moderationCases)
-        .where(eq(schema.moderationCases.userId, userId));
 
-      if (options.status) {
-        query = query.where(
-          and(
-            eq(schema.moderationCases.userId, userId),
-            eq(schema.moderationCases.status, options.status)
-          )
-        );
-      }
-
-      const result = await query
-        .orderBy(desc(schema.moderationCases.createdAt))
-        .limit(options.limit)
-        .offset((options.page - 1) * options.limit);
-
-      return result;
-    } catch (error) {
-      safeLogger.error("Error getting user moderation cases:", error);
-      throw error;
-    }
-  }
 
   async getModerationCasesByStatus(status: string, limit: number = 50) {
     try {
@@ -2809,17 +2589,7 @@ export class DatabaseService {
     }
   }
 
-  async getUserModerationActions(userId: string, limit: number = 50) {
-    try {
-      return await this.db.select().from(schema.moderationActions)
-        .where(eq(schema.moderationActions.userId, userId))
-        .orderBy(desc(schema.moderationActions.createdAt))
-        .limit(limit);
-    } catch (error) {
-      safeLogger.error("Error getting user moderation actions:", error);
-      throw error;
-    }
-  }
+
 
   // Payment Transaction Methods
 
