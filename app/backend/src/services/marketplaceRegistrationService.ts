@@ -1,9 +1,9 @@
 import { db } from '../db';
-import { 
-  marketplaceUsers, 
-  sellerVerifications 
+import {
+  marketplaceUsers,
+  sellerVerifications
 } from '../db/marketplaceSchema';
-import { users } from '../db/schema';
+import { users, sellers } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 
 export interface SellerRegistrationData {
@@ -82,6 +82,26 @@ export class MarketplaceRegistrationService {
           disputeRate: '0',
           lastTierUpdate: new Date(),
           submittedAt: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .onConflictDoNothing();
+
+      // LEGACY/COMPATIBILITY: Create record in sellers table (required for dashboard access)
+      // The dashboard service reads from 'sellers', not 'marketplace_users'
+      const normalizedAddress = data.walletAddress.toLowerCase();
+      const cleanAddress = normalizedAddress.startsWith('0x') ? normalizedAddress : '0x' + normalizedAddress;
+
+      await db
+        .insert(sellers)
+        .values({
+          walletAddress: cleanAddress,
+          legalBusinessName: data.legalName,
+          registeredAddressCountry: data.country,
+          // Default values for required/important fields
+          isVerified: false,
+          onboardingCompleted: false,
+          tier: 'unverified',
           createdAt: new Date(),
           updatedAt: new Date()
         })
