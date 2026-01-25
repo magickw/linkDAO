@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { AuthService } from '../services/authService';
 import { ApiResponse } from '../utils/apiResponse';
-import { AuthenticatedUser } from './authMiddleware';
+import { AuthenticatedUser } from '../types/authentication';
 
 const authService = new AuthService();
 

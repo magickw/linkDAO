@@ -1,3 +1,15 @@
+export interface AuthenticatedUser {
+  id: string;
+  address: string;
+  walletAddress: string;
+  userId: string;
+  kycStatus?: string | null;
+  permissions?: string[];
+  role: string;
+  email?: string | null;
+  isAdmin: boolean;
+}
+
 export interface AuthenticationRequest {
   walletAddress: string;
   signature: string;

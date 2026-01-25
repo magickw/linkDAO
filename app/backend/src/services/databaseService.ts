@@ -1402,9 +1402,9 @@ export class DatabaseService {
     try {
       // Use a different approach: select orders first, then fetch related data separately
       // This avoids the alias issue and still eliminates N+1 queries by batching
-      
+
       let query = this.db.select().from(schema.orders);
-      
+
       const whereClauses = [];
       if (role === 'buyer') {
         whereClauses.push(eq(schema.orders.buyerId, userId));
@@ -1428,24 +1428,24 @@ export class DatabaseService {
       query = query.limit(limit).offset(offset);
 
       const orders = await query;
-      
+
       // Collect all unique buyer and seller IDs
-      const buyerIds = [...new Set(orders.map(o => o.buyerId).filter(Boolean))];
-      const sellerIds = [...new Set(orders.map(o => o.sellerId).filter(Boolean))];
-      const productIds = [...new Set(orders.map(o => o.listingId).filter(Boolean))];
-      
+      const buyerIds = [...new Set(orders.map(o => o.buyerId).filter((id): id is string => !!id))] as string[];
+      const sellerIds = [...new Set(orders.map(o => o.sellerId).filter((id): id is string => !!id))] as string[];
+      const productIds = [...new Set(orders.map(o => o.listingId).filter((id): id is string => !!id))] as string[];
+
       // Fetch all related data in parallel
       const [buyers, sellers, products] = await Promise.all([
         buyerIds.length > 0 ? this.db.select().from(schema.users).where(inArray(schema.users.id, buyerIds)) : [],
         sellerIds.length > 0 ? this.db.select().from(schema.users).where(inArray(schema.users.id, sellerIds)) : [],
         productIds.length > 0 ? this.db.select().from(schema.products).where(inArray(schema.products.id, productIds)) : []
       ]);
-      
+
       // Create lookup maps
       const buyerMap = new Map(buyers.map(b => [b.id, b]));
       const sellerMap = new Map(sellers.map(s => [s.id, s]));
       const productMap = new Map(products.map(p => [p.id, p]));
-      
+
       // Combine data
       return orders.map(order => ({
         order,
@@ -1454,29 +1454,7 @@ export class DatabaseService {
         product: order.listingId ? productMap.get(order.listingId) : null
       }));
 
-      const whereClauses = [];
-      if (role === 'buyer') {
-        whereClauses.push(eq(schema.orders.buyerId, userId));
-      } else if (role === 'seller') {
-        whereClauses.push(eq(schema.orders.sellerId, userId));
-      } else {
-        whereClauses.push(or(eq(schema.orders.buyerId, userId), eq(schema.orders.sellerId, userId)));
-      }
 
-      if (filters.status) {
-        whereClauses.push(eq(schema.orders.status, filters.status));
-      }
-
-      if (whereClauses.length > 0) {
-        query = query.where(and(...whereClauses));
-      }
-
-      const sortColumn = schema.orders[sortBy] || schema.orders.createdAt;
-      query = query.orderBy(sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn));
-
-      query = query.limit(limit).offset(offset);
-
-      return await query;
     } catch (error) {
       safeLogger.error("Error getting orders by user:", error);
       throw error;
@@ -1599,8 +1577,6 @@ export class DatabaseService {
     }
   }
 
-
-
   async updateDispute(id: number, updates: Partial<typeof schema.disputes.$inferInsert>) {
     try {
       const result = await this.db.update(schema.disputes).set(updates).where(eq(schema.disputes.id, id)).returning();
@@ -1610,14 +1586,6 @@ export class DatabaseService {
       throw error;
     }
   }
-
-
-
-
-
-
-
-
 
   // AI Moderation operations
   async createAIModeration(objectType: string, objectId: string, aiAnalysis?: string) {

@@ -3,7 +3,7 @@ import { UserService } from './userService';
 import { tokenRevocationService } from './tokenRevocationService';
 import { getRequiredEnv, isDevelopment } from '../utils/envValidation';
 import { safeLogger } from '../utils/safeLogger';
-import { AuthenticatedUser } from '../middleware/authMiddleware';
+import { AuthenticatedUser } from '../types/authentication';
 
 const userService = new UserService();
 
