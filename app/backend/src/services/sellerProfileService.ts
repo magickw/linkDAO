@@ -24,7 +24,7 @@ export class SellerProfileService {
       const [seller] = await db
         .select()
         .from(sellers)
-        .where(eq(sellers.walletAddress, cleanAddress))
+        .where(eq(sql`LOWER(${sellers.walletAddress})`, cleanAddress.toLowerCase()))
         .limit(1);
 
       // If not found, try without 0x prefix as fallback
@@ -33,7 +33,7 @@ export class SellerProfileService {
         const [fallbackSeller] = await db
           .select()
           .from(sellers)
-          .where(eq(sellers.walletAddress, fallbackAddress))
+          .where(eq(sql`LOWER(${sellers.walletAddress})`, fallbackAddress.toLowerCase()))
           .limit(1);
 
         if (fallbackSeller) {
@@ -561,7 +561,14 @@ export class SellerProfileService {
       socialLinks: seller.socialLinks ? this.parseSocialLinks(seller.socialLinks) : undefined,
       storeDescription: seller.storeDescription || undefined,
       tier: seller.tier || 'basic',
-      isVerified: seller.isVerified || false,
+      verificationStatus: {
+        email: seller.emailVerified || false,
+        phone: seller.phoneVerified || false,
+        kyc: (seller.kycStatus as any) || 'none',
+        identity: seller.kycStatus === 'approved',
+      },
+      applicationStatus: (seller.kycStatus === 'approved' || seller.isVerified) ? 'approved' : 
+                         (seller.kycStatus === 'rejected') ? 'rejected' : 'approved', // Default to approved for existing sellers
       onboardingCompleted: seller.onboardingCompleted || false,
       onboardingSteps: this.parseOnboardingSteps(seller.onboardingSteps),
       profileCompleteness: this.calculateProfileCompleteness(seller),
@@ -679,7 +686,8 @@ export class SellerProfileService {
   }
 
   private calculateOnboardingCompletion(steps: OnboardingSteps): boolean {
-    return steps.profile_setup && steps.business_info && steps.verification && steps.payout_setup && steps.first_listing;
+    // Only profile setup, business info, and payouts are strictly required to see the dashboard
+    return steps.profile_setup && steps.business_info && steps.payout_setup;
   }
 
   private calculateCompletionPercentage(steps: OnboardingSteps): number {

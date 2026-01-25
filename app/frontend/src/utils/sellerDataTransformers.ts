@@ -594,7 +594,13 @@ export function transformSellerProfileToUnified(
 
       // Onboarding progress
       onboardingProgress: {
-        ...sellerProfile.onboardingProgress,
+        profileSetup: sellerProfile.onboardingSteps?.profile_setup || false,
+        verification: sellerProfile.onboardingSteps?.verification || false,
+        payoutSetup: sellerProfile.onboardingSteps?.payout_setup || false,
+        firstListing: sellerProfile.onboardingSteps?.first_listing || false,
+        completed: sellerProfile.onboardingCompleted || false,
+        currentStep: calculateCurrentStep(sellerProfile.onboardingSteps),
+        totalSteps: 5,
         steps: (sellerProfile.onboardingProgress as any)?.steps || [],
       },
 
@@ -704,6 +710,15 @@ export function transformDashboardStatsToUnified(
       }
     };
 
+    // Correctly map backend balance fields if they exist in the alternate format
+    const balance = {
+      crypto: safeDashboardStats.balance.crypto || {},
+      fiatEquivalent: safeDashboardStats.balance.fiatEquivalent || 0,
+      pendingEscrow: Number(safeDashboardStats.balance.pendingEscrow || (safeDashboardStats.balance as any).pending || 0),
+      availableWithdraw: Number(safeDashboardStats.balance.availableWithdraw || (safeDashboardStats.balance as any).available || 0),
+      totalEarnings: Number(safeDashboardStats.sales.total || 0),
+    };
+
     const unified: UnifiedSellerDashboard = {
       // Profile information
       profile,
@@ -712,11 +727,11 @@ export function transformDashboardStatsToUnified(
       listings: {
         items: listings,
         summary: {
-          total: safeDashboardStats.listings.active + safeDashboardStats.listings.draft + safeDashboardStats.listings.sold + safeDashboardStats.listings.expired,
-          active: safeDashboardStats.listings.active,
-          draft: safeDashboardStats.listings.draft,
-          sold: safeDashboardStats.listings.sold,
-          expired: safeDashboardStats.listings.expired,
+          total: Number(safeDashboardStats.listings.total || (safeDashboardStats.listings.active + safeDashboardStats.listings.draft + (safeDashboardStats.listings as any).sold + (safeDashboardStats.listings as any).expired || 0)),
+          active: Number(safeDashboardStats.listings.active || 0),
+          draft: Number(safeDashboardStats.listings.draft || 0),
+          sold: Number((safeDashboardStats.listings as any).sold || (safeDashboardStats.listings as any).soldOut || 0),
+          expired: Number((safeDashboardStats.listings as any).expired || 0),
           paused: 0, // Not available in original
           trending: listings.slice(0, 5), // Top 5 as trending
           recentlyAdded: listings.slice(0, 3), // Top 3 as recently added
@@ -727,12 +742,12 @@ export function transformDashboardStatsToUnified(
       orders: {
         items: [], // Would need to be provided separately
         summary: {
-          total: Object.values(safeDashboardStats.orders).reduce((sum, count) => sum + count, 0),
-          pending: safeDashboardStats.orders.pending,
-          processing: safeDashboardStats.orders.processing,
-          shipped: safeDashboardStats.orders.shipped,
-          delivered: safeDashboardStats.orders.delivered,
-          disputed: safeDashboardStats.orders.disputed,
+          total: Number(safeDashboardStats.orders.total || Object.values(safeDashboardStats.orders).reduce((sum, count) => sum + (typeof count === 'number' ? count : 0), 0)),
+          pending: Number(safeDashboardStats.orders.pending || 0),
+          processing: Number(safeDashboardStats.orders.processing || 0),
+          shipped: Number((safeDashboardStats.orders as any).shipped || 0),
+          delivered: Number((safeDashboardStats.orders as any).delivered || (safeDashboardStats.orders as any).completed || 0),
+          disputed: Number((safeDashboardStats.orders as any).disputed || 0),
           cancelled: 0, // Not available in original
           recent: [], // Would need to be provided separately
         },
@@ -741,10 +756,10 @@ export function transformDashboardStatsToUnified(
       // Analytics and metrics
       analytics: {
         overview: {
-          totalRevenue: safeDashboardStats.sales.total,
-          totalOrders: Object.values(safeDashboardStats.orders).reduce((sum, count) => sum + count, 0),
+          totalRevenue: Number(safeDashboardStats.sales.total || 0),
+          totalOrders: Number(safeDashboardStats.orders.total || Object.values(safeDashboardStats.orders).reduce((sum, count) => sum + (typeof count === 'number' ? count : 0), 0)),
           conversionRate: 0, // Would need to be calculated
-          averageOrderValue: safeDashboardStats.sales.total / Math.max(1, Object.values(safeDashboardStats.orders).reduce((sum, count) => sum + count, 0)),
+          averageOrderValue: Number(safeDashboardStats.sales.total || 0) / Math.max(1, Number(safeDashboardStats.orders.total || 1)),
           growthRate: 0, // Would need historical data
         },
         sales: {
@@ -802,18 +817,12 @@ export function transformDashboardStatsToUnified(
 
       // Financial overview
       financial: {
-        balance: {
-          crypto: safeDashboardStats.balance.crypto,
-          fiatEquivalent: safeDashboardStats.balance.fiatEquivalent,
-          pendingEscrow: safeDashboardStats.balance.pendingEscrow,
-          availableWithdraw: safeDashboardStats.balance.availableWithdraw,
-          totalEarnings: safeDashboardStats.sales.total,
-        },
+        balance,
         transactions: {
           recent: [],
           pending: [],
           summary: {
-            thisMonth: safeDashboardStats.sales.thisMonth,
+            thisMonth: Number(safeDashboardStats.sales.thisMonth || 0),
             lastMonth: 0, // Not available
             growth: 0, // Would need to be calculated
           },
@@ -888,6 +897,16 @@ export function transformDashboardStatsToUnified(
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
+
+function calculateCurrentStep(steps: any): number {
+  if (!steps) return 1;
+  if (!steps.profile_setup) return 1;
+  if (!steps.business_info) return 2;
+  if (!steps.verification) return 3;
+  if (!steps.payout_setup) return 4;
+  if (!steps.first_listing) return 5;
+  return 5;
+}
 
 function formatPrice(price: any, currency?: string): string {
   const numPrice = typeof price === 'string' ? parseFloat(price) : price;

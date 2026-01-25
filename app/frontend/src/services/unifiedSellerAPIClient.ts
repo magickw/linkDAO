@@ -168,9 +168,9 @@ export class UnifiedSellerAPIClient {
   // Standardized endpoint patterns
   private endpoints: SellerAPIEndpoints = {
     // Profile endpoints
-    getProfile: (walletAddress: string) => `${this.baseURL}/${walletAddress}/profile`, // Public endpoint that accepts wallet address
-    updateProfile: (walletAddress: string) => `${this.baseURL}/profile`, // Uses authenticated user
-    createProfile: () => `${this.baseURL}/profile`,
+    getProfile: (walletAddress: string) => `${BACKEND_API_BASE_URL}/api/marketplace/seller/${walletAddress}`, // Public endpoint
+    updateProfile: (walletAddress: string) => `${BACKEND_API_BASE_URL}/api/marketplace/seller/${walletAddress}`, // Uses authenticated user
+    createProfile: () => `${BACKEND_API_BASE_URL}/api/marketplace/seller/profile`,
     updateProfileEnhanced: (walletAddress: string) => `${this.baseURL}/profile/enhanced`, // Uses authenticated user
     // Onboarding endpoints
     getOnboardingSteps: (walletAddress: string) => `${this.baseURL}/onboarding`, // Uses authenticated user

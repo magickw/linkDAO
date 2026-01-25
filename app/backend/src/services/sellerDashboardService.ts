@@ -114,17 +114,19 @@ class SellerDashboardService {
       // Verify seller exists and get user UUID for orders queries
       // NOTE: sellers.id is an integer (serial), but orders.sellerId references users.id (UUID)
       // So we need to get the user's UUID by wallet address for querying orders
+      const normalizedAddress = walletAddress.toLowerCase();
+      
       const [seller] = await tx
         .select({ id: sellers.id })
         .from(sellers)
-        .where(eq(sellers.walletAddress, walletAddress.toLowerCase()))
+        .where(eq(sql`LOWER(${sellers.walletAddress})`, normalizedAddress))
         .limit(1);
 
       // Get user UUID for orders queries (orders.sellerId references users.id which is UUID)
       const [user] = await tx
         .select({ id: users.id })
         .from(users)
-        .where(eq(users.walletAddress, walletAddress.toLowerCase()))
+        .where(eq(sql`LOWER(${users.walletAddress})`, normalizedAddress))
         .limit(1);
 
       if (!seller) {
@@ -236,7 +238,7 @@ class SellerDashboardService {
           available: sql<string>`COALESCE(SUM(CASE WHEN ${sellerTransactions.transactionType} = 'sale' THEN ${sellerTransactions.amount} ELSE 0 END), 0)`,
         })
         .from(sellerTransactions)
-        .where(eq(sellerTransactions.sellerWalletAddress, walletAddress.toLowerCase()));
+        .where(eq(sql`LOWER(${sellerTransactions.sellerWalletAddress})`, normalizedAddress));
 
       // OPTIMIZED: Simple count query with index on (userAddress, read)
       const [unreadCount] = await tx
@@ -244,7 +246,7 @@ class SellerDashboardService {
         .from(notifications)
         .where(
           and(
-            eq(notifications.userAddress, walletAddress.toLowerCase()),
+            eq(sql`LOWER(${notifications.userAddress})`, normalizedAddress),
             eq(notifications.read, false)
           )
         )

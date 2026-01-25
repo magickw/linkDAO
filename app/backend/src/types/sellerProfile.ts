@@ -40,6 +40,7 @@ export interface SellerProfile {
   // Note: taxId is not exposed in the profile for security, only taxIdType
   tier?: string;
   isVerified: boolean;
+  applicationStatus: 'pending' | 'approved' | 'rejected' | 'suspended';
   onboardingCompleted: boolean;
   onboardingSteps: OnboardingSteps;
   // Profile Completeness
