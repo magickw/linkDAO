@@ -580,11 +580,11 @@ export class OrderService {
             const escrow = await databaseService.getEscrowById(order.escrowId);
             if (escrow && escrow.onChainId) {
               // Get chain ID from order metadata if available, otherwise default to Sepolia
-              let chainId = 11155111; 
+              let chainId = 11155111;
               if (order.metadata && typeof order.metadata === 'object' && (order.metadata as any).chainId) {
                 chainId = Number((order.metadata as any).chainId);
               }
-              
+
               await this.enhancedEscrowService.refundBuyerOnChain(escrow.onChainId, chainId);
               safeLogger.info(`On-chain refund triggered for order ${orderId} (escrow: ${escrow.onChainId})`);
             } else {
@@ -739,46 +739,73 @@ export class OrderService {
       }
     }
 
+    // Ensure buyer and seller objects exist to prevent crashes
+    const safeBuyer = buyer || {
+      id: dbOrder.buyerId || 'unknown',
+      walletAddress: dbOrder.buyerWalletAddress || 'unknown',
+      handle: 'Unknown User',
+      displayName: 'Unknown User',
+      avatarCid: undefined,
+      billingAddress1: undefined,
+      billingCity: undefined,
+      billingState: undefined,
+      billingZipCode: undefined,
+      billingCountry: undefined
+    };
+
+    const safeSeller = seller || {
+      id: dbOrder.sellerId || 'unknown',
+      walletAddress: dbOrder.sellerWalletAddress || 'unknown',
+      handle: 'Unknown Seller',
+      displayName: 'Unknown Seller',
+      avatarCid: undefined,
+      billingAddress1: undefined,
+      billingCity: undefined,
+      billingState: undefined,
+      billingZipCode: undefined,
+      billingCountry: undefined
+    };
+
     return {
       id: dbOrder.id.toString(),
       orderNumber: dbOrder.id.toString(),
       listingId: dbOrder.listingId?.toString() || '',
-      buyerId: buyer.id?.toString(),
-      sellerId: seller.id?.toString(),
-      buyerWalletAddress: buyer.walletAddress,
-      sellerWalletAddress: seller.walletAddress,
+      buyerId: safeBuyer.id?.toString(),
+      sellerId: safeSeller.id?.toString(),
+      buyerWalletAddress: safeBuyer.walletAddress,
+      sellerWalletAddress: safeSeller.walletAddress,
       buyer: {
-        id: buyer.id?.toString(),
-        walletAddress: buyer.walletAddress,
-        handle: buyer.handle,
-        displayName: buyer.displayName,
-        avatar: buyer.avatarCid ? `https://ipfs.io/ipfs/${buyer.avatarCid}` : undefined,
-        address: buyer.billingAddress1 ? {
-          street: buyer.billingAddress1 + (buyer.billingAddress2 ? ` ${buyer.billingAddress2}` : ''),
-          city: buyer.billingCity || '',
-          state: buyer.billingState || '',
-          postalCode: buyer.billingZipCode || '',
-          country: buyer.billingCountry || ''
+        id: safeBuyer.id?.toString(),
+        walletAddress: safeBuyer.walletAddress,
+        handle: safeBuyer.handle,
+        displayName: safeBuyer.displayName,
+        avatar: safeBuyer.avatarCid ? `https://ipfs.io/ipfs/${safeBuyer.avatarCid}` : undefined,
+        address: safeBuyer.billingAddress1 ? {
+          street: safeBuyer.billingAddress1 + (safeBuyer.billingAddress2 ? ` ${safeBuyer.billingAddress2}` : ''),
+          city: safeBuyer.billingCity || '',
+          state: safeBuyer.billingState || '',
+          postalCode: safeBuyer.billingZipCode || '',
+          country: safeBuyer.billingCountry || ''
         } : undefined
       },
       seller: {
-        id: seller.id?.toString(),
-        walletAddress: seller.walletAddress,
-        handle: seller.handle,
-        displayName: seller.displayName,
-        avatar: seller.avatarCid ? `https://ipfs.io/ipfs/${seller.avatarCid}` : undefined,
+        id: safeSeller.id?.toString(),
+        walletAddress: safeSeller.walletAddress,
+        handle: safeSeller.handle,
+        displayName: safeSeller.displayName,
+        avatar: safeSeller.avatarCid ? `https://ipfs.io/ipfs/${safeSeller.avatarCid}` : undefined,
         address: sellerProfile ? {
-          street: sellerProfile.registeredAddressStreet || sellerProfile.businessAddress || seller.billingAddress1 || '',
-          city: sellerProfile.registeredAddressCity || seller.billingCity || '',
-          state: sellerProfile.registeredAddressState || seller.billingState || '',
-          postalCode: sellerProfile.registeredAddressPostalCode || seller.billingZipCode || '',
-          country: sellerProfile.registeredAddressCountry || seller.billingCountry || ''
-        } : (seller.billingAddress1 ? {
-          street: seller.billingAddress1 + (seller.billingAddress2 ? ` ${seller.billingAddress2}` : ''),
-          city: seller.billingCity || '',
-          state: seller.billingState || '',
-          postalCode: seller.billingZipCode || '',
-          country: seller.billingCountry || ''
+          street: sellerProfile.registeredAddressStreet || sellerProfile.businessAddress || safeSeller.billingAddress1 || '',
+          city: sellerProfile.registeredAddressCity || safeSeller.billingCity || '',
+          state: sellerProfile.registeredAddressState || safeSeller.billingState || '',
+          postalCode: sellerProfile.registeredAddressPostalCode || safeSeller.billingZipCode || '',
+          country: sellerProfile.registeredAddressCountry || safeSeller.billingCountry || ''
+        } : (safeSeller.billingAddress1 ? {
+          street: safeSeller.billingAddress1 + (safeSeller.billingAddress2 ? ` ${safeSeller.billingAddress2}` : ''),
+          city: safeSeller.billingCity || '',
+          state: safeSeller.billingState || '',
+          postalCode: safeSeller.billingZipCode || '',
+          country: safeSeller.billingCountry || ''
         } : undefined)
       },
       escrowId,
@@ -786,6 +813,8 @@ export class OrderService {
       total: orderTotal,
       paymentToken: dbOrder.paymentToken || '',
       currency: dbOrder.paymentToken || 'USD',
+      orderMetadata: typeof dbOrder.orderMetadata === 'string' ? JSON.parse(dbOrder.orderMetadata) : dbOrder.orderMetadata,
+      metadata: dbOrder.metadata,
       status: (dbOrder.status?.toUpperCase() as OrderStatus) || OrderStatus.CREATED,
       createdAt: dbOrder.createdAt?.toISOString() || new Date().toISOString(),
       shippingAddress: this.formatAddress(dbOrder.shippingAddress) || this.formatShippingAddress(dbOrder), // Try JSON first, fallback to columns

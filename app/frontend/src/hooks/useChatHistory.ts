@@ -3,6 +3,7 @@ import { Message as ChatMessage, Conversation, ChatHistoryRequest, MessageReacti
 import { unifiedMessagingService } from '@/services/unifiedMessagingService'; // Use the new unified service
 import { useAuth } from '@/context/AuthContext';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useRef } from 'react';
 
 interface UseChatHistoryReturn {
   messages: ChatMessage[];
@@ -33,6 +34,7 @@ export const useChatHistory = (): UseChatHistoryReturn => {
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const currentConversationIdRef = useRef<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | undefined>();
   const [isOnline, setIsOnline] = useState(true);
   const [messageReactions, setMessageReactions] = useState<Map<string, MessageReaction[]>>(new Map());
@@ -133,13 +135,14 @@ export const useChatHistory = (): UseChatHistoryReturn => {
   }, []);
 
   // Subscribe to messaging events for real-time updates
+  // This effect runs once to set up listeners that will work across conversation changes
   useEffect(() => {
     const unsubscribers: (() => void)[] = [];
 
     // Handle message sent events (includes temp -> real ID replacement)
     unsubscribers.push(
       unifiedMessagingService.on('message_sent', ({ message, conversationId, tempId }) => {
-        if (conversationId === currentConversationId) {
+        if (conversationId === currentConversationIdRef.current) {
           setMessages(prev => {
             // If there's a tempId, replace the optimistic message with the real one
             if (tempId) {
@@ -161,7 +164,7 @@ export const useChatHistory = (): UseChatHistoryReturn => {
     // Handle message received events (from WebSocket)
     unsubscribers.push(
       unifiedMessagingService.on('message_received', ({ message, conversationId }) => {
-        if (conversationId === currentConversationId) {
+        if (conversationId === currentConversationIdRef.current) {
           setMessages(prev => {
             // Avoid duplicates - check if message already exists
             const exists = prev.some(m => m.id === message.id);
@@ -228,7 +231,7 @@ export const useChatHistory = (): UseChatHistoryReturn => {
     // Handle message deleted events
     unsubscribers.push(
       unifiedMessagingService.on('message_deleted', ({ messageId, conversationId }) => {
-        if (conversationId === currentConversationId) {
+        if (conversationId === currentConversationIdRef.current) {
           setMessages(prev => prev.filter(msg => msg.id !== messageId));
         }
       })
@@ -237,7 +240,7 @@ export const useChatHistory = (): UseChatHistoryReturn => {
     // Handle message edited events
     unsubscribers.push(
       unifiedMessagingService.on('message_edited', ({ message, conversationId }) => {
-        if (conversationId === currentConversationId) {
+        if (conversationId === currentConversationIdRef.current) {
           setMessages(prev =>
             prev.map(msg => (msg.id === message.id ? message : msg))
           );
@@ -254,10 +257,12 @@ export const useChatHistory = (): UseChatHistoryReturn => {
       })
     );
 
+    // Important: No dependency on currentConversationId since we're using ref instead
+    // This ensures listeners are set up once and persist
     return () => {
       unsubscribers.forEach(unsub => unsub());
     };
-  }, [currentConversationId]);
+  }, [user?.address, queryClient]);
 
   const loadConversations = useCallback(async (append = false) => {
     if (append) {
@@ -277,6 +282,7 @@ export const useChatHistory = (): UseChatHistoryReturn => {
       setLoading(true);
       setError(null);
       setCurrentConversationId(request.conversationId);
+      currentConversationIdRef.current = request.conversationId;
 
       // Use the new unified service
       const response = await unifiedMessagingService.getMessages(request.conversationId, { limit: request.limit, before: request.before });

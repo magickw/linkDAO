@@ -196,6 +196,7 @@ export interface MarketplaceOrder {
   currency?: string;
   orderNotes?: string;
   orderMetadata?: any;
+  metadata?: any;
   product?: {
     id: string;
     title: string;
@@ -211,7 +212,7 @@ export interface MarketplaceOrder {
     serviceDurationMinutes?: number;
   };
   disputeId?: string;
-  
+
   // Financial Details
   taxAmount?: string;
   shippingCost?: string;

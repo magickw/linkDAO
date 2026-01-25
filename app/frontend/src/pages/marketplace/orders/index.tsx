@@ -593,9 +593,9 @@ function OrderCard({ order, onViewDetails, onCancelOrder, canCancel, isCancellin
                         variant="primary"
                         icon={<Eye size={16} />}
                         iconPosition="left"
-                        onClick={onViewDetails}
+                        onClick={() => window.location.href = `/marketplace/orders/${order.id}`}
                     >
-                        View Details
+                        Track Order
                     </Button>
                 </div>
             </div>

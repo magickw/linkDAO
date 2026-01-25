@@ -118,6 +118,9 @@ class UnifiedMessagingService {
     isConnected: boolean;
   } | null = null;
 
+  // Store bound methods to ensure proper unsubscription
+  private boundWebSocketHandlers: Map<string, Function> = new Map();
+
   // Sync state
   private syncInProgress = false;
   private lastFullSync: Date | null = null;
@@ -194,21 +197,39 @@ class UnifiedMessagingService {
     this.wsConnection = ws;
 
     if (ws) {
-      // Subscribe to messaging events
-      ws.on('new_message', this.handleWebSocketMessage.bind(this));
-      ws.on('message_deleted', this.handleWebSocketMessageDeleted.bind(this));
-      ws.on('message_edited', this.handleWebSocketMessageEdited.bind(this));
-      ws.on('user_typing', this.handleWebSocketTyping.bind(this));
-      ws.on('user_stopped_typing', this.handleWebSocketStopTyping.bind(this));
-      ws.on('message_read', this.handleWebSocketReadReceipt.bind(this));
-      ws.on('user_online', (data: any) => this.handleWebSocketPresence({ ...data, isOnline: true }));
-      ws.on('user_offline', (data: any) => this.handleWebSocketPresence({ ...data, isOnline: false }));
-      ws.on('reaction_update', this.handleWebSocketReaction.bind(this));
+      // Store bound methods for proper cleanup later
+      const handlers: Record<string, Function> = {
+        new_message: this.handleWebSocketMessage.bind(this),
+        message_deleted: this.handleWebSocketMessageDeleted.bind(this),
+        message_edited: this.handleWebSocketMessageEdited.bind(this),
+        user_typing: this.handleWebSocketTyping.bind(this),
+        user_stopped_typing: this.handleWebSocketStopTyping.bind(this),
+        message_read: this.handleWebSocketReadReceipt.bind(this),
+        reaction_update: this.handleWebSocketReaction.bind(this),
+      };
+
+      // Store handlers in map for later cleanup
+      Object.entries(handlers).forEach(([event, handler]) => {
+        this.boundWebSocketHandlers.set(event, handler);
+        ws.on(event, handler);
+      });
+
+      // Handle user online/offline with inline handlers (they modify the data so we can't reuse)
+      const userOnlineHandler = (data: any) => this.handleWebSocketPresence({ ...data, isOnline: true });
+      const userOfflineHandler = (data: any) => this.handleWebSocketPresence({ ...data, isOnline: false });
+
+      this.boundWebSocketHandlers.set('user_online', userOnlineHandler);
+      this.boundWebSocketHandlers.set('user_offline', userOfflineHandler);
+
+      ws.on('user_online', userOnlineHandler);
+      ws.on('user_offline', userOfflineHandler);
 
       this.emitEvent('connection_change', {
         isConnected: ws.isConnected,
         mode: ws.isConnected ? 'websocket' : 'offline'
       });
+
+      console.log('[UnifiedMessaging] WebSocket connection established and handlers registered');
     }
   }
 
@@ -216,16 +237,17 @@ class UnifiedMessagingService {
    * Clean up resources
    */
   async cleanup(): Promise<void> {
-    // Unsubscribe from WebSocket events
-    if (this.wsConnection) {
-      this.wsConnection.off('new_message', this.handleWebSocketMessage.bind(this));
-      this.wsConnection.off('message_deleted', this.handleWebSocketMessageDeleted.bind(this));
-      this.wsConnection.off('message_edited', this.handleWebSocketMessageEdited.bind(this));
-      this.wsConnection.off('user_typing', this.handleWebSocketTyping.bind(this));
-      this.wsConnection.off('user_stopped_typing', this.handleWebSocketStopTyping.bind(this));
-      this.wsConnection.off('message_read', this.handleWebSocketReadReceipt.bind(this));
-      this.wsConnection.off('user_status_update', this.handleWebSocketPresence.bind(this));
-      this.wsConnection.off('reaction_update', this.handleWebSocketReaction.bind(this));
+    // Unsubscribe from WebSocket events using stored bound handlers
+    if (this.wsConnection && this.boundWebSocketHandlers.size > 0) {
+      this.boundWebSocketHandlers.forEach((handler, event) => {
+        try {
+          this.wsConnection!.off(event, handler);
+        } catch (error) {
+          console.warn(`[UnifiedMessaging] Failed to unsubscribe from ${event}:`, error);
+        }
+      });
+      this.boundWebSocketHandlers.clear();
+      console.log('[UnifiedMessaging] WebSocket handlers unregistered');
     }
 
     // Clear caches

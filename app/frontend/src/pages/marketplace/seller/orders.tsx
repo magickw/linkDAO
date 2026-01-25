@@ -150,7 +150,7 @@ export default function SellerOrdersPage() {
                             key={`${notif.event}-${index}`}
                             className="flex items-start gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer transition-colors"
                             onClick={() => {
-                              router.push(`/marketplace/seller/orders/${notif.data.orderId}`);
+                              router.push(`/marketplace/orders/${notif.data.orderId}`);
                               setShowNotificationPanel(false);
                             }}
                           >
@@ -273,13 +273,12 @@ export default function SellerOrdersPage() {
                             <p className="text-white">{order.totalAmount} {order.currency}</p>
                           </td>
                           <td className="py-4">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              order.status === 'pending' ? 'bg-yellow-500/20 text-yellow-300' :
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${order.status === 'pending' ? 'bg-yellow-500/20 text-yellow-300' :
                               order.status === 'processing' ? 'bg-blue-500/20 text-blue-300' :
-                              order.status === 'shipped' ? 'bg-purple-500/20 text-purple-300' :
-                              order.status === 'delivered' ? 'bg-green-500/20 text-green-300' :
-                              'bg-gray-500/20 text-gray-300'
-                            }`}>
+                                order.status === 'shipped' ? 'bg-purple-500/20 text-purple-300' :
+                                  order.status === 'delivered' ? 'bg-green-500/20 text-green-300' :
+                                    'bg-gray-500/20 text-gray-300'
+                              }`}>
                               {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                             </span>
                           </td>
@@ -287,9 +286,9 @@ export default function SellerOrdersPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => router.push(`/marketplace/seller/orders/${order.id}`)}
+                              onClick={() => router.push(`/marketplace/orders/${order.id}`)}
                             >
-                              View
+                              Track Order
                             </Button>
                           </td>
                         </tr>
