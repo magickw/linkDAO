@@ -1,5 +1,6 @@
 import React from 'react';
 import type { FulfillmentMetrics } from '../../types/fulfillment';
+import { GlassPanel } from '../../design-system';
 
 interface MetricsOverviewProps {
     metrics?: {
@@ -15,10 +16,10 @@ export function MetricsOverview({ metrics }: MetricsOverviewProps) {
         return (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[...Array(4)].map((_, i) => (
-                    <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 animate-pulse">
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4"></div>
-                        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-                    </div>
+                    <GlassPanel key={i} className="p-6 animate-pulse">
+                        <div className="h-4 bg-gray-700 rounded w-3/4 mb-4"></div>
+                        <div className="h-8 bg-gray-700 rounded w-1/2"></div>
+                    </GlassPanel>
                 ))}
             </div>
         );
@@ -56,33 +57,33 @@ export function MetricsOverview({ metrics }: MetricsOverviewProps) {
     ];
 
     const colorClasses = {
-        green: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800',
-        yellow: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800',
-        red: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800',
-        blue: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',
-        purple: 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800',
+        green: 'border-green-500/30 bg-green-500/10 text-green-400',
+        yellow: 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400',
+        red: 'border-red-500/30 bg-red-500/10 text-red-400',
+        blue: 'border-blue-500/30 bg-blue-500/10 text-blue-400',
+        purple: 'border-purple-500/30 bg-purple-500/10 text-purple-400',
     };
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {cards.map((card, index) => (
-                <div
+                <GlassPanel
                     key={index}
-                    className={`rounded-lg shadow p-6 border-2 ${colorClasses[card.color as keyof typeof colorClasses]}`}
+                    className={`p-6 border ${colorClasses[card.color as keyof typeof colorClasses].split(' ')[0]}`}
                 >
                     <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                        <h3 className="text-sm font-medium text-gray-400">
                             {card.title}
                         </h3>
                         <span className="text-2xl">{card.icon}</span>
                     </div>
-                    <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                    <p className={`text-3xl font-bold ${colorClasses[card.color as keyof typeof colorClasses].split(' ').pop()}`}>
                         {card.value}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                         {card.subtitle}
                     </p>
-                </div>
+                </GlassPanel>
             ))}
         </div>
     );

@@ -1,11 +1,11 @@
 import express from 'express';
 import { fulfillmentMetricsController } from '../controllers/fulfillmentMetricsController';
-import { authenticateToken } from '../middleware/auth';
+import { authMiddleware } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
 // All routes require authentication
-router.use(authenticateToken);
+router.use(authMiddleware);
 
 /**
  * GET /api/seller/metrics/fulfillment

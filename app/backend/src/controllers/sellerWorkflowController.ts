@@ -421,8 +421,9 @@ export class SellerWorkflowController {
             return res.json(result);
         } catch (error: any) {
             safeLogger.error('Error completing digital delivery:', error);
-            const status = error.message === 'Unauthorized' ? 403 :
-                           error.message === 'Order not found' ? 404 : 500;
+            const status = error.statusCode || 
+                           (error.message === 'Unauthorized' ? 403 :
+                           error.message === 'Order not found' ? 404 : 500);
             return res.status(status).json({ error: error.message || 'Failed to complete digital delivery' });
         }
     }

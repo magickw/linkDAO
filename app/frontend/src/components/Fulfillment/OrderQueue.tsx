@@ -23,7 +23,7 @@ export function OrderQueue({
         return (
             <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
-                    <div key={i} className="bg-gray-100 dark:bg-gray-700 rounded-lg h-32 animate-pulse"></div>
+                    <div key={i} className="bg-gray-800 rounded-lg h-32 animate-pulse"></div>
                 ))}
             </div>
         );
@@ -33,10 +33,10 @@ export function OrderQueue({
         return (
             <div className="text-center py-12">
                 <div className="text-6xl mb-4">📭</div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                <h3 className="text-lg font-medium text-white mb-2">
                     No orders in this queue
                 </h3>
-                <p className="text-gray-500 dark:text-gray-400">
+                <p className="text-gray-400">
                     All caught up! Check back later.
                 </p>
             </div>
@@ -46,14 +46,14 @@ export function OrderQueue({
     return (
         <div className="space-y-4">
             {/* Select All */}
-            <div className="flex items-center px-4 py-2 bg-gray-50 dark:bg-gray-700/50 rounded">
+            <div className="flex items-center px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg">
                 <input
                     type="checkbox"
                     checked={selectedOrders.length === orders.length}
                     onChange={onSelectAll}
-                    className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                    className="h-4 w-4 text-blue-600 rounded border-gray-600 bg-gray-700 focus:ring-blue-500"
                 />
-                <label className="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                <label className="ml-3 text-sm text-gray-300">
                     Select all ({orders.length})
                 </label>
             </div>

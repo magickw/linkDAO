@@ -1,6 +1,6 @@
 import express from 'express';
 import { orderAutomationController } from '../controllers/orderAutomationController';
-import { authenticateToken } from '../middleware/auth';
+import { authMiddleware } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
@@ -14,19 +14,19 @@ router.get('/orders/:orderId/automation-log', orderAutomationController.getAutom
  * POST /api/orders/:orderId/automation/trigger
  * Manually trigger automation for an order
  */
-router.post('/orders/:orderId/automation/trigger', authenticateToken, orderAutomationController.triggerAutomation.bind(orderAutomationController));
+router.post('/orders/:orderId/automation/trigger', authMiddleware, orderAutomationController.triggerAutomation.bind(orderAutomationController));
 
 /**
  * GET /api/automation/rules
  * Get all automation rules and their status
  */
-router.get('/automation/rules', authenticateToken, orderAutomationController.getRules.bind(orderAutomationController));
+router.get('/automation/rules', authMiddleware, orderAutomationController.getRules.bind(orderAutomationController));
 
 /**
  * PUT /api/automation/rules/:ruleName
  * Enable or disable an automation rule (admin only)
  */
-router.put('/automation/rules/:ruleName', authenticateToken, orderAutomationController.updateRule.bind(orderAutomationController));
+router.put('/automation/rules/:ruleName', authMiddleware, orderAutomationController.updateRule.bind(orderAutomationController));
 
 /**
  * POST /api/automation/process-all

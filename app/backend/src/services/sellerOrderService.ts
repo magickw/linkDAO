@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { sellers, orders, users, orderEvents } from '../db/schema';
+import { sellers, orders, users, orderEvents, products } from '../db/schema';
 import { eq, and, desc, sql, asc, inArray } from 'drizzle-orm';
 
 /**
@@ -45,6 +45,7 @@ interface OrderWithBuyer {
   escrowId?: string;
   checkoutSessionId?: string;
   paymentMethod?: string;
+  items?: any[];
 }
 
 /**
@@ -164,6 +165,38 @@ class SellerOrderService {
     const buyerResult = await db.select().from(users).where(eq(users.id, order.buyerId));
     const buyer = buyerResult[0];
 
+    // Get product details
+    let items: any[] = [];
+    if (order.listingId) {
+      try {
+        const productResult = await db.select().from(products).where(eq(products.id, order.listingId));
+        const product = productResult[0];
+        
+        if (product) {
+          let image = '';
+          try {
+            const images = typeof product.images === 'string' ? JSON.parse(product.images) : product.images;
+            image = Array.isArray(images) && images.length > 0 ? images[0] : '';
+          } catch (e) {
+            image = '';
+          }
+
+          items.push({
+            id: product.id,
+            title: product.title,
+            quantity: order.quantity || 1,
+            price: order.amount,
+            image: image,
+            isPhysical: product.isPhysical,
+            isService: product.isService,
+            serviceType: product.serviceType
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching product details:', err);
+      }
+    }
+
     return {
       id: order.id,
       buyerId: order.buyerId?.toString() || '',
@@ -183,6 +216,7 @@ class SellerOrderService {
       escrowId: order.escrowId || undefined,
       checkoutSessionId: order.checkoutSessionId || undefined,
       paymentMethod: order.paymentMethod || undefined,
+      items
     };
   }
 

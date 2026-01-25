@@ -5,6 +5,7 @@ import { ShippingService } from './shippingService';
 import { NotificationService } from './notificationService';
 import { OrderStatus } from '../models/Order';
 import { v4 as uuidv4 } from 'uuid';
+import { ValidationError, NotFoundError, UnauthorizedError } from '../middleware/errorHandler';
 
 export interface SellerDashboardStats {
     pendingCount: number;
@@ -788,10 +789,10 @@ export class SellerWorkflowService {
     async completeDigitalDelivery(orderId: string, sellerId: string, deliveryNotes?: string): Promise<any> {
         try {
             const order = await this.databaseService.getOrderById(orderId);
-            if (!order) throw new Error('Order not found');
+            if (!order) throw new NotFoundError('Order not found');
 
             const isSeller = order.sellerId === sellerId || order.sellerWalletAddress === sellerId;
-            if (!isSeller) throw new Error('Unauthorized');
+            if (!isSeller) throw new UnauthorizedError('Unauthorized');
 
             // For digital products, we can transition from PAID or PROCESSING to DELIVERED
             // Normalize status comparison to handle case differences (DB stores lowercase, enum is uppercase)
@@ -801,7 +802,7 @@ export class SellerWorkflowService {
                 normalizedStatus !== OrderStatus.PROCESSING &&
                 normalizedStatus !== 'PENDING' &&
                 normalizedStatus !== OrderStatus.PAYMENT_PENDING) {
-                throw new Error(`Order must be PAID, PROCESSING or PENDING to complete digital delivery. Current status: ${order.status}`);
+                throw new ValidationError(`Order must be PAID, PROCESSING or PENDING to complete digital delivery. Current status: ${order.status}`);
             }
 
             const completedAt = new Date();

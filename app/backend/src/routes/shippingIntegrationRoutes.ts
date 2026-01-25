@@ -1,6 +1,6 @@
 import express from 'express';
 import { shippingIntegrationController } from '../controllers/shippingIntegrationController';
-import { authenticateToken } from '../middleware/auth';
+import { authMiddleware } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
@@ -8,19 +8,19 @@ const router = express.Router();
  * POST /api/shipping/rates
  * Get shipping rates for an order
  */
-router.post('/rates', authenticateToken, shippingIntegrationController.getRates.bind(shippingIntegrationController));
+router.post('/rates', authMiddleware, shippingIntegrationController.getRates.bind(shippingIntegrationController));
 
 /**
  * POST /api/shipping/labels
  * Purchase a shipping label
  */
-router.post('/labels', authenticateToken, shippingIntegrationController.purchaseLabel.bind(shippingIntegrationController));
+router.post('/labels', authMiddleware, shippingIntegrationController.purchaseLabel.bind(shippingIntegrationController));
 
 /**
  * GET /api/shipping/labels/:orderId
  * Get shipping label for an order
  */
-router.get('/labels/:orderId', authenticateToken, shippingIntegrationController.getLabel.bind(shippingIntegrationController));
+router.get('/labels/:orderId', authMiddleware, shippingIntegrationController.getLabel.bind(shippingIntegrationController));
 
 /**
  * GET /api/shipping/track/:trackingNumber
@@ -38,6 +38,6 @@ router.post('/webhooks/easypost', shippingIntegrationController.handleWebhook.bi
  * POST /api/shipping/validate-address
  * Validate an address
  */
-router.post('/validate-address', authenticateToken, shippingIntegrationController.validateAddress.bind(shippingIntegrationController));
+router.post('/validate-address', authMiddleware, shippingIntegrationController.validateAddress.bind(shippingIntegrationController));
 
 export default router;

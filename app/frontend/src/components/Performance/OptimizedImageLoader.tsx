@@ -251,7 +251,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
 
   const imgRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const intersectionObserverRef = useRef<IntersectionObserver>();
+  const intersectionObserverRef = useRef<IntersectionObserver | null>(null);
 
   // Generate optimized image URL
   const optimizedSrc = useMemo(() => {
@@ -285,7 +285,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
       }
     );
 
-    intersectionObserverRef.current.observe(containerRef.current);
+    intersectionObserverRef.current?.observe(containerRef.current);
 
     return () => {
       intersectionObserverRef.current?.disconnect();

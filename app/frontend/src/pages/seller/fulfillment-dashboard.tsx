@@ -5,6 +5,7 @@ import { MetricsOverview } from '../../components/Fulfillment/MetricsOverview';
 import { OrderQueue } from '../../components/Fulfillment/OrderQueue';
 import { BulkActionsBar } from '../../components/Fulfillment/BulkActionsBar';
 import { ShippingLabelModal } from '../../components/Fulfillment/ShippingLabelModal';
+import { GlassPanel, Button, LoadingSkeleton } from '../../design-system';
 import type { QueueType } from '../../types/fulfillment';
 
 export default function FulfillmentDashboardPage() {
@@ -62,8 +63,9 @@ export default function FulfillmentDashboardPage() {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="space-y-4 p-6">
+                <LoadingSkeleton className="h-12 w-full" />
+                <LoadingSkeleton className="h-64 w-full" />
             </div>
         );
     }
@@ -76,85 +78,78 @@ export default function FulfillmentDashboardPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="space-y-6">
             {/* Header */}
-            <div className="bg-white dark:bg-gray-800 shadow">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                        Fulfillment Dashboard
-                    </h1>
-                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                        Manage your orders and shipping efficiently
-                    </p>
-                </div>
+            <div className="flex flex-col gap-2">
+                <h1 className="text-2xl font-bold text-white">
+                    Fulfillment Dashboard
+                </h1>
+                <p className="text-gray-400">
+                    Manage your orders and shipping efficiently
+                </p>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Metrics Overview */}
-                <MetricsOverview metrics={dashboard?.metrics} />
+            {/* Metrics Overview */}
+            <MetricsOverview metrics={dashboard?.metrics} />
 
-                {/* Queue Tabs */}
-                <div className="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow">
-                    <div className="border-b border-gray-200 dark:border-gray-700">
-                        <nav className="flex -mb-px">
-                            {tabs.map((tab) => (
-                                <button
-                                    key={tab.key}
-                                    onClick={() => {
-                                        setActiveTab(tab.key);
-                                        setSelectedOrders([]);
-                                    }}
-                                    className={`
-                    flex-1 py-4 px-1 text-center border-b-2 font-medium text-sm
-                    ${activeTab === tab.key
-                                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+            {/* Queue Tabs */}
+            <GlassPanel className="p-6">
+                <div className="border-b border-gray-700 mb-6">
+                    <nav className="flex space-x-4">
+                        {tabs.map((tab) => (
+                            <button
+                                key={tab.key}
+                                onClick={() => {
+                                    setActiveTab(tab.key);
+                                    setSelectedOrders([]);
+                                }}
+                                className={`
+                                    py-3 px-4 text-center font-medium text-sm rounded-t-lg transition-colors relative
+                                    ${activeTab === tab.key
+                                        ? 'text-purple-400 border-b-2 border-purple-500 bg-purple-500/10'
+                                        : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+                                    }
+                                `}
+                            >
+                                <span className="mr-2">{tab.icon}</span>
+                                {tab.label}
+                                {tab.count > 0 && (
+                                    <span className={`
+                                        ml-2 px-2 py-0.5 rounded-full text-xs
+                                        ${tab.urgent
+                                            ? 'bg-red-900/50 text-red-200'
+                                            : 'bg-gray-700 text-gray-300'
                                         }
-                    ${tab.urgent && tab.count > 0 ? 'animate-pulse' : ''}
-                  `}
-                                >
-                                    <span className="mr-2">{tab.icon}</span>
-                                    {tab.label}
-                                    {tab.count > 0 && (
-                                        <span className={`
-                      ml-2 px-2 py-1 rounded-full text-xs
-                      ${tab.urgent
-                                                ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                                                : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                                            }
-                    `}>
-                                            {tab.count}
-                                        </span>
-                                    )}
-                                </button>
-                            ))}
-                        </nav>
-                    </div>
-
-                    {/* Bulk Actions Bar */}
-                    {selectedOrders.length > 0 && (
-                        <BulkActionsBar
-                            selectedCount={selectedOrders.length}
-                            onMarkShipped={() => handleBulkAction('mark_shipped')}
-                            onPrintLabels={() => handleBulkAction('print_labels')}
-                            onExportCSV={() => handleBulkAction('export_csv')}
-                            onClear={() => setSelectedOrders([])}
-                        />
-                    )}
-
-                    {/* Order Queue */}
-                    <div className="p-6">
-                        <OrderQueue
-                            orders={queueOrders || []}
-                            selectedOrders={selectedOrders}
-                            onSelectOrder={handleSelectOrder}
-                            onSelectAll={handleSelectAll}
-                            onShipOrder={handleShipOrder}
-                            loading={queueLoading}
-                        />
-                    </div>
+                                    `}>
+                                        {tab.count}
+                                    </span>
+                                )}
+                            </button>
+                        ))}
+                    </nav>
                 </div>
-            </div>
+
+                {/* Bulk Actions Bar */}
+                {selectedOrders.length > 0 && (
+                    <BulkActionsBar
+                        selectedCount={selectedOrders.length}
+                        onMarkShipped={() => handleBulkAction('mark_shipped')}
+                        onPrintLabels={() => handleBulkAction('print_labels')}
+                        onExportCSV={() => handleBulkAction('export_csv')}
+                        onClear={() => setSelectedOrders([])}
+                    />
+                )}
+
+                {/* Order Queue */}
+                <OrderQueue
+                    orders={queueOrders || []}
+                    selectedOrders={selectedOrders}
+                    onSelectOrder={handleSelectOrder}
+                    onSelectAll={handleSelectAll}
+                    onShipOrder={handleShipOrder}
+                    loading={queueLoading}
+                />
+            </GlassPanel>
 
             {/* Shipping Label Modal */}
             {labelModalOpen && selectedOrderForLabel && (
