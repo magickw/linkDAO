@@ -12,34 +12,6 @@ const router = Router();
 const controller = new NotificationController();
 
 /**
- * POST /api/notifications/register
- * Register device token for push notifications
- */
-router.post(
-    '/register',
-    authMiddleware,
-    [
-        body('token').isString().notEmpty(),
-        body('platform').isIn(['ios', 'android', 'web', 'expo']),
-        body('deviceInfo').optional().isObject(),
-    ],
-    controller.registerToken
-);
-
-/**
- * POST /api/notifications/unregister
- * Unregister device token for push notifications
- */
-router.post(
-    '/unregister',
-    authMiddleware,
-    [
-        body('token').isString().notEmpty(),
-    ],
-    controller.unregisterToken
-);
-
-/**
  * GET /api/notifications/preferences
  * Get user's notification preferences
  */
@@ -47,16 +19,6 @@ router.get(
     '/preferences',
     authMiddleware,
     controller.getPreferences
-);
-
-/**
- * GET /api/notifications
- * Get user notifications
- */
-router.get(
-    '/',
-    authMiddleware,
-    controller.getNotifications
 );
 
 /**
@@ -87,6 +49,44 @@ router.put(
     '/:id/read',
     authMiddleware,
     controller.markAsRead
+);
+
+/**
+ * GET /api/notifications
+ * Get user notifications
+ */
+router.get(
+    '/',
+    authMiddleware,
+    controller.getNotifications
+);
+
+/**
+ * POST /api/notifications/register
+ * Register device token for push notifications
+ */
+router.post(
+    '/register',
+    authMiddleware,
+    [
+        body('token').isString().notEmpty(),
+        body('platform').isIn(['ios', 'android', 'web', 'expo']),
+        body('deviceInfo').optional().isObject(),
+    ],
+    controller.registerToken
+);
+
+/**
+ * POST /api/notifications/unregister
+ * Unregister device token for push notifications
+ */
+router.post(
+    '/unregister',
+    authMiddleware,
+    [
+        body('token').isString().notEmpty(),
+    ],
+    controller.unregisterToken
 );
 
 /**

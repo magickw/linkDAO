@@ -491,7 +491,7 @@ import feedRoutes from './routes/feedRoutes';
 import userRoutes from './routes/userRoutes';
 import communityRoutes from './routes/communityRoutes';
 import { commentRoutes } from './routes/commentRoutes';
-import notificationRoutes from './routes/realTimeNotificationRoutes';
+import notificationRoutes from './routes/notificationRoutes';
 import { userNotificationRoutes } from './routes/userNotificationRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import healthRoutes from './routes/healthRoutes';
