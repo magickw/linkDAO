@@ -5,6 +5,37 @@ import { Button, GlassPanel, LoadingSkeleton } from '@/design-system';
 import Layout from '@/components/Layout';
 import { useOrderNotifications } from '@/hooks/useOrderNotifications';
 import { Bell, Package, Truck, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import OrderProgressBar from '@/components/Marketplace/OrderTracking/OrderProgressBar';
+import OrderStatusBadge from '@/components/Marketplace/OrderTracking/OrderStatusBadge';
+
+// Helper function to map order status to progress bar stage
+const mapStatusToStage = (status: string): 'created' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'cancelled' => {
+  const statusLower = status.toLowerCase();
+  switch (statusLower) {
+    case 'created':
+    case 'pending':
+      return 'created';
+    case 'paid':
+    case 'payment_confirmed':
+    case 'payment_received':
+      return 'paid';
+    case 'processing':
+    case 'preparing':
+      return 'processing';
+    case 'shipped':
+    case 'in_transit':
+    case 'out_for_delivery':
+      return 'shipped';
+    case 'delivered':
+    case 'completed':
+      return 'delivered';
+    case 'cancelled':
+    case 'refunded':
+      return 'cancelled';
+    default:
+      return 'created';
+  }
+};
 
 export default function SellerOrdersPage() {
   const router = useRouter();
@@ -247,6 +278,7 @@ export default function SellerOrdersPage() {
                         <th className="text-left py-3 text-gray-300 font-medium">Customer</th>
                         <th className="text-left py-3 text-gray-300 font-medium">Amount</th>
                         <th className="text-left py-3 text-gray-300 font-medium">Status</th>
+                        <th className="text-left py-3 text-gray-300 font-medium">Progress</th>
                         <th className="text-left py-3 text-gray-300 font-medium">Actions</th>
                       </tr>
                     </thead>
@@ -259,6 +291,19 @@ export default function SellerOrdersPage() {
                               <p className="text-gray-400 text-sm">
                                 {new Date(order.createdAt).toLocaleDateString()}
                               </p>
+                              {order.estimatedDelivery && (
+                                <div className="flex items-center gap-1 mt-1 text-xs text-blue-400">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                  <span>
+                                    {new Date(order.estimatedDelivery).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </td>
                           <td className="py-4">
@@ -273,14 +318,18 @@ export default function SellerOrdersPage() {
                             <p className="text-white">{order.totalAmount} {order.currency}</p>
                           </td>
                           <td className="py-4">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${order.status === 'pending' ? 'bg-yellow-500/20 text-yellow-300' :
-                              order.status === 'processing' ? 'bg-blue-500/20 text-blue-300' :
-                                order.status === 'shipped' ? 'bg-purple-500/20 text-purple-300' :
-                                  order.status === 'delivered' ? 'bg-green-500/20 text-green-300' :
-                                    'bg-gray-500/20 text-gray-300'
-                              }`}>
-                              {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                            </span>
+                            <OrderStatusBadge 
+                              status={order.status} 
+                              size="sm"
+                            />
+                          </td>
+                          <td className="py-4">
+                            <div className="w-48">
+                              <OrderProgressBar 
+                                currentStage={mapStatusToStage(order.status)}
+                                estimatedDelivery={order.estimatedDelivery}
+                              />
+                            </div>
                           </td>
                           <td className="py-4">
                             <Button

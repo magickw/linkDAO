@@ -27,6 +27,7 @@ import { Button } from '@/design-system/components/Button';
 import Layout from '@/components/Layout';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import OrderProgressBar from '@/components/Marketplace/OrderTracking/OrderProgressBar';
 
 interface Order {
     id: string;
@@ -86,6 +87,35 @@ interface OrderItem {
     isPhysical?: boolean;
     isService?: boolean;
 }
+
+// Helper function to map order status to progress bar stage
+const mapStatusToStage = (status: string): 'created' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'cancelled' => {
+    const statusLower = status.toLowerCase();
+    switch (statusLower) {
+        case 'created':
+        case 'pending':
+            return 'created';
+        case 'paid':
+        case 'payment_confirmed':
+        case 'payment_received':
+            return 'paid';
+        case 'processing':
+        case 'preparing':
+            return 'processing';
+        case 'shipped':
+        case 'in_transit':
+        case 'out_for_delivery':
+            return 'shipped';
+        case 'delivered':
+        case 'completed':
+            return 'delivered';
+        case 'cancelled':
+        case 'refunded':
+            return 'cancelled';
+        default:
+            return 'created';
+    }
+};
 
 export default function OrdersPage() {
     const { user } = useAuth();
@@ -496,13 +526,29 @@ function OrderCard({ order, onViewDetails, onCancelOrder, canCancel, isCancellin
                     {getStatusIcon(order.status || 'pending')}
                     <div>
                         <h3 className="font-semibold text-white">Order #{order.orderNumber || 'N/A'}</h3>
-                        <p className="text-sm text-white/60">
-                            {order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-US', {
-                                month: 'long',
-                                day: 'numeric',
-                                year: 'numeric'
-                            }) : 'Unknown date'}
-                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                            <p className="text-sm text-white/60">
+                                {order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-US', {
+                                    month: 'long',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                }) : 'Unknown date'}
+                            </p>
+                            {order.estimatedDelivery && (
+                                <>
+                                    <span className="text-white/40">•</span>
+                                    <div className="flex items-center gap-1 text-sm text-blue-400">
+                                        <Calendar size={14} />
+                                        <span>
+                                            {new Date(order.estimatedDelivery).toLocaleDateString('en-US', {
+                                                month: 'short',
+                                                day: 'numeric'
+                                            })}
+                                        </span>
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(order.status || 'pending')}`}>
@@ -540,6 +586,14 @@ function OrderCard({ order, onViewDetails, onCancelOrder, canCancel, isCancellin
                 <p className="text-sm text-white/60">
                     {(order.items || []).length} item{(order.items || []).length !== 1 ? 's' : ''}
                 </p>
+            </div>
+
+            {/* Order Progress Bar */}
+            <div className="mb-4">
+                <OrderProgressBar 
+                    currentStage={mapStatusToStage(order.status || 'pending')}
+                    estimatedDelivery={order.estimatedDelivery}
+                />
             </div>
 
             {/* Tracking Info */}

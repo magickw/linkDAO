@@ -57,19 +57,19 @@ const TrackingDisplay: React.FC<TrackingDisplayProps> = ({
 
   const getTrackingStatusColor = (status: string) => {
     const statusColors: Record<string, string> = {
-      'DELIVERED': 'text-green-600 bg-green-100 border-green-200',
-      'OUT_FOR_DELIVERY': 'text-blue-600 bg-blue-100 border-blue-200',
-      'IN_TRANSIT': 'text-yellow-600 bg-yellow-100 border-yellow-200',
-      'TRANSIT': 'text-yellow-600 bg-yellow-100 border-yellow-200', // Mock service uses TRANSIT
-      'PICKED_UP': 'text-purple-600 bg-purple-100 border-purple-200',
-      'LABEL_CREATED': 'text-gray-600 bg-gray-100 border-gray-200',
-      'PRE_TRANSIT': 'text-gray-600 bg-gray-100 border-gray-200', // Mock service uses PRE_TRANSIT
-      'EXCEPTION': 'text-red-600 bg-red-100 border-red-200',
-      'FAILURE': 'text-red-600 bg-red-100 border-red-200',
-      'DELAYED': 'text-orange-600 bg-orange-100 border-orange-200',
+      'DELIVERED': 'text-green-700 bg-green-100 border-green-300 dark:text-green-400 dark:bg-green-900/30 dark:border-green-600',
+      'OUT_FOR_DELIVERY': 'text-blue-700 bg-blue-100 border-blue-300 dark:text-blue-400 dark:bg-blue-900/30 dark:border-blue-600',
+      'IN_TRANSIT': 'text-indigo-700 bg-indigo-100 border-indigo-300 dark:text-indigo-400 dark:bg-indigo-900/30 dark:border-indigo-600',
+      'TRANSIT': 'text-indigo-700 bg-indigo-100 border-indigo-300 dark:text-indigo-400 dark:bg-indigo-900/30 dark:border-indigo-600',
+      'PICKED_UP': 'text-purple-700 bg-purple-100 border-purple-300 dark:text-purple-400 dark:bg-purple-900/30 dark:border-purple-600',
+      'LABEL_CREATED': 'text-gray-700 bg-gray-100 border-gray-300 dark:text-gray-400 dark:bg-gray-800 dark:border-gray-600',
+      'PRE_TRANSIT': 'text-gray-700 bg-gray-100 border-gray-300 dark:text-gray-400 dark:bg-gray-800 dark:border-gray-600',
+      'EXCEPTION': 'text-red-700 bg-red-100 border-red-300 dark:text-red-400 dark:bg-red-900/30 dark:border-red-600',
+      'FAILURE': 'text-red-700 bg-red-100 border-red-300 dark:text-red-400 dark:bg-red-900/30 dark:border-red-600',
+      'DELAYED': 'text-orange-700 bg-orange-100 border-orange-300 dark:text-orange-400 dark:bg-orange-900/30 dark:border-orange-600',
     };
 
-    return statusColors[status] || statusColors[status.toUpperCase()] || 'text-gray-600 bg-gray-100 border-gray-200';
+    return statusColors[status] || statusColors[status.toUpperCase()] || 'text-gray-700 bg-gray-100 border-gray-300 dark:text-gray-400 dark:bg-gray-800 dark:border-gray-600';
   };
 
   const getTrackingStatusIcon = (status: string) => {
@@ -87,7 +87,21 @@ const TrackingDisplay: React.FC<TrackingDisplayProps> = ({
   };
 
   const formatTrackingStatus = (status: string) => {
-    return status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+    const statusDescriptions: Record<string, string> = {
+      'DELIVERED': 'Delivered',
+      'OUT_FOR_DELIVERY': 'Out for Delivery',
+      'IN_TRANSIT': 'In Transit',
+      'TRANSIT': 'In Transit',
+      'PICKED_UP': 'Picked Up',
+      'LABEL_CREATED': 'Label Created',
+      'PRE_TRANSIT': 'Preparing for Shipment',
+      'EXCEPTION': 'Delivery Exception',
+      'FAILURE': 'Delivery Failed',
+      'DELAYED': 'Delayed',
+    };
+
+    return statusDescriptions[status] || statusDescriptions[status.toUpperCase()] || 
+           status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const getNormalizedStatus = (status: string) => {
@@ -135,6 +149,39 @@ const TrackingDisplay: React.FC<TrackingDisplayProps> = ({
 
       {/* Tracking Summary */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        {/* Current Status - Prominent Display */}
+        {trackingInfo?.status && (
+          <div className="mb-6 p-4 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${getTrackingStatusColor(trackingInfo.status).split(' ')[1]} ${getTrackingStatusColor(trackingInfo.status).split(' ')[2]}`}>
+                  {React.createElement(getTrackingStatusIcon(trackingInfo.status), { size: 24, className: getTrackingStatusColor(trackingInfo.status).split(' ')[0] })}
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide font-medium">
+                    Current Status
+                  </p>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {formatTrackingStatus(trackingInfo.status)}
+                  </p>
+                </div>
+              </div>
+              {onRefresh && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onRefresh}
+                  disabled={loading}
+                  className="border-blue-300 dark:border-blue-700"
+                >
+                  <RefreshCw size={16} className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Tracking Details */}
           <div className="space-y-4">
@@ -143,12 +190,13 @@ const TrackingDisplay: React.FC<TrackingDisplayProps> = ({
                 Tracking Number
               </label>
               <div className="flex items-center space-x-2 mt-1">
-                <span className="font-mono text-lg text-gray-900 dark:text-white">
+                <span className="font-mono text-lg text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded">
                   {order.trackingNumber}
                 </span>
                 <button
                   onClick={copyTrackingNumber}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                  title="Copy tracking number"
                 >
                   <Copy size={16} />
                 </button>
@@ -156,7 +204,8 @@ const TrackingDisplay: React.FC<TrackingDisplayProps> = ({
                   href={getCarrierUrl(order.trackingCarrier || '', order.trackingNumber)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-500 hover:text-blue-600"
+                  className="p-1.5 text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                  title="Track on carrier website"
                 >
                   <ExternalLink size={16} />
                 </a>
@@ -167,24 +216,10 @@ const TrackingDisplay: React.FC<TrackingDisplayProps> = ({
               <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
                 Carrier
               </label>
-              <div className="text-lg text-gray-900 dark:text-white mt-1">
+              <div className="text-lg text-gray-900 dark:text-white mt-1 font-medium">
                 {order.trackingCarrier || 'Unknown'}
               </div>
             </div>
-
-            {trackingInfo?.status && (
-              <div>
-                <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Current Status
-                </label>
-                <div className="mt-1">
-                  <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getTrackingStatusColor(trackingInfo.status)}`}>
-                    {React.createElement(getTrackingStatusIcon(trackingInfo.status), { size: 16, className: 'mr-2' })}
-                    {formatTrackingStatus(trackingInfo.status)}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Delivery Information */}

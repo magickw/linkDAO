@@ -91,7 +91,7 @@ export default function PostDetail({
 
   // Standalone Reddit-style layout
   return (
-    <div className={`relative grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-6 w-full px-0 sm:px-2 lg:px-4 mx-auto max-w-screen-2xl ${className}`}>
+    <div className={`relative grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-6 w-full px-4 sm:px-6 lg:px-8 ${className}`}>
       {/* Left Navigation Sidebar - Hidden on mobile */}
       <div className="hidden lg:block lg:col-span-3">
         <div className="sticky top-24 space-y-4">

@@ -15,8 +15,11 @@ const router = express.Router();
 router.get('/:shareId', async (req, res) => {
   try {
     const { shareId } = req.params;
+    console.log(`[shareRoutes] Resolving share ID: ${shareId}`);
 
     const post = await postController.postService.getPostByShareId(shareId);
+    console.log(`[shareRoutes] Post lookup result:`, post ? 'Found' : 'Not found');
+
     if (post) {
       return res.json({
         success: true,
@@ -27,12 +30,13 @@ router.get('/:shareId', async (req, res) => {
     }
 
     // Not found
+    console.log(`[shareRoutes] Share ID not found: ${shareId}`);
     return res.status(404).json({
       success: false,
       error: 'Share not found'
     });
   } catch (error: any) {
-    console.error('Error resolving share ID:', error);
+    console.error('[shareRoutes] Error resolving share ID:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to resolve share'
