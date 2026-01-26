@@ -9,7 +9,8 @@ import {
   ArrowLeft,
   Share2,
   Users,
-  Calendar
+  Calendar,
+  Shield
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/context/ToastContext';
