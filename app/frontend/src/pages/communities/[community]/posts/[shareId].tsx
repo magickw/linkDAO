@@ -194,15 +194,13 @@ export default function CommunityPostPage() {
             <div className="fixed inset-0 bg-gradient-to-br from-blue-50/30 via-purple-50/20 to-pink-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 pointer-events-none" />
 
             <div className="relative min-h-screen bg-gray-50 dark:bg-gray-900 pt-0 lg:pt-6">
-                <div className="w-full px-0 sm:px-2 lg:px-4 mx-auto max-w-screen-2xl">
-                    <PostDetail
-                        post={post}
-                        community={community}
-                        userMembership={userMembership}
-                        onVote={handleVote}
-                        isStandalone={true}
-                    />
-                </div>
+                <PostDetail
+                    post={post}
+                    community={community}
+                    userMembership={userMembership}
+                    onVote={handleVote}
+                    isStandalone={true}
+                />
             </div>
         </Layout>
     );

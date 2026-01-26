@@ -4,18 +4,12 @@ import { EnhancedPost } from '@/types/feed';
 import { Community } from '@/models/Community';
 import { CommunityMembership } from '@/models/CommunityMembership';
 import CommunityPostCardEnhanced from './CommunityPostCardEnhanced';
-import EnhancedCommentSystem from '../EnhancedCommentSystem';
 import CommunityAvatar from './CommunityAvatar';
-import { 
-  ArrowLeft, 
-  Share2, 
-  Users, 
-  ExternalLink, 
-  MessageCircle,
-  Clock,
-  Shield,
-  Calendar,
-  Info
+import {
+  ArrowLeft,
+  Share2,
+  Users,
+  Calendar
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/context/ToastContext';
@@ -96,7 +90,7 @@ export default function PostDetail({
 
   // Standalone Reddit-style layout
   return (
-    <div className={`relative grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-6 w-full ${className}`}>
+    <div className={`relative grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-6 w-full px-0 sm:px-2 lg:px-4 mx-auto max-w-screen-2xl ${className}`}>
       {/* Left Navigation Sidebar - Hidden on mobile */}
       <div className="hidden lg:block lg:col-span-3">
         <div className="sticky top-24 space-y-4">
@@ -151,25 +145,6 @@ export default function PostDetail({
           isStandalone={isStandalone}
           className="shadow-md"
         />
-
-        {/* Comments Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="p-4 border-b border-gray-100 dark:border-gray-700">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <MessageCircle className="w-5 h-5" />
-              Comments ({commentCount})
-            </h2>
-          </div>
-          <div className="p-4">
-            <EnhancedCommentSystem
-              postId={post.id}
-              postType="community"
-              communityId={community.id}
-              userMembership={userMembership}
-              onCommentCountChange={setCommentCount}
-            />
-          </div>
-        </div>
       </div>
 
       {/* Right Sidebar - Community Info */}

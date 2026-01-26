@@ -11,6 +11,9 @@ import GovernanceScreen from './screens/GovernanceScreen';
 import NotificationSettingsScreen from './screens/NotificationSettingsScreen';
 import OfflineContentScreen from './screens/OfflineContentScreen';
 import MobileGovernanceScreen from './screens/MobileGovernanceScreen';
+import CheckoutScreen from './screens/CheckoutScreen';
+import EarnToOwnScreen from './screens/EarnToOwnScreen';
+import SellerDashboardScreen from './screens/SellerDashboardScreen';
 
 // Types
 export type RootStackParamList = {
@@ -21,6 +24,19 @@ export type RootStackParamList = {
   NotificationSettings: undefined;
   OfflineContent: undefined;
   MobileGovernance: undefined;
+  Checkout: {
+    items: Array<{
+      id: string;
+      name: string;
+      price: number;
+      quantity: number;
+      image?: string;
+    }>;
+    total: number;
+    sellerId: string;
+  };
+  EarnToOwn: undefined;
+  SellerDashboard: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -64,6 +80,21 @@ export default function App() {
             name="MobileGovernance" 
             component={MobileGovernanceScreen} 
             options={{ title: 'Mobile Governance' }} 
+          />
+          <Stack.Screen 
+            name="Checkout" 
+            component={CheckoutScreen} 
+            options={{ title: 'Checkout' }} 
+          />
+          <Stack.Screen 
+            name="EarnToOwn" 
+            component={EarnToOwnScreen} 
+            options={{ title: 'Earn to Own' }} 
+          />
+          <Stack.Screen 
+            name="SellerDashboard" 
+            component={SellerDashboardScreen} 
+            options={{ title: 'Seller Dashboard' }} 
           />
         </Stack.Navigator>
       </NavigationContainer>
