@@ -1,10 +1,15 @@
+export interface CommunityRule {
+  title: string;
+  description: string;
+}
+
 export interface Community {
   id: string;
   name: string;
   slug: string;
   displayName: string;
   description: string;
-  rules: string[];
+  rules: (string | CommunityRule)[];
   memberCount: number;
   createdAt: Date;
   updatedAt: Date;
@@ -73,7 +78,7 @@ export interface UpdateCommunityInput {
   displayName?: string;
   slug?: string;
   description?: string;
-  rules?: string[];
+  rules?: (string | CommunityRule)[];
   avatar?: string;
   banner?: string;
   category?: string;

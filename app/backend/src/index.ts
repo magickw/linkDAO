@@ -1067,7 +1067,7 @@ app.use('/api/admin/system-health', authMiddleware, systemHealthMonitoringRoutes
 // Charity routes are now handled in adminRoutes.ts
 
 // Workflow automation routes
-app.use('/api/admin/workflows', authMiddleware, workflowAutomationRoutes);
+app.use('/api/admin/workflows', workflowAutomationRoutes);
 
 // Analytics routes
 app.use('/api/analytics', analyticsRoutes);

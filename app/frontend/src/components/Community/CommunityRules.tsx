@@ -5,6 +5,8 @@
 
 import React, { useState } from 'react';
 
+import { CommunityRule } from '../../models/Community';
+
 interface Rule {
   id: string;
   title: string;
@@ -16,9 +18,9 @@ interface Rule {
 
 interface CommunityRulesProps {
   communityId: string;
-  rules: string[];
+  rules: (string | CommunityRule)[];
   canEdit: boolean;
-  onRulesUpdate: (rules: string[]) => void;
+  onRulesUpdate: (rules: (string | CommunityRule)[]) => void;
 }
 
 export const CommunityRules: React.FC<CommunityRulesProps> = ({
@@ -28,24 +30,39 @@ export const CommunityRules: React.FC<CommunityRulesProps> = ({
   onRulesUpdate
 }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [editedRules, setEditedRules] = useState<string[]>(rules);
+  const [editedRules, setEditedRules] = useState<(string | CommunityRule)[]>(rules);
   const [newRule, setNewRule] = useState('');
 
-  // Convert string rules to structured rules for display
-  const structuredRules: Rule[] = rules.map((rule, index) => ({
-    id: `rule-${index}`,
-    title: `Rule ${index + 1}`,
-    description: rule,
-    severity: 'medium' as const,
-    enforced: true,
-    violationCount: 0 // Will be populated from real moderation data when available
-  }));
+  // Convert rules to structured rules for display
+  const structuredRules: Rule[] = rules.map((rule, index) => {
+    if (typeof rule === 'string') {
+      return {
+        id: `rule-${index}`,
+        title: `Rule ${index + 1}`,
+        description: rule,
+        severity: 'medium' as const,
+        enforced: true,
+        violationCount: 0
+      };
+    }
+    return {
+      id: `rule-${index}`,
+      title: rule.title || `Rule ${index + 1}`,
+      description: rule.description,
+      severity: 'medium' as const,
+      enforced: true,
+      violationCount: 0
+    };
+  });
 
   const handleSaveRules = async () => {
     try {
       // Filter out empty rules
-      const filteredRules = editedRules.filter(rule => rule.trim() !== '');
-      
+      const filteredRules = editedRules.filter(rule => {
+        if (typeof rule === 'string') return rule.trim() !== '';
+        return rule.description.trim() !== '';
+      });
+
       // Update rules via API
       const response = await fetch(`/api/communities/${communityId}/rules`, {
         method: 'PUT',
@@ -86,7 +103,13 @@ export const CommunityRules: React.FC<CommunityRulesProps> = ({
 
   const handleRuleChange = (index: number, value: string) => {
     const updated = [...editedRules];
-    updated[index] = value;
+    const currentRule = updated[index];
+
+    if (typeof currentRule === 'string') {
+      updated[index] = value;
+    } else {
+      updated[index] = { ...currentRule, description: value };
+    }
     setEditedRules(updated);
   };
 
@@ -104,19 +127,19 @@ export const CommunityRules: React.FC<CommunityRulesProps> = ({
       case 'high':
         return (
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
           </svg>
         );
       case 'medium':
         return (
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
           </svg>
         );
       case 'low':
         return (
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
           </svg>
         );
       default:
@@ -143,7 +166,7 @@ export const CommunityRules: React.FC<CommunityRulesProps> = ({
             className="btn btn-outline"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
             </svg>
             Edit Rules
           </button>
@@ -162,7 +185,7 @@ export const CommunityRules: React.FC<CommunityRulesProps> = ({
               <div key={index} className="rule-editor">
                 <div className="rule-number">{index + 1}</div>
                 <textarea
-                  value={rule}
+                  value={typeof rule === 'string' ? rule : rule.description}
                   onChange={(e) => handleRuleChange(index, e.target.value)}
                   placeholder="Enter rule description..."
                   className="rule-textarea"
@@ -174,7 +197,7 @@ export const CommunityRules: React.FC<CommunityRulesProps> = ({
                   title="Remove rule"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
                   </svg>
                 </button>
               </div>
@@ -197,7 +220,7 @@ export const CommunityRules: React.FC<CommunityRulesProps> = ({
               title="Add rule"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
               </svg>
             </button>
           </div>
@@ -232,7 +255,7 @@ export const CommunityRules: React.FC<CommunityRulesProps> = ({
                   <div className="rule-header">
                     <div className="rule-number">{index + 1}</div>
                     <div className="rule-meta">
-                      <span 
+                      <span
                         className="severity-badge"
                         style={{ color: getSeverityColor(rule.severity) }}
                       >
@@ -242,14 +265,14 @@ export const CommunityRules: React.FC<CommunityRulesProps> = ({
                       {rule.enforced && (
                         <span className="enforced-badge">
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+                            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
                           </svg>
                           Enforced
                         </span>
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="rule-content">
                     <p>{rule.description}</p>
                   </div>
@@ -271,8 +294,8 @@ export const CommunityRules: React.FC<CommunityRulesProps> = ({
               <div className="enforcement-info">
                 <h4>Rule Enforcement</h4>
                 <p>
-                  Rules are automatically monitored and enforced by community moderators. 
-                  Violations may result in warnings, temporary restrictions, or permanent bans 
+                  Rules are automatically monitored and enforced by community moderators.
+                  Violations may result in warnings, temporary restrictions, or permanent bans
                   depending on severity and frequency.
                 </p>
               </div>
@@ -280,12 +303,12 @@ export const CommunityRules: React.FC<CommunityRulesProps> = ({
               <div className="reporting-info">
                 <h4>Report Violations</h4>
                 <p>
-                  If you see content that violates these rules, please report it using the 
+                  If you see content that violates these rules, please report it using the
                   report button on posts and comments. All reports are reviewed by moderators.
                 </p>
                 <button className="btn btn-outline">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/>
+                    <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z" />
                   </svg>
                   Report Content
                 </button>

@@ -10,8 +10,11 @@ import {
   Share2,
   Users,
   Calendar,
-  Shield
+  Shield,
+  MessageCircle
 } from 'lucide-react';
+
+import EnhancedCommentSystem from '../EnhancedCommentSystem';
 import Link from 'next/link';
 import { useToast } from '@/context/ToastContext';
 
@@ -165,7 +168,7 @@ export default function PostDetail({
                   </h3>
                 </div>
               </div>
-              
+
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-4">
                 {community.description || 'No description available'}
               </p>
@@ -211,14 +214,11 @@ export default function PostDetail({
                 {community.rules.slice(0, 5).map((rule, index) => (
                   <div key={index} className="text-xs text-gray-600 dark:text-gray-400 border-b border-gray-50 dark:border-gray-700/50 pb-2 last:border-0 last:pb-0">
                     <p className="font-semibold text-gray-800 dark:text-gray-200 mb-0.5">
-                      {index + 1}. {rule.title || `Rule ${index + 1}`}
+                      {index + 1}. {typeof rule === 'string' ? `Rule ${index + 1}` : (rule.title || `Rule ${index + 1}`)}
                     </p>
-                    {rule.description && (
-                      <p className="line-clamp-2 opacity-80">{rule.description}</p>
-                    )}
-                    {!rule.title && typeof rule === 'string' && (
-                      <p>{rule}</p>
-                    )}
+                    <p className="line-clamp-2 opacity-80">
+                      {typeof rule === 'string' ? rule : rule.description}
+                    </p>
                   </div>
                 ))}
               </div>
