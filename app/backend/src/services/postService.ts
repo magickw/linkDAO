@@ -721,6 +721,8 @@ export class PostService {
         // Get the author's profile
         const author = await userProfileService.getProfileById(dbPost.authorId);
         const authorAddress = author ? author.walletAddress : 'unknown';
+        const authorHandle = author ? (author.handle || author.walletAddress?.slice(0, 8) || 'anonymous') : 'anonymous';
+        const authorName = author ? author.displayName : undefined;
 
         // Handle potential null dates by providing default values
         const createdAt = dbPost.createdAt || new Date();
@@ -730,6 +732,8 @@ export class PostService {
           id: dbPost.id.toString(),
           shareId: dbPost.shareId,
           author: authorAddress,
+          authorHandle,
+          authorName,
           parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
           content: dbPost.content,
           contentCid: dbPost.contentCid,
