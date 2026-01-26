@@ -1,6 +1,8 @@
 export interface Post {
   id: string;
   author: string;
+  authorHandle?: string;
+  authorName?: string;
   parentId: string | null;
   content?: string; // Direct content from DB to avoid IPFS fetch
   contentCid: string;
@@ -8,7 +10,12 @@ export interface Post {
   mediaCids: string[];
   tags: string[];
   createdAt: Date;
+  updatedAt?: Date;
   onchainRef: string;
+  // Voting and engagement fields
+  upvotes?: number;
+  downvotes?: number;
+  viewCount?: number;
   // Moderation fields
   moderationStatus?: 'active' | 'limited' | 'pending_review' | 'blocked';
   moderationWarning?: string | null;
@@ -28,6 +35,9 @@ export interface Post {
   communityName?: string;
   communitySlug?: string;
   title?: string;
+  stakedValue?: number;
+  comments?: number;
+  walletAddress?: string;
 }
 
 export interface CreatePostInput {
