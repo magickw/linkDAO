@@ -187,7 +187,7 @@ const OrderStatusBadge: React.FC<OrderStatusBadgeProps> = ({
             ${config.bgColor} ${config.textColor}
           `}
         >
-          <Info size={14} className={config.color} flex-shrink-0 mt-0.5" />
+          <Info size={14} className={`${config.color} flex-shrink-0 mt-0.5`} />
           <span>{config.description}</span>
         </motion.div>
       )}
