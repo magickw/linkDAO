@@ -492,6 +492,8 @@ export class PostService {
       // Get user profile for author info
       const author = dbPost.authorId ? await userProfileService.getProfileById(dbPost.authorId) : null;
       const authorAddress = author ? author.walletAddress : 'unknown';
+      const authorHandle = author ? (author.handle || author.walletAddress?.slice(0, 8) || 'anonymous') : 'anonymous';
+      const authorName = author ? author.displayName : undefined;
 
       // Fetch enrichment data (shares, repost status)
       let shares = 0;
@@ -536,6 +538,8 @@ export class PostService {
       return {
         id: dbPost.id.toString(),
         author: authorAddress,
+        authorHandle,
+        authorName,
         parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
         content: dbPost.content,
         contentCid: dbPost.contentCid,
@@ -583,6 +587,8 @@ export class PostService {
         return {
           id: dbPost.id.toString(),
           author: 'unknown',
+          authorHandle: 'anonymous',
+          authorName: undefined,
           parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
           content: dbPost.content,
           contentCid: dbPost.contentCid,
@@ -620,6 +626,8 @@ export class PostService {
       return {
         id: dbPost.id.toString(),
         author: author.walletAddress,
+        authorHandle: author.handle || author.walletAddress?.slice(0, 8) || 'anonymous',
+        authorName: author.displayName,
         parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
         content: dbPost.content,
         contentCid: dbPost.contentCid,
