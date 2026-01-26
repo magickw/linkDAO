@@ -798,6 +798,12 @@ export class SellerWorkflowService {
             // Normalize status comparison to handle case differences (DB stores lowercase, enum is uppercase)
             // Allow PENDING status as well since some orders may appear as pending
             const normalizedStatus = (order.status || '').toUpperCase();
+
+            // Idempotency check: If already delivered, return success
+            if (normalizedStatus === OrderStatus.DELIVERED) {
+                safeLogger.info(`Order ${orderId} already delivered. Skipping update.`);
+                return { success: true, status: order.status, alreadyDelivered: true };
+            }
             if (normalizedStatus !== OrderStatus.PAID &&
                 normalizedStatus !== OrderStatus.PROCESSING &&
                 normalizedStatus !== 'PENDING' &&

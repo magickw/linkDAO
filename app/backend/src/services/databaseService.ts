@@ -556,15 +556,51 @@ export class DatabaseService {
   }
 
   // Follow operations
+  async followUser(followerId: string, followingId: string) {
+    try {
+      const result = await this.db.insert(schema.follows).values({
+        followerId,
+        followingId
+      }).returning();
+      return result[0];
+    } catch (error) {
+      safeLogger.error("Error following user:", error);
+      throw error;
+    }
+  }
 
+  async unfollowUser(followerId: string, followingId: string) {
+    try {
+      const result = await this.db.delete(schema.follows)
+        .where(and(
+          eq(schema.follows.followerId, followerId),
+          eq(schema.follows.followingId, followingId)
+        ))
+        .returning();
+      return result.length > 0;
+    } catch (error) {
+      safeLogger.error("Error unfollowing user:", error);
+      throw error;
+    }
+  }
 
+  async getFollowers(userId: string) {
+    try {
+      return await this.db.select().from(schema.follows).where(eq(schema.follows.followingId, userId));
+    } catch (error) {
+      safeLogger.error("Error getting followers:", error);
+      throw error;
+    }
+  }
 
-
-
-
-
-
-  // Payment operations
+  async getFollowing(userId: string) {
+    try {
+      return await this.db.select().from(schema.follows).where(eq(schema.follows.followerId, userId));
+    } catch (error) {
+      safeLogger.error("Error getting following:", error);
+      throw error;
+    }
+  }  // Payment operations
   async createPayment(from: string, to: string, token: string, amount: string, txHash?: string, memo?: string) {
     try {
       const result = await this.db.insert(schema.payments).values({
