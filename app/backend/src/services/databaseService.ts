@@ -105,6 +105,15 @@ export class DatabaseService {
     }
   }
   // User operations
+  async getUserById(id: string) {
+    try {
+      const result = await this.db.select().from(schema.users).where(eq(schema.users.id, id));
+      return result[0] || null;
+    } catch (error) {
+      safeLogger.error("Error getting user by ID:", error);
+      throw error;
+    }
+  }
 
 
 

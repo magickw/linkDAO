@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
-import { enhancedAuthService } from '../../../packages/shared/services/enhancedAuthService';
+import { enhancedAuthService } from '@linkdao/shared/services/enhancedAuthService';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
@@ -177,7 +177,7 @@ export default function CharityDashboardScreen() {
     }
   };
 
-  };
+
 
   const getStatusColor = (status: string) => {
     switch (status) {

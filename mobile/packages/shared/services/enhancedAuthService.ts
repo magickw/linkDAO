@@ -38,7 +38,7 @@ export interface SessionData {
   timestamp: number;
   expiresAt: number;
   refreshToken?: string;
-  sessionId?: string; 
+  sessionId?: string;
 }
 
 export interface AuthenticationOptions {
@@ -82,7 +82,14 @@ class EnhancedAuthService {
 
   private async initialize(): Promise<void> {
     try {
-      const storage = getStorage();
+      let storage;
+      try {
+        storage = getStorage();
+      } catch (e) {
+        // Storage not ready yet, silently waiting for explicit initialization
+        return;
+      }
+
       if (!storage) return;
 
       this.sessionKey = await storage.getItem(this.STORAGE_KEYS.SESSION_KEY);
@@ -104,8 +111,12 @@ class EnhancedAuthService {
       }
     } catch (error) {
       console.error('Error initializing from storage:', error);
-      await this.clearStoredSession();
+      // Don't clear session on storage error to avoid wiping data on temporary failures
     }
+  }
+
+  public async reloadSession(): Promise<void> {
+    await this.initialize();
   }
 
   private setupPeriodicRefresh(): void {
@@ -226,8 +237,8 @@ class EnhancedAuthService {
   }
 
   private hasValidSession(address: string): boolean {
-    return !!(this.sessionData && this.token && 
-      this.sessionData.user.address.toLowerCase() === address.toLowerCase() && 
+    return !!(this.sessionData && this.token &&
+      this.sessionData.user.address.toLowerCase() === address.toLowerCase() &&
       Date.now() < this.sessionData.expiresAt);
   }
 }

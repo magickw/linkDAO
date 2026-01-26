@@ -7,7 +7,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Linking, Platform } from 'react-native';
 import { ethers } from 'ethers';
-import { MetaMaskSDK } from '@metamask/sdk-react-native';
+// Import only types for the injected SDK state
+import type { SDKState } from '@metamask/sdk-react-native';
 
 const STORAGE_KEY = 'wallet_connection';
 
@@ -24,46 +25,27 @@ class WalletService {
   private _isConnected: boolean = false;
   private activeConnection: WalletConnection | null = null;
   private currentProvider: WalletProvider | null = null;
-  private ethereum: any = null;
-  private sdk: any = null;
-  private metamaskSDKAvailable: boolean = false;
+  // This will hold the injected SDK state from the React Provider
+  private metaMaskSDKState: SDKState | null = null;
 
   /**
    * Initialize wallet service
    */
   async initialize() {
     try {
-      // Initialize MetaMask SDK
-      try {
-        this.sdk = new MetaMaskSDK({
-          openDefaultInpage: false,
-          dappMetadata: {
-            name: 'LinkDAO Mobile',
-            url: 'https://linkdao.io',
-          },
-          // Enable communication between the SDK and MetaMask
-          communicationServerUrl: 'https://metamask-sdk-socket.metafi.codefi.network/',
-          checkInstallationImmediately: false,
-          i18nOptions: {
-            enabled: true,
-          },
-        });
-        
-        this.ethereum = this.sdk.getProvider();
-        this.metamaskSDKAvailable = true;
-        console.log('✅ MetaMask SDK initialized');
-      } catch (sdkError) {
-        console.error('⚠️ Failed to initialize MetaMask SDK:', sdkError);
-        this.metamaskSDKAvailable = false;
-      }
-      
       console.log('✅ Wallet service initialized');
-      
       await this.restoreConnection();
     } catch (error) {
       console.error('❌ Failed to initialize wallet service:', error);
-      // Don't throw here, allowing the app to continue even if initialization has partial failures
     }
+  }
+
+  /**
+   * Set the MetaMask SDK instance injected from the React Provider
+   */
+  setMetaMaskSDK(sdkState: SDKState) {
+    this.metaMaskSDKState = sdkState;
+    console.log('✅ MetaMask SDK injected into WalletService. Ready:', sdkState?.ready);
   }
 
   /**
@@ -99,7 +81,6 @@ class WalletService {
       }
 
       // If we got an address (synchronously), set up the connection
-      // Note: Some deep link flows might not return here immediately
       if (address) {
         this._isConnected = true;
         this.currentProvider = provider;
@@ -122,26 +103,17 @@ class WalletService {
   }
 
   /**
-   * Connect to MetaMask Mobile
+   * Connect to MetaMask Mobile via injected SDK
    */
   private async connectMetaMask(): Promise<string> {
     try {
-      if (!this.metamaskSDKAvailable || !this.ethereum) {
-        // Try to re-initialize if it failed initially
-        console.log('🔄 Attempting to re-initialize MetaMask SDK...');
-        await this.initialize();
-        if (!this.metamaskSDKAvailable || !this.ethereum) {
-           throw new Error('MetaMask SDK not available. Please ensure the app is installed.');
-        }
+      if (!this.metaMaskSDKState?.sdk) {
+        throw new Error('MetaMask SDK not initialized. Please ensure the app is wrapped in MetaMaskProvider and SDK is injected.');
       }
 
-      console.log('🦊 Connecting to MetaMask via SDK...');
+      console.log('🦊 Connecting to MetaMask via injected SDK...');
 
-      // Request accounts from MetaMask
-      const accounts = await this.ethereum.request({
-        method: 'eth_requestAccounts',
-        params: [],
-      });
+      const accounts = await this.metaMaskSDKState.sdk.connect();
 
       if (!accounts || accounts.length === 0) {
         throw new Error('No accounts returned from MetaMask');
@@ -149,7 +121,7 @@ class WalletService {
 
       const address = accounts[0];
       console.log('📱 MetaMask connected via SDK:', address);
-      
+
       return address;
     } catch (error) {
       console.error('❌ Failed to connect to MetaMask:', error);
@@ -167,7 +139,7 @@ class WalletService {
 
       const wcScheme = 'wc:';
       const dappName = 'LinkDAO Mobile';
-      
+
       // Using a basic V1-style link for compatibility fallback, 
       // but ideally this should be upgraded to V2 with a proper Project ID
       const wcUri = `${wcScheme}${encodeURIComponent(dappName)}@1?bridge=https://bridge.walletconnect.org&key=${Date.now()}`;
@@ -176,8 +148,7 @@ class WalletService {
       if (canOpen) {
         await Linking.openURL(wcUri);
         // Note: This flow is incomplete without a socket listener
-        // We return a placeholder to indicate the action was taken, but the UI 
-        // will need to handle the fact that we don't have the address yet.
+        // We return a placeholder to indicate the action was taken
         throw new Error('Please authorize in your wallet app. (Note: Full WalletConnect V2 support is pending update)');
       } else {
         throw new Error('No WalletConnect-compatible wallet found.');
@@ -201,7 +172,7 @@ class WalletService {
         const appStoreUrl = Platform.OS === 'ios'
           ? 'https://apps.apple.com/app/coinbase-wallet/id1278383455'
           : 'https://play.google.com/store/apps/details?id=org.toshi';
-        
+
         // Open store
         await Linking.openURL(appStoreUrl);
         throw new Error('Redirecting to install Coinbase Wallet...');
@@ -213,9 +184,7 @@ class WalletService {
       const deepLink = `${cbWalletScheme}wager?dappName=${encodeURIComponent(dappName)}&dappUrl=${encodeURIComponent(dappUrl)}`;
 
       await Linking.openURL(deepLink);
-      
-      // We can't synchronously get the address without a callback handler.
-      // We throw a helpful message to the user.
+
       throw new Error('Opened Coinbase Wallet. Please confirm connection. (Full integration pending)');
 
     } catch (error) {
@@ -234,11 +203,11 @@ class WalletService {
       const isInstalled = await Linking.canOpenURL(trustWalletScheme);
 
       if (!isInstalled) {
-         const appStoreUrl = Platform.OS === 'ios'
+        const appStoreUrl = Platform.OS === 'ios'
           ? 'https://apps.apple.com/app/trust-crypto-bitcoin-wallet/id1288339409'
           : 'https://play.google.com/store/apps/details?id=com.wallet.crypto.trustapp';
-         await Linking.openURL(appStoreUrl);
-         throw new Error('Redirecting to install Trust Wallet...');
+        await Linking.openURL(appStoreUrl);
+        throw new Error('Redirecting to install Trust Wallet...');
       }
 
       const dappName = 'LinkDAO Mobile';
@@ -258,18 +227,18 @@ class WalletService {
    * Connect to Rainbow Wallet
    */
   private async connectRainbow(): Promise<string> {
-     // Similar fallback pattern
-     try {
-       const scheme = 'rainbow://';
-       const isInstalled = await Linking.canOpenURL(scheme);
-       if(isInstalled) {
-         await Linking.openURL(scheme);
-         throw new Error('Opened Rainbow Wallet. (Integration pending)');
-       }
-       throw new Error('Rainbow Wallet not installed.');
-     } catch (e) {
-       throw e;
-     }
+    // Similar fallback pattern
+    try {
+      const scheme = 'rainbow://';
+      const isInstalled = await Linking.canOpenURL(scheme);
+      if (isInstalled) {
+        await Linking.openURL(scheme);
+        throw new Error('Opened Rainbow Wallet. (Integration pending)');
+      }
+      throw new Error('Rainbow Wallet not installed.');
+    } catch (e) {
+      throw e;
+    }
   }
 
   /**
@@ -285,24 +254,28 @@ class WalletService {
   async signMessage(message: string, address: string): Promise<string> {
     try {
       if (!this._isConnected || !this.activeConnection || this.activeConnection.address.toLowerCase() !== address.toLowerCase()) {
-        // Attempt to reconnect if using MetaMask and we have the provider
-        if (this.currentProvider === 'metamask' && this.ethereum) {
-           console.log('⚠️ Connection state lost, attempting to re-use provider...');
-           // proceed to try signing
+        if (this.currentProvider === 'metamask' && this.metaMaskSDKState?.provider) {
+          console.log('⚠️ Connection state lost, attempting to re-use provider...');
+          // proceed to try signing
         } else {
-           throw new Error('Wallet not connected or address mismatch');
+          throw new Error('Wallet not connected or address mismatch');
         }
       }
 
       console.log('🔐 Signing message with', this.currentProvider, ':', message);
 
-      if (this.currentProvider === 'metamask' && this.ethereum) {
+      if (this.currentProvider === 'metamask') {
+        if (!this.metaMaskSDKState?.provider) {
+          throw new Error('MetaMask provider not available');
+        }
+
         // Use MetaMask SDK provider to sign
-        const signature = await this.ethereum.request({
+        // Note: request return type is unknown, casting to string
+        const signature = await this.metaMaskSDKState.provider.request({
           method: 'personal_sign',
           params: [message, address],
-        });
-        
+        }) as string;
+
         console.log('✅ Message signed via MetaMask SDK');
         return signature;
       }
@@ -319,18 +292,22 @@ class WalletService {
    */
   async sendTransaction(tx: ethers.TransactionRequest): Promise<string> {
     try {
-      if (!this._isConnected && !this.ethereum) {
+      if (!this._isConnected) {
         throw new Error('Wallet not connected');
       }
 
       console.log('💸 Sending transaction to:', tx.to);
 
-      if (this.currentProvider === 'metamask' || this.ethereum) {
-        const hash = await this.ethereum.request({
+      if (this.currentProvider === 'metamask') {
+        if (!this.metaMaskSDKState?.provider) {
+          throw new Error('MetaMask provider not available');
+        }
+
+        const hash = await this.metaMaskSDKState.provider.request({
           method: 'eth_sendTransaction',
           params: [tx],
-        });
-        
+        }) as string;
+
         console.log('✅ Transaction sent via MetaMask SDK:', hash);
         return hash;
       }
@@ -347,25 +324,26 @@ class WalletService {
    */
   async switchChain(chainId: number): Promise<void> {
     if (!this._isConnected) {
-       // try to proceed if we have ethereum provider
-       if (!this.ethereum) throw new Error('Wallet not connected');
+      throw new Error('Wallet not connected');
     }
 
     console.log('🔄 Switching to chain:', chainId);
     if (this.activeConnection) {
-        this.activeConnection.chainId = chainId;
-        await this.saveConnection(this.activeConnection);
+      this.activeConnection.chainId = chainId;
+      await this.saveConnection(this.activeConnection);
     }
-    
+
     // Attempt to switch via provider if supported
     try {
+      if (this.currentProvider === 'metamask' && this.metaMaskSDKState?.provider) {
         const hexChainId = `0x${chainId.toString(16)}`;
-        await this.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: hexChainId }],
+        await this.metaMaskSDKState.provider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: hexChainId }],
         });
-    } catch(e) {
-        console.warn('Failed to switch chain on provider:', e);
+      }
+    } catch (e) {
+      console.warn('Failed to switch chain on provider:', e);
     }
 
     console.log('✅ Chain switched');
@@ -381,14 +359,13 @@ class WalletService {
       this.activeConnection = null;
       this.currentProvider = null;
       await this.clearConnection();
-      
-      // Optionally disconnect from SDK if supported
-      if (this.sdk) {
-          try {
-              this.sdk.terminate();
-          } catch (e) { console.warn('Error terminating SDK', e); }
+
+      if (provider === 'metamask' && this.metaMaskSDKState?.sdk) {
+        try {
+          await this.metaMaskSDKState.sdk.terminate();
+        } catch (e) { console.warn('Error terminating SDK', e); }
       }
-      
+
       console.log(`✅ Disconnected from ${provider}`);
     } catch (error) {
       console.error('❌ Failed to disconnect wallet:', error);

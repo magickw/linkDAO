@@ -32,6 +32,12 @@
       ],
       "@/constants/*": [
         "./src/constants/*"
+      ],
+      "@linkdao/shared": [
+        "../../packages/shared"
+      ],
+      "@linkdao/shared/*": [
+        "../../packages/shared/*"
       ]
     }
   },

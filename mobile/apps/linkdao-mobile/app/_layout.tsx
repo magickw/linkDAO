@@ -15,12 +15,29 @@ import { WalletLoginBridge } from '../src/components/WalletLoginBridge';
 import { walletService } from '../src/services/walletConnectService';
 import { socialMediaService } from '../src/services/socialMediaService';
 import { notificationService } from '../src/services/notificationService';
-import { setWalletAdapter } from '@linkdao/shared';
+import { setWalletAdapter, setStorageProvider } from '@linkdao/shared';
+import { enhancedAuthService } from '@linkdao/shared/services/enhancedAuthService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ErrorBoundary from '../src/components/ErrorBoundary';
 
 import { StripeProvider } from '@stripe/stripe-react-native';
 
+import { MetaMaskProvider, useSDK } from '@metamask/sdk-react-native';
+
 const STRIPE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_PLACEHOLDER';
+
+// Component to inject SDK state into the singleton service
+function MetaMaskInjector() {
+  const sdkState = useSDK();
+
+  useEffect(() => {
+    if (sdkState) {
+      walletService.setMetaMaskSDK(sdkState);
+    }
+  }, [sdkState]);
+
+  return null;
+}
 
 export default function RootLayout() {
   const { isAuthenticated } = useAuthStore();
@@ -41,6 +58,21 @@ export default function RootLayout() {
         return walletService.isConnected();
       },
     });
+
+    // Initialize Storage Provider
+    const initStorage = async () => {
+      try {
+        setStorageProvider(AsyncStorage);
+        // Reload session now that storage is available
+        if (enhancedAuthService.reloadSession) {
+          await enhancedAuthService.reloadSession();
+        }
+        console.log('✅ Storage provider initialized');
+      } catch (error) {
+        console.error('❌ Failed to initialize storage provider:', error);
+      }
+    };
+    initStorage();
 
     // Initialize wallet service
     const initWalletService = async () => {
@@ -122,25 +154,36 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <StripeProvider publishableKey={STRIPE_KEY}>
-            <StatusBar style="auto" />
-            {/* Auto-authentication bridge for wallet connections */}
-            <WalletLoginBridge
-              autoLogin={true}
-              walletAddress={walletAddress as string}
-              connector={connector as any}
-              onLoginSuccess={({ user }) => {
-                console.log('✅ Auto-login successful for:', user.address);
+            <MetaMaskProvider
+              debug={false}
+              sdkOptions={{
+                dappMetadata: {
+                  name: "LinkDAO Mobile",
+                  url: "https://linkdao.io", // Must match your deep link url scheme if possible but generic is fine for now
+                }
               }}
-              onLoginError={(error) => {
-                console.error('❌ Auto-login failed:', error);
-              }}
-            />
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="auth" options={{ headerShown: false }} />
-              <Stack.Screen name="settings" options={{ headerShown: false }} />
-              <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
-            </Stack>
+            >
+              <MetaMaskInjector />
+              <StatusBar style="auto" />
+              {/* Auto-authentication bridge for wallet connections */}
+              <WalletLoginBridge
+                autoLogin={true}
+                walletAddress={walletAddress as string}
+                connector={connector as any}
+                onLoginSuccess={({ user }) => {
+                  console.log('✅ Auto-login successful for:', user.address);
+                }}
+                onLoginError={(error) => {
+                  console.error('❌ Auto-login failed:', error);
+                }}
+              />
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="auth" options={{ headerShown: false }} />
+                <Stack.Screen name="settings" options={{ headerShown: false }} />
+                <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
+              </Stack>
+            </MetaMaskProvider>
           </StripeProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
