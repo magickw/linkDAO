@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../config/api';
+import { enhancedAuthService } from './enhancedAuthService';
 
 const API_URL = API_BASE_URL;
 
@@ -31,11 +32,11 @@ export interface UpdateAnnouncementInput {
 }
 
 class AnnouncementService {
-    private getHeaders() {
-        const token = localStorage.getItem('auth_token');
+    private async getHeaders() {
+        const headers = await enhancedAuthService.getAuthHeaders();
         return {
             'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : '',
+            ...headers
         };
     }
 
@@ -44,9 +45,10 @@ class AnnouncementService {
      */
     async createAnnouncement(input: CreateAnnouncementInput): Promise<{ success: boolean; message: string; data?: Announcement }> {
         try {
+            const headers = await this.getHeaders();
             const response = await fetch(`${API_URL}/communities/${input.communityId}/announcements`, {
                 method: 'POST',
-                headers: this.getHeaders(),
+                headers,
                 body: JSON.stringify(input),
             });
 
@@ -63,9 +65,10 @@ class AnnouncementService {
      */
     async updateAnnouncement(id: string, input: UpdateAnnouncementInput): Promise<{ success: boolean; message: string; data?: Announcement }> {
         try {
+            const headers = await this.getHeaders();
             const response = await fetch(`${API_URL}/announcements/${id}`, {
                 method: 'PUT',
-                headers: this.getHeaders(),
+                headers,
                 body: JSON.stringify(input),
             });
 
@@ -82,9 +85,10 @@ class AnnouncementService {
      */
     async deleteAnnouncement(id: string): Promise<{ success: boolean; message: string }> {
         try {
+            const headers = await this.getHeaders();
             const response = await fetch(`${API_URL}/announcements/${id}`, {
                 method: 'DELETE',
-                headers: this.getHeaders(),
+                headers,
             });
 
             const data = await response.json();
@@ -120,9 +124,10 @@ class AnnouncementService {
      */
     async getAllAnnouncements(communityId: string): Promise<{ success: boolean; data: Announcement[] }> {
         try {
+            const headers = await this.getHeaders();
             const response = await fetch(`${API_URL}/communities/${communityId}/announcements/all`, {
                 method: 'GET',
-                headers: this.getHeaders(),
+                headers,
             });
 
             const data = await response.json();

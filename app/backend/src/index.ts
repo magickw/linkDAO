@@ -599,6 +599,10 @@ app.use('/api/metrics', metricsRoutes);
 app.use('/api/docs', docsRoutes);
 // Onboarding routes for user preferences
 app.use('/api/onboarding', onboardingRoutes);
+
+// Announcement routes
+import announcementRoutes from './routes/announcementRoutes';
+app.use('/api', announcementRoutes);
 // Enhanced fiat payment routes
 app.use('/api/enhanced-fiat-payment', enhancedFiatPaymentRoutes);
 // Backward compatibility alias without /api prefix (for service worker or cached requests)
@@ -1000,8 +1004,7 @@ import fulfillmentDashboardRoutes from './routes/fulfillmentDashboardRoutes';
 import leaderboardRoutes from './routes/leaderboardRoutes';
 import treasuryRoutes from './routes/treasuryRoutes';
 
-// Import announcement routes
-import announcementRoutes from './routes/announcementRoutes';
+
 // Import monthly update routes
 import monthlyUpdateRoutes from './routes/monthlyUpdateRoutes';
 // Import verification routes
@@ -1021,7 +1024,7 @@ app.use('/api/ldao', ldaoBenefitsRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/treasury', treasuryRoutes);
 
-app.use('/api', announcementRoutes);
+
 app.use('/api', monthlyUpdateRoutes);
 app.use('/api/verification', verificationRoutes);
 process.stdout.write('✅ Leaderboard, Treasury, Post Management, Announcement, and Monthly Update routes enabled\n');

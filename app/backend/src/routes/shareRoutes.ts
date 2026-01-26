@@ -6,9 +6,17 @@ import express from 'express';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { shareController } from '../controllers/shareController';
 import { authenticateToken } from '../middleware/auth';
-import { postController } from '../controllers/postController';
+import { PostService } from '../services/postService';
 
 const router = express.Router();
+
+// Instantiate PostService to resolve shares
+let postService: PostService;
+try {
+  postService = new PostService();
+} catch (error) {
+  console.error('Failed to initialize PostService in shareRoutes:', error);
+}
 
 // Public route: Resolve share ID to either a post or status
 // Uses postService which has internal fallback to check statuses
@@ -17,7 +25,15 @@ router.get('/:shareId', async (req, res) => {
     const { shareId } = req.params;
     console.log(`[shareRoutes] Resolving share ID: ${shareId}`);
 
-    const post = await postController.postService.getPostByShareId(shareId);
+    if (!postService) {
+      console.error('[shareRoutes] PostService not initialized');
+      return res.status(500).json({
+        success: false,
+        error: 'Service unavailable'
+      });
+    }
+
+    const post = await postService.getPostByShareId(shareId);
     console.log(`[shareRoutes] Post lookup result:`, post ? 'Found' : 'Not found');
 
     if (post) {

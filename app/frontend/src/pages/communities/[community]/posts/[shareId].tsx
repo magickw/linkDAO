@@ -187,7 +187,7 @@ export default function CommunityPostPage() {
     }
 
     return (
-        <Layout title={post.title || `Post in ${community.displayName || community.name}`}>
+        <Layout title={post.title || `Post in ${community.displayName || community.name}`} fullWidth={true}>
             {getMetaTags()}
 
             {/* Background gradient for visual polish */}
