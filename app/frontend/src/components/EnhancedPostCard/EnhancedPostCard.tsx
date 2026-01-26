@@ -264,8 +264,10 @@ const EnhancedPostCard = React.memo(({
   }, [address, addToast]);
 
   const handleShare = useCallback(async () => {
-    const handle = post.authorProfile?.handle || (post.author ? post.author.slice(0, 8) : 'unknown');
-    const url = `${window.location.origin}/${handle}/statuses/${post.id}`;
+    const shareId = post.shareId || post.id;
+    const url = post.communityId
+      ? `${window.location.origin}/cp/${shareId}`
+      : `${window.location.origin}/p/${shareId}`;
     try {
       if (navigator.share) {
         await navigator.share({
@@ -281,7 +283,7 @@ const EnhancedPostCard = React.memo(({
       console.error('Error sharing post:', error);
       addToast('Failed to share post', 'error');
     }
-  }, [post.id, post.title, post.content, addToast]);
+  }, [post.id, post.shareId, post.title, post.content, post.communityId, addToast]);
 
   // Handle upvote
   const handleUpvote = useCallback(async () => {
