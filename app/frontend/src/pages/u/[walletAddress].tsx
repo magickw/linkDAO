@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import { useWeb3 } from '@/context/Web3Context';
@@ -13,6 +13,10 @@ import FollowingList from '@/components/FollowingList';
 import TipBar from '@/components/TipBar';
 import Link from 'next/link';
 import { PublicProfileService, PublicProfileData } from '@/services/publicProfileService';
+import { SendTokenForm } from '@/components/Wallet/SendTokenForm';
+import { DollarSign } from 'lucide-react';
+
+const BottomSheet = lazy(() => import('@/components/BottomSheet'));
 
 // Helper function to validate IPFS CID and construct proper URL
 function getAvatarUrl(profileCid: string | undefined): string | undefined {
@@ -56,6 +60,7 @@ export default function PublicProfile() {
   const [error, setError] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState(false);
   const [activeTab, setActiveTab] = useState<'posts' | 'followers' | 'following' | 'social' | 'comments' | 'upvotes' | 'downvotes'>('posts');
+  const [isSendMoneySheetOpen, setIsSendMoneySheetOpen] = useState(false);
 
   // Follow/unfollow functionality
   const { follow, unfollow, isLoading: isFollowLoading } = useFollow();
@@ -484,6 +489,15 @@ export default function PublicProfile() {
                         </svg>
                         Message
                       </button>
+
+                      {/* Send Money Button */}
+                      <button
+                        onClick={() => setIsSendMoneySheetOpen(true)}
+                        className="inline-flex items-center justify-center px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
+                      >
+                        <DollarSign className="mr-2 h-5 w-5" />
+                        Send Money
+                      </button>
                     </>
                   )}
 
@@ -826,6 +840,20 @@ export default function PublicProfile() {
           </div>
         </div>
       </div>
+
+      {/* Send Money BottomSheet */}
+      <Suspense fallback={null}>
+        <BottomSheet
+          isOpen={isSendMoneySheetOpen}
+          onClose={() => setIsSendMoneySheetOpen(false)}
+          title={`Send Money to ${profile.displayName || profile.handle || formatAddress(profile.walletAddress)}`}
+        >
+          <SendTokenForm 
+            onClose={() => setIsSendMoneySheetOpen(false)} 
+            initialRecipient={profile.walletAddress}
+          />
+        </BottomSheet>
+      </Suspense>
     </Layout>
   );
 }

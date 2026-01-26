@@ -8,10 +8,11 @@ import { useAccount } from 'wagmi';
 import { tokenService } from '@/services/web3/tokenService';
 import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
-import { ShoppingCart, TrendingUp, Zap, ExternalLink, ArrowRight } from 'lucide-react';
+import { ShoppingCart, TrendingUp, Zap, ExternalLink, ArrowRight, Droplets } from 'lucide-react';
 import { useRouter } from 'next/router';
 import { TokenInfo } from '@/types/web3Community';
 import PurchaseModal from './PurchaseModal';
+import USDCFaucetModal from './USDCFaucetModal';
 
 type LocalTokenInfo = TokenInfo & {
   priceUSD: number;
@@ -24,6 +25,7 @@ const TokenAcquisitionSection: React.FC = () => {
   const [tokenInfo, setTokenInfo] = useState<LocalTokenInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [isFaucetModalOpen, setIsFaucetModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchTokenInfo = async () => {
@@ -87,6 +89,11 @@ const TokenAcquisitionSection: React.FC = () => {
         isOpen={isPurchaseModalOpen}
         onClose={() => setIsPurchaseModalOpen(false)}
       />
+      
+      <USDCFaucetModal
+        isOpen={isFaucetModalOpen}
+        onClose={() => setIsFaucetModalOpen(false)}
+      />
 
       {/* Left: Token Info Compact */}
       <div className="flex items-center gap-4">
@@ -128,6 +135,14 @@ const TokenAcquisitionSection: React.FC = () => {
       <div className="flex items-center gap-3 w-full md:w-auto">
         {/* Secondary Actions (Smaller/Phantom) */}
         <div className="flex items-center gap-2 mr-2">
+          <button
+            onClick={() => setIsFaucetModalOpen(true)}
+            className="text-cyan-400 hover:text-cyan-300 px-3 py-1.5 rounded-lg hover:bg-cyan-500/10 text-sm font-medium transition-all flex items-center gap-1.5 border border-cyan-500/30"
+          >
+            <Droplets size={14} />
+            Get USDC
+          </button>
+
           <button
             onClick={handleBuyTokens}
             className="text-white/70 hover:text-white px-3 py-1.5 rounded-lg hover:bg-white/5 text-sm font-medium transition-all flex items-center gap-1.5"

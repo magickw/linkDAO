@@ -18,7 +18,7 @@ import {
   Info
 } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
-import { useAccount, useConnect, useChainId, useSwitchChain, usePublicClient, useWalletClient } from 'wagmi';
+import { useAccount, useConnect, useChainId, useSwitchChain, usePublicClient, useWalletClient, useReadContract, useWriteContract } from 'wagmi';
 import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import {
@@ -1682,6 +1682,66 @@ const CryptoPaymentDetails: React.FC<{
   onError: (error: Error) => void;
   isConnected: boolean;
 }> = ({ paymentMethod, onProceed, useEscrow, setUseEscrow, onConnected, onError, isConnected }) => {
+  const { address } = useAccount();
+  const { addToast } = useToast();
+  
+  // Contracts for Approval
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
+    address: paymentMethod.method.token?.address as `0x${string}`,
+    abi: [{
+      name: 'allowance',
+      type: 'function',
+      stateMutability: 'view',
+      inputs: [{ name: 'owner', type: 'address' }, { name: 'spender', type: 'address' }],
+      outputs: [{ name: '', type: 'uint256' }]
+    }],
+    functionName: 'allowance',
+    args: [address as `0x${string}`, process.env.NEXT_PUBLIC_ESCROW_ADDRESS as `0x${string}`],
+    query: {
+      enabled: isConnected && !!address && !!paymentMethod.method.token && !paymentMethod.method.token.isNative,
+    }
+  }) as { data: bigint | undefined, refetch: () => void };
+
+  const { writeContract, isPending: isApprovePending, isSuccess: isApproveSuccess } = useWriteContract();
+
+  const isNativeToken = paymentMethod.method.token?.isNative;
+  const amountToApprove = BigInt(Math.ceil(paymentMethod.costEstimate.totalCost * 1000000)) * BigInt(10 ** (paymentMethod.method.token?.decimals || 18)) / BigInt(1000000); // Approximate conversion
+  
+  const needsApproval = !isNativeToken && allowance !== undefined && allowance < amountToApprove;
+
+  const handleApprove = () => {
+    if (!paymentMethod.method.token?.address) return;
+    
+    writeContract({
+      address: paymentMethod.method.token.address as `0x${string}`,
+      abi: [{
+        name: 'approve',
+        type: 'function',
+        stateMutability: 'nonpayable',
+        inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }],
+        outputs: [{ name: '', type: 'bool' }]
+      }],
+      functionName: 'approve',
+      args: [process.env.NEXT_PUBLIC_ESCROW_ADDRESS as `0x${string}`, amountToApprove],
+    }, {
+      onSuccess: () => {
+        addToast('Approval submitted! Waiting for confirmation...', 'info');
+        // Poll for confirmation or wait for effect
+        setTimeout(() => refetchAllowance(), 5000);
+      },
+      onError: (err) => {
+        console.error('Approval failed:', err);
+        addToast('Failed to approve token', 'error');
+      }
+    });
+  };
+
+  useEffect(() => {
+    if (isApproveSuccess) {
+      refetchAllowance();
+    }
+  }, [isApproveSuccess, refetchAllowance]);
+
   return (
     <div className="space-y-6">
       <GlassPanel variant="secondary" className="p-6">
@@ -1702,6 +1762,7 @@ const CryptoPaymentDetails: React.FC<{
             <span className="text-white/70">Payment Token:</span>
             <span className="text-white">{paymentMethod.method.token?.symbol || 'ETH'}</span>
           </div>
+          {/* ... existing summary details ... */}
           <div className="flex justify-between">
             <span className="text-white/70">Network:</span>
             <span className="text-white">{getNetworkName(paymentMethod.method.chainId || 1)}</span>
@@ -1770,14 +1831,25 @@ const CryptoPaymentDetails: React.FC<{
         </GlassPanel>
       )}
 
-      <Button
-        variant="primary"
-        onClick={onProceed}
-        disabled={!isConnected}
-        className="w-full"
-      >
-        {isConnected ? `Pay with ${paymentMethod.method.name}` : 'Connect Wallet First'}
-      </Button>
+      {needsApproval ? (
+        <Button
+          variant="secondary"
+          onClick={handleApprove}
+          disabled={!isConnected || isApprovePending}
+          className="w-full"
+        >
+          {isApprovePending ? 'Approving...' : `Approve ${paymentMethod.method.token?.symbol}`}
+        </Button>
+      ) : (
+        <Button
+          variant="primary"
+          onClick={onProceed}
+          disabled={!isConnected}
+          className="w-full"
+        >
+          {isConnected ? `Pay with ${paymentMethod.method.name}` : 'Connect Wallet First'}
+        </Button>
+      )}
     </div>
   );
 };

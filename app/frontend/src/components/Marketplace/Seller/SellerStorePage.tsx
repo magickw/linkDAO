@@ -12,6 +12,11 @@ import { withSellerErrorBoundary } from './ErrorHandling';
 import { normalizeTier, getTierDisplayName } from '@/utils/tierMapping';
 import { TrustBadge, VerificationTier, VerificationStatus } from '@/components/Trust/TrustBadge';
 import { VerificationHistory } from '@/components/Trust/VerificationHistory';
+import { SendTokenForm } from '@/components/Wallet/SendTokenForm';
+import { DollarSign } from 'lucide-react';
+
+const BottomSheet = React.lazy(() => import('@/components/BottomSheet'));
+
 import {
   Star,
   Shield,
@@ -252,6 +257,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
   const [categories, setCategories] = useState<CategoryInfo[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
   const [showDAOModal, setShowDAOModal] = useState(false);
+  const [isSendMoneySheetOpen, setIsSendMoneySheetOpen] = useState(false);
   const [reviewFilter, setReviewFilter] = useState<'recent' | 'highest' | 'verified'>('recent');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -1046,6 +1052,17 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                       Message
                     </button>
 
+                    {/* Send Money Button */}
+                    {!isEditable && (
+                      <button
+                        onClick={() => setIsSendMoneySheetOpen(true)}
+                        className="px-6 py-3 bg-emerald-600 rounded-lg text-white hover:bg-emerald-700 transition-all font-medium flex items-center gap-2"
+                      >
+                        <DollarSign className="w-4 h-4" />
+                        Send Money
+                      </button>
+                    )}
+
                     <button
                       onClick={() => setIsFollowing(!isFollowing)}
                       className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${isFollowing
@@ -1719,6 +1736,20 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
           endorsements={seller.daoEndorsements}
           sellerName={seller.name}
         />
+
+        {/* Send Money BottomSheet */}
+        <React.Suspense fallback={null}>
+          <BottomSheet
+            isOpen={isSendMoneySheetOpen}
+            onClose={() => setIsSendMoneySheetOpen(false)}
+            title={`Send Money to ${seller.name}`}
+          >
+            <SendTokenForm 
+              onClose={() => setIsSendMoneySheetOpen(false)} 
+              initialRecipient={seller.walletAddress}
+            />
+          </BottomSheet>
+        </React.Suspense>
       </div>
     </div>
   );

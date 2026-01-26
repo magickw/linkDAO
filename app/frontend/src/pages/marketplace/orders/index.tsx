@@ -98,16 +98,20 @@ const mapStatusToStage = (status: string): 'created' | 'paid' | 'processing' | '
         case 'paid':
         case 'payment_confirmed':
         case 'payment_received':
+        case 'funded': // Escrow funded
             return 'paid';
         case 'processing':
         case 'preparing':
+        case 'disputed': // Dispute open (hold progress at processing)
             return 'processing';
         case 'shipped':
         case 'in_transit':
         case 'out_for_delivery':
+        case 'active': // Escrow active/delivery confirmed
             return 'shipped';
         case 'delivered':
         case 'completed':
+        case 'resolved': // Escrow resolved
             return 'delivered';
         case 'cancelled':
         case 'refunded':
@@ -141,7 +145,7 @@ export default function OrdersPage() {
     const canCancelOrder = useCallback((order: Order) => {
         if (!order || !order.status) return false;
         const status = order.status.toLowerCase();
-        return ['created', 'paid', 'processing', 'pending'].includes(status);
+        return ['created', 'paid', 'processing', 'pending', 'funded'].includes(status);
     }, []);
 
     // Handle cancel order
@@ -280,13 +284,18 @@ export default function OrdersPage() {
             case 'pending':
                 return <Clock className="text-yellow-400" size={20} />;
             case 'processing':
+            case 'disputed':
                 return <RefreshCw className="text-blue-400" size={20} />;
             case 'shipped':
+            case 'active':
                 return <Truck className="text-purple-400" size={20} />;
             case 'delivered':
+            case 'resolved':
                 return <CheckCircle className="text-green-400" size={20} />;
             case 'cancelled':
                 return <XCircle className="text-red-400" size={20} />;
+            case 'funded':
+                return <DollarSign className="text-emerald-400" size={20} />;
             default:
                 return <Package className="text-white/60" size={20} />;
         }
@@ -298,12 +307,18 @@ export default function OrdersPage() {
                 return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
             case 'processing':
                 return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+            case 'disputed':
+                return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
             case 'shipped':
+            case 'active':
                 return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
             case 'delivered':
+            case 'resolved':
                 return 'bg-green-500/20 text-green-400 border-green-500/30';
             case 'cancelled':
                 return 'bg-red-500/20 text-red-400 border-red-500/30';
+            case 'funded':
+                return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
             default:
                 return 'bg-white/5 text-white/60 border-white/10';
         }
@@ -387,9 +402,11 @@ export default function OrdersPage() {
                                 {[
                                     { key: 'all', label: 'All Orders' },
                                     { key: 'pending', label: 'Pending' },
+                                    { key: 'funded', label: 'Funded' },
                                     { key: 'processing', label: 'Processing' },
                                     { key: 'shipped', label: 'Shipped' },
                                     { key: 'delivered', label: 'Delivered' },
+                                    { key: 'disputed', label: 'Disputed' },
                                     { key: 'cancelled', label: 'Cancelled' }
                                 ].map((filter) => (
                                     <Button
@@ -489,13 +506,18 @@ function OrderCard({ order, onViewDetails, onCancelOrder, canCancel, isCancellin
             case 'pending':
                 return <Clock className="text-yellow-400" size={20} />;
             case 'processing':
+            case 'disputed':
                 return <RefreshCw className="text-blue-400" size={20} />;
             case 'shipped':
+            case 'active':
                 return <Truck className="text-purple-400" size={20} />;
             case 'delivered':
+            case 'resolved':
                 return <CheckCircle className="text-green-400" size={20} />;
             case 'cancelled':
                 return <XCircle className="text-red-400" size={20} />;
+            case 'funded':
+                return <DollarSign className="text-emerald-400" size={20} />;
             default:
                 return <Package className="text-white/60" size={20} />;
         }
@@ -507,12 +529,18 @@ function OrderCard({ order, onViewDetails, onCancelOrder, canCancel, isCancellin
                 return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
             case 'processing':
                 return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+            case 'disputed':
+                return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
             case 'shipped':
+            case 'active':
                 return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
             case 'delivered':
+            case 'resolved':
                 return 'bg-green-500/20 text-green-400 border-green-500/30';
             case 'cancelled':
                 return 'bg-red-500/20 text-red-400 border-red-500/30';
+            case 'funded':
+                return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
             default:
                 return 'bg-white/5 text-white/60 border-white/10';
         }

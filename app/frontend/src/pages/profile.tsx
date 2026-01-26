@@ -33,6 +33,10 @@ import { getTokenLogoWithFallback } from '@/utils/tokenLogoUtils';
 import { VerificationModal } from '@/components/Verification/VerificationModal';
 import { useVerification } from '@/hooks/useVerification';
 import { ProfilePostItem } from '@/components/ProfilePostItem';
+import { SendTokenForm } from '@/components/Wallet/SendTokenForm';
+import { DollarSign } from 'lucide-react';
+
+const BottomSheet = React.lazy(() => import('@/components/BottomSheet'));
 
 export default function Profile() {
   const router = useRouter();
@@ -50,6 +54,7 @@ export default function Profile() {
   const { profile: backendProfile, isLoading: isBackendProfileLoading, error: backendProfileError, refetch, updateProfile: updateBackendProfile, saveProfile: saveBackendProfile } = useProfile(targetUserAddress);
   const { data: followCount, isLoading: isFollowCountLoading } = useFollowCount(targetUserAddress);
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
+  const [isSendMoneySheetOpen, setIsSendMoneySheetOpen] = useState(false);
   const { requests } = useVerification();
 
   // Wallet data
@@ -887,6 +892,17 @@ export default function Profile() {
                       )}
                     </button>
                   )}
+
+                  {/* Show Send Money button when viewing another user's profile */}
+                  {currentUserAddress && targetUserAddress && targetUserAddress !== currentUserAddress && (
+                    <button
+                      onClick={() => setIsSendMoneySheetOpen(true)}
+                      className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-xl shadow-lg text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 dark:focus:ring-offset-gray-800 transition-all transform hover:scale-105"
+                    >
+                      <DollarSign className="mr-2 h-5 w-5" />
+                      Send Money
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1672,6 +1688,20 @@ export default function Profile() {
         </div>
       </div>
       <VerificationModal isOpen={isVerificationModalOpen} onClose={() => setIsVerificationModalOpen(false)} />
+      
+      {/* Send Money BottomSheet */}
+      <React.Suspense fallback={null}>
+        <BottomSheet
+          isOpen={isSendMoneySheetOpen}
+          onClose={() => setIsSendMoneySheetOpen(false)}
+          title={`Send Money to ${profile.displayName || profile.handle || formatAddress(targetUserAddress || '')}`}
+        >
+          <SendTokenForm 
+            onClose={() => setIsSendMoneySheetOpen(false)} 
+            initialRecipient={targetUserAddress || ''}
+          />
+        </BottomSheet>
+      </React.Suspense>
     </Layout>
   );
 }

@@ -18,6 +18,7 @@ import { usePostModalManager } from '@/hooks/usePostModalManager';
 import PostModal from '@/components/PostModal';
 import { getAvatarUrl } from '@/utils/userDisplay';
 
+import { SendTokenForm } from '@/components/Wallet/SendTokenForm';
 
 // Lazy load heavy components
 const SmartRightSidebar = lazy(() => import('@/components/SmartRightSidebar/SmartRightSidebar').catch(() => ({ default: () => <div>Failed to load sidebar</div> })));
@@ -1331,17 +1332,7 @@ export default function Home() {
             onClose={() => setIsWalletSheetOpen(false)}
             title="Send Tokens"
           >
-            <div className="p-4">
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                Wallet-to-wallet token sending feature coming soon!
-              </p>
-              <button
-                onClick={() => setIsWalletSheetOpen(false)}
-                className="w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
-              >
-                Close
-              </button>
-            </div>
+            <SendTokenForm onClose={() => setIsWalletSheetOpen(false)} />
           </BottomSheet>
         </Suspense>
 
