@@ -38,19 +38,32 @@ export class SellerErrorBoundary extends Component<
 
   static getDerivedStateFromError(error: Error): Partial<SellerErrorBoundaryState> {
     // Convert regular errors to SellerError if needed
-    const sellerError = error instanceof SellerError 
-      ? error 
-      : new SellerError(
-          SellerErrorType.API_ERROR,
-          error.message || 'An unexpected error occurred',
-          'COMPONENT_ERROR',
-          { originalError: error.name }
-        );
+    try {
+      const sellerError = error instanceof SellerError
+        ? error
+        : new SellerError(
+            SellerErrorType.API_ERROR,
+            error.message || 'An unexpected error occurred',
+            'COMPONENT_ERROR',
+            { originalError: error.name }
+          );
 
-    return {
-      hasError: true,
-      error: sellerError,
-    };
+      return {
+        hasError: true,
+        error: sellerError,
+      };
+    } catch (err) {
+      // If even creating the error fails, return a basic error state
+      console.error('Failed to process error in error boundary:', err);
+      return {
+        hasError: true,
+        error: new SellerError(
+          SellerErrorType.API_ERROR,
+          'An unexpected error occurred',
+          'ERROR_BOUNDARY_FAILURE'
+        ),
+      };
+    }
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {

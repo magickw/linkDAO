@@ -47,13 +47,20 @@ export async function globalFetch<T = any>(
     try {
       // Prepare headers
       const headers = new Headers(fetchOptions.headers);
-      
+
       // Add auth headers if not skipped
-      if (!skipAuth && enhancedAuthService.isAuthenticated()) {
-        const authHeaders = await enhancedAuthService.getAuthHeaders();
-        Object.entries(authHeaders).forEach(([key, value]) => {
-          headers.set(key, value);
-        });
+      if (!skipAuth) {
+        try {
+          if (enhancedAuthService.isAuthenticated && enhancedAuthService.isAuthenticated()) {
+            const authHeaders = await enhancedAuthService.getAuthHeaders();
+            Object.entries(authHeaders).forEach(([key, value]) => {
+              headers.set(key, value);
+            });
+          }
+        } catch (authError) {
+          console.warn('Failed to get auth headers, continuing without auth:', authError);
+          // Continue without auth headers if getting them fails
+        }
       }
 
       // Ensure Content-Type is set for POST/PUT/PATCH requests with body
