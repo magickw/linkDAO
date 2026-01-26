@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { get, post, put } from './globalFetchWrapper';
 import type {
     DashboardData,
     OrderQueueItem,
@@ -14,21 +14,19 @@ import type {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
 
-// Create axios instance with auth
-const getAuthHeaders = () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    return token ? { Authorization: `Bearer ${token}` } : {};
-};
-
 class FulfillmentService {
     /**
      * Get complete dashboard data
      */
     async getDashboard(): Promise<DashboardData> {
-        const response = await axios.get<{ data: DashboardData }>(
-            `${API_BASE}/api/seller/fulfillment/dashboard`,
-            { headers: getAuthHeaders() }
+        const response = await get<{ data: DashboardData }>(
+            `${API_BASE}/api/seller/fulfillment/dashboard`
         );
+
+        if (!response.success || !response.data) {
+            throw new Error(response.error || 'Failed to fetch dashboard data');
+        }
+
         return response.data.data;
     }
 
@@ -36,10 +34,14 @@ class FulfillmentService {
      * Get specific order queue
      */
     async getQueue(queueType: QueueType, limit: number = 50): Promise<OrderQueueItem[]> {
-        const response = await axios.get<{ data: OrderQueueItem[] }>(
-            `${API_BASE}/api/seller/fulfillment/queue/${queueType}`,
-            { params: { limit }, headers: getAuthHeaders() }
+        const response = await get<{ data: OrderQueueItem[] }>(
+            `${API_BASE}/api/seller/fulfillment/queue/${queueType}?limit=${limit}`
         );
+
+        if (!response.success || !response.data) {
+            throw new Error(response.error || 'Failed to fetch queue');
+        }
+
         return response.data.data;
     }
 
@@ -47,10 +49,14 @@ class FulfillmentService {
      * Get fulfillment metrics
      */
     async getMetrics(periodDays: number = 30): Promise<FulfillmentMetrics> {
-        const response = await axios.get<{ data: FulfillmentMetrics }>(
-            `${API_BASE}/api/seller/metrics/fulfillment`,
-            { params: { period: periodDays }, headers: getAuthHeaders() }
+        const response = await get<{ data: FulfillmentMetrics }>(
+            `${API_BASE}/api/seller/metrics/fulfillment?period=${periodDays}`
         );
+
+        if (!response.success || !response.data) {
+            throw new Error(response.error || 'Failed to fetch metrics');
+        }
+
         return response.data.data;
     }
 
@@ -58,10 +64,14 @@ class FulfillmentService {
      * Get performance trends
      */
     async getPerformanceTrends(periodDays: number = 90, intervalDays: number = 7): Promise<PerformanceTrend[]> {
-        const response = await axios.get<{ data: PerformanceTrend[] }>(
-            `${API_BASE}/api/seller/metrics/performance`,
-            { params: { period: periodDays, interval: intervalDays }, headers: getAuthHeaders() }
+        const response = await get<{ data: PerformanceTrend[] }>(
+            `${API_BASE}/api/seller/metrics/performance?period=${periodDays}&interval=${intervalDays}`
         );
+
+        if (!response.success || !response.data) {
+            throw new Error(response.error || 'Failed to fetch performance trends');
+        }
+
         return response.data.data;
     }
 
@@ -69,10 +79,14 @@ class FulfillmentService {
      * Get comparison to platform average
      */
     async getComparison(periodDays: number = 30): Promise<MetricsComparison> {
-        const response = await axios.get<{ data: MetricsComparison }>(
-            `${API_BASE}/api/seller/metrics/comparison`,
-            { params: { period: periodDays }, headers: getAuthHeaders() }
+        const response = await get<{ data: MetricsComparison }>(
+            `${API_BASE}/api/seller/metrics/comparison?period=${periodDays}`
         );
+
+        if (!response.success || !response.data) {
+            throw new Error(response.error || 'Failed to fetch comparison data');
+        }
+
         return response.data.data;
     }
 
@@ -80,11 +94,15 @@ class FulfillmentService {
      * Perform bulk action on orders
      */
     async performBulkAction(orderIds: string[], action: BulkAction): Promise<BulkActionResult> {
-        const response = await axios.post<{ data: BulkActionResult }>(
+        const response = await post<{ data: BulkActionResult }>(
             `${API_BASE}/api/seller/fulfillment/bulk-action`,
-            { orderIds, action },
-            { headers: getAuthHeaders() }
+            { orderIds, action }
         );
+
+        if (!response.success || !response.data) {
+            throw new Error(response.error || 'Failed to perform bulk action');
+        }
+
         return response.data.data;
     }
 
@@ -92,10 +110,14 @@ class FulfillmentService {
      * Get automation rules
      */
     async getAutomationRules(): Promise<AutomationRule[]> {
-        const response = await axios.get<{ data: AutomationRule[] }>(
-            `${API_BASE}/api/automation/rules`,
-            { headers: getAuthHeaders() }
+        const response = await get<{ data: AutomationRule[] }>(
+            `${API_BASE}/api/automation/rules`
         );
+
+        if (!response.success || !response.data) {
+            throw new Error(response.error || 'Failed to fetch automation rules');
+        }
+
         return response.data.data;
     }
 
@@ -103,21 +125,28 @@ class FulfillmentService {
      * Update automation rule
      */
     async updateAutomationRule(ruleName: string, enabled: boolean): Promise<void> {
-        await axios.put(
+        const response = await put(
             `${API_BASE}/api/automation/rules/${ruleName}`,
-            { enabled },
-            { headers: getAuthHeaders() }
+            { enabled }
         );
+
+        if (!response.success) {
+            throw new Error(response.error || 'Failed to update automation rule');
+        }
     }
 
     /**
      * Get automation log for an order
      */
     async getAutomationLog(orderId: string): Promise<AutomationLog[]> {
-        const response = await axios.get<{ data: AutomationLog[] }>(
-            `${API_BASE}/api/orders/${orderId}/automation-log`,
-            { headers: getAuthHeaders() }
+        const response = await get<{ data: AutomationLog[] }>(
+            `${API_BASE}/api/orders/${orderId}/automation-log`
         );
+
+        if (!response.success || !response.data) {
+            throw new Error(response.error || 'Failed to fetch automation log');
+        }
+
         return response.data.data;
     }
 
@@ -125,11 +154,13 @@ class FulfillmentService {
      * Manually trigger automation for an order
      */
     async triggerAutomation(orderId: string): Promise<void> {
-        await axios.post(
-            `${API_BASE}/api/orders/${orderId}/automation/trigger`,
-            {},
-            { headers: getAuthHeaders() }
+        const response = await post(
+            `${API_BASE}/api/orders/${orderId}/automation/trigger`
         );
+
+        if (!response.success) {
+            throw new Error(response.error || 'Failed to trigger automation');
+        }
     }
 }
 

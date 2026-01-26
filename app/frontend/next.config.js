@@ -338,13 +338,18 @@ const nextConfig = {
 
 module.exports = nextConfig;
 
-// Add rewrites for API proxying in development
-if (process.env.NODE_ENV === 'development') {
+// Configure rewrites for API proxying
+// This is enabled in all environments to ensure frontend can talk to backend
+// whether running locally (dev/prod) or in deployment
+if (true) {
   nextConfig.rewrites = async () => {
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+    console.log(`[Next.js] Rewriting /api/* to ${backendUrl}/api/*`);
+    
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:10000/api/:path*'
+        destination: `${backendUrl}/api/:path*`
       }
     ];
   };

@@ -43,14 +43,26 @@ export default function StatusSharePage() {
                 // Fetch status by share ID using the unified resolver
                 const response = await fetch(`/api/p/${shareId}`);
 
+                const contentType = response.headers.get('content-type');
+                const isJson = contentType && contentType.includes('application/json');
+
                 if (!response.ok) {
                     let errorMessage = 'Failed to load status';
-                    try {
-                        const errorData = await response.json();
-                        errorMessage = errorData.error || errorData.message || errorMessage;
-                    } catch (e) {
-                        // If JSON parsing fails, use status text
-                        errorMessage = response.statusText || `Error ${response.status}`;
+                    
+                    if (isJson) {
+                        try {
+                            const errorData = await response.json();
+                            errorMessage = errorData.error || errorData.message || errorMessage;
+                            if (errorData.debug) {
+                                console.log('[SharePage] Debug info:', errorData.debug);
+                            }
+                        } catch (e) {
+                            errorMessage = response.statusText || `Error ${response.status}`;
+                        }
+                    } else {
+                        // Non-JSON error usually means 404 from Next.js (backend unreachable)
+                        console.error('[SharePage] Received non-JSON response:', response.status);
+                        errorMessage = `Error ${response.status}: Backend unreachable or API route missing`;
                     }
                     
                     if (response.status === 404) {
@@ -60,6 +72,10 @@ export default function StatusSharePage() {
                     }
                     setIsLoading(false);
                     return;
+                }
+
+                if (!isJson) {
+                     throw new Error('Received invalid response format from server');
                 }
 
                 const result = await response.json();
