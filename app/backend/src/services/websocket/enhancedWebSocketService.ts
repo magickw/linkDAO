@@ -1,5 +1,5 @@
 import { Server } from 'socket.io';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { Server as HttpServer } from 'http';
 
 interface WebSocketUser {

@@ -1,5 +1,5 @@
 import { Server, Socket } from 'socket.io';
-import { verifyToken } from '../utils/auth';
+import { verifyToken } from '../../utils/auth';
 
 interface ChatSession {
   id: string;

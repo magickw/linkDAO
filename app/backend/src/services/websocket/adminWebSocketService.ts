@@ -1,9 +1,9 @@
 import { Server } from 'socket.io';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { Server as HttpServer } from 'http';
 import { getWebSocketService } from './webSocketService';
-import { databaseService } from './databaseService';
-import { users } from '../db/schema';
+import { databaseService } from '../databaseService';
+import { users } from '../../db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 
 interface AdminUser {

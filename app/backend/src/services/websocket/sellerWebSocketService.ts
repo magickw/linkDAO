@@ -1,5 +1,5 @@
 import { getWebSocketService } from './webSocketService';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 
 interface SellerUpdateEvent {
   type: 'profile_updated' | 'new_order' | 'order_status_changed' | 'tier_upgraded' | 'listing_updated' | 'payment_received' | 'review_received' | 'analytics_updated';
