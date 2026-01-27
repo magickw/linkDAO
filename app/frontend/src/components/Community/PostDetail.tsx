@@ -10,8 +10,7 @@ import {
   Share2,
   Users,
   Calendar,
-  Shield,
-  MessageCircle
+  Shield
 } from 'lucide-react';
 
 import EnhancedCommentSystem from '../EnhancedCommentSystem';
@@ -72,12 +71,6 @@ export default function PostDetail({
           className="shadow-sm border-gray-200 dark:border-gray-700"
         />
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="p-4 border-b border-gray-100 dark:border-gray-700">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <MessageCircle className="w-5 h-5" />
-              Comments ({commentCount})
-            </h2>
-          </div>
           <div className="p-4">
             <EnhancedCommentSystem
               postId={post.id}

@@ -345,18 +345,8 @@ export default function StatusSharePage() {
                                         onReaction={handleReaction}
                                         onTip={handleTip}
                                         onExpand={() => { }}
+                                        defaultExpanded={true}
                                     />
-
-                                    {/* Comment System */}
-                                    {status && status.id && (
-                                        <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
-                                            <EnhancedCommentSystem
-                                                postId={status.id}
-                                                postType="feed"
-                                                onCommentAdded={handleCommentAdded}
-                                            />
-                                        </div>
-                                    )}
                                 </>
                             )}
                         </div>

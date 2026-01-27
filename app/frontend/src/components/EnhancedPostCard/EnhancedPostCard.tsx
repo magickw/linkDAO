@@ -68,6 +68,7 @@ interface EnhancedPostCardProps {
   onUpvote?: (postId: string) => Promise<void>;
   onDownvote?: (postId: string) => Promise<void>;
   isNested?: boolean;
+  defaultExpanded?: boolean;
 }
 
 // Add proper comparison function for React.memo
@@ -97,12 +98,13 @@ const EnhancedPostCard = React.memo(({
   onExpand,
   onUpvote,
   onDownvote,
-  isNested = false
+  isNested = false,
+  defaultExpanded = false
 }: EnhancedPostCardProps) => {
   const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
   const router = useRouter();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded || false);
   const [showAllPreviews, setShowAllPreviews] = useState(false);
   const [isPinned, setIsPinned] = useState(post.pinnedUntil && new Date(post.pinnedUntil) > new Date());
 

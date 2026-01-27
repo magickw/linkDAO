@@ -97,7 +97,7 @@ export default function StatusPage() {
         }
 
         try {
-            await StatusService.reactToStatus(postId, address, 'upvote', '1');
+            await StatusService.addReaction(postId, 'upvote', 1);
             addToast('Upvoted!', 'success');
             // Optionally refresh status to get updated counts
         } catch (error) {
@@ -118,7 +118,7 @@ export default function StatusPage() {
         }
 
         try {
-            await StatusService.reactToStatus(postId, address, 'downvote', '1');
+            await StatusService.addReaction(postId, 'downvote', 1);
             addToast('Downvoted!', 'success');
             // Optionally refresh status to get updated counts
         } catch (error) {
@@ -139,7 +139,7 @@ export default function StatusPage() {
         }
 
         try {
-            await StatusService.reactToStatus(postId, address, reactionType, String(amount || 1));
+            await StatusService.addReaction(postId, reactionType, amount || 1);
             addToast(`Reacted with ${reactionType}!`, 'success');
         } catch (error) {
             console.error('Error reacting:', error);
@@ -161,7 +161,7 @@ export default function StatusPage() {
         if (!status) return;
 
         try {
-            await StatusService.tipStatus(postId, address, status.author, token, amount);
+            await StatusService.sendTip(postId, parseFloat(amount), token);
             addToast(`Tipped ${amount} ${token}!`, 'success');
         } catch (error) {
             console.error('Error tipping:', error);
@@ -267,18 +267,8 @@ export default function StatusPage() {
                                         onReaction={handleReaction}
                                         onTip={handleTip}
                                         onExpand={() => { }}
+                                        defaultExpanded={true}
                                     />
-
-                                    {/* Comment System - only render when status is fully loaded */}
-                                    {status && status.id && (
-                                        <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
-                                            <EnhancedCommentSystem
-                                                postId={status.id}
-                                                postType="feed"
-                                                onCommentAdded={handleCommentAdded}
-                                            />
-                                        </div>
-                                    )}
                                 </>
                             )}
                         </div>
