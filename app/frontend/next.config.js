@@ -90,6 +90,21 @@ const nextConfig = {
       })(),
     };
 
+    // Suppress Solana instruction-plans errors - it's an optional dependency from coinbase SDK
+    // that tries to import missing error codes from @solana/errors
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /^@solana\/instruction-plans$/,
+      })
+    );
+
+    // Suppress Solana kit errors - optional dependency we don't directly use
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /^@solana\/kit$/,
+      })
+    );
+
     // Handle node: protocol imports - convert to regular node module imports
     config.resolve.alias = {
       ...config.resolve.alias,
