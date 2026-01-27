@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { orderAutomationService } from '../services/orderAutomationService';
+import { orderAutomationService } from '../services/marketplace/orderAutomationService';
 import { safeLogger } from '../utils/safeLogger';
 import { apiResponse } from '../utils/apiResponse';
 

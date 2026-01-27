@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { returnAlertManagerService } from '../services/returnAlertManagerService';
+import { returnAlertManagerService } from '../services/marketplace/returnAlertManagerService';
 import { safeLogger } from '../utils/safeLogger';
 
 /**

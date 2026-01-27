@@ -1,9 +1,8 @@
 
 import { TrackingPollerService } from '../../services/trackingPollerService';
-import { ShippingService } from '../../services/shippingService';
-import { OrderTimelineService } from '../../services/orderTimelineService';
-import { NotificationService } from '../../services/notificationService';
-import { OrderService } from '../../services/orderService';
+import { ShippingService } from '../../services/marketplace/shippingService';
+import { OrderTimelineService } from '../../services/marketplace/orderTimelineService';
+import { OrderService } from '../../services/marketplace/orderService';
 import { db } from '../../db';
 
 // Mock dependencies

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
-import { motion } from 'framer-motion';
+
 import { useAccount } from 'wagmi';
 import { marketplaceService, MarketplaceListing as ServiceMarketplaceListing, CategoryInfo } from '@/services/marketplaceService';
 import { unifiedSellerService } from '@/services/unifiedSellerService';
@@ -850,9 +850,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Seller Edit Banner - Only shown when seller views their own store */}
         {isEditable && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
+          <div
             className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg p-4 mb-6 border border-white/20"
           >
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -885,13 +883,11 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                 </button>
               </div>
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* Header Section with Cover Image */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+        <div
           className="bg-white/10 backdrop-blur-lg rounded-2xl overflow-hidden mb-8"
         >
           {/* Cover Image */}
@@ -1270,13 +1266,11 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Featured Listings Section */}
         {seller.featuredListings.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+          <div
             className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 mb-8"
           >
             <h2 className="text-xl font-bold text-white mb-4">Featured Listings</h2>
@@ -1300,13 +1294,11 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                 </div>
               ))}
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* Breadcrumb Navigation */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+        <div
           className="mb-6"
         >
           <nav className="flex items-center space-x-2 text-sm text-white/70">
@@ -1328,7 +1320,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
               {seller.name}
             </span>
           </nav>
-        </motion.div>
+        </div>
 
         {/* Navigation Tabs */}
         <div className="flex flex-wrap gap-2 md:gap-6 mb-8 overflow-x-auto pb-2">
@@ -1352,10 +1344,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
         </div>
 
         {/* Content based on active tab */}
-        <motion.div
+        <div
           key={activeTab}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
           className="bg-white/10 backdrop-blur-lg rounded-2xl p-8"
         >
           {activeTab === 'listings' && (
@@ -1431,12 +1421,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
               {filteredListings.length > 0 ? (
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
                   {filteredListings.map((listing, index) => (
-                    <motion.div
+                    <div
                       key={listing.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      whileHover={{ y: -5 }}
                       className="bg-white/10 rounded-xl overflow-hidden cursor-pointer hover:bg-white/15 transition-all duration-300 border border-white/10 hover:border-white/30"
                       onClick={() => handleProductClick(listing.id)}
                     >
@@ -1481,7 +1467,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                           </span>
                         </div>
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -1727,7 +1713,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
               )}
             </div>
           )}
-        </motion.div>
+        </div>
 
         {/* DAO Endorsement Modal */}
         <DAOEndorsementModal
@@ -1744,8 +1730,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             onClose={() => setIsSendMoneySheetOpen(false)}
             title={`Send Money to ${seller.name}`}
           >
-            <SendTokenForm 
-              onClose={() => setIsSendMoneySheetOpen(false)} 
+            <SendTokenForm
+              onClose={() => setIsSendMoneySheetOpen(false)}
               initialRecipient={seller.walletAddress}
             />
           </BottomSheet>

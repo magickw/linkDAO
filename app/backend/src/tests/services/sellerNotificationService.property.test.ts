@@ -11,7 +11,7 @@
 
 import * as fc from 'fast-check';
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
-import { SellerNotificationService } from '../../services/sellerNotificationService';
+import { SellerNotificationService } from '../../services/marketplace/sellerNotificationService';
 import {
   SellerNotificationInput,
   NotificationPreferences,

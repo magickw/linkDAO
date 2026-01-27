@@ -4,7 +4,7 @@
 
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { RedisSessionService } from '../services/redisSessionService';
-import { DiscountCodeService } from '../services/discountCodeService';
+import { DiscountCodeService } from '../services/marketplace/discountCodeService';
 import { AddressVerificationService } from '../services/addressVerificationService';
 import { withTimeout, withRetry, CircuitBreaker } from '../utils/paymentTimeout';
 

@@ -4,7 +4,7 @@ import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import orderRoutes from '../routes/orderRoutes';
 import { databaseService } from '../services/databaseService';
 import { userProfileService } from '../services/userProfileService';
-import { orderService } from '../services/orderService';
+import { orderService } from '../services/marketplace/orderService';
 import { safeLogger } from '../utils/safeLogger';
 
 // Mock databaseService and userProfileService

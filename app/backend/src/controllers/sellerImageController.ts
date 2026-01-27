@@ -9,7 +9,7 @@
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
-import { sellerImageService } from '../services/sellerImageService';
+import { sellerImageService } from '../services/marketplace/sellerImageService';
 import { SellerError, SellerErrorType } from '../types/sellerError';
 
 export interface AuthenticatedRequest extends Request {

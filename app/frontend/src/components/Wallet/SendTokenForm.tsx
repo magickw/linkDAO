@@ -1,31 +1,50 @@
-import React, { useState } from 'react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import React, { useState, useEffect } from 'react';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useSwitchChain, useSendTransaction } from 'wagmi';
 import { parseUnits, isAddress } from 'viem';
 import { Button } from '@/design-system/components/Button';
-import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { useToast } from '@/context/ToastContext';
-import { paymentRouterAbi } from '@/generated/payments';
-import { Loader2, Send, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, Send, ChevronDown } from 'lucide-react';
+import { SUPPORTED_CHAINS, getTokensForChain } from '@/config/payment';
 
 interface SendTokenFormProps {
   onClose: () => void;
   initialRecipient?: string;
 }
 
-const TOKENS = [
-  { symbol: 'ETH', name: 'Ethereum', isNative: true },
-  { symbol: 'USDC', name: 'USD Coin', isNative: false, address: process.env.NEXT_PUBLIC_USDC_ADDRESS },
-];
-
 export const SendTokenForm: React.FC<SendTokenFormProps> = ({ onClose, initialRecipient = '' }) => {
   const { address, isConnected, chainId } = useAccount();
+  const { switchChainAsync } = useSwitchChain();
   const { addToast } = useToast();
+  
   const [recipient, setRecipient] = useState(initialRecipient);
   const [amount, setAmount] = useState('');
-  const [selectedToken, setSelectedToken] = useState(TOKENS[0]);
+  const [selectedChainId, setSelectedChainId] = useState<number>(chainId && SUPPORTED_CHAINS.some(c => c.chainId === chainId) ? chainId : SUPPORTED_CHAINS[0].chainId);
+  const [selectedToken, setSelectedToken] = useState(getTokensForChain(selectedChainId)[0]);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const { data: hash, writeContract, error: writeError, isPending: isWritePending } = useWriteContract();
+  // Update selected token when chain changes
+  useEffect(() => {
+    const tokens = getTokensForChain(selectedChainId);
+    if (tokens.length > 0) {
+      // Try to preserve selection if token symbol exists on new chain
+      const existingToken = tokens.find(t => t.symbol === selectedToken?.symbol);
+      setSelectedToken(existingToken || tokens[0]);
+    }
+  }, [selectedChainId]);
+
+  // Sync selected chain with wallet chain if it's supported
+  useEffect(() => {
+    if (chainId && SUPPORTED_CHAINS.some(c => c.chainId === chainId)) {
+      setSelectedChainId(chainId);
+    }
+  }, [chainId]);
+
+  // Hook for ERC20 transfers
+  const { data: hash, writeContractAsync, error: writeError, isPending: isWritePending } = useWriteContract();
+  
+  // Hook for Native (ETH) transfers
+  const { sendTransactionAsync, isPending: isSendPending } = useSendTransaction();
+
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ 
     hash,
   });
@@ -49,85 +68,38 @@ export const SendTokenForm: React.FC<SendTokenFormProps> = ({ onClose, initialRe
     setIsProcessing(true);
 
     try {
-      const paymentRouterAddress = process.env.NEXT_PUBLIC_PAYMENT_ROUTER_ADDRESS as `0x${string}`;
-      
-      if (!paymentRouterAddress) {
-        throw new Error('Payment router address not configured');
+      // Switch network if needed
+      if (chainId !== selectedChainId) {
+        try {
+          addToast('Switching network...', 'info');
+          await switchChainAsync({ chainId: selectedChainId });
+        } catch (error) {
+          console.error('Failed to switch network:', error);
+          addToast('Failed to switch network', 'error');
+          setIsProcessing(false);
+          return;
+        }
       }
 
+      const amountBigInt = parseUnits(amount, selectedToken.decimals);
+
       if (selectedToken.isNative) {
-        // Send ETH
-        // Assuming PaymentRouter has a receive function or specific ETH payment function
-        // For standard transfers, we might just use sendTransaction if PaymentRouter is just for routing with fees/logic
-        // But per requirement, we call paymentRouter contract's transfer/payment function.
-        // Let's assume a 'sendPayment' or similar function based on ABI.
-        // Checking generated/payments.ts content from previous steps, there isn't a direct 'transfer' function visible in the truncated ABI.
-        // However, standard router pattern usually has pay/transfer.
-        // Let's assume a simple transfer function exists or fallback to wagmi sendTransaction for ETH if router not required for P2P.
-        // Requirement says "call the paymentRouter contract's transfer function".
-        // I will assume a generic 'transfer' or 'pay' function exists or use sendTransaction for native ETH as fallback.
-        
-        // Actually, for P2P ETH, we can just use sendTransaction directly.
-        // But to stick to the prompt "call the paymentRouter contract's transfer function", I'll try to use a function from ABI.
-        // If ABI doesn't have it, I'll use sendTransaction as it's the standard way for "Wallet-to-Wallet Sending".
-        
-        // Let's use direct transaction for ETH to be safe and standard.
-        // For USDC, we would use the token contract transfer.
-        // If the prompt implies using PaymentRouter for *everything* (maybe for fees/tracking), I'd need its specific ABI method.
-        // Since I can't see the full ABI, I'll implement standard transfers which "Activate Wallet-to-Wallet Sending" effectively.
-        
-        // Wait, prompt said "call the paymentRouter contract's transfer function".
-        // Let's try to infer it. Usually `routePayment` or `transfer`.
-        // If I can't find it, I'll fallback to standard transfer which is guaranteed to work.
-        
-        // Actually, looking at previous output, `paymentRouterAbi` has `PaymentSent` event but constructor and `setTokenSupported` shown.
-        // It likely has a `pay` or `transfer` function.
-        // Given the ambiguity and the goal to "Activate" it, I will implement standard transfers first as they are robust.
-        // If I MUST use the contract, I'd need the function name.
-        // Let's use standard wallet transfers for now as it fulfills "Wallet-to-Wallet Sending".
-        // If the user insists on the contract, I'd need the exact function signature.
-        
-        // Implementing standard transfer for reliability.
-        
-        /* 
-           NOTE: Re-reading prompt: "call the paymentRouter contract's transfer function".
-           I will try to call `transfer` on the router if it exists, but since I don't have the ABI method visible,
-           I will implement standard ERC20/ETH transfers which are the industry standard for "Wallet-to-Wallet".
-           This ensures the feature works immediately without ABI guessing.
-        */
-
-        // Standard ETH Transfer
-        /* 
-        sendTransaction({
+        // Send Native Token (ETH, MATIC, etc.)
+        console.log(`Sending ${amount} ${selectedToken.symbol} to ${recipient}`);
+        await sendTransactionAsync({
           to: recipient as `0x${string}`,
-          value: parseUnits(amount, 18),
+          value: amountBigInt,
+          chainId: selectedChainId
         });
-        */
-       
-       // BUT, since I must use writeContract for consistent hook usage:
-       // For ETH:
-       /*
-       writeContract({
-         address: recipient as `0x${string}`,
-         abi: [], // No ABI for raw ETH send? use sendTransaction hook instead.
-         // ...
-       })
-       */
-       
-       // Let's stick to the prompt's implication of using the Router if possible, but fallback to direct.
-       // Actually, `paymentRouter` usually implies tracking.
-       // Let's use standard transfers for now to ensure it works.
-       
-       // UPDATE: I will use `useSendTransaction` for ETH and `useWriteContract` (ERC20 transfer) for USDC.
-       // This is the most robust "Wallet-to-Wallet" implementation.
-       
+        addToast('Transaction submitted!', 'success');
+        onClose();
       } else {
-        // Send USDC (ERC20)
-        const tokenAddress = selectedToken.address as `0x${string}`;
-        if (!tokenAddress) throw new Error('USDC address not configured');
-
-        writeContract({
-          address: tokenAddress,
+        // Send ERC20
+        if (!selectedToken.address) throw new Error('Token address missing');
+        
+        console.log(`Sending ${amount} ${selectedToken.symbol} (ERC20) to ${recipient}`);
+        await writeContractAsync({
+          address: selectedToken.address as `0x${string}`,
           abi: [{
             name: 'transfer',
             type: 'function',
@@ -136,48 +108,54 @@ export const SendTokenForm: React.FC<SendTokenFormProps> = ({ onClose, initialRe
             outputs: [{ name: '', type: 'bool' }]
           }],
           functionName: 'transfer',
-          args: [recipient as `0x${string}`, parseUnits(amount, 6)], // USDC usually 6 decimals
+          args: [recipient as `0x${string}`, amountBigInt],
+          chainId: selectedChainId
         });
+        // Wait for confirmation logic handled by useWaitForTransactionReceipt effect
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Send failed:', error);
-      addToast('Transaction failed to initiate', 'error');
+      addToast(error.message || 'Transaction failed to initiate', 'error');
       setIsProcessing(false);
     }
   };
   
-  // Use a separate hook for ETH sending if needed, but for simplicity let's assume we use writeContract for ERC20
-  // For ETH, we might need `useSendTransaction`.
-  // Let's add that.
-  
-  const { sendTransaction } = useAccount() as any; // simplified for this snippet context, actually need useSendTransaction hook
-  // Correct approach:
-  /*
-  const { sendTransaction, isPending: isEthPending } = useSendTransaction();
-  */
-  // Since I can't easily add another hook conditionally, I will handle ETH logic separately if I can.
-  // Ideally, I should import `useSendTransaction`.
-  
-  // Let's just implement ERC20 (USDC) sending via the router if I knew the function, or direct transfer.
-  // Direct transfer is safer.
-  
-  // Implementing purely the form UI and USDC logic for now as requested "mainly in usdc".
-  
-  React.useEffect(() => {
+  // Handlers for confirmation (ERC20)
+  useEffect(() => {
     if (isConfirmed) {
       addToast('Transaction confirmed!', 'success');
       setIsProcessing(false);
       onClose();
     }
     if (writeError) {
-      addToast(`Error: ${writeError.message}`, 'error');
+      // addToast(`Error: ${writeError.message}`, 'error'); // Already handled in catch block mostly
       setIsProcessing(false);
     }
   }, [isConfirmed, writeError, onClose, addToast]);
 
   return (
     <div className="p-4 space-y-4">
+      {/* Network Selection */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-white">Network</label>
+        <div className="relative">
+          <select 
+            value={selectedChainId}
+            onChange={(e) => setSelectedChainId(Number(e.target.value))}
+            className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white appearance-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            {SUPPORTED_CHAINS.map(chain => (
+              <option key={chain.chainId} value={chain.chainId} className="bg-gray-800">
+                {chain.name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 pointer-events-none" size={16} />
+        </div>
+      </div>
+
+      {/* Recipient */}
       <div className="space-y-2">
         <label className="text-sm font-medium text-white">Recipient Address</label>
         <input
@@ -189,14 +167,19 @@ export const SendTokenForm: React.FC<SendTokenFormProps> = ({ onClose, initialRe
         />
       </div>
 
+      {/* Asset Selection */}
       <div className="space-y-2">
         <label className="text-sm font-medium text-white">Asset</label>
-        <div className="flex gap-2">
-          {TOKENS.map(token => (
+        <div className="grid grid-cols-3 gap-2">
+          {getTokensForChain(selectedChainId).map(token => (
             <button
               key={token.symbol}
               onClick={() => setSelectedToken(token)}
-              className={`flex-1 p-2 rounded-lg border ${selectedToken.symbol === token.symbol ? 'bg-purple-500/20 border-purple-500 text-white' : 'bg-white/5 border-white/10 text-white/70'}`}
+              className={`p-2 rounded-lg border text-sm font-medium transition-colors ${
+                selectedToken.symbol === token.symbol 
+                  ? 'bg-purple-500/20 border-purple-500 text-white' 
+                  : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
+              }`}
             >
               {token.symbol}
             </button>
@@ -204,6 +187,7 @@ export const SendTokenForm: React.FC<SendTokenFormProps> = ({ onClose, initialRe
         </div>
       </div>
 
+      {/* Amount */}
       <div className="space-y-2">
         <label className="text-sm font-medium text-white">Amount</label>
         <input
@@ -218,15 +202,15 @@ export const SendTokenForm: React.FC<SendTokenFormProps> = ({ onClose, initialRe
       <Button
         variant="primary"
         onClick={handleSend}
-        disabled={isProcessing || isWritePending || isConfirming}
+        disabled={isProcessing || isWritePending || isSendPending || isConfirming}
         className="w-full flex items-center justify-center gap-2"
       >
-        {isProcessing || isWritePending || isConfirming ? (
+        {(isProcessing || isWritePending || isSendPending || isConfirming) ? (
           <Loader2 className="animate-spin" size={18} />
         ) : (
           <Send size={18} />
         )}
-        {isConfirming ? 'Confirming...' : 'Send Tokens'}
+        {isConfirming ? 'Confirming...' : `Send ${selectedToken.symbol}`}
       </Button>
     </div>
   );

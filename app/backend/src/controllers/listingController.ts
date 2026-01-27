@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
-import { UnifiedMarketplaceService } from '../services/unifiedMarketplaceService';
-import { CreateListingInput, UpdateListingInput, ListingStatus } from '../services/listingService';
+import { UnifiedMarketplaceService } from '../services/marketplace/unifiedMarketplaceService';
+import { CreateListingInput, UpdateListingInput, ListingStatus } from '../services/marketplace/listingService';
 import { ProductSearchFilters, ProductSortOptions, PaginationOptions } from '../models/Product';
 import { ValidationError } from '../models/validation';
 

@@ -74,7 +74,7 @@ class OrderService {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
           errorData.message ||
-            `Failed to fetch orders: ${response.status} ${response.statusText}`
+          `Failed to fetch orders: ${response.status} ${response.statusText}`
         );
       }
 
@@ -186,25 +186,25 @@ class OrderService {
       // Call the return refund service to check eligibility
       // This would typically be an API endpoint, but we'll simulate the logic here
       const order = await this.getOrderById(orderId);
-      
+
       if (!order) {
         return { eligible: false, reason: 'Order not found' };
       }
-      
+
       // Orders are eligible for return if they are delivered and within the return window
       if (order.status !== 'DELIVERED' && order.status !== 'COMPLETED') {
         return { eligible: false, reason: 'Order must be delivered before returning' };
       }
-      
+
       // Check if within return window (typically 30 days)
       const deliveryDate = new Date(order.estimatedDelivery || order.createdAt);
       const deadline = new Date(deliveryDate.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
       const now = new Date();
-      
+
       if (now > deadline) {
         return { eligible: false, reason: 'Return period has expired', deadline };
       }
-      
+
       return { eligible: true, deadline };
     } catch (error) {
       console.error('Error checking return eligibility:', error);
@@ -428,7 +428,7 @@ class OrderService {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           status,
           metadata
         })
@@ -534,13 +534,13 @@ class OrderService {
   private transformOrder(order: any): MarketplaceOrder {
     // This is a simplified transformation - in a real implementation,
     // you would map the actual backend order structure to the frontend format
-    
+
     // Add return eligibility information
     const deliveryDate = order.status === 'SHIPPED' ? new Date(Date.now() + 86400000 * 3) : new Date(order.createdAt);
     const returnDeadline = new Date(deliveryDate.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
     const now = new Date();
     const returnEligible = (order.status === 'DELIVERED' || order.status === 'COMPLETED') && now < returnDeadline;
-    
+
     return {
       id: order.id,
       listingId: order.listingId || order.id,
@@ -629,7 +629,7 @@ class OrderService {
     ];
 
     const currentStep = statusSteps.find(step => step.status === order.status) || statusSteps[0];
-    
+
     return {
       orderId: order.id,
       status: order.status,
@@ -719,6 +719,35 @@ class OrderService {
       await orderNotificationService.sendNotificationViaBackend('payment_received', notificationData);
     } catch (error) {
       console.warn('Failed to send payment received notification:', error);
+    }
+  }
+  /**
+   * Get shipping rates
+   */
+  async getShippingRates(data: any): Promise<any[]> {
+    try {
+      const response = await fetch(`${this.apiBaseUrl}/api/orders/shipping/rates`, {
+        method: 'POST',
+        headers: {
+          ...authService.getAuthHeaders(),
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch shipping rates: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching shipping rates:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to fetch shipping rates');
     }
   }
 }

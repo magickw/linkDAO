@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
-import { OrderPaymentIntegrationService, PaymentTransactionStatus } from '../services/orderPaymentIntegrationService';
+import { OrderPaymentIntegrationService, PaymentTransactionStatus } from '../services/marketplace/orderPaymentIntegrationService';
 
 export class OrderPaymentIntegrationController {
   private orderPaymentIntegrationService: OrderPaymentIntegrationService;

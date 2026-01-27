@@ -7,7 +7,7 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
-import { Status } from '@/models/Status';
+import { Status, convertBackendStatusToStatus } from '@/models/Status';
 import { StatusService } from '@/services/statusService';
 import { useToast } from '@/context/ToastContext';
 import { useWeb3 } from '@/context/Web3Context';
@@ -48,7 +48,7 @@ export default function StatusSharePage() {
 
                 if (!response.ok) {
                     let errorMessage = 'Failed to load status';
-                    
+
                     if (isJson) {
                         try {
                             const errorData = await response.json();
@@ -64,7 +64,7 @@ export default function StatusSharePage() {
                         console.error('[SharePage] Received non-JSON response:', response.status);
                         errorMessage = `Error ${response.status}: Backend unreachable or API route missing`;
                     }
-                    
+
                     if (response.status === 404) {
                         setError(errorMessage || 'Status not found');
                     } else {
@@ -75,13 +75,13 @@ export default function StatusSharePage() {
                 }
 
                 if (!isJson) {
-                     throw new Error('Received invalid response format from server');
+                    throw new Error('Received invalid response format from server');
                 }
 
                 const result = await response.json();
 
                 if (result.success && result.data) {
-                    const statusData = result.data.post as Status;
+                    const statusData = convertBackendStatusToStatus(result.data.post);
                     const canonical = result.data.canonicalUrl;
                     const owner = result.data.owner;
 

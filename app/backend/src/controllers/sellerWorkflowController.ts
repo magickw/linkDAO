@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { SellerWorkflowService } from '../services/sellerWorkflowService';
+import { SellerWorkflowService } from '../services/marketplace/sellerWorkflowService';
 import { AppError, ValidationError } from '../middleware/errorHandler';
 import { safeLogger } from '../utils/safeLogger';
 

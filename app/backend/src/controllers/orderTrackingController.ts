@@ -6,7 +6,7 @@
 
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
-import { OrderTrackingService } from '../services/orderTrackingService';
+import { OrderTrackingService } from '../services/marketplace/orderTrackingService';
 import { AppError, NotFoundError, ValidationError, ForbiddenError } from '../middleware/errorHandler';
 
 export class OrderTrackingController {

@@ -3,9 +3,9 @@ import { describe, expect, it, beforeAll, afterAll, beforeEach, jest } from '@je
 import { db } from '../../db';
 import { trackingRecords, orders, users, tracking_records } from '../../db/schema';
 import { TrackingPollerService } from '../../services/trackingPollerService';
-import { ShippingService } from '../../services/shippingService';
-import { OrderTimelineService } from '../../services/orderTimelineService';
-import { OrderService } from '../../services/orderService';
+import { ShippingService } from '../../services/marketplace/shippingService';
+import { OrderTimelineService } from '../../services/marketplace/orderTimelineService';
+import { OrderService } from '../../services/marketplace/orderService';
 import { OrderStatus } from '../../models/Order';
 import { v4 as uuidv4 } from 'uuid';
 import { eq } from 'drizzle-orm';
