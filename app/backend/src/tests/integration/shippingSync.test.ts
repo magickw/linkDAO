@@ -11,39 +11,22 @@ import { v4 as uuidv4 } from 'uuid';
 import { eq } from 'drizzle-orm';
 
 // Mock Carrier APIs in ShippingService but keep DB logic real
-jest.mock('../../services/shippingService', () => {
-    const originalModule = jest.requireActual('../../services/shippingService') as any;
-    return {
-        ...originalModule,
-        ShippingService: class extends originalModule.ShippingService {
-            async trackShipment(trackingNumber: string, carrier: string) {
-                // Return mock data based on tracking number to simulate different states
-                if (trackingNumber === 'DELIVERED123') {
-                    return {
-                        trackingNumber,
-                        carrier,
-                        status: 'DELIVERED',
-                        events: [{ status: 'DELIVERED', timestamp: new Date().toISOString(), description: 'Delivered' }]
-                    };
-                }
-                if (trackingNumber === 'TRANSIT123') {
-                    return {
-                        trackingNumber,
-                        carrier,
-                        status: 'IN_TRANSIT',
-                        events: [{ status: 'PICKED_UP', timestamp: new Date().toISOString(), description: 'Picked up' }]
-                    };
-                }
-                return {
-                    trackingNumber,
-                    carrier,
-                    status: 'UNKNOWN',
-                    events: []
-                };
-            }
-        }
-    };
+jest.mock('../../services/marketplace/shippingService', () => {
+  return {
+    ShippingService: jest.fn().mockImplementation(() => {
+      return {
+        createShipment: jest.fn(),
+        trackShipment: jest.fn(),
+        getShippingRates: jest.fn(),
+        validateAddress: jest.fn(),
+        startDeliveryTracking: jest.fn()
+      };
+    })
+  };
 });
+
+// Use the mock instead of requireActual if possible, or update path
+// const originalModule = jest.requireActual('../../services/marketplace/shippingService') as any;
 
 describe('Shipping & Tracking Integration', () => {
     let poller: TrackingPollerService;

@@ -1,7 +1,7 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
 import { savedForLaterService } from '../services/savedForLaterService';
-import { cartService, Cart } from '../services/cartService';
+import { cartService, Cart } from '../services/marketplace/cartService';
 import { AuthenticatedUser } from '../middleware/authMiddleware';
 import { Request, Response } from 'express';
 

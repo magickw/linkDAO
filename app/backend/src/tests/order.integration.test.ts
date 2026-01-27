@@ -10,7 +10,7 @@ import { safeLogger } from '../utils/safeLogger';
 // Mock databaseService and userProfileService
 jest.mock('../services/databaseService');
 jest.mock('../services/userProfileService');
-jest.mock('../services/orderService');
+jest.mock('../services/marketplace/orderService');
 
 const app = express();
 app.use(express.json());

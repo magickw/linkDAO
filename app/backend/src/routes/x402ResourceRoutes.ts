@@ -2,7 +2,7 @@ import express from 'express';
 import { safeLogger } from '../utils/safeLogger';
 import { resourceServer, PAY_TO_ADDRESS } from '../middleware/x402Middleware';
 import { paymentMiddleware } from '@x402/express';
-import { OrderService } from '../services/orderService';
+import { OrderService } from '../services/marketplace/orderService';
 
 // Initialize services
 const orderService = new OrderService();

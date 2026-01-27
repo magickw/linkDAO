@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { getWebSocketService } from '../services/webSocketService';
+import { getWebSocketService } from '../services/websocket/webSocketService';
 
 const router = Router();
 

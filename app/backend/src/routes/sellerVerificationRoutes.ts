@@ -3,7 +3,7 @@ import { body, param } from 'express-validator';
 import { SellerVerificationController } from '../controllers/sellerVerificationController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { validateAdminRole } from '../middleware/adminAuthMiddleware';
-import { SellerVerificationAuditService } from '../services/sellerVerificationAuditService';
+import { SellerVerificationAuditService } from '../services/marketplace/sellerVerificationAuditService';
 import { safeLogger } from '../utils/safeLogger';
 
 const router = Router();

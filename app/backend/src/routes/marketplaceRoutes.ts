@@ -150,7 +150,7 @@ router.get('/health', async (req, res) => {
 
     // Test marketplace service with the new health check method
     try {
-      const { marketplaceService } = await import('../services/marketplaceService');
+      const { marketplaceService } = await import('../services/marketplace/marketplaceService');
       const healthCheck = await marketplaceService.healthCheck();
 
       if (!healthCheck.healthy) {

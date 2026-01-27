@@ -1,4 +1,4 @@
-import { WebSocketServiceConfig } from '../services/webSocketService';
+import { WebSocketServiceConfig } from '../services/websocket/webSocketService';
 
 // Production configuration with optimized settings for resource-constrained environments
 // Pro tier: 4GB RAM, 2 CPUs

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { body, param } from 'express-validator';
 import { validateAdminRole } from '../middleware/adminAuthMiddleware';
 import { authMiddleware } from '../middleware/authMiddleware';
-import { SellerVerificationNotificationService } from '../services/sellerVerificationNotificationService';
+import { SellerVerificationNotificationService } from '../services/marketplace/sellerVerificationNotificationService';
 import { safeLogger } from '../utils/safeLogger';
 
 const router = Router();

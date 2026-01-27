@@ -4,7 +4,7 @@ import { csrfProtection } from '../middleware/csrfProtection';
 import { authMiddleware } from '../middleware/authMiddleware';
 import multer from 'multer';
 import { sellerController } from '../controllers/sellerController';
-import { sellerProfileService } from '../services/sellerProfileService';
+import { sellerProfileService } from '../services/marketplace/sellerProfileService';
 import { successResponse, errorResponse } from '../utils/apiResponse';
 const router = Router();
 

@@ -6,10 +6,10 @@ import { OrderService } from '../../services/marketplace/orderService';
 import { db } from '../../db';
 
 // Mock dependencies
-jest.mock('../../services/shippingService');
+jest.mock('../../services/marketplace/shippingService');
 jest.mock('../../services/orderTimelineService');
 jest.mock('../../services/notificationService');
-jest.mock('../../services/orderService');
+jest.mock('../../services/marketplace/orderService');
 jest.mock('../../db', () => ({
     db: {
         select: jest.fn(),

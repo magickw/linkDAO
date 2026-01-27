@@ -476,8 +476,7 @@ class LDAOSupportService {
       //   updatedAt: new Date()
       // }).returning();
 
-      // Notify support agents via WebSocket if available
-      const { getWebSocketService } = await import('../services/webSocketService');
+      const { getWebSocketService } = await import('./websocket/webSocketService');
       const wsService = getWebSocketService();
       
       if (wsService && typeof (wsService as any).broadcast === 'function') {
@@ -525,7 +524,7 @@ class LDAOSupportService {
       //   .where(eq(supportChatSessions.id, chatSessionId));
 
       // Broadcast message via WebSocket
-      const { getWebSocketService } = await import('../services/webSocketService');
+      const { getWebSocketService } = await import('./websocket/webSocketService');
       const wsService = getWebSocketService();
       
       if (wsService && typeof (wsService as any).broadcast === 'function') {
@@ -573,7 +572,7 @@ class LDAOSupportService {
       //   .where(eq(supportChatSessions.id, chatSessionId));
 
       // Notify user via WebSocket
-      const { getWebSocketService } = await import('../services/webSocketService');
+      const { getWebSocketService } = await import('./websocket/webSocketService');
       const wsService = getWebSocketService();
       
       if (wsService) {

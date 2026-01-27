@@ -2,8 +2,8 @@ import { Router, Request, Response } from 'express';
 import { safeLogger } from '../utils/safeLogger';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { authMiddleware } from '../middleware/authMiddleware';
-import { sellerOrderService } from '../services/sellerOrderService';
-import { SellerWorkflowService } from '../services/sellerWorkflowService';
+import { sellerOrderService } from '../services/marketplace/sellerOrderService';
+import { SellerWorkflowService } from '../services/marketplace/sellerWorkflowService';
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '../utils/apiResponse';
 import { cachingMiddleware, rateLimitWithCache } from '../middleware/cachingMiddleware';
 

@@ -4,7 +4,7 @@ import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/
 import { safeLogger } from '../utils/safeLogger';
 import { messagingService } from '../services/messagingService';
 import { apiResponse } from '../utils/apiResponse';
-import { getWebSocketService } from '../services/webSocketService';
+import { getWebSocketService } from '../services/websocket/webSocketService';
 import { linkPreviewService } from '../services/linkPreviewService';
 import { ipfsService } from '../services/ipfsService';
 

@@ -10,7 +10,7 @@
  * @see .kiro/specs/order-lifecycle-infrastructure/design.md
  */
 
-import { SellerNotificationService } from '../services/sellerNotificationService';
+import { SellerNotificationService } from '../services/marketplace/sellerNotificationService';
 import { safeLogger } from '../utils/safeLogger';
 
 // Singleton instance of the notification service

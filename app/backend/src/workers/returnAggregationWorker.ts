@@ -1,7 +1,7 @@
 import { Queue, Worker, Job } from 'bullmq';
 import { safeLogger } from '../utils/safeLogger';
 import { redisService } from '../services/redisService';
-import { returnAnalyticsService } from '../services/returnAnalyticsService';
+import { returnAnalyticsService } from '../services/marketplace/returnAnalyticsService';
 import { db } from '../db/index';
 import {
   returnEvents,

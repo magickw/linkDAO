@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { safeLogger } from '../utils/safeLogger';
 import { csrfProtection } from '../middleware/csrfProtection';
-import { sellerDashboardService } from '../services/sellerDashboardService';
+import { sellerDashboardService } from '../services/marketplace/sellerDashboardService';
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '../utils/apiResponse';
 import { cachingMiddleware, rateLimitWithCache } from '../middleware/cachingMiddleware';
 import { sanitizeWalletAddress } from '../utils/inputSanitization';

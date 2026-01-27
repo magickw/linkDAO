@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
-import { MarketplaceVerificationService } from '../services/marketplaceVerificationService';
-import { MarketplaceModerationService } from '../services/marketplaceModerationService';
+import { MarketplaceVerificationService } from '../services/marketplace/marketplaceVerificationService';
+import { MarketplaceModerationService } from '../services/marketplace/marketplaceModerationService';
 import { z } from 'zod';
 
 // Define the ProofOfOwnership interface

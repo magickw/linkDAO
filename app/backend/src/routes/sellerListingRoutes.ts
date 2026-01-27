@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { safeLogger } from '../utils/safeLogger';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { authenticateToken } from '../middleware/auth';
-import { sellerListingService } from '../services/sellerListingService';
+import { sellerListingService } from '../services/marketplace/sellerListingService';
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '../utils/apiResponse';
 import { cachingMiddleware, rateLimitWithCache } from '../middleware/cachingMiddleware';
 

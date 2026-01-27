@@ -110,7 +110,7 @@ import { Pool } from 'pg';
 // Enhanced CORS middleware is already imported as a function
 
 // Import services
-import { initializeWebSocketFix, shutdownWebSocketFix } from './services/websocketConnectionFix';
+import { initializeWebSocketFix, shutdownWebSocketFix } from './services/websocket/websocketConnectionFix';
 import { initializeWebSocket, shutdownWebSocket } from './services/websocket/webSocketService';
 import { initializeAdminWebSocket, shutdownAdminWebSocket } from './services/websocket/adminWebSocketService';
 import { initializeSellerWebSocket, shutdownSellerWebSocket } from './services/websocket/sellerWebSocketService';

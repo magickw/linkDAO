@@ -5,8 +5,8 @@ import { safeLogger } from '../utils/safeLogger';
 import { adminDashboardService } from '../services/adminDashboardService';
 import { FinancialMonitoringService } from '../services/financialMonitoringService';
 import { auditService } from '../services/auditService';
-import { orderSearchService } from '../services/orderSearchService';
-import { getAdminWebSocketService } from '../services/adminWebSocketService';
+import { orderSearchService } from '../services/marketplace/orderSearchService';
+import { getAdminWebSocketService } from '../services/websocket/adminWebSocketService';
 
 const financialMonitoringService = new FinancialMonitoringService();
 

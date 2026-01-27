@@ -7,7 +7,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { safeLogger } from '../utils/safeLogger';
-import SellerSecurityService, { SellerRole, SellerAccessRequest } from '../services/sellerSecurityService';
+import SellerSecurityService, { SellerRole, SellerAccessRequest } from '../services/marketplace/sellerSecurityService';
 import { securityMonitoringService } from '../services/securityMonitoringService';
 import { SecurityEventType, SecuritySeverity } from '../services/securityMonitoringService';
 import { errorResponse, validationErrorResponse } from '../utils/apiResponse';
