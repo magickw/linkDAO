@@ -6,6 +6,7 @@ import { EnhancedEscrowService } from './enhancedEscrowService';
 import { ShippingService } from './shippingService';
 import { NotificationService } from './notificationService';
 import { BlockchainEventService } from './blockchainEventService';
+import { TaxAwareEscrowService } from './tax/taxAwareEscrowService';
 import { getOrderWebSocketService } from './orderWebSocketService';
 import {
   MarketplaceOrder,
@@ -31,6 +32,7 @@ const sellerService = new SellerService();
 
 export class OrderService {
   private enhancedEscrowService: EnhancedEscrowService;
+  private taxAwareEscrowService: TaxAwareEscrowService;
 
   constructor() {
     this.enhancedEscrowService = new EnhancedEscrowService(
@@ -38,10 +40,16 @@ export class OrderService {
       process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || '',
       process.env.MARKETPLACE_CONTRACT_ADDRESS || ''
     );
+    this.taxAwareEscrowService = new TaxAwareEscrowService(
+      process.env.RPC_URL || 'https://sepolia.drpc.org',
+      process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || ''
+    );
   }
 
   /**
    * Create a new order with smart contract escrow deployment
+   * FIXED: Properly handles escrow with full payment amount (item + shipping + tax)
+   * Platform fee is 15% on ITEM PRICE ONLY (industry standard, not on shipping/tax)
    */
   async createOrder(input: CreateOrderInput): Promise<MarketplaceOrder> {
     try {
@@ -54,34 +62,67 @@ export class OrderService {
         this.ensureUserExists(input.sellerAddress)
       ]);
 
-      // Create escrow contract first
+      // ===== CRITICAL FIX: Calculate order amounts correctly =====
+      const itemPrice = parseFloat(input.amount);
+      const shippingCost = input.shippingCost ? parseFloat(input.shippingCost) : 0;
+      const taxAmount = input.taxAmount ? parseFloat(input.taxAmount) : 0;
+
+      // Platform fee: 15% on ITEM PRICE ONLY (not on shipping or tax)
+      // This is deducted from the seller's payout, NOT charged to buyer
+      const platformFeeRate = 0.15;
+      const platformFee = itemPrice * platformFeeRate;
+
+      // IMPORTANT: Escrow should hold the FULL PAYMENT AMOUNT
+      // This includes shipping and tax (which must be released separately)
+      const fullEscrowAmount = itemPrice + shippingCost + taxAmount;
+
+      safeLogger.info('Creating order with corrected escrow amount:', {
+        itemPrice,
+        shippingCost,
+        taxAmount,
+        platformFee,
+        fullEscrowAmount,
+      });
+
+      // Create escrow contract with FULL PAYMENT AMOUNT
+      // This is the total the buyer pays, which goes into escrow
       const { escrowId } = await this.enhancedEscrowService.createEscrow(
         input.listingId,
         input.buyerAddress,
         input.sellerAddress,
         input.paymentToken,
-        input.amount
+        fullEscrowAmount.toString() // FIX: Use full amount, not just item price
       );
 
-      // Create order in database
+      // Create order in database with CORRECT AMOUNTS
       const dbOrder = await databaseService.createOrder(
         input.listingId,
         buyerUser.id,
         sellerUser.id,
-        input.amount,
+        fullEscrowAmount.toString(), // FIX: Store full escrow amount, not just item price
         input.paymentToken,
         input.quantity ?? 1,
         escrowId,
         undefined, // variantId
         undefined, // orderId
-        '0', // taxAmount
-        '0', // shippingCost
-        '0', // platformFee
-        [], // taxBreakdown
+        taxAmount.toString(), // FIX: Store actual tax amount
+        shippingCost.toString(), // FIX: Store actual shipping cost
+        platformFee.toString(), // FIX: Store actual platform fee
+        input.taxBreakdown || [], // FIX: Store tax breakdown if provided
         input.shippingAddress,
         input.billingAddress || input.shippingAddress,
         input.paymentMethod || 'crypto',
-        input.paymentDetails
+        {
+          ...input.paymentDetails,
+          // Store breakdown for audit trail
+          orderBreakdown: {
+            itemPrice,
+            shippingCost,
+            taxAmount,
+            platformFee,
+            totalAmount: fullEscrowAmount,
+          }
+        }
       );
 
       if (!dbOrder) {
@@ -1026,9 +1067,37 @@ export class OrderService {
       const order = await this.getOrderById(orderId);
       if (!order || order.status !== OrderStatus.DELIVERED) return;
 
-      // Release payment from escrow
+      // Release payment from escrow with tax separation
       if (order.escrowId) {
-        await this.enhancedEscrowService.approveEscrow(order.escrowId, order.buyerWalletAddress);
+        // Use tax-aware escrow service to properly split funds
+        const release = await this.taxAwareEscrowService.releaseFundsWithTaxSeparation(
+          order.escrowId,
+          order.buyerWalletAddress,
+          order.sellerWalletAddress,
+          1 // chainId (Sepolia for testnet)
+        );
+
+        safeLogger.info('Payment released with proper fund separation:', {
+          orderId,
+          escrowId: order.escrowId,
+          sellerAmount: release.sellerAmount,
+          platformFee: release.platformFee,
+          taxAmount: release.taxAmount,
+          transactionHash: release.transactionHash
+        });
+
+        // Create order event with release details
+        await this.createOrderEvent(
+          orderId,
+          'PAYMENT_RELEASED',
+          'Payment released from escrow with tax separation',
+          {
+            sellerAmount: release.sellerAmount,
+            platformFee: release.platformFee,
+            taxAmount: release.taxAmount,
+            transactionHash: release.transactionHash
+          }
+        );
       }
 
       // Update order status to completed
@@ -1040,9 +1109,6 @@ export class OrderService {
         wsService.sendOrderCompletion(orderId, order.buyerWalletAddress);
         wsService.sendOrderCompletion(orderId, order.sellerWalletAddress);
       }
-
-      // Create order event
-      await this.createOrderEvent(orderId, 'PAYMENT_RELEASED', 'Payment automatically released to seller');
     } catch (error) {
       safeLogger.error('Error auto-releasing payment:', error);
     }

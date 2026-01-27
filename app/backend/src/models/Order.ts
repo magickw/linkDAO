@@ -4,7 +4,7 @@ export interface CreateOrderInput {
   listingId: string;
   buyerAddress: string;
   sellerAddress: string;
-  amount: string;
+  amount: string; // Item price only
   paymentToken: string;
   quantity?: number;
   shippingAddress?: ShippingAddress;
@@ -12,6 +12,10 @@ export interface CreateOrderInput {
   paymentMethod?: string;
   paymentDetails?: any;
   notes?: string;
+  // Optional: Can be calculated by service if not provided
+  shippingCost?: string;
+  taxAmount?: string;
+  taxBreakdown?: any;
 }
 
 export interface UpdateOrderInput {
