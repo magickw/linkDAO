@@ -36,8 +36,10 @@ interface SendMessageData {
   encryptedContent?: string;
   contentType: string;
   replyToId?: string;
+  quotedMessageId?: string;
   attachments: any[];
   encryptionMetadata?: any;
+  metadata?: any;
 }
 
 interface EncryptMessageData {
@@ -65,14 +67,14 @@ export class MessagingService {
     const cached = await cacheService.get(cacheKey);
     if (cached) return cached as string;
 
-    const user = await db.query.users.findFirst({
-      where: eq(users.walletAddress, normalized),
-      columns: { id: true }
-    });
+    const userResult = await db.select({ id: users.id })
+      .from(users)
+      .where(eq(users.walletAddress, normalized))
+      .limit(1);
 
-    if (user) {
-      await cacheService.set(cacheKey, user.id, 3600); // Cache for 1 hour
-      return user.id;
+    if (userResult.length > 0) {
+      await cacheService.set(cacheKey, userResult[0].id, 3600); // Cache for 1 hour
+      return userResult[0].id;
     }
     return null;
   }
@@ -1543,8 +1545,7 @@ export class MessagingService {
         await db
           .update(conversationParticipants)
           .set({
-            leftAt: new Date(),
-            updatedAt: new Date()
+            leftAt: new Date()
           })
           .where(
             and(
@@ -1628,8 +1629,7 @@ export class MessagingService {
         await db
           .update(conversationParticipants)
           .set({
-            role: newRole,
-            updatedAt: new Date()
+            role: newRole
           })
           .where(
             and(

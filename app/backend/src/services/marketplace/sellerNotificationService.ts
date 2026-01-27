@@ -15,7 +15,7 @@
  * @see .kiro/specs/order-lifecycle-infrastructure/design.md
  */
 
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import { ISellerNotificationService } from './interfaces/ISellerNotificationService';
 import {
   SellerNotification,
@@ -532,7 +532,7 @@ export class SellerNotificationService implements ISellerNotificationService {
     };
 
     return {
-      id: uuidv4(),
+      id: crypto.randomUUID(),
       sellerId: input.sellerId,
       type: input.type,
       priority,
@@ -891,7 +891,7 @@ export class SellerNotificationService implements ISellerNotificationService {
   ): Promise<void> {
     if (notifications.length === 0) return;
 
-    const batchId = uuidv4();
+    const batchId = crypto.randomUUID();
     const sellerId = notifications[0].sellerId;
 
     // Create a summary notification

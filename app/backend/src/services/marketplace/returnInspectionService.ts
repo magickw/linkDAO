@@ -1,7 +1,7 @@
 import { db } from '../../db/index';
 import { returns, returnStatusHistory } from '../../db/schema';
 import { eq } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import { safeLogger } from '../../utils/logger';
 
 export interface InspectionResult {
@@ -241,7 +241,7 @@ export class ReturnInspectionService {
   ): Promise<void> {
     try {
       await db.insert(returnStatusHistory).values({
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         returnId,
         fromStatus,
         toStatus,

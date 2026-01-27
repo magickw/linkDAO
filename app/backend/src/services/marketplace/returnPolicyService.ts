@@ -1,7 +1,7 @@
 import { db } from '../../db/index';
 import { returnPolicies } from '../../db/schema';
 import { eq } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import { safeLogger } from '../../utils/logger';
 
 export interface ReturnPolicyData {
@@ -77,7 +77,7 @@ class ReturnPolicyService {
         return this.formatPolicyResponse(updatedPolicy);
       } else {
         const newPolicyRecord = {
-          id: uuidv4(),
+          id: crypto.randomUUID(),
           ...policyRecord,
           createdAt: new Date()
         };

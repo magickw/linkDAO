@@ -6,7 +6,7 @@ import {
   refundTransactionAuditLog
 } from '../../db/schema';
 import { eq, and, gte, lte, desc, sql, isNull, ne } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import { logger } from '../../utils/logger';
 import { stripeRefundProvider } from './providers/stripeRefundProvider';
 import { paypalRefundProvider } from './providers/paypalRefundProvider';
@@ -319,7 +319,7 @@ export class RefundReconciliationService {
           const severity = this.calculateDiscrepancySeverity(discrepancyAmount, discrepancyType);
 
           discrepancies.push({
-            discrepancyId: uuidv4(),
+            discrepancyId: crypto.randomUUID(),
             refundRecordId: reconciliation.refundRecordId,
             discrepancyType,
             severity,
@@ -390,7 +390,7 @@ export class RefundReconciliationService {
 
     for (const { refundRecord } of refundsWithoutProvider) {
       discrepancies.push({
-        discrepancyId: uuidv4(),
+        discrepancyId: crypto.randomUUID(),
         refundRecordId: refundRecord.id,
         discrepancyType: 'missing_transaction',
         severity: 'high',
@@ -448,7 +448,7 @@ export class RefundReconciliationService {
       const refundRecordId = duplicateTxs[0]?.refundRecordId || '';
 
       discrepancies.push({
-        discrepancyId: uuidv4(),
+        discrepancyId: crypto.randomUUID(),
         refundRecordId,
         discrepancyType: 'duplicate_transaction',
         severity: 'medium',
@@ -480,7 +480,7 @@ export class RefundReconciliationService {
     try {
       logger.info(`Generating reconciliation report for period ${startDate.toISOString()} to ${endDate.toISOString()}`);
 
-      const reportId = uuidv4();
+      const reportId = crypto.randomUUID();
       const reportDate = new Date();
 
       // Get overall statistics
@@ -665,7 +665,7 @@ export class RefundReconciliationService {
       } else {
         // Create new reconciliation record
         await db.insert(refundReconciliationRecords).values({
-          id: uuidv4(),
+          id: crypto.randomUUID(),
           refundRecordId,
           reconciliationDate,
           reconciliationStatus: status,
@@ -965,7 +965,7 @@ export class RefundReconciliationService {
         [reconciliationRecord] = await db
           .insert(refundReconciliationRecords)
           .values({
-            id: uuidv4(),
+            id: crypto.randomUUID(),
             refundRecordId,
             reconciliationDate: new Date().toISOString().split('T')[0],
             reconciliationStatus: 'reconciled',
@@ -996,7 +996,7 @@ export class RefundReconciliationService {
 
       // Log audit action
       await db.insert(refundTransactionAuditLog).values({
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         refundRecordId,
         actionType: 'manual_reconciliation',
         actionDescription: `Transaction manually reconciled by ${reconciledBy}. Expected: ${expectedAmount}, Actual: ${actualAmount}, Discrepancy: ${discrepancyAmount}`,

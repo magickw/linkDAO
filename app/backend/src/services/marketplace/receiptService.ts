@@ -1,6 +1,6 @@
 import { DatabaseService } from './databaseService';
 import { safeLogger } from '../../utils/safeLogger';
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 
 const databaseService = new DatabaseService();
 
@@ -36,7 +36,7 @@ export class ReceiptService {
       const receiptNumber = `RCP-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
       const receiptRecord = {
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         orderId: data.orderId,
         receiptNumber,
         buyerInfo: {

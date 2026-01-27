@@ -2,7 +2,7 @@ import { db } from '../../db';
 import { promoCodes, users, sellers } from '../../db/schema';
 import { eq, and, gte, lte, or, isNull, sql } from 'drizzle-orm';
 import { safeLogger } from '../../utils/safeLogger';
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 
 export interface CreatePromoCodeInput {
     code: string;
@@ -79,7 +79,7 @@ export class PromoCodeService {
 
         try {
             const [newUser] = await db.insert(users).values({
-                id: uuidv4(),
+                id: crypto.randomUUID(),
                 walletAddress: normalizedAddress,
                 displayName: seller.storeName || 'Seller',
                 role: 'seller'
@@ -128,7 +128,7 @@ export class PromoCodeService {
             }
 
             const [newPromo] = await db.insert(promoCodes).values({
-                id: uuidv4(),
+                id: crypto.randomUUID(),
                 ...input,
                 sellerId, // Use resolved UUID
                 discountValue: input.discountValue.toString(), // Convert to string for numeric

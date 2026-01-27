@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useAccount, useDisconnect } from 'wagmi';
-import { useRouter } from 'next/router';
 import { enhancedAuthService, KYCStatus } from '@/services/enhancedAuthService';
 import { AuthUser, UserRole, Permission } from '@/types/auth';
 import { useToast } from '@/context/ToastContext';
@@ -53,7 +52,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { address, isConnected, connector } = useAccount();
   const { disconnect } = useDisconnect();
   const { addToast } = useToast();
-  const router = useRouter();
 
   const handleLogout = useCallback(async () => {
     await enhancedAuthService.logout();

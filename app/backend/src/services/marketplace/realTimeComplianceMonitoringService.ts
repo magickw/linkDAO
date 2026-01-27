@@ -9,7 +9,6 @@ import { EventEmitter } from 'events';
 import WebSocket from 'ws';
 import { logger } from '../../utils/logger';
 import { sellerReturnPerformanceService } from './sellerReturnPerformanceService';
-import { complianceMonitoringService } from './complianceMonitoringService';
 
 export interface ComplianceAlert {
   id: string;

@@ -8,7 +8,7 @@ import {
 } from '../db/schema';
 import { earningActivityService } from './earningActivityService';
 import { earningNotificationService } from './earningNotificationService';
-import { nanoid } from 'nanoid';
+import crypto from 'crypto';
 import { referralConfigService } from './referralConfigService';
 
 export interface ReferralData {
@@ -46,8 +46,14 @@ class ReferralService {
    * Generate unique referral code
    */
   generateReferralCode(): string {
-    const codeLength = referralConfigService.getReferralCodeLength ? referralConfigService.getReferralCodeLength() : 8;
-    return nanoid(typeof codeLength === 'number' ? codeLength : 8).toUpperCase();
+    const codeLength = referralConfigService.getReferralCodeLength ? referralConfigService.getReferralCodeLength() as number : 8;
+    const buffer = crypto.randomBytes(codeLength);
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < codeLength; i++) {
+      code += chars[buffer[i] % chars.length];
+    }
+    return code;
   }
 
   /**

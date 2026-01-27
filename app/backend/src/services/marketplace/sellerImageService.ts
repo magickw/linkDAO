@@ -26,7 +26,7 @@ try {
     })
   };
 }
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import imageStorageService from './imageStorageService';
 import { cdnService } from './cdnService';
 import { SellerError, SellerErrorType } from '../../types/sellerError';
@@ -267,7 +267,7 @@ class SellerImageService {
    * Requirements: 5.3, 5.4
    */
   private async uploadToStorage(processedImages: any, input: ImageUploadInput) {
-    const imageId = uuidv4();
+    const imageId = crypto.randomUUID();
     const timestamp = Date.now();
     
     // Upload main image

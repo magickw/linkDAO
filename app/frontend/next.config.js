@@ -346,6 +346,13 @@ const nextConfig = {
     // externalResolver: true,  // Removed due to deprecation warning
   },
 
+  // Skip generating auto catch-all for not-found to avoid router context issues
+  // We provide a custom not-found.tsx instead
+  onDemandEntries: {
+    maxInactiveAge: 60 * 1000,
+    pagesBufferLength: 5,
+  },
+
   // Optimize for development
   // swcMinify: false, // Disable SWC minification in development for faster builds (Removed due to deprecation warning)
   poweredByHeader: false // Remove powered by header for security

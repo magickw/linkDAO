@@ -9,7 +9,7 @@ import {
 import { eq, and, gte, lte, sql, desc, count, avg, sum, max, min } from 'drizzle-orm';
 import { safeLogger } from '../../utils/safeLogger';
 import { redisService } from './redisService';
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import { fraudDetectionEngine } from './fraudDetectionEngine';
 import { refundMonitoringService } from './refundMonitoringService';
 import { returnAnalyticsService } from './returnAnalyticsService';
@@ -285,7 +285,7 @@ export class ReturnAlertManagerService {
    * Set or update alert configuration
    */
   setAlertConfig(config: Omit<AlertConfig, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }): AlertConfig {
-    const configId = config.id || `config-${uuidv4()}`;
+    const configId = config.id || `config-${crypto.randomUUID()}`;
     const now = new Date();
     
     const alertConfig: AlertConfig = {
@@ -651,7 +651,7 @@ export class ReturnAlertManagerService {
    * Generate an alert based on configuration
    */
   private async generateAlert(config: AlertConfig): Promise<ReturnAlert> {
-    const alertId = `alert-${uuidv4()}`;
+    const alertId = `alert-${crypto.randomUUID()}`;
     const now = new Date();
     
     // Calculate current value for context
@@ -1272,7 +1272,7 @@ export class ReturnAlertManagerService {
     try {
       // Create escalation record
       const escalation: AlertEscalation = {
-        id: `escalation-${uuidv4()}`,
+        id: `escalation-${crypto.randomUUID()}`,
         alertId: alert.id,
         level: (alert.contextData?.escalationLevel || 0) + 1,
         escalatedAt: new Date(),
@@ -1340,7 +1340,7 @@ export class ReturnAlertManagerService {
     try {
       // Create escalation record
       const escalation: AlertEscalation = {
-        id: `escalation-${uuidv4()}`,
+        id: `escalation-${crypto.randomUUID()}`,
         alertId: alert.id,
         level: (alert.contextData?.escalationLevel || 0) + 1,
         escalatedAt: new Date(),

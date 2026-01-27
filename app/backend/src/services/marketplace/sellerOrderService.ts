@@ -205,9 +205,7 @@ class SellerOrderService {
             quantity: order.quantity || 1,
             price: order.amount,
             image: image,
-            isPhysical: product.isPhysical,
-            isService: product.isService,
-            serviceType: product.serviceType
+            isPhysical: product.isPhysical
           });
         }
       } catch (err) {
@@ -404,7 +402,7 @@ class SellerOrderService {
         eq(orderEvents.eventType, 'message'),
         sql`${orderEvents.metadata}::jsonb->>'orderId' = ${orderId}`
       ))
-      .orderBy(asc(orderEvents.createdAt));
+      .orderBy(asc(orderEvents.timestamp));
 
     return messageEvents.map(event => {
       const metadata = JSON.parse(event.metadata || '{}');
@@ -412,7 +410,7 @@ class SellerOrderService {
         id: event.id,
         sender: metadata.sender || 'system',
         message: event.description || '',
-        timestamp: event.createdAt?.toISOString() || new Date().toISOString(),
+        timestamp: event.timestamp?.toISOString() || new Date().toISOString(),
         read: metadata.read || false,
       };
     });
@@ -448,11 +446,11 @@ class SellerOrderService {
         sellerId,
         read: false,
       }),
-    }).returning({ id: orderEvents.id, createdAt: orderEvents.createdAt });
+    }).returning({ id: orderEvents.id, timestamp: orderEvents.timestamp });
 
     return {
       id: result[0]?.id?.toString() || '',
-      timestamp: result[0]?.createdAt?.toISOString() || new Date().toISOString(),
+      timestamp: result[0]?.timestamp?.toISOString() || new Date().toISOString(),
     };
   }
 

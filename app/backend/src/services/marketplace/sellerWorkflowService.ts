@@ -4,7 +4,7 @@ import { OrderService } from './orderService';
 import { ShippingService } from './shippingService';
 import { NotificationService } from './notificationService';
 import { OrderStatus } from '../../models/Order';
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import { ValidationError, NotFoundError, UnauthorizedError } from '../middleware/errorHandler';
 
 export interface SellerDashboardStats {
@@ -239,8 +239,8 @@ export class SellerWorkflowService {
             }
 
             // Generate Label (Mock for now)
-            const labelUrl = `https://mock-carrier.com/label/${uuidv4()}.pdf`;
-            const trackingNumber = `TRACK-${uuidv4().substring(0, 8).toUpperCase()}`;
+            const labelUrl = `https://mock-carrier.com/label/${crypto.randomUUID()}.pdf`;
+            const trackingNumber = `TRACK-${crypto.randomUUID().substring(0, 8).toUpperCase()}`;
 
             // Update with metadata - keep as PROCESSING but add readyToShip flag
             await this.orderService.updateOrderStatus(orderId, OrderStatus.PROCESSING, {
@@ -614,7 +614,7 @@ export class SellerWorkflowService {
             const newDeliverable = {
                 ...deliverable,
                 uploadedAt: new Date().toISOString(),
-                id: uuidv4()
+                id: crypto.randomUUID()
             };
             existingDeliverables.push(newDeliverable);
 

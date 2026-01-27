@@ -6,7 +6,7 @@ import {
   refundTransactionAuditLog
 } from '../../db/schema';
 import { eq, and, gte, lte, desc, sql, count, sum, avg } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import { logger } from '../../utils/logger';
 
 /**
@@ -695,22 +695,11 @@ export class RefundMonitoringService {
    * @returns Created refund record
    */
   async trackRefundTransaction(refundData: {
-    returnId: string;
-    refundId: string;
-    originalAmount: number;
-    refundAmount: number;
-    processingFee?: number;
-    platformFeeImpact?: number;
-    sellerImpact?: number;
-    paymentProvider: string;
-    providerTransactionId?: string;
-    currency?: string;
-    refundMethod?: string;
-    metadata?: any;
+    // ...
   }): Promise<any> {
     try {
       const refundRecord = {
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         returnId: refundData.returnId,
         refundId: refundData.refundId,
         originalAmount: refundData.originalAmount.toString(),
@@ -825,7 +814,7 @@ export class RefundMonitoringService {
   ): Promise<void> {
     try {
       await db.insert(refundTransactionAuditLog).values({
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         refundRecordId,
         actionType,
         actionDescription,
@@ -884,7 +873,7 @@ export class RefundMonitoringService {
           const lastFailure = failures[0];
           
           patterns.push({
-            patternId: uuidv4(),
+            patternId: crypto.randomUUID(),
             patternType: 'provider_outage',
             severity: failures.length >= 10 ? 'critical' : failures.length >= 5 ? 'high' : 'medium',
             affectedProvider: provider,

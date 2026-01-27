@@ -158,6 +158,44 @@ export class DatabaseService {
     }
   }
 
+  async createUserReputation(address: string, score: string, daoApproved: boolean) {
+    try {
+      const result = await this.db.insert(schema.reputations).values({
+        walletAddress: address.toLowerCase(),
+        score: parseInt(score),
+        daoApproved
+      }).returning();
+      return result[0];
+    } catch (error) {
+      safeLogger.error("Error creating user reputation:", error);
+      throw error;
+    }
+  }
+
+  async updateUserReputation(address: string, updates: Partial<typeof schema.reputations.$inferInsert>) {
+    try {
+      const result = await this.db.update(schema.reputations)
+        .set(updates)
+        .where(eq(schema.reputations.walletAddress, address.toLowerCase()))
+        .returning();
+      return result[0] || null;
+    } catch (error) {
+      safeLogger.error("Error updating user reputation:", error);
+      throw error;
+    }
+  }
+
+  async getDAOApprovedVendors() {
+    try {
+      return await this.db.select()
+        .from(schema.reputations)
+        .where(eq(schema.reputations.daoApproved, true));
+    } catch (error) {
+      safeLogger.error("Error getting DAO approved vendors:", error);
+      throw error;
+    }
+  }
+
 
 
   // Post operations
@@ -957,7 +995,20 @@ export class DatabaseService {
     }
   }
 
-
+  async getEscrowsByUser(userId: string) {
+    try {
+      return await this.db.select()
+        .from(schema.escrows)
+        .where(or(
+          eq(schema.escrows.buyerId, userId),
+          eq(schema.escrows.sellerId, userId)
+        ))
+        .orderBy(desc(schema.escrows.createdAt));
+    } catch (error) {
+      safeLogger.error("Error getting escrows by user:", error);
+      throw error;
+    }
+  }
 
   async updateEscrow(id: string, updates: Partial<typeof schema.escrows.$inferInsert>) {
     try {
@@ -1697,6 +1748,18 @@ export class DatabaseService {
       return result[0] || null;
     } catch (error) {
       safeLogger.error("Error getting dispute by ID:", error);
+      throw error;
+    }
+  }
+
+  async getDisputesByUser(userId: string) {
+    try {
+      return await this.db.select()
+        .from(schema.disputes)
+        .where(eq(schema.disputes.reporterId, userId))
+        .orderBy(desc(schema.disputes.createdAt));
+    } catch (error) {
+      safeLogger.error("Error getting disputes by user:", error);
       throw error;
     }
   }

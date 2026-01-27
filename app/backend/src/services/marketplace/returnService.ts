@@ -6,7 +6,7 @@ import {
   refundTransactions 
 } from '../../db/schema';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import { safeLogger } from '../../utils/safeLogger';
 import { returnTrackingService } from './returnTrackingService';
 import { returnInspectionService } from './returnInspectionService';
@@ -64,7 +64,7 @@ class ReturnService {
 
       // Create return record
       const returnRecord = {
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         orderId: request.orderId,
         buyerId: request.buyerId,
         sellerId: request.sellerId,
@@ -243,7 +243,7 @@ class ReturnService {
 
       // Create refund transaction record
       const refundTransaction = {
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         returnId: request.returnId,
         orderId: returnRecord.orderId,
         amount: refundAmount.toString(),
@@ -369,7 +369,7 @@ class ReturnService {
   ): Promise<void> {
     try {
       await db.insert(returnStatusHistory).values({
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         returnId,
         fromStatus,
         toStatus,

@@ -6,8 +6,8 @@
 
 import { Pool } from 'pg';
 import { safeLogger } from '../../utils/safeLogger';
-import EnhancedDatabaseOptimizationService from './enhancedDatabaseOptimizationService';
-import DatabaseConnectionOptimizer from './databaseConnectionOptimizer';
+import EnhancedDatabaseOptimizationService from '../enhancedDatabaseOptimizationService';
+import DatabaseConnectionOptimizer from '../databaseConnectionOptimizer';
 import SellerQueryOptimizer from './sellerQueryOptimizer';
 
 interface SellerOptimizationMetrics {

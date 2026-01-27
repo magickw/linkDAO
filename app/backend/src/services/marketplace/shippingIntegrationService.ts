@@ -125,7 +125,7 @@ class ShippingIntegrationService {
             // Update order with tracking info
             await db.update(orders)
                 .set({
-                    trackingNumber: boughtShipment.tracking_code,
+                    trackingNumber: boughtShipment.tracking_code as any as string,
                     trackingCarrier: boughtShipment.selected_rate?.carrier,
                     status: 'shipped'
                 })

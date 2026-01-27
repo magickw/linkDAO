@@ -10,7 +10,7 @@ import { eq, and } from 'drizzle-orm';
  */
 export class CryptoTaxEscrowService {
   private provider: ethers.JsonRpcProvider;
-  private signer: ethers.Wallet;
+  private signer: ethers.Wallet | null = null;
   private taxEscrowContractAddress: string;
   private taxEscrowABI: any[];
 
@@ -20,7 +20,17 @@ export class CryptoTaxEscrowService {
     contractAddress: string = process.env.TAX_ESCROW_CONTRACT_ADDRESS || ''
   ) {
     this.provider = new ethers.JsonRpcProvider(rpcUrl);
-    this.signer = new ethers.Wallet(privateKey, this.provider);
+    
+    if (privateKey && privateKey !== '0xYOUR_PRIVATE_KEY' && privateKey.length > 0) {
+      try {
+        this.signer = new ethers.Wallet(privateKey, this.provider);
+      } catch (error) {
+        safeLogger.error('Failed to initialize signer in CryptoTaxEscrowService:', error);
+      }
+    } else {
+      safeLogger.warn('No valid ADMIN_PRIVATE_KEY found for CryptoTaxEscrowService. On-chain features will be disabled.');
+    }
+    
     this.taxEscrowContractAddress = contractAddress;
     this.taxEscrowABI = this.getContractABI();
   }
@@ -35,6 +45,9 @@ export class CryptoTaxEscrowService {
     tokenAddress: string,
     dueDate: Date
   ): Promise<string> {
+    if (!this.signer) {
+      throw new Error('CryptoTaxEscrowService: Signer not initialized. Check ADMIN_PRIVATE_KEY.');
+    }
     try {
       safeLogger.info('Creating tax liability on chain:', {
         escrowId,
@@ -77,6 +90,9 @@ export class CryptoTaxEscrowService {
     amount: number,
     tokenAddress: string = 'ETH'
   ): Promise<string> {
+    if (!this.signer) {
+      throw new Error('CryptoTaxEscrowService: Signer not initialized. Check ADMIN_PRIVATE_KEY.');
+    }
     try {
       safeLogger.info('Funding tax liability:', {
         liabilityId,
@@ -146,6 +162,9 @@ export class CryptoTaxEscrowService {
     totalAmount: number,
     liabilitiesCount: number
   ): Promise<string> {
+    if (!this.signer) {
+      throw new Error('CryptoTaxEscrowService: Signer not initialized. Check ADMIN_PRIVATE_KEY.');
+    }
     try {
       safeLogger.info('Creating tax batch on chain:', {
         batchNumber,
@@ -183,6 +202,9 @@ export class CryptoTaxEscrowService {
    * File tax batch with authorities
    */
   async fileTaxBatchOnChain(batchId: number): Promise<string> {
+    if (!this.signer) {
+      throw new Error('CryptoTaxEscrowService: Signer not initialized. Check ADMIN_PRIVATE_KEY.');
+    }
     try {
       safeLogger.info('Filing tax batch on chain:', { batchId });
 
@@ -217,6 +239,9 @@ export class CryptoTaxEscrowService {
     tokenAddress: string,
     remittanceReference: string
   ): Promise<string> {
+    if (!this.signer) {
+      throw new Error('CryptoTaxEscrowService: Signer not initialized. Check ADMIN_PRIVATE_KEY.');
+    }
     try {
       safeLogger.info('Releasing tax funds on chain:', {
         batchId,

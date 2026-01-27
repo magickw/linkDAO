@@ -1,9 +1,9 @@
 import axios from 'axios';
-import { safeLogger } from '../../../utils/safeLogger';
-import { ShippingInfo, TrackingInfo, TrackingEvent, ShippingAddress } from '../../../models/Order';
+import { safeLogger } from '../../utils/safeLogger';
+import { ShippingInfo, TrackingInfo, TrackingEvent, ShippingAddress } from '../../models/Order';
 import { DatabaseService } from '../databaseService';
 import { NotificationService } from '../notificationService';
-import { CircuitBreaker } from '../../../utils/circuitBreaker';
+import { CircuitBreaker } from '../../utils/circuitBreaker';
 
 const databaseService = new DatabaseService();
 const notificationService = new NotificationService();

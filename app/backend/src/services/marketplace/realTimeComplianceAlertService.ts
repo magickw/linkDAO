@@ -8,7 +8,7 @@
 import { EventEmitter } from 'events';
 import { logger } from '../../utils/logger';
 import { realTimeComplianceMonitoringService } from './realTimeComplianceMonitoringService';
-import { comprehensiveAuditService } from './comprehensiveAuditService';
+import { comprehensiveAuditService } from '../comprehensiveAuditService';
 
 export interface ComplianceViolationAlert {
   id: string;
