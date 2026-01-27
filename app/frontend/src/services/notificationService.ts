@@ -43,7 +43,8 @@ class NotificationService {
         throw new Error('Failed to fetch notification');
       }
 
-      const data = await response.json();
+      const json = await response.json();
+      const data = json.success && json.data ? json.data : json;
       return this.transformNotification(data);
     } catch (error) {
       console.error('Error fetching notification:', error);
@@ -94,7 +95,8 @@ class NotificationService {
         throw new Error('Failed to fetch notifications');
       }
 
-      const data = await response.json();
+      const json = await response.json();
+      const data = json.success && json.data ? json.data : json;
 
       // Validate data structure
       if (!data || !Array.isArray(data.notifications)) {
@@ -162,7 +164,8 @@ class NotificationService {
         throw new Error('Failed to fetch unread count');
       }
 
-      const data = await response.json();
+      const json = await response.json();
+      const data = json.success && json.data ? json.data : json;
       return data.count;
     } catch (error) {
       console.error('Error fetching unread count:', error);
@@ -330,7 +333,8 @@ class NotificationService {
         throw new Error('Failed to fetch notification preferences');
       }
 
-      return await response.json();
+      const json = await response.json();
+      return json.success && json.data ? json.data : json;
     } catch (error) {
       console.error('Error fetching notification preferences:', error);
       throw error;
@@ -521,7 +525,8 @@ class NotificationService {
         throw new Error('Failed to fetch notification analytics');
       }
 
-      return await response.json();
+      const json = await response.json();
+      return json.success && json.data ? json.data : json;
     } catch (error) {
       console.error('Error fetching notification analytics:', error);
       throw error;
@@ -546,7 +551,8 @@ class NotificationService {
         throw new Error('Failed to create notification');
       }
 
-      const data = await response.json();
+      const json = await response.json();
+      const data = json.success && json.data ? json.data : json;
       return this.transformNotification(data);
     } catch (error) {
       console.error('Error creating notification:', error);

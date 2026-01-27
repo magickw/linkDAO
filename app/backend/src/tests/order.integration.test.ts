@@ -2,10 +2,8 @@ import request from 'supertest';
 import express from 'express';
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import orderRoutes from '../routes/orderRoutes';
-import { databaseService } from '../services/databaseService';
 import { userProfileService } from '../services/userProfileService';
 import { orderService } from '../services/orderService';
-import { safeLogger } from '../utils/safeLogger';
 
 // Mock databaseService and userProfileService
 jest.mock('../services/databaseService');
@@ -13,7 +11,7 @@ jest.mock('../services/userProfileService');
 jest.mock('../services/orderService');
 
 const app = express();
-app.use(express.json());
+app.use(express.json() as any);
 app.use('/api/orders', orderRoutes);
 
 // Mock auth middleware to attach a user to the request
@@ -51,16 +49,20 @@ describe('Order Integration Tests', () => {
 
   describe('GET /api/orders/mine', () => {
     it('should return paginated and sorted orders for the authenticated user', async () => {
-      (userProfileService.getProfileByAddress as jest.Mock).mockResolvedValue(mockUser);
-      (orderService.getOrdersByUserId as jest.Mock).mockResolvedValue(mockOrders);
+      (userProfileService.getProfileByAddress as any).mockResolvedValue(mockUser);
+      (orderService.getOrdersByUser as any).mockResolvedValue({
+        orders: mockOrders,
+        total: mockOrders.length
+      });
 
       const response = await request(app)
         .get('/api/orders/mine?limit=2&offset=0&sortBy=createdAt&sortOrder=desc')
         .expect(200);
 
-      expect(response.body).toHaveLength(mockOrders.length);
-      expect(orderService.getOrdersByUserId).toHaveBeenCalledWith(
-        'testUserId',
+      expect(response.body.orders).toHaveLength(mockOrders.length);
+      expect(response.body.total).toBe(mockOrders.length);
+      expect(orderService.getOrdersByUser).toHaveBeenCalledWith(
+        '0xTestWalletAddress',
         undefined, // role
         { status: undefined }, // filters
         'createdAt', // sortBy
@@ -68,22 +70,23 @@ describe('Order Integration Tests', () => {
         2, // limit
         0 // offset
       );
-      // Further assertions can be made on the actual data returned, its pagination, and sorting
     });
 
     it('should filter orders by status', async () => {
-        (userProfileService.getProfileByAddress as jest.Mock).mockResolvedValue(mockUser);
-        (orderService.getOrdersByUserId as jest.Mock).mockResolvedValue(
-            mockOrders.filter(o => o.order.status === 'completed')
-        );
+        const filtered = mockOrders.filter(o => o.order.status === 'completed');
+        (userProfileService.getProfileByAddress as any).mockResolvedValue(mockUser);
+        (orderService.getOrdersByUser as any).mockResolvedValue({
+            orders: filtered,
+            total: filtered.length
+        });
 
         const response = await request(app)
           .get('/api/orders/mine?status=completed')
           .expect(200);
   
-        expect(response.body).toHaveLength(2); // order1 and order3
-        expect(orderService.getOrdersByUserId).toHaveBeenCalledWith(
-          'testUserId',
+        expect(response.body.orders).toHaveLength(2); // order1 and order3
+        expect(orderService.getOrdersByUser).toHaveBeenCalledWith(
+          '0xTestWalletAddress',
           undefined,
           { status: 'completed' },
           'createdAt',
@@ -94,27 +97,34 @@ describe('Order Integration Tests', () => {
       });
 
     it('should handle no orders found', async () => {
-      (userProfileService.getProfileByAddress as jest.Mock).mockResolvedValue(mockUser);
-      (orderService.getOrdersByUserId as jest.Mock).mockResolvedValue([]);
+      (userProfileService.getProfileByAddress as any).mockResolvedValue(mockUser);
+      (orderService.getOrdersByUser as any).mockResolvedValue({
+        orders: [],
+        total: 0
+      });
 
       const response = await request(app)
         .get('/api/orders/mine')
         .expect(200);
 
-      expect(response.body).toHaveLength(0);
+      expect(response.body.orders).toHaveLength(0);
+      expect(response.body.total).toBe(0);
     });
   });
 
   describe('GET /api/orders/user/:userAddress', () => {
     it('should return paginated and sorted orders for a specific user', async () => {
-      (userProfileService.getProfileByAddress as jest.Mock).mockResolvedValue(mockUser);
-      (orderService.getOrdersByUser as jest.Mock).mockResolvedValue(mockOrders);
+      (userProfileService.getProfileByAddress as any).mockResolvedValue(mockUser);
+      (orderService.getOrdersByUser as any).mockResolvedValue({
+        orders: mockOrders,
+        total: mockOrders.length
+      });
 
       const response = await request(app)
         .get('/api/orders/user/0xTestWalletAddress?limit=1&offset=0&sortBy=id&sortOrder=asc&role=buyer')
         .expect(200);
 
-      expect(response.body).toHaveLength(mockOrders.length);
+      expect(response.body.orders).toHaveLength(mockOrders.length);
       expect(orderService.getOrdersByUser).toHaveBeenCalledWith(
         '0xTestWalletAddress',
         'buyer', // role
@@ -127,7 +137,7 @@ describe('Order Integration Tests', () => {
     });
 
     it('should handle user not found', async () => {
-      (userProfileService.getProfileByAddress as jest.Mock).mockResolvedValue(null);
+      (userProfileService.getProfileByAddress as any).mockResolvedValue(null);
 
       const response = await request(app)
         .get('/api/orders/user/0xNonExistentWalletAddress')
@@ -137,16 +147,18 @@ describe('Order Integration Tests', () => {
     });
 
     it('should filter orders by status and role', async () => {
-        (userProfileService.getProfileByAddress as jest.Mock).mockResolvedValue(mockUser);
-        (orderService.getOrdersByUser as jest.Mock).mockResolvedValue(
-            mockOrders.filter(o => o.order.status === 'completed' && o.order.buyerId === 'testUserId')
-        );
+        const filtered = mockOrders.filter(o => o.order.status === 'completed' && o.order.buyerId === 'testUserId');
+        (userProfileService.getProfileByAddress as any).mockResolvedValue(mockUser);
+        (orderService.getOrdersByUser as any).mockResolvedValue({
+            orders: filtered,
+            total: filtered.length
+        });
   
         const response = await request(app)
           .get('/api/orders/user/0xTestWalletAddress?status=completed&role=buyer')
           .expect(200);
   
-        expect(response.body).toHaveLength(1); // order1
+        expect(response.body.orders).toHaveLength(1); // order1
         expect(orderService.getOrdersByUser).toHaveBeenCalledWith(
           '0xTestWalletAddress',
           'buyer',

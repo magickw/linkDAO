@@ -52,10 +52,10 @@ interface DeviceSubscription {
 
 interface NotificationPayload {
   userId: string;
-  type: 'community_update' | 'new_post' | 'mention' | 'reply' | 'community_invite' | 'governance_proposal' | 'proposal_result' | 'moderator_action' | 'system_update' | 'generic' | 
-        'order_created' | 'order_received' | 'payment_received' | 'order_processing' | 'order_shipped' | 'order_delivered' | 'order_completed' | 
-        'dispute_initiated' | 'dispute_resolved' | 'cancellation_requested' | 'cancellation_approved' | 'cancellation_rejected' | 'cancellation_auto_approved' |
-        'delivery_confirmed' | 'payment_released';
+  type: 'community_update' | 'new_post' | 'mention' | 'reply' | 'community_invite' | 'governance_proposal' | 'proposal_result' | 'moderator_action' | 'system_update' | 'generic' |
+  'order_created' | 'order_received' | 'payment_received' | 'order_processing' | 'order_shipped' | 'order_delivered' | 'order_completed' |
+  'dispute_initiated' | 'dispute_resolved' | 'cancellation_requested' | 'cancellation_approved' | 'cancellation_rejected' | 'cancellation_auto_approved' |
+  'delivery_confirmed' | 'payment_released';
   communityId?: string;
   postId?: string;
   title: string;
@@ -112,7 +112,7 @@ export class PushNotificationService {
         auth: ''
       }
     };
-    
+
     return await this.registerDeviceSubscription(userId, subscription, platform);
   }
 
@@ -122,7 +122,7 @@ export class PushNotificationService {
     // For now, we'll use a placeholder
     const userId = 'placeholder-user-id';
     const endpoint = `https://mobile-push.linkdao.com/token/${token}`;
-    
+
     return await this.unregisterDeviceSubscription(userId, endpoint);
   }
 
@@ -137,7 +137,7 @@ export class PushNotificationService {
         message: notification.body,
         data: notification.data || {}
       };
-      
+
       // Send the notification
       const result = await this.sendPushNotification(payload);
       return result.success > 0;
@@ -221,7 +221,7 @@ export class PushNotificationService {
         WHERE user_address = ${userId}
         LIMIT 1
       `);
-      
+
       const preferences = Array.isArray(result) ? result : [];
 
       if (preferences.length === 0) {
@@ -767,12 +767,7 @@ export class PushNotificationService {
     }
   }
 
-  /**
-   * Get the VAPID public key for frontend subscription
-   */
-  getVapidPublicKey(): string {
-    return this.vapidPublicKey;
-  }
+
 
   /**
    * Check if Web Push is properly configured

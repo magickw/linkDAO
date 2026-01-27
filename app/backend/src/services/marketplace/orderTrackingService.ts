@@ -98,12 +98,12 @@ export class OrderTrackingService {
       const offset = (page - 1) * limit;
 
       // Since we don't have getOrdersWithFilters, we'll get all user orders and filter manually
-      const allUserOrders = await this.databaseService.getOrdersByUser(
+      const result = await this.databaseService.getOrdersByUser(
         conditions.buyerId || conditions.sellerId || ''
       );
 
       // Apply manual filtering
-      let filteredOrders = allUserOrders;
+      let filteredOrders = result.orders;
 
       // Filter by status if provided
       if (conditions.status) {

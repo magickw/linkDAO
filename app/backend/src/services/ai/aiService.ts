@@ -402,7 +402,8 @@ export class AIService {
       const reputation = await marketplaceService.getUserReputation(userAddress);
       
       // Get user's recent transactions
-      const userOrders = await marketplaceService.getOrdersByUser(userAddress);
+      const ordersResult = await marketplaceService.getOrdersByUser(userAddress);
+      const userOrders = ordersResult.orders;
       const userDisputes = await marketplaceService.getDisputesByUser(userAddress);
       
       // Create prompt for AI analysis

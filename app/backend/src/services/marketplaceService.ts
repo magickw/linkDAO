@@ -899,11 +899,12 @@ export class BlockchainMarketplaceService {
     }
   }
 
-  async getOrdersByUser(userAddress: string): Promise<MarketplaceOrder[]> {
+  async getOrdersByUser(userAddress: string): Promise<{ orders: MarketplaceOrder[], total: number }> {
     const user = await userProfileService.getProfileByAddress(userAddress);
-    if (!user) return [];
+    if (!user) return { orders: [], total: 0 };
 
-    const dbOrders = await databaseService.getOrdersByUser(user.id);
+    const result = await databaseService.getOrdersByUser(user.id);
+    const dbOrders = result.orders;
 
     const orders: MarketplaceOrder[] = [];
     for (const dbOrder of dbOrders) {
@@ -926,7 +927,10 @@ export class BlockchainMarketplaceService {
       orders.push(order);
     }
 
-    return orders;
+    return {
+      orders,
+      total: result.total
+    };
   }
 
   async updateOrderStatus(orderId: string, status: 'PENDING' | 'COMPLETED' | 'DISPUTED' | 'REFUNDED'): Promise<boolean> {

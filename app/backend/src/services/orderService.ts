@@ -159,15 +159,18 @@ export class OrderService {
     sortOrder: 'asc' | 'desc' = 'desc',
     limit: number = 50,
     offset: number = 0
-  ): Promise<MarketplaceOrder[]> {
+  ): Promise<{ orders: MarketplaceOrder[]; total: number }> {
     try {
       safeLogger.info('[OrderService] getOrdersByUserId called', { userId, role, filters, sortBy, sortOrder, limit, offset });
 
-      const dbOrders = await databaseService.getOrdersByUser(userId, role, filters, sortBy, sortOrder, limit, offset);
+      const result = await databaseService.getOrdersByUser(userId, role, filters, sortBy, sortOrder, limit, offset);
 
-      safeLogger.info('[OrderService] DB orders found', { count: dbOrders.length, userId });
+      safeLogger.info('[OrderService] DB orders found', { count: result.orders.length, total: result.total, userId });
 
-      return dbOrders.map((row: any) => this.formatOrder(row.order, row.buyer, row.seller, row.order.escrowId?.toString(), row.product, null));
+      return {
+        orders: result.orders.map((row: any) => this.formatOrder(row.order, row.buyer, row.seller, row.order.escrowId?.toString(), row.product, null)),
+        total: result.total
+      };
     } catch (error) {
       safeLogger.error('Error getting user orders by ID:', error);
       throw error;
@@ -187,13 +190,13 @@ export class OrderService {
     sortOrder: 'asc' | 'desc' = 'desc',
     limit: number = 50,
     offset: number = 0
-  ): Promise<MarketplaceOrder[]> {
+  ): Promise<{ orders: MarketplaceOrder[]; total: number }> {
     try {
       safeLogger.info('[OrderService] getOrdersByUser called', { userAddress, role, filters, sortBy, sortOrder, limit, offset });
       const user = await userProfileService.getProfileByAddress(userAddress);
       if (!user) {
         safeLogger.warn('[OrderService] User not found for address', { userAddress });
-        return [];
+        return { orders: [], total: 0 };
       }
 
       safeLogger.info('[OrderService] User profile found', { userId: user.id });
@@ -431,7 +434,7 @@ export class OrderService {
         cancelledOrders: analytics.cancelledOrders || 0,
         topCategories: analytics.topCategories || [],
         monthlyTrends: analytics.monthlyTrends || [],
-        recentOrders: await this.getOrdersByUser(userAddress),
+        recentOrders: (await this.getOrdersByUser(userAddress)).orders,
         timeRange: analytics.timeRange
       };
     } catch (error) {
@@ -1066,3 +1069,5 @@ export class OrderService {
     }
   }
 }
+
+export const orderService = new OrderService();

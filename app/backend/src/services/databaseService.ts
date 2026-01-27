@@ -115,6 +115,49 @@ export class DatabaseService {
     }
   }
 
+  async getUserByAddress(address: string) {
+    try {
+      const normalizedAddress = address.toLowerCase();
+      const [user] = await this.db.select()
+        .from(schema.users)
+        .where(sql`LOWER(${schema.users.walletAddress}) = LOWER(${normalizedAddress})`)
+        .limit(1);
+      return user || null;
+    } catch (error) {
+      safeLogger.error("Error getting user by address:", error);
+      throw error;
+    }
+  }
+
+  async getUserAddressById(userId: string) {
+    try {
+      if (userId.startsWith('0x')) return userId;
+
+      const result = await this.db.select({ walletAddress: schema.users.walletAddress })
+        .from(schema.users)
+        .where(eq(schema.users.id, userId))
+        .limit(1);
+
+      return result[0]?.walletAddress || null;
+    } catch (error) {
+      safeLogger.error("Error getting user address by ID:", error);
+      throw error;
+    }
+  }
+
+  async getUserReputation(address: string) {
+    try {
+      const normalizedAddress = address.toLowerCase();
+      const result = await this.db.select()
+        .from(schema.reputations)
+        .where(sql`LOWER(${schema.reputations.walletAddress}) = LOWER(${normalizedAddress})`);
+      return result[0] || null;
+    } catch (error) {
+      safeLogger.error("Error getting user reputation:", error);
+      throw error;
+    }
+  }
+
 
 
   // Post operations
@@ -769,7 +812,7 @@ export class DatabaseService {
 
   async getAllListings(maxLimit: number = 1000) {
     try {
-      safeLogger.warn('getAllListings called - using hard limit of', maxLimit, 'records');
+      safeLogger.warn(`getAllListings called - using hard limit of ${maxLimit} records`);
       return await this.db.select().from(schema.listings).limit(maxLimit);
     } catch (error) {
       safeLogger.error("Error getting all listings:", error);
@@ -779,7 +822,7 @@ export class DatabaseService {
 
   async getActiveListings(maxLimit: number = 1000) {
     try {
-      safeLogger.warn('getActiveListings called - using hard limit of', maxLimit, 'records');
+      safeLogger.warn(`getActiveListings called - using hard limit of ${maxLimit} records`);
       return await this.db.select().from(schema.listings)
         .where(eq(schema.listings.status, 'active'))
         .limit(maxLimit);
@@ -1420,6 +1463,27 @@ export class DatabaseService {
     }
   }
 
+  async getReceiptsByUser(userAddress: string, limit: number = 50, offset: number = 0) {
+    try {
+      // Join with orders and users to filter by buyer's wallet address
+      const result = await this.db.select({
+        receipt: schema.orderReceipts
+      })
+        .from(schema.orderReceipts)
+        .innerJoin(schema.orders, eq(schema.orderReceipts.orderId, schema.orders.id))
+        .innerJoin(schema.users, eq(schema.orders.buyerId, schema.users.id))
+        .where(sql`LOWER(${schema.users.walletAddress}) = LOWER(${userAddress})`)
+        .orderBy(desc(schema.orderReceipts.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      return result.map((r: any) => r.receipt);
+    } catch (error) {
+      safeLogger.error("Error getting receipts by user:", error);
+      throw error;
+    }
+  }
+
 
 
   async updateReceiptStatus(id: string, status: string, metadata?: any) {
@@ -1476,12 +1540,18 @@ export class DatabaseService {
 
       query = query.limit(limit).offset(offset);
 
-      const orders = await query;
+      // Execute both count and data queries
+      const [orders, totalResult] = await Promise.all([
+        query,
+        this.db.select({ count: sql`count(*)` }).from(schema.orders).where(and(...whereClauses))
+      ]);
+
+      const total = Number(totalResult[0]?.count || 0);
 
       // Collect all unique buyer and seller IDs
-      const buyerIds = [...new Set(orders.map(o => o.buyerId).filter((id): id is string => !!id))] as string[];
-      const sellerIds = [...new Set(orders.map(o => o.sellerId).filter((id): id is string => !!id))] as string[];
-      const productIds = [...new Set(orders.map(o => o.listingId).filter((id): id is string => !!id))] as string[];
+      const buyerIds = [...new Set(orders.map((o: any) => o.buyerId).filter((id: any): id is string => !!id))] as string[];
+      const sellerIds = [...new Set(orders.map((o: any) => o.sellerId).filter((id: any): id is string => !!id))] as string[];
+      const productIds = [...new Set(orders.map((o: any) => o.listingId).filter((id: any): id is string => !!id))] as string[];
 
       // Fetch all related data in parallel
       const [buyers, sellers, products] = await Promise.all([
@@ -1491,17 +1561,22 @@ export class DatabaseService {
       ]);
 
       // Create lookup maps
-      const buyerMap = new Map(buyers.map(b => [b.id, b]));
-      const sellerMap = new Map(sellers.map(s => [s.id, s]));
-      const productMap = new Map(products.map(p => [p.id, p]));
+      const buyerMap = new Map(buyers.map((b: any) => [b.id, b]));
+      const sellerMap = new Map(sellers.map((s: any) => [s.id, s]));
+      const productMap = new Map(products.map((p: any) => [p.id, p]));
 
       // Combine data
-      return orders.map(order => ({
+      const formattedOrders = orders.map((order: any) => ({
         order,
         buyer: order.buyerId ? buyerMap.get(order.buyerId) : null,
         seller: order.sellerId ? sellerMap.get(order.sellerId) : null,
         product: order.listingId ? productMap.get(order.listingId) : null
       }));
+
+      return {
+        orders: formattedOrders,
+        total
+      };
 
 
     } catch (error) {
@@ -1807,7 +1882,7 @@ export class DatabaseService {
 
   async getAllProducts(maxLimit: number = 1000) {
     try {
-      safeLogger.warn('getAllProducts called - using hard limit of', maxLimit, 'records');
+      safeLogger.warn(`getAllProducts called - using hard limit of ${maxLimit} records`);
       return await this.db.select().from(schema.products).limit(maxLimit);
     } catch (error) {
       safeLogger.error("Error getting all products:", error);
@@ -1817,7 +1892,7 @@ export class DatabaseService {
 
   async getActiveProducts(maxLimit: number = 1000) {
     try {
-      safeLogger.warn('getActiveProducts called - using hard limit of', maxLimit, 'records');
+      safeLogger.warn(`getActiveProducts called - using hard limit of ${maxLimit} records`);
       return await this.db.select().from(schema.products)
         .where(eq(schema.products.status, 'active'))
         .limit(maxLimit);
@@ -2235,6 +2310,23 @@ export class DatabaseService {
     });
   }
 
+  async getUserNotifications(userAddress: string, limit: number = 50, offset: number = 0) {
+    return this.executeQuery(async () => {
+      const result = await this.db.select()
+        .from(schema.notifications)
+        .where(eq(schema.notifications.userAddress, userAddress))
+        .orderBy(desc(schema.notifications.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      // Parse metadata if needed (though drizzle might handle json automatically depending on config, usually explicit parse is safe/redundant)
+      return result.map((n: any) => ({
+        ...n,
+        metadata: typeof n.metadata === 'string' ? JSON.parse(n.metadata) : n.metadata
+      }));
+    });
+  }
+
 
 
   async markNotificationAsRead(notificationId: string) {
@@ -2324,6 +2416,20 @@ export class DatabaseService {
   }
 
 
+
+  async getUserPushTokens(userAddress: string) {
+    return this.executeQuery(async () => {
+      try {
+        const result = await this.db.select()
+          .from(schema.pushTokens)
+          .where(eq(schema.pushTokens.userAddress, userAddress));
+        return result;
+      } catch (error) {
+        safeLogger.error('Error getting user push tokens:', error);
+        return [];
+      }
+    });
+  }
 
   async storePushToken(userAddress: string, token: string, platform: string): Promise<boolean> {
     return this.executeQuery(async () => {

@@ -87,7 +87,7 @@ export class OrderController {
 
       const { status, limit = 50, offset = 0, sortBy = 'createdAt', sortOrder = 'desc', role } = req.query;
 
-      const orders = await orderService.getOrdersByUser(
+      const result = await orderService.getOrdersByUser(
         userAddress,
         role as 'buyer' | 'seller',
         { status: status as string },
@@ -97,7 +97,16 @@ export class OrderController {
         parseInt(offset as string)
       );
 
-      return res.status(200).json(orders);
+      const page = Math.floor(parseInt(offset as string) / parseInt(limit as string)) + 1;
+      const totalPages = Math.ceil(result.total / parseInt(limit as string));
+
+      return res.status(200).json({
+        orders: result.orders,
+        total: result.total,
+        page,
+        limit: parseInt(limit as string),
+        totalPages
+      });
     } catch (error) {
       safeLogger.error('Error in getMyOrders:', error);
       return res.status(500).json({ message: 'Failed to retrieve user orders' });
@@ -135,7 +144,7 @@ export class OrderController {
         ...(status && { status: status as string }),
       };
 
-      const orders = await orderService.getOrdersByUser(
+      const result = await orderService.getOrdersByUser(
         userAddress,
         role as 'buyer' | 'seller',
         filters,
@@ -145,7 +154,16 @@ export class OrderController {
         numOffset
       );
 
-      return res.status(200).json(orders);
+      const page = Math.floor(numOffset / numLimit) + 1;
+      const totalPages = Math.ceil(result.total / numLimit);
+
+      return res.status(200).json({
+        orders: result.orders,
+        total: result.total,
+        page,
+        limit: numLimit,
+        totalPages
+      });
     } catch (error) {
       safeLogger.error('Error in getOrdersByUser controller:', error);
       return res.status(500).json({ message: 'Internal server error' });
