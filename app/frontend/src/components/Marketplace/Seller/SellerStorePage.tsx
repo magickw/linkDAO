@@ -1043,7 +1043,10 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                       Refresh
                     </button>
 
-                    <button className="px-6 py-3 bg-white/10 rounded-lg text-white hover:bg-white/20 transition-all font-medium border border-white/20 flex items-center gap-2">
+                    <button 
+                      onClick={() => router.push(`/chat?recipient=${encodeURIComponent(seller.walletAddress)}`)}
+                      className="px-6 py-3 bg-white/10 rounded-lg text-white hover:bg-white/20 transition-all font-medium border border-white/20 flex items-center gap-2"
+                    >
                       <MessageCircle className="w-4 h-4" />
                       Message
                     </button>

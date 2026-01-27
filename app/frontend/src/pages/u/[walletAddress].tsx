@@ -481,7 +481,7 @@ export default function PublicProfile() {
 
                       {/* Message Button */}
                       <button
-                        onClick={() => router.push(`/messages?to=${encodeURIComponent(profile.walletAddress)}`)}
+                        onClick={() => router.push(`/chat?recipient=${encodeURIComponent(profile.walletAddress)}`)}
                         className="inline-flex items-center justify-center px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                       >
                         <svg className="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -35,6 +35,8 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^3.0.0",
     "@nomicfoundation/hardhat-verify": "^2.0.12",
+    "@swc/core": "^1.15.10",
+    "@swc/jest": "^0.2.39",
     "concurrently": "^8.0.0",
     "hardhat": "^2.27.0"
   },

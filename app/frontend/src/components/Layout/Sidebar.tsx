@@ -25,7 +25,7 @@ export function Sidebar() {
     { href: '/', label: 'Home', icon: Home },
     { href: '/marketplace', label: 'Marketplace', icon: ShoppingBag },
     { href: '/governance', label: 'Governance', icon: TrendingUp },
-    { href: '/messages', label: 'Messages', icon: MessageSquare, requireAuth: true },
+    { href: '/chat', label: 'Messages', icon: MessageSquare, requireAuth: true },
     { href: '/wallet', label: 'Wallet', icon: Wallet, requireAuth: true },
   ];
 

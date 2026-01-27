@@ -244,6 +244,38 @@ export default function ChatPage() {
   useEffect(() => {
     if (!router.isReady || !hookConversations || conversationsLoading) return;
 
+    // Handle 'recipient' query param for starting/finding conversation
+    const recipientAddress = router.query.recipient as string;
+    const initialMessage = router.query.initialMessage as string;
+    
+    if (recipientAddress && address) {
+      // Check if we already have a conversation with this recipient
+      const existingConversation = hookConversations.find(c => 
+        c.participants.some(p => p.toLowerCase() === recipientAddress.toLowerCase())
+      );
+
+      if (existingConversation) {
+        // Conversation exists, select it
+        if (existingConversation.id !== selectedConversation?.id) {
+           handleConversationSelect(existingConversation);
+        }
+      } else {
+        // No conversation, start a new one
+        // We use the function directly instead of state to avoid race conditions
+        startNewConversation(recipientAddress, initialMessage);
+      }
+      
+      // Clean up the query param so we don't re-trigger on re-renders
+      // But keep the slug if present (though usually mutually exclusive)
+      const { recipient, ...restQuery } = router.query;
+      router.replace({
+          pathname: '/chat' + (existingConversation ? `/dm/${existingConversation.id}` : ''),
+          query: restQuery 
+      }, undefined, { shallow: true });
+      
+      return;
+    }
+
     // On initial load or route change, select conversation from URL
     if (parsedRoute.type === 'dm' && parsedRoute.id) {
       const conversation = hookConversations.find(c => c.id === parsedRoute.id);
@@ -484,7 +516,7 @@ export default function ChatPage() {
     router.push('/chat', undefined, { shallow: true });
   };
 
-  const startNewConversation = async (recipientAddress?: string) => {
+  const startNewConversation = async (recipientAddress?: string, initialMessage?: string) => {
     const recipient = (recipientAddress ?? newRecipientAddress ?? '').trim();
 
     if (!recipient || !address) {
@@ -520,7 +552,7 @@ export default function ChatPage() {
         headers,
         body: JSON.stringify({
           participantAddress: recipient,
-          initialMessage: "Hello! Let's start chatting.",
+          initialMessage: initialMessage || "Hello! Let's start chatting.",
           conversationType: 'direct'
         }),
       });

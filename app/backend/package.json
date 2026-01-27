@@ -94,7 +94,6 @@
     "@easypost/api": "^8.4.0",
     "@nestjs/common": "^11.1.8",
     "@swc/cli": "^0.7.9",
-    "@swc/core": "^1.15.7",
     "@tensorflow/tfjs-node": "^0.1.11",
     "@types/bcrypt": "^6.0.0",
     "@types/express-fileupload": "^1.5.1",
@@ -179,6 +178,8 @@
   "devDependencies": {
     "@faker-js/faker": "^10.0.0",
     "@jest/globals": "^30.2.0",
+    "@swc/core": "^1.15.10",
+    "@swc/jest": "^0.2.39",
     "@types/compression": "^1.7.5",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.17",
