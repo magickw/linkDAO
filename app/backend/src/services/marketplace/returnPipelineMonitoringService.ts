@@ -1,4 +1,4 @@
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { redisService } from './redisService';
 import { returnAggregationQueue } from '../workers/returnAggregationWorker';
 import { returnEventQueue } from '../queues/returnEventQueue';

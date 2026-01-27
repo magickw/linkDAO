@@ -1,5 +1,5 @@
 import { eq, desc, and, sql, gte, lte } from 'drizzle-orm';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../db';
 import { 
   sellerRiskAssessments, 
@@ -9,7 +9,7 @@ import {
   marketplaceListings,
   reviews,
   userReputation
-} from '../db/schema';
+} from '../../db/schema';
 
 export interface SellerRiskProfile {
   id: number;

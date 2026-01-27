@@ -1,8 +1,8 @@
-import { db } from '../db/index';
-import { returns, returnStatusHistory } from '../db/schema';
+import { db } from '../../db/index';
+import { returns, returnStatusHistory } from '../../db/schema';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
-import { safeLogger } from '../utils/logger';
+import { safeLogger } from '../../utils/logger';
 
 export interface InspectionResult {
   condition: 'as_new' | 'good' | 'acceptable' | 'damaged' | 'unusable';

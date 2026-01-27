@@ -1,5 +1,5 @@
 import { UnifiedMarketplaceService } from './unifiedMarketplaceService';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { BlockchainMarketplaceService } from './marketplaceService';
 import { ProductListingService } from './listingService';
 

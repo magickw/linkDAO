@@ -1,12 +1,12 @@
 import { orderMessagingAutomation } from './orderMessagingAutomation';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../db';
 import { 
   orders, 
   orderEvents, 
   trackingRecords,
   paymentTransactions
-} from '../db/schema';
+} from '../../db/schema';
 import { eq, desc } from 'drizzle-orm';
 
 export class OrderEventHandlerService {

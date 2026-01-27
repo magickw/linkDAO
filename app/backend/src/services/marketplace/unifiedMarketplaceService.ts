@@ -1,9 +1,9 @@
 import { ProductListingService } from './listingService';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { BlockchainMarketplaceService } from './marketplaceService';
-import { Product, CreateProductInput, UpdateProductInput, ProductSearchFilters, ProductSortOptions, PaginationOptions, ProductSearchResult } from '../models/Product';
-import { MarketplaceListing, CreateListingInput as BlockchainCreateListingInput, UpdateListingInput as BlockchainUpdateListingInput } from '../models/Marketplace';
-import { ValidationError } from '../models/validation';
+import { Product, CreateProductInput, UpdateProductInput, ProductSearchFilters, ProductSortOptions, PaginationOptions, ProductSearchResult } from '../../models/Product';
+import { MarketplaceListing, CreateListingInput as BlockchainCreateListingInput, UpdateListingInput as BlockchainUpdateListingInput } from '../../models/Marketplace';
+import { ValidationError } from '../../models/validation';
 
 /**
  * Unified Marketplace Service

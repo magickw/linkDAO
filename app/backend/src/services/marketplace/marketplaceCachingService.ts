@@ -1,5 +1,5 @@
 import { Redis, Cluster } from 'ioredis';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { LRUCache } from 'lru-cache';
 import { performance } from 'perf_hooks';
 import { CachingStrategiesService } from './cachingStrategiesService';

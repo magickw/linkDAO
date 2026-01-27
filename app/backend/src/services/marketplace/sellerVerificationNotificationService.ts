@@ -1,7 +1,7 @@
 import { db } from '../db';
-import { adminAuditLog, users } from '../db/schema';
+import { adminAuditLog, users } from '../../db/schema';
 import { eq } from 'drizzle-orm';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 
 export interface NotificationPayload {
   userId: string;

@@ -6,9 +6,9 @@
  */
 
 import crypto from 'crypto';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { EventEmitter } from 'events';
-import { securityConfig } from '../config/securityConfig';
+import { securityConfig } from '../../config/securityConfig';
 import { securityMonitoringService, SecurityEventType, SecuritySeverity } from './securityMonitoringService';
 import AuditLoggingService from './auditLoggingService';
 import { EncryptionService } from './encryptionService';

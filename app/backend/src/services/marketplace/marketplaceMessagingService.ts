@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import {
   conversations,
   chatMessages,
@@ -12,7 +12,7 @@ import {
   trackingRecords,
   disputes,
   users
-} from '../db/schema';
+} from '../../db/schema';
 import { eq, and, desc, sql, inArray, lt } from 'drizzle-orm';
 import { getWebSocketService } from '../websocket/webSocketService';
 import {
@@ -20,7 +20,7 @@ import {
   sanitizeMessageTemplate,
   sanitizeQuickReply,
   sanitizeConversation
-} from '../utils/sanitization';
+} from '../../utils/sanitization';
 import { cacheService } from './cacheService';
 
 // MEMORY OPTIMIZATION: Constants for limits and cleanup

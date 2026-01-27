@@ -1,15 +1,15 @@
 import { eq, sql } from 'drizzle-orm';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../db';
-import { sellers } from '../db/schema';
+import { sellers } from '../../db/schema';
 import {
   SellerProfile,
   CreateSellerProfileRequest,
   UpdateSellerProfileRequest,
   OnboardingStatus,
   OnboardingSteps
-} from '../types/sellerProfile';
-import { encrypt } from '../utils/encryption';
+} from '../../types/sellerProfile';
+import { encrypt } from '../../utils/encryption';
 
 export class SellerProfileService {
   async getProfile(walletAddress: string): Promise<SellerProfile | null> {

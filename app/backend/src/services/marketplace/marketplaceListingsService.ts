@@ -1,7 +1,7 @@
 import { eq, desc, asc, and, gte, lte, like, count, sql } from 'drizzle-orm';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../db';
-import { products, users, categories } from '../db/schema';
+import { products, users, categories } from '../../db/schema';
 import {
   MarketplaceListing,
   CreateMarketplaceListingRequest,
@@ -10,7 +10,7 @@ import {
   PaginatedMarketplaceListings,
   MarketplaceListingInsert,
   MarketplaceListingUpdate
-} from '../types/marketplaceListing';
+} from '../../types/marketplaceListing';
 
 export class MarketplaceListingsService {
   /**

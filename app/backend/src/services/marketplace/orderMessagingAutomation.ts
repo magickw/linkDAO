@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { 
   orders, 
   listings, 
@@ -7,7 +7,7 @@ import {
   trackingRecords,
   disputes,
   conversations
-} from '../db/schema';
+} from '../../db/schema';
 import { eq, sql } from 'drizzle-orm';
 import { marketplaceMessagingService } from './marketplaceMessagingService';
 

@@ -1,6 +1,6 @@
 import { db } from '../db';
-import { safeLogger } from '../utils/safeLogger';
-import { adminAuditLog } from '../db/schema';
+import { safeLogger } from '../../utils/safeLogger';
+import { adminAuditLog } from '../../db/schema';
 import { eq, desc } from 'drizzle-orm';
 
 export interface AuditLogEntry {

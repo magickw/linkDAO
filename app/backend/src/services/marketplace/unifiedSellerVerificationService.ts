@@ -1,12 +1,12 @@
 import { eq, and, lt, desc } from 'drizzle-orm';
 import { db } from '../db';
-import { sellerVerifications, marketplaceUsers } from '../db/marketplaceSchema';
-import { SellerVerification, VerificationRequest } from '../types/sellerVerification';
-import { ValidationError } from '../models/validation';
-import { users } from '../db/schema';
+import { sellerVerifications, marketplaceUsers } from '../../db/marketplaceSchema';
+import { SellerVerification, VerificationRequest } from '../../types/sellerVerification';
+import { ValidationError } from '../../models/validation';
+import { users } from '../../db/schema';
 import { SellerVerificationAuditService } from './sellerVerificationAuditService';
 import { SellerVerificationNotificationService } from './sellerVerificationNotificationService';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 
 export class UnifiedSellerVerificationService {
   /**

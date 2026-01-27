@@ -1,7 +1,7 @@
 import { DatabaseService } from './databaseService';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { OrderWebSocketService, getOrderWebSocketService } from '../websocket/orderWebSocketService';
-import { OrderStatus } from '../models/Order';
+import { OrderStatus } from '../../models/Order';
 
 export interface OrderMilestone {
     orderId: string;

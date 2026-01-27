@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { sellers, orders, users, orderEvents, products } from '../db/schema';
+import { sellers, orders, users, orderEvents, products } from '../../db/schema';
 import { eq, and, desc, sql, asc, inArray } from 'drizzle-orm';
 
 /**

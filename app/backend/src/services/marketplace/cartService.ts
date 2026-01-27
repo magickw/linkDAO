@@ -1,6 +1,6 @@
 import { db } from '../db';
-import { safeLogger } from '../utils/safeLogger';
-import { carts, cartItems, products, users, savedForLater } from '../db/schema';
+import { safeLogger } from '../../utils/safeLogger';
+import { carts, cartItems, products, users, savedForLater } from '../../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { AuthenticatedUser } from '../middleware/authMiddleware';
 

@@ -9,17 +9,17 @@ import {
     ProductSortOptions,
     PaginationOptions,
     ProductSearchResult
-} from '../models/Product';
+} from '../../models/Product';
 import { ProductService } from './productService';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { BlockchainMarketplaceService } from './marketplaceService';
 import ImageStorageService from './imageStorageService';
 import { DatabaseService } from './databaseService';
 import { RedisService } from './redisService';
-import { ValidationHelper, ValidationError } from '../models/validation';
+import { ValidationHelper, ValidationError } from '../../models/validation';
 import { eq, and, or, like, gte, lte, inArray, desc, asc, isNull, sql } from 'drizzle-orm';
-import * as schema from '../db/schema';
-import { CreateListingInput as BlockchainListingInput, MarketplaceListing } from '../models/Marketplace';
+import * as schema from '../../db/schema';
+import { CreateListingInput as BlockchainListingInput, MarketplaceListing } from '../../models/Marketplace';
 
 export interface CreateListingInput extends CreateProductInput {
     // Additional listing-specific fields

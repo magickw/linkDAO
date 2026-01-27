@@ -1,8 +1,8 @@
 import { db } from '../db';
-import { sellers, orders, products, notifications, sellerTransactions, users } from '../db/schema';
+import { sellers, orders, products, notifications, sellerTransactions, users } from '../../db/schema';
 import { eq, and, gte, lte, sql, desc, count } from 'drizzle-orm';
 import { cacheService } from './cacheService';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 
 /**
  * Dashboard Statistics Interface

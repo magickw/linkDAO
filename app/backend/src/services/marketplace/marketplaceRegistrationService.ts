@@ -2,8 +2,8 @@ import { db } from '../db';
 import {
   marketplaceUsers,
   sellerVerifications
-} from '../db/marketplaceSchema';
-import { users, sellers } from '../db/schema';
+} from '../../db/marketplaceSchema';
+import { users, sellers } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 
 export interface SellerRegistrationData {

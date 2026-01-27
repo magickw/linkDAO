@@ -1,10 +1,10 @@
 import { eq, and, lt } from 'drizzle-orm';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../db';
 import { sellerVerifications } from '../database/schemas/sellerVerification';
-import { sellers } from '../db/schema';
-import { SellerVerification, VerificationRequest } from '../types/sellerVerification';
-import { ValidationError } from '../models/validation';
+import { sellers } from '../../db/schema';
+import { SellerVerification, VerificationRequest } from '../../types/sellerVerification';
+import { ValidationError } from '../../models/validation';
 import { desc } from 'drizzle-orm';
 
 export class SellerVerificationService {

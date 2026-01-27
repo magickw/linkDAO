@@ -1,8 +1,8 @@
 import EasyPost from '@easypost/api';
 import { db } from '../db';
-import { orders, shippingLabels } from '../db/schema';
+import { orders, shippingLabels } from '../../db/schema';
 import { eq } from 'drizzle-orm';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { orderAutomationService } from './orderAutomationService';
 
 // Initialize with env key or fallback to prevent startup crash

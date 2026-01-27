@@ -31,14 +31,14 @@ import {
   HIGH_VALUE_ORDER_CONFIG,
   PriorityDetermination,
   SellerNotificationTiming,
-} from '../types/sellerNotification';
+} from '../../types/sellerNotification';
 import { DatabaseService } from './databaseService';
 import { NotificationService } from './notificationService';
 import { WebSocketService } from '../websocket/webSocketService';
 import { EmailService } from './emailService';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../db';
-import { notifications } from '../db/schema';
+import { notifications } from '../../db/schema';
 
 /**
  * Order email data structure for email notifications

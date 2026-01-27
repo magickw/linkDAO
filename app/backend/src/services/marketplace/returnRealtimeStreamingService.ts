@@ -1,4 +1,4 @@
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { getAdminWebSocketService } from '../websocket/adminWebSocketService';
 import { redisService } from './redisService';
 import { ReturnEvent } from './returnAnalyticsService';

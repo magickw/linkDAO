@@ -1,5 +1,5 @@
 import { eq, and, desc, sql, gte, lte, count, or, aliasedTable } from 'drizzle-orm';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../db';
 import {
   orders,
@@ -10,7 +10,7 @@ import {
   sellers,
   paymentTransactions,
   orderPaymentEvents
-} from '../db/schema';
+} from '../../db/schema';
 import { transactionService } from './transactionService';
 
 export interface OrderManagementData {

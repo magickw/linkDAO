@@ -1,5 +1,5 @@
 import { DatabaseService } from './databaseService';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { reputationService } from './reputationService';
 import { kycService } from './kycService';
 import { AIModerationOrchestrator, ContentInput } from './aiModerationOrchestrator';

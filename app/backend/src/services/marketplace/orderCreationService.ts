@@ -1,5 +1,5 @@
 import { DatabaseService } from './databaseService';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { NotificationService } from './notificationService';
 import { HybridPaymentOrchestrator } from './hybridPaymentOrchestrator';
 import { ProductListingService } from './listingService';

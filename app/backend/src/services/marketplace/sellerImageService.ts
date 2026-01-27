@@ -29,7 +29,7 @@ try {
 import { v4 as uuidv4 } from 'uuid';
 import imageStorageService from './imageStorageService';
 import { cdnService } from './cdnService';
-import { SellerError, SellerErrorType } from '../types/sellerError';
+import { SellerError, SellerErrorType } from '../../types/sellerError';
 
 export interface ImageUploadInput {
   buffer: Buffer;

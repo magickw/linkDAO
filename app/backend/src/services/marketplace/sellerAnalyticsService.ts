@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import {
   sellers,
   products,
@@ -10,7 +10,7 @@ import {
   sellerTierProgression,
   sellerTierHistory,
   reviews
-} from '../db/schema';
+} from '../../db/schema';
 import { eq, sql, and, gte, lte, desc, asc, count, sum, avg, isNotNull } from 'drizzle-orm';
 import { Redis } from 'ioredis';
 import { databaseService } from './databaseService';

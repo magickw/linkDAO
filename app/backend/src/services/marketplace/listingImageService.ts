@@ -2,9 +2,9 @@ import { ProductListingService } from './listingService';
 import ImageStorageService from './imageStorageService';
 import { DatabaseService } from './databaseService';
 import { RedisService } from './redisService';
-import { ValidationError } from '../models/validation';
+import { ValidationError } from '../../models/validation';
 import { eq } from 'drizzle-orm';
-import * as schema from '../db/schema';
+import * as schema from '../../db/schema';
 
 export interface ListingImageUpload {
   file: Buffer;

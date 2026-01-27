@@ -5,7 +5,7 @@
  */
 
 import { Pool, PoolClient } from 'pg';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { performance } from 'perf_hooks';
 
 interface SellerQueryMetrics {

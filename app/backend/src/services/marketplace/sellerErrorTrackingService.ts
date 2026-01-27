@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { sql } from 'drizzle-orm';
 import { Redis } from 'ioredis';
 

@@ -4,7 +4,7 @@
  */
 
 import { DatabaseService } from './databaseService';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { UserProfileService } from './userProfileService';
 import { NotificationService } from './notificationService';
 import { OrderService } from './orderService';
@@ -13,11 +13,11 @@ import {
   OrderStatus,
   OrderEvent,
   OrderAnalytics
-} from '../models/Order';
+} from '../../models/Order';
 import { AppError, NotFoundError, ForbiddenError } from '../middleware/errorHandler';
 import { shippingProviderService } from './shippingProviderService';
 import { db } from '../db';
-import { escrows } from '../db/schema';
+import { escrows } from '../../db/schema';
 import { eq } from 'drizzle-orm';
 
 export class OrderTrackingService {

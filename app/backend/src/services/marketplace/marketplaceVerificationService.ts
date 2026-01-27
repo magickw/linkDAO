@@ -1,9 +1,9 @@
 import { eq, and, lt, desc } from 'drizzle-orm';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../db';
-import { sellerVerifications, marketplaceVerifications } from '../db/marketplaceSchema';
-import { SellerVerification, VerificationRequest } from '../types/sellerVerification';
-import { ValidationError } from '../models/validation';
+import { sellerVerifications, marketplaceVerifications } from '../../db/marketplaceSchema';
+import { SellerVerification, VerificationRequest } from '../../types/sellerVerification';
+import { ValidationError } from '../../models/validation';
 
 // Define the ProofOfOwnership interface
 export interface ProofOfOwnership {

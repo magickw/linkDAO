@@ -1,10 +1,10 @@
 import { orderEventHandlerService } from './orderEventHandlerService';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../db';
 import { 
   orders, 
   orderEvents
-} from '../db/schema';
+} from '../../db/schema';
 import { eq, desc, gt, sql } from 'drizzle-orm';
 
 export class OrderEventListenerService {

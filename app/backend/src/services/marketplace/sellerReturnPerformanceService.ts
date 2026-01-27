@@ -1,6 +1,6 @@
 import { db } from '../db';
-import { users, orders } from '../db/schema';
-import { marketplaceUsers } from '../db/marketplaceSchema';
+import { users, orders } from '../../db/schema';
+import { marketplaceUsers } from '../../db/marketplaceSchema';
 import { eq, and, gte, lte, sql, desc, asc } from 'drizzle-orm';
 import { EventEmitter } from 'events';
 import { realTimeComplianceMonitoringService } from './realTimeComplianceMonitoringService';

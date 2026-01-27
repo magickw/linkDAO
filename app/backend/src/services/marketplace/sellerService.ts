@@ -1,7 +1,7 @@
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { safeLogger } from '../utils/safeLogger';
-import { db } from '../db';
-import * as schema from '../db/schema';
+import { safeLogger } from '../../../utils/safeLogger';
+import { db } from '../../db';
+import * as schema from '../../../db/schema';
 import {
   sellers,
   users,
@@ -17,12 +17,12 @@ import {
   sellerTierBenefits,
   sellerTierProgression,
   sellerTierHistory
-} from '../db/schema';
-import { ensService } from './ensService';
-import { profileSyncService } from './profileSyncService';
-import { reputationService } from './reputationService';
-import { transactionService } from './transactionService';
-import { databaseService } from './databaseService';
+} from '../../../db/schema';
+import { ensService } from '../ensService';
+import { profileSyncService } from '../profileSyncService';
+import { reputationService } from '../reputationService';
+import { transactionService } from '../transactionService';
+import { databaseService } from '../databaseService';
 import { Request } from 'express';
 import multer from 'multer';
 import { UploadedFile } from 'express-fileupload';
