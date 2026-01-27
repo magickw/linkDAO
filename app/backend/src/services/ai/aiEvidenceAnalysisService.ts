@@ -16,7 +16,7 @@ try {
   };
 }
 import crypto from 'crypto';
-import { db } from '../db';
+import { db } from '../../db';
 import { disputes } from '../db/schema';
 import { eq } from 'drizzle-orm';
 

@@ -5,7 +5,7 @@
  * financial regulations applicable to Web3 marketplaces.
  */
 
-import { db } from '../db';
+import { db } from '../../db';
 import { safeLogger } from '../utils/safeLogger';
 import { users } from '../db/schema';
 import { securityConfig } from '../config/securityConfig';

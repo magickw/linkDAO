@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { db } from '../../db';
 import { eq, and, or, desc, asc, sql, inArray, lt, gte, between } from 'drizzle-orm';
 import { 
   WorkflowMetric,

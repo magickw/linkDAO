@@ -1,6 +1,6 @@
 import { orderEventHandlerService } from './orderEventHandlerService';
 import { safeLogger } from '../../utils/safeLogger';
-import { db } from '../db';
+import { db } from '../../db';
 import { 
   orders, 
   orderEvents

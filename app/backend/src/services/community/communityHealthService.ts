@@ -1,5 +1,5 @@
 import { safeLogger } from '../utils/safeLogger';
-import { db } from '../db';
+import { db } from '../../db';
 import { communities, communityMembers, communityStats, posts, reactions } from '../db/schema';
 
 // Import governance and moderation tables conditionally

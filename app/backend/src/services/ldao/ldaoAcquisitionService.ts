@@ -15,7 +15,7 @@ import { LDAOAcquisitionConfigManager } from '../config/ldaoAcquisitionConfig';
 import { LDAOReceiptService } from './ldaoReceiptService';
 import { emailService } from './emailService';
 import { safeLogger } from '../utils/safeLogger';
-import { db } from '../db';
+import { db } from '../../db';
 import { purchaseTransactions, earningActivities } from '../db/schema';
 import { eq, desc, and, gte, lt, SQL } from 'drizzle-orm';
 import { subDays } from 'date-fns';

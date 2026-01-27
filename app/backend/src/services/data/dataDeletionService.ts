@@ -4,7 +4,7 @@
  * Required by Facebook and LinkedIn for OAuth apps
  */
 
-import { db } from '../db';
+import { db } from '../../db';
 import { safeLogger } from '../utils/safeLogger';
 import {
   users,

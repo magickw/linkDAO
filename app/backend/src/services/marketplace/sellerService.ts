@@ -1,7 +1,7 @@
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { safeLogger } from '../../../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../../db';
-import * as schema from '../../../db/schema';
+import * as schema from '../../db/schema';
 import {
   sellers,
   users,
@@ -17,7 +17,7 @@ import {
   sellerTierBenefits,
   sellerTierProgression,
   sellerTierHistory
-} from '../../../db/schema';
+} from '../../db/schema';
 import { ensService } from '../ensService';
 import { profileSyncService } from '../profileSyncService';
 import { reputationService } from '../reputationService';

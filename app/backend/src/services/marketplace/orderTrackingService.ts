@@ -16,7 +16,7 @@ import {
 } from '../../models/Order';
 import { AppError, NotFoundError, ForbiddenError } from '../middleware/errorHandler';
 import { shippingProviderService } from './shippingProviderService';
-import { db } from '../db';
+import { db } from '../../db';
 import { escrows } from '../../db/schema';
 import { eq } from 'drizzle-orm';
 

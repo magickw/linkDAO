@@ -5,7 +5,7 @@
  * suspensions, investigations, and reinstatements.
  */
 
-import { db } from '../db';
+import { db } from '../../db';
 import { users } from '../db/schema';
 import { logger } from '../utils/logger';
 import { comprehensiveAuditService } from './comprehensiveAuditService';

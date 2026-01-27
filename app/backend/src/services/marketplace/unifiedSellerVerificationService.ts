@@ -1,5 +1,5 @@
 import { eq, and, lt, desc } from 'drizzle-orm';
-import { db } from '../db';
+import { db } from '../../db';
 import { sellerVerifications, marketplaceUsers } from '../../db/marketplaceSchema';
 import { SellerVerification, VerificationRequest } from '../../types/sellerVerification';
 import { ValidationError } from '../../models/validation';

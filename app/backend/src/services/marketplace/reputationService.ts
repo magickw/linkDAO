@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { db } from '../../db';
 import { userReputation, reputationHistoryMarketplace, reputationCalculationRules } from '../../db/schema';
 import { eq, desc, and, sql } from 'drizzle-orm';
 import { logger } from '../../utils/logger';

@@ -5,7 +5,7 @@
  * violation reports, and trend analysis.
  */
 
-import { db } from '../db';
+import { db } from '../../db';
 import { logger } from '../utils/logger';
 import { comprehensiveAuditService } from './comprehensiveAuditService';
 

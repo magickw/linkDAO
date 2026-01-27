@@ -1,5 +1,5 @@
 import EasyPost from '@easypost/api';
-import { db } from '../db';
+import { db } from '../../db';
 import { orders, shippingLabels } from '../../db/schema';
 import { eq } from 'drizzle-orm';
 import { safeLogger } from '../../utils/safeLogger';

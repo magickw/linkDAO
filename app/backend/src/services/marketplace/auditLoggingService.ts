@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { db } from '../../db';
 import { safeLogger } from '../../utils/safeLogger';
 import { moderationAuditLog } from '../../db/schema';
 import { ModerationAuditLog } from '../../models/ModerationModels';

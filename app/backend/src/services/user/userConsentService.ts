@@ -1,6 +1,6 @@
 import { eq, and } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
-import { db } from '../db';
+import { db } from '../../db';
 import { z } from 'zod';
 
 // Consent types and purposes

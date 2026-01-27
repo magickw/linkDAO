@@ -5,7 +5,7 @@
  * against industry standards and historical data.
  */
 
-import { db } from '../db';
+import { db } from '../../db';
 import { logger } from '../utils/logger';
 import { comprehensiveAuditService } from './comprehensiveAuditService';
 import * as crypto from 'crypto';

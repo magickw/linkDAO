@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import { safeLogger } from '../utils/safeLogger';
-import { db } from '../db';
+import { db } from '../../db';
 import { 
   adminAuditLog, 
   users,

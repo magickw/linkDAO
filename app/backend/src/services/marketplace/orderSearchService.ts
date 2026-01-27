@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { db } from '../../db';
 import { orders, users, marketplaceListings } from '../../db/schema';
 import { safeLogger } from '../../utils/safeLogger';
 import { eq, and, gte, lte, desc, or, sql, like, inArray } from 'drizzle-orm';

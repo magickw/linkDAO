@@ -1,6 +1,6 @@
 import { eq, lt, and, sql } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
-import { db } from '../db';
+import { db } from '../../db';
 import { 
   moderationCases, 
   moderationActions, 

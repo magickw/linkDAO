@@ -1,6 +1,6 @@
 import { eq, desc, and, sql, gte, lte } from 'drizzle-orm';
 import { safeLogger } from '../../utils/safeLogger';
-import { db } from '../db';
+import { db } from '../../db';
 import {
   sellerGrowthProjections,
   sellerPerformanceHistory,

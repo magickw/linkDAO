@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { db } from '../../db';
 import { safeLogger } from '../utils/safeLogger';
 import { posts, users, communities, communityMembers, communityStats, communityCategories, reactions } from '../db/schema';
 import { eq, desc, asc, and, or, like, inArray, sql, gt, lt, count, avg, sum, isNull, ne } from 'drizzle-orm';
