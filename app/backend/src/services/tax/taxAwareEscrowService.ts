@@ -6,9 +6,9 @@ import {
   tax_liabilities,
 } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
-import { EnhancedEscrowService } from './enhancedEscrowService';
-import { cryptoTaxEscrowService } from './tax/cryptoTaxEscrowService';
-import { taxRemittanceService } from './tax/taxRemittanceService';
+import { EnhancedEscrowService } from '../enhancedEscrowService';
+import { cryptoTaxEscrowService } from './cryptoTaxEscrowService';
+import { taxRemittanceService } from './taxRemittanceService';
 
 /**
  * Tax-Aware Escrow Service
