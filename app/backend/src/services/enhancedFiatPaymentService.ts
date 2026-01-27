@@ -3,6 +3,19 @@ import { safeLogger } from '../utils/safeLogger';
 import { ExchangeRateService } from './exchangeRateService';
 import { NotificationService } from './notificationService';
 import { UserProfileService } from './userProfileService';
+import { db } from '../db';
+import { users } from '../db/schema';
+import { paymentMethodsV2 } from '../db/buyerDataSchema';
+import { eq, sql } from 'drizzle-orm';
+import { StripePaymentService } from './stripePaymentService';
+
+// Initialize Stripe Service (Config should ideally be injected)
+const stripeService = new StripePaymentService({
+  secretKey: process.env.STRIPE_SECRET_KEY || '',
+  publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
+  webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+  apiVersion: '2023-10-16'
+});
 
 export interface FiatPaymentRequest {
   orderId: string;
@@ -284,33 +297,36 @@ export class EnhancedFiatPaymentService {
     methodData: any
   ): Promise<PaymentMethodInfo> {
     try {
-      // Validate provider and method type
-      const providerConfig = this.PROVIDER_CONFIGS[provider as keyof typeof this.PROVIDER_CONFIGS];
-      if (!providerConfig) {
-        throw new Error(`Unsupported provider: ${provider}`);
+      // Validate provider
+      if (provider !== 'stripe') {
+        throw new Error(`Only Stripe is currently supported for secure method setup`);
       }
 
-      if (!providerConfig.supportedMethods.includes(methodType)) {
-        throw new Error(`${provider} doesn't support ${methodType}`);
+      // methodData should ONLY contain paymentMethodId (from Stripe Elements)
+      const { paymentMethodId } = methodData;
+      if (!paymentMethodId) {
+        throw new Error('Missing paymentMethodId');
       }
 
-      // Create payment method with provider
-      const providerMethodId = await this.createProviderPaymentMethod(provider, methodType, methodData);
+      // For Stripe, we can assume the payment method is already created on Stripe side via Elements
+      // We just need to save the reference.
+      
+      const { last4, brand, expiryMonth, expiryYear } = methodData;
 
       // Store payment method in database
       const paymentMethod: PaymentMethodInfo = {
-        id: providerMethodId,
-        type: methodType as any,
-        provider,
-        name: `${providerConfig.name} ${methodType}`,
-        last4: methodData.last4,
-        brand: methodData.brand,
-        expiryMonth: methodData.expiryMonth,
-        expiryYear: methodData.expiryYear,
+        id: paymentMethodId,
+        type: 'card',
+        provider: 'stripe',
+        name: `Stripe Card ending ${last4}`,
+        last4,
+        brand,
+        expiryMonth,
+        expiryYear,
         isDefault: false,
         enabled: true,
-        country: methodData.country || 'US',
-        currency: methodData.currency || 'USD',
+        country: 'US', // Default
+        currency: 'USD', // Default
         verificationStatus: 'verified',
         addedAt: new Date()
       };
@@ -642,14 +658,40 @@ export class EnhancedFiatPaymentService {
     return reasoning;
   }
 
-  private async createProviderPaymentMethod(provider: string, methodType: string, methodData: any): Promise<string> {
-    // Mock implementation
-    return `pm_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
   private async savePaymentMethod(userAddress: string, paymentMethod: PaymentMethodInfo): Promise<void> {
-    // Mock implementation - in production, save to database
-    safeLogger.info(`Saving payment method for ${userAddress}:`, paymentMethod);
+    try {
+      // 1. Lookup User ID from Address
+      const [user] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(sql`LOWER(${users.walletAddress})`, userAddress.toLowerCase()))
+        .limit(1);
+
+      if (!user) {
+        throw new Error(`User not found for address ${userAddress}`);
+      }
+
+      // 2. Save to payment_methods_v2
+      await db.insert(paymentMethodsV2).values({
+        userId: user.id,
+        provider: paymentMethod.provider,
+        methodType: 'credit_card', // Standardize on credit_card for now
+        stripePaymentMethodId: paymentMethod.id,
+        last4: paymentMethod.last4,
+        cardBrand: paymentMethod.brand,
+        cardExpMonth: paymentMethod.expiryMonth?.toString(),
+        cardExpYear: paymentMethod.expiryYear?.toString(),
+        isDefault: paymentMethod.isDefault,
+        status: 'active',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      safeLogger.info(`Saved payment method for ${userAddress} (UID: ${user.id})`);
+    } catch (error) {
+      safeLogger.error('Database error saving payment method:', error);
+      throw new Error('Failed to save payment method: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
   }
 
   private async generateReceiptPDF(receipt: FiatPaymentReceipt): Promise<string> {

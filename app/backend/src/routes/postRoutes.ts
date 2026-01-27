@@ -32,6 +32,7 @@ router.get('/share/:shareId', postController.getPostByShareId.bind(postControlle
 router.post('/:id/view', postController.viewPost.bind(postController));
 router.get('/:id', postController.getPostById.bind(postController));
 router.put('/:id', authMiddleware, csrfProtection, postController.updatePost.bind(postController));
+router.post('/:id/share', authMiddleware, postController.sharePost.bind(postController));
 router.delete('/:id', authMiddleware, csrfProtection, postController.deletePost.bind(postController));
 
 export default router;

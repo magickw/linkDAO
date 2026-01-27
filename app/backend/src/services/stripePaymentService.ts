@@ -460,4 +460,71 @@ export class StripePaymentService implements IPaymentProcessor {
       return null;
     }
   }
+
+  /**
+   * Create a Stripe Connect Express account for a seller
+   */
+  public async createConnectAccount(email: string, businessType: 'individual' | 'company' = 'individual', country: string = 'US'): Promise<string> {
+    try {
+      const account = await this.stripe.accounts.create({
+        type: 'express',
+        country,
+        email,
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+        business_type: businessType,
+      });
+
+      return account.id;
+    } catch (error) {
+      safeLogger.error('Stripe Connect account creation error:', error);
+      throw new Error('Failed to create Connect account');
+    }
+  }
+
+  /**
+   * Create an account link for Stripe Connect onboarding
+   */
+  public async createAccountLink(accountId: string, refreshUrl: string, returnUrl: string): Promise<string> {
+    try {
+      const accountLink = await this.stripe.accountLinks.create({
+        account: accountId,
+        refresh_url: refreshUrl,
+        return_url: returnUrl,
+        type: 'account_onboarding',
+      });
+
+      return accountLink.url;
+    } catch (error) {
+      safeLogger.error('Stripe Account Link creation error:', error);
+      throw new Error('Failed to create account link');
+    }
+  }
+
+  /**
+   * Retrieve Stripe Connect account details
+   */
+  public async getConnectAccount(accountId: string): Promise<Stripe.Account> {
+    try {
+      return await this.stripe.accounts.retrieve(accountId);
+    } catch (error) {
+      safeLogger.error('Stripe Connect account retrieval error:', error);
+      throw new Error('Failed to retrieve Connect account');
+    }
+  }
+
+  /**
+   * Create a Login Link for the Express Dashboard
+   */
+  public async createLoginLink(accountId: string): Promise<string> {
+    try {
+      const link = await this.stripe.accounts.createLoginLink(accountId);
+      return link.url;
+    } catch (error) {
+      safeLogger.error('Stripe Login Link creation error:', error);
+      throw new Error('Failed to create login link');
+    }
+  }
 }

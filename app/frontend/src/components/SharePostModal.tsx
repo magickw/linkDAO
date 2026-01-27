@@ -77,10 +77,7 @@ export default function SharePostModal({
 
   // Community sharing state
   const [userCommunities, setUserCommunities] = useState<Community[]>([]);
-  const [searchResults, setSearchResults] = useState<Community[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
   const [loadingCommunities, setLoadingCommunities] = useState(false);
-  const [isSearchingCommunities, setIsSearchingCommunities] = useState(false);
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
 
   // Initial fetch of user's communities
@@ -100,27 +97,6 @@ export default function SharePostModal({
       fetchCommunities();
     }
   }, [isOpen, address, selectedOption]);
-
-  // Search communities when search term changes
-  useEffect(() => {
-    const searchTimer = setTimeout(async () => {
-      if (searchTerm.trim().length >= 2) {
-        try {
-          setIsSearchingCommunities(true);
-          const results = await CommunityService.searchCommunities(searchTerm);
-          setSearchResults(results);
-        } catch (error) {
-          console.error('Search failed:', error);
-        } finally {
-          setIsSearchingCommunities(false);
-        }
-      } else {
-        setSearchResults([]);
-      }
-    }, 300);
-
-    return () => clearTimeout(searchTimer);
-  }, [searchTerm]);
 
   // Generate share URL
   const getPostUrl = () => {
@@ -247,7 +223,13 @@ export default function SharePostModal({
   ].filter(option => {
     // Exclude 'Share to Community' if post doesn't have a title (e.g. statuses)
     if (option.id === 'community') {
-      return !!post.title;
+      if (!post.title) {
+        return false;
+      }
+      // Also exclude if the post doesn't belong to the current user
+      if (address && post.author && post.author.toLowerCase() !== address.toLowerCase()) {
+        return false;
+      }
     }
     return true;
   });
@@ -327,7 +309,7 @@ export default function SharePostModal({
       aria-labelledby="share-modal-title"
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full max-h-[90vh] overflow-hidden shadow-2xl"
+        className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full max-h-[85vh] flex flex-col shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -424,175 +406,110 @@ export default function SharePostModal({
         {/* Community Selection */}
         {selectedOption === 'community' && (
           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-              Select a community to share to:
-            </h4>
-
-            {/* Search Input */}
-            <div className="relative mb-4">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search public communities..."
-                className="w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                {isSearchingCommunities ? (
-                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                ) : searchTerm ? (
-                  <button onClick={() => setSearchTerm('')} className="hover:text-gray-600 dark:hover:text-gray-200">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Select a community
+            </label>
+            
+            {/* Community Dropdown */}
+            <div className="relative">
+              <select
+                value={selectedCommunityId || ''}
+                onChange={(e) => setSelectedCommunityId(e.target.value || null)}
+                disabled={loadingCommunities}
+                className="w-full px-4 py-3 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <option value="">Choose a community...</option>
+                {loadingCommunities ? (
+                  <option disabled>Loading communities...</option>
+                ) : userCommunities.length === 0 ? (
+                  <option disabled>No communities available</option>
                 ) : (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
+                  userCommunities.map(community => (
+                    <option key={community.id} value={community.id}>
+                      {community.name} ({community.memberCount.toLocaleString()} members)
+                    </option>
+                  ))
                 )}
+              </select>
+              
+              {/* Dropdown Arrow Icon */}
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </div>
             </div>
 
-            {/* Results List */}
-            <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-              {searchTerm.length >= 2 ? (
-                searchResults.length === 0 && !isSearchingCommunities ? (
-                  <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
-                    No communities found for "{searchTerm}"
-                  </div>
-                ) : (
-                  searchResults.map(community => (
-                    <div
-                      key={community.id}
-                      onClick={() => setSelectedCommunityId(community.id)}
-                      className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-all duration-200 ${selectedCommunityId === community.id
-                        ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-500 ring-1 ring-primary-500'
-                        : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
-                        }`}
-                    >
-                      <div className="flex-shrink-0">
-                        {community.avatar ? (
+            {/* Selected Community Preview */}
+            {selectedCommunityId && (
+              <div className="mt-3 p-3 bg-primary-50 dark:bg-primary-900/20 rounded-lg border border-primary-200 dark:border-primary-700">
+                <div className="flex items-center space-x-3">
+                  {(() => {
+                    const selectedCommunity = userCommunities.find(c => c.id === selectedCommunityId);
+                    return selectedCommunity ? (
+                      <>
+                        {selectedCommunity.avatar ? (
                           <img
-                            src={community.avatar}
-                            alt={community.name}
-                            className="w-10 h-10 rounded-full object-cover shadow-sm"
+                            src={selectedCommunity.avatar}
+                            alt={selectedCommunity.name}
+                            className="w-8 h-8 rounded-full object-cover"
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-secondary-500 flex items-center justify-center text-xs font-bold text-white shadow-sm">
-                            {community.name.substring(0, 2).toUpperCase()}
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-secondary-500 flex items-center justify-center text-xs font-bold text-white">
+                            {selectedCommunity.name.substring(0, 2).toUpperCase()}
                           </div>
                         )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                          {community.name}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                          {community.memberCount.toLocaleString()} members
-                        </p>
-                      </div>
-                      {selectedCommunityId === community.id && (
-                        <CheckSquare className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-                      )}
-                    </div>
-                  ))
-                )
-              ) : (
-                <>
-                  {loadingCommunities ? (
-                    <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
-                      <svg className="animate-spin h-6 w-6 mx-auto mb-2 opacity-50" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Loading your communities...
-                    </div>
-                  ) : userCommunities.length === 0 ? (
-                    <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
-                      <Users className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                      Search for communities to share to
-                    </div>
-                  ) : (
-                    <>
-                      <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 dark:text-gray-500 mb-2 px-1">Your Communities</p>
-                      {userCommunities.map(community => (
-                        <div
-                          key={community.id}
-                          onClick={() => setSelectedCommunityId(community.id)}
-                          className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-all duration-200 ${selectedCommunityId === community.id
-                            ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-500 ring-1 ring-primary-500'
-                            : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
-                            }`}
-                        >
-                          <div className="flex-shrink-0">
-                            {community.avatar ? (
-                              <img
-                                src={community.avatar}
-                                alt={community.name}
-                                className="w-10 h-10 rounded-full object-cover shadow-sm"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-secondary-500 flex items-center justify-center text-xs font-bold text-white shadow-sm">
-                                {community.name.substring(0, 2).toUpperCase()}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                              {community.name}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                              {community.memberCount.toLocaleString()} members
-                            </p>
-                          </div>
-                          {selectedCommunityId === community.id && (
-                            <CheckSquare className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-                          )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-primary-900 dark:text-primary-100 truncate">
+                            {selectedCommunity.name}
+                          </p>
+                          <p className="text-xs text-primary-700 dark:text-primary-300 truncate">
+                            {selectedCommunity.memberCount.toLocaleString()} members
+                          </p>
                         </div>
-                      ))}
-                    </>
-                  )}
-                </>
-              )}
-            </div>
+                        <CheckSquare className="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0" />
+                      </>
+                    ) : null;
+                  })()}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
         {/* Share Options */}
-        <div className="p-4 max-h-96 overflow-y-auto">
-          <div className="grid grid-cols-2 gap-3">
-            {shareOptions.map((option) => (
-              <button
-                key={option.id}
-                onClick={() => {
-                  if (option.id === 'timeline') {
-                    setSelectedOption('timeline');
-                  } else if (option.id === 'community') {
-                    setSelectedOption('community');
-                  } else {
-                    handleExternalShare(option);
-                  }
-                }}
-                disabled={isSharing}
-                className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${selectedOption === option.id
-                  ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'
-                  : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  }`}
-              >
-                <div className={`w-10 h-10 ${option.color} rounded-full flex items-center justify-center text-white text-lg`}>
-                  {option.icon}
-                </div>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  {option.name}
-                </span>
-              </button>
-            ))}
+        {!selectedOption && (
+          <div className="p-4 overflow-y-auto flex-1 min-h-0">
+            <div className="grid grid-cols-2 gap-3">
+              {shareOptions.map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => {
+                    if (option.id === 'timeline') {
+                      setSelectedOption('timeline');
+                    } else if (option.id === 'community') {
+                      setSelectedOption('community');
+                    } else {
+                      handleExternalShare(option);
+                    }
+                  }}
+                  disabled={isSharing}
+                  className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${selectedOption === option.id
+                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'
+                    : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    }`}
+                >
+                  <div className={`w-10 h-10 ${option.color} rounded-full flex items-center justify-center text-white text-lg`}>
+                    {option.icon}
+                  </div>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    {option.name}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Timeline/Community Share Actions */}
         {(selectedOption === 'timeline' || selectedOption === 'community') && (

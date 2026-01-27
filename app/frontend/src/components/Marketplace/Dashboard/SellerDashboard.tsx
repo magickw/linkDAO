@@ -13,6 +13,8 @@ import { useToast } from '../../../context/ToastContext';
 import { countries } from '../../../utils/countries';
 import { PayoutSetupStep } from '../Seller/onboarding/PayoutSetupStep';
 import { paymentMethodService, CreatePaymentMethodInput } from '../../../services/paymentMethodService';
+import { StripeProvider } from '../../Payment/StripeProvider';
+import { StripeSetupForm } from '../../Payment/StripeSetupForm';
 import { OptimizedImage } from '../../Performance/OptimizedImageLoader';
 import { PromoCodesManager } from '../PromoCodes/PromoCodesManager';
 import { SellerOrdersTab } from './SellerOrdersTab';
@@ -53,6 +55,8 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
     cvv: '',
   });
   const [isAddingPaymentMethod, setIsAddingPaymentMethod] = useState(false);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [initializingSetup, setInitializingSetup] = useState(false);
   const { addToast } = useToast();
 
   // Profile editing state
@@ -246,50 +250,42 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
     }
   };
 
-  // Handle adding a payment method
+  // Handle adding a payment method (Secure Flow)
   const handleAddPaymentMethod = async () => {
     if (!dashboardAddress) {
       addToast('Wallet address not available', 'error');
       return;
     }
 
-    setIsAddingPaymentMethod(true);
+    try {
+      setInitializingSetup(true);
+      const secret = await paymentMethodService.createSetupIntent();
+      setClientSecret(secret);
+      setShowAddPaymentMethodModal(true);
+    } catch (error) {
+      console.error('Failed to initialize payment setup:', error);
+      addToast('Failed to initialize secure payment setup', 'error');
+    } finally {
+      setInitializingSetup(false);
+    }
+  };
+
+  const handleSetupSuccess = async (setupIntentId: string, paymentMethodId: string) => {
+    if (!dashboardAddress) return;
 
     try {
-      // Validate required fields
-      if (!paymentMethodForm.nickname) {
-        addToast('Please provide a nickname for your payment method', 'error');
-        return;
-      }
-
-      if (paymentMethodForm.type === 'card') {
-        if (!paymentMethodForm.cardNumber || !paymentMethodForm.expiryMonth || !paymentMethodForm.expiryYear || !paymentMethodForm.cvv) {
-          addToast('Please fill in all card details', 'error');
-          return;
-        }
-      }
-
-      // Add the payment method using the service
-      const result = await paymentMethodService.addPaymentMethod(dashboardAddress, paymentMethodForm);
-
-      // Add toast notification
+      setIsAddingPaymentMethod(true);
+      await paymentMethodService.addPaymentMethod(dashboardAddress, paymentMethodId, 'Stripe Card');
       addToast('Payment method added successfully', 'success');
-
-      // Close the modal
       setShowAddPaymentMethodModal(false);
-
-      // Reset the form
-      setPaymentMethodForm({
-        type: 'card',
-        nickname: '',
-        cardNumber: '',
-        expiryMonth: undefined,
-        expiryYear: undefined,
-        cvv: '',
-      });
+      setClientSecret(null);
+      
+      // Refresh payment methods
+      const paymentMethodsData = await paymentMethodService.getPaymentMethods(dashboardAddress);
+      setPaymentMethods(paymentMethodsData);
     } catch (error) {
-      console.error('Failed to add payment method:', error);
-      addToast('Failed to add payment method. Please try again.', 'error');
+      console.error('Failed to save payment method:', error);
+      addToast('Failed to save payment method', 'error');
     } finally {
       setIsAddingPaymentMethod(false);
     }
@@ -1667,9 +1663,10 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                         </p>
                         <Button
                           variant="primary"
-                          onClick={() => setShowAddPaymentMethodModal(true)}
+                          onClick={handleAddPaymentMethod}
+                          disabled={initializingSetup}
                         >
-                          Add Payment Method
+                          {initializingSetup ? 'Initializing...' : 'Add Payment Method'}
                         </Button>
                       </div>
 
@@ -1806,14 +1803,17 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
               </GlassPanel>
             )}
 
-            {/* Add Payment Method Modal */}
-            {showAddPaymentMethodModal && (
+            {/* Add Payment Method Modal (Secure) */}
+            {showAddPaymentMethodModal && clientSecret && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                 <div className="bg-gray-800 rounded-xl max-w-md w-full p-6">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold text-white">Add Payment Method</h3>
+                    <h3 className="text-lg font-semibold text-white">Add Secure Payment Method</h3>
                     <button
-                      onClick={() => setShowAddPaymentMethodModal(false)}
+                      onClick={() => {
+                        setShowAddPaymentMethodModal(false);
+                        setClientSecret(null);
+                      }}
                       className="text-gray-400 hover:text-white"
                     >
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1822,172 +1822,16 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                     </button>
                   </div>
 
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-gray-300 text-sm mb-1">Payment Method Type</label>
-                      <select
-                        value={paymentMethodForm.type}
-                        onChange={(e) => setPaymentMethodForm({
-                          ...paymentMethodForm,
-                          type: e.target.value as 'card' | 'bank' | 'crypto'
-                        })}
-                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      >
-                        <option value="card">Credit/Debit Card</option>
-                        <option value="bank">Bank Account</option>
-                        <option value="crypto">Crypto Wallet</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-300 text-sm mb-1">Nickname</label>
-                      <input
-                        type="text"
-                        name="payment-nickname"
-                        autoComplete="off"
-                        value={paymentMethodForm.nickname}
-                        onChange={(e) => setPaymentMethodForm({
-                          ...paymentMethodForm,
-                          nickname: e.target.value
-                        })}
-                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        placeholder="e.g., Business Card, Personal Account"
-                      />
-                    </div>
-
-                    {paymentMethodForm.type === 'card' && (
-                      <>
-                        <div>
-                          <label className="block text-gray-300 text-sm mb-1">Card Number</label>
-                          <input
-                            type="text"
-                            value={paymentMethodForm.cardNumber}
-                            onChange={(e) => setPaymentMethodForm({
-                              ...paymentMethodForm,
-                              cardNumber: e.target.value.replace(/\s/g, '').replace(/(.{4})/g, '$1 ').trim()
-                            })}
-                            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            placeholder="1234 5678 9012 3456"
-                            maxLength={19}
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-gray-300 text-sm mb-1">Expiry (MM/YY)</label>
-                            <div className="flex gap-2">
-                              <input
-                                type="number"
-                                value={paymentMethodForm.expiryMonth || ''}
-                                onChange={(e) => setPaymentMethodForm({
-                                  ...paymentMethodForm,
-                                  expiryMonth: e.target.value ? parseInt(e.target.value, 10) : undefined
-                                })}
-                                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                placeholder="MM"
-                                min="1"
-                                max="12"
-                                maxLength={2}
-                              />
-                              <input
-                                type="number"
-                                value={paymentMethodForm.expiryYear || ''}
-                                onChange={(e) => setPaymentMethodForm({
-                                  ...paymentMethodForm,
-                                  expiryYear: e.target.value ? parseInt(e.target.value, 10) : undefined
-                                })}
-                                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                placeholder="YY"
-                                min="24"
-                                max="99"
-                                maxLength={2}
-                              />
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-gray-300 text-sm mb-1">CVV</label>
-                            <input
-                              type="password"
-                              value={paymentMethodForm.cvv}
-                              onChange={(e) => setPaymentMethodForm({
-                                ...paymentMethodForm,
-                                cvv: e.target.value
-                              })}
-                              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                              placeholder="123"
-                              maxLength={4}
-                            />
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {paymentMethodForm.type === 'bank' && (
-                      <>
-                        <div>
-                          <label className="block text-gray-300 text-sm mb-1">Account Number</label>
-                          <input
-                            type="text"
-                            value={paymentMethodForm.accountNumber}
-                            onChange={(e) => setPaymentMethodForm({
-                              ...paymentMethodForm,
-                              accountNumber: e.target.value
-                            })}
-                            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            placeholder="Account number"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-gray-300 text-sm mb-1">Routing Number</label>
-                          <input
-                            type="text"
-                            value={paymentMethodForm.routingNumber}
-                            onChange={(e) => setPaymentMethodForm({
-                              ...paymentMethodForm,
-                              routingNumber: e.target.value
-                            })}
-                            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            placeholder="Routing number"
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {paymentMethodForm.type === 'crypto' && (
-                      <div>
-                        <label className="block text-gray-300 text-sm mb-1">Wallet Address</label>
-                        <input
-                          type="text"
-                          value={paymentMethodForm.walletAddress}
-                          onChange={(e) => setPaymentMethodForm({
-                            ...paymentMethodForm,
-                            walletAddress: e.target.value
-                          })}
-                          className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                          placeholder="0x..."
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex justify-end space-x-3 mt-6">
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowAddPaymentMethodModal(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      variant="primary"
-                      onClick={handleAddPaymentMethod}
-                      loading={isAddingPaymentMethod}
-                      disabled={isAddingPaymentMethod}
-                    >
-                      {isAddingPaymentMethod ? 'Adding...' : 'Add Payment Method'}
-                    </Button>
-                  </div>
+                  <StripeProvider options={{ clientSecret }}>
+                    <StripeSetupForm
+                      clientSecret={clientSecret}
+                      onSuccess={handleSetupSuccess}
+                      onCancel={() => {
+                        setShowAddPaymentMethodModal(false);
+                        setClientSecret(null);
+                      }}
+                    />
+                  </StripeProvider>
                 </div>
               </div>
             )}

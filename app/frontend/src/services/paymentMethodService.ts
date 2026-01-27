@@ -71,26 +71,43 @@ class PaymentMethodService {
   }
 
   /**
-   * Add new payment method (tokenizes sensitive data)
+   * Create a SetupIntent for saving a card
    */
-  async addPaymentMethod(userAddress: string, paymentData: CreatePaymentMethodInput): Promise<PaymentMethod> {
+  async createSetupIntent(): Promise<string> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/stripe/create-setup-intent`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({}), // Customer ID is inferred from auth token/user address in backend
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create setup intent');
+      }
+
+      const data = await response.json();
+      return data.clientSecret;
+    } catch (error) {
+      console.error('Error creating setup intent:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Add new payment method (uses Stripe PaymentMethod ID)
+   */
+  async addPaymentMethod(userAddress: string, paymentMethodId: string, nickname?: string): Promise<PaymentMethod> {
     try {
       const response = await fetch(`${this.baseUrl}/enhanced-fiat-payment/setup-method`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify({
           userAddress,
-          provider: 'stripe', // Default provider
-          methodType: paymentData.type,
+          provider: 'stripe',
+          methodType: 'card',
           methodData: {
-            cardNumber: paymentData.cardNumber,
-            expiryMonth: paymentData.expiryMonth,
-            expiryYear: paymentData.expiryYear,
-            cvv: paymentData.cvv,
-            accountNumber: paymentData.accountNumber,
-            routingNumber: paymentData.routingNumber,
-            walletAddress: paymentData.walletAddress,
-            nickname: paymentData.nickname,
+            paymentMethodId,
+            nickname
           }
         }),
       });
@@ -104,18 +121,17 @@ class PaymentMethodService {
       
       // Return a payment method object based on the response
       return {
-        id: data.id || `pm_${Date.now()}`,
-        type: paymentData.type,
-        nickname: paymentData.nickname,
-        isDefault: paymentData.isDefault || false,
-        token: data.token || `token_${Date.now()}`,
-        lastFour: paymentData.cardNumber ? paymentData.cardNumber.slice(-4) : 
-                  paymentData.accountNumber ? paymentData.accountNumber.slice(-4) : undefined,
-        expiryMonth: paymentData.expiryMonth,
-        expiryYear: paymentData.expiryYear,
-        brand: data.brand || (paymentData.type === 'card' ? 'Visa' : undefined),
-        createdAt: data.createdAt || new Date().toISOString(),
-        updatedAt: data.updatedAt || new Date().toISOString()
+        id: data.data?.id || `pm_${Date.now()}`,
+        type: 'card',
+        nickname: nickname || data.data?.name || 'Card',
+        isDefault: false,
+        token: paymentMethodId,
+        lastFour: data.data?.last4,
+        expiryMonth: data.data?.expiryMonth,
+        expiryYear: data.data?.expiryYear,
+        brand: data.data?.brand,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
     } catch (err) {
       console.error('Error adding payment method:', err);

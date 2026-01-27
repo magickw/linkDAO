@@ -44,7 +44,8 @@ export class EscrowSchedulerService {
   // Default escrow duration in days (if not specified per escrow)
   private readonly DEFAULT_ESCROW_DURATION_DAYS = 14;
   // Grace period after delivery confirmation before auto-release (in hours)
-  private readonly AUTO_RELEASE_GRACE_PERIOD_HOURS = 48;
+  // Standard business return window: 30 days to allow buyers to initiate returns
+  private readonly AUTO_RELEASE_GRACE_PERIOD_HOURS = 720; // 30 days = 30 * 24 = 720 hours
 
   constructor() {
     this.enhancedEscrowService = new EnhancedEscrowService(
@@ -376,6 +377,23 @@ export class EscrowSchedulerService {
       safeLogger.info(`Found ${pendingReleases.length} pending seller releases`);
 
       for (const escrow of pendingReleases) {
+        // Additional validation: Ensure return/dispute window has fully expired
+        const deliveryDeadline = escrow.deliveryDeadline ? new Date(escrow.deliveryDeadline) : null;
+        const returnWindowExpiry = deliveryDeadline 
+          ? new Date(deliveryDeadline.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 days
+          : null;
+
+        const now = new Date();
+
+        // Only release if:
+        // 1. Delivery was confirmed at least 30 days ago (grace period), AND
+        // 2. Return window has expired (30 days after delivery deadline), OR
+        // 3. No delivery deadline exists (fall back to grace period only)
+        if (returnWindowExpiry && now < returnWindowExpiry) {
+          safeLogger.info(`Skipping escrow ${escrow.id} - return window not yet expired (expires: ${returnWindowExpiry.toISOString()})`);
+          continue;
+        }
+
         await this.releaseToSeller(escrow);
         await this.delay(500);
       }
@@ -404,19 +422,30 @@ export class EscrowSchedulerService {
         throw new Error('Seller not found or has no wallet address');
       }
 
-      // For crypto payments, transfer funds to seller
-      // Note: In a real smart contract escrow, this would trigger the release function
-      // For now, we simulate this by updating the status
-
       let releaseResult: any = { success: true };
 
-      if (escrow.tokenAddress || escrow.paymentMethod === 'crypto') {
-        // In a real implementation, this would call the smart contract's release function
-        // For now, we log and update status
-        safeLogger.info(`Releasing ${escrow.amount} to seller ${seller.walletAddress}`);
+      if (escrow.onChainId && (escrow.tokenAddress || escrow.paymentMethod === 'crypto')) {
+        // Call the smart contract's releaseFundsAfterReturnWindow function
+        safeLogger.info(`Calling smart contract to release funds for escrow ${escrow.onChainId}`);
 
-        // TODO: Implement actual smart contract release call
-        // releaseResult = await this.escrowContract.releaseFunds(escrow.onChainId);
+        try {
+          const chainId = 11155111; // Default to Sepolia testnet
+          const tx = await this.enhancedEscrowService.releaseFundsAfterReturnWindow(
+            escrow.onChainId,
+            chainId
+          );
+          releaseResult = {
+            success: true,
+            transactionHash: tx.transactionHash,
+            provider: 'blockchain-escrow'
+          };
+        } catch (error: any) {
+          safeLogger.error(`Smart contract release failed for escrow ${escrow.id}:`, error);
+          throw new Error(`Smart contract release failed: ${error.message}`);
+        }
+      } else {
+        // For fiat payments or non-blockchain escrows, just update database
+        safeLogger.info(`Releasing ${escrow.amount} to seller ${seller.walletAddress} (non-crypto)`);
       }
 
       // Update escrow as resolved with release to seller
@@ -430,6 +459,7 @@ export class EscrowSchedulerService {
             type: 'auto_release_seller',
             releasedTo: seller.walletAddress,
             amount: escrow.amount,
+            transactionHash: releaseResult.transactionHash,
             resolvedAt: new Date().toISOString()
           })
         })
@@ -448,7 +478,7 @@ export class EscrowSchedulerService {
         escrow.sellerId,
         'payment_released',
         escrow.id.toString(),
-        { amount: escrow.amount }
+        { amount: escrow.amount, transactionHash: releaseResult.transactionHash }
       );
 
       // Notify buyer that transaction is complete
@@ -463,6 +493,20 @@ export class EscrowSchedulerService {
       return true;
     } catch (error: any) {
       safeLogger.error(`Failed to release funds for escrow ${escrow.id}:`, error);
+
+      // Mark escrow as needing manual intervention
+      await db
+        .update(escrows)
+        .set({
+          resolution: JSON.stringify({
+            type: 'auto_release_failed',
+            error: error.message,
+            attemptedAt: new Date().toISOString(),
+            requiresManualReview: true
+          })
+        })
+        .where(eq(escrows.id, escrow.id));
+
       return false;
     }
   }

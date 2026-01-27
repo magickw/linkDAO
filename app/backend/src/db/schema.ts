@@ -945,6 +945,26 @@ export const ensVerifications = pgTable("ens_verifications", {
   expiresAtIdx: index("idx_ens_verifications_expires_at").on(t.expiresAt),
 }));
 
+// Stripe Connect Accounts
+export const stripeConnectAccounts = pgTable("stripe_connect_accounts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userAddress: varchar("user_address", { length: 42 }).notNull(),
+  stripeAccountId: varchar("stripe_account_id", { length: 255 }).notNull().unique(),
+  accountStatus: varchar("account_status", { length: 20 }).default("pending"),
+  capabilities: jsonb("capabilities"),
+  requirements: jsonb("requirements"),
+  verificationStatus: varchar("verification_status", { length: 20 }).default("pending"),
+  payoutsEnabled: boolean("payouts_enabled").default(false),
+  chargesEnabled: boolean("charges_enabled").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  userAddressIdx: index("idx_stripe_accounts_user_address").on(t.userAddress),
+  stripeAccountIdIdx: index("idx_stripe_accounts_stripe_id").on(t.stripeAccountId),
+  accountStatusIdx: index("idx_stripe_accounts_status").on(t.accountStatus),
+  verificationStatusIdx: index("idx_stripe_accounts_verification").on(t.verificationStatus),
+}));
+
 // Sellers table for enhanced store functionality
 export const sellers = pgTable("sellers", {
   id: serial("id").primaryKey(),

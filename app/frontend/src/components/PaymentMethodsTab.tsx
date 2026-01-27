@@ -8,7 +8,9 @@ import { useAccount } from 'wagmi';
 import { useToast } from '@/context/ToastContext';
 import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
-import { paymentMethodService, PaymentMethod, CreatePaymentMethodInput } from '@/services/paymentMethodService';
+import { paymentMethodService, PaymentMethod } from '@/services/paymentMethodService';
+import { StripeProvider } from './Payment/StripeProvider';
+import { StripeSetupForm } from './Payment/StripeSetupForm';
 
 export const PaymentMethodsTab: React.FC = () => {
   const { address: walletAddress } = useAccount();
@@ -16,13 +18,9 @@ export const PaymentMethodsTab: React.FC = () => {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isAdding, setIsAdding] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [formData, setFormData] = useState<CreatePaymentMethodInput>({
-    type: 'card',
-    nickname: '',
-    isDefault: false,
-  });
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [initializingSetup, setInitializingSetup] = useState(false);
 
   const fetchPaymentMethods = async () => {
     if (walletAddress) {
@@ -43,37 +41,44 @@ export const PaymentMethodsTab: React.FC = () => {
     fetchPaymentMethods();
   }, [walletAddress]);
 
-  const addPaymentMethod = async (formData: any) => {
+  const handleAddClick = async () => {
     if (!walletAddress) return;
     
     try {
-      setIsAdding(true);
-      await paymentMethodService.addPaymentMethod(walletAddress!, formData);
-      // Refresh the list
-      const methods = await paymentMethodService.getPaymentMethods(walletAddress!);
-      setPaymentMethods(methods);
-      setIsAdding(false);
-      return true;
-    } catch (err) {
-      setError('Failed to add payment method');
-      console.error('Error adding payment method:', err);
-      setIsAdding(false);
-      return false;
+      setInitializingSetup(true);
+      const secret = await paymentMethodService.createSetupIntent();
+      setClientSecret(secret);
+      setShowAddForm(true);
+    } catch (error) {
+      console.error('Failed to initialize payment setup:', error);
+      addToast('Failed to initialize secure payment setup', 'error');
+    } finally {
+      setInitializingSetup(false);
     }
   };
 
-  const handleAddPaymentMethod = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSetupSuccess = async (setupIntentId: string, paymentMethodId: string) => {
+    if (!walletAddress) return;
+
     try {
-      await paymentMethodService.addPaymentMethod(walletAddress!, formData);
+      await paymentMethodService.addPaymentMethod(walletAddress, paymentMethodId, 'Stripe Card');
       addToast('Payment method added successfully', 'success');
       setShowAddForm(false);
-      setFormData({ type: 'card', nickname: '', isDefault: false });
+      setClientSecret(null);
       fetchPaymentMethods();
     } catch (error) {
-      addToast('Failed to add payment method', 'error');
+      console.error('Failed to save payment method:', error);
+      addToast('Failed to save payment method', 'error');
     }
+  };
+
+  const handleSetupError = (error: Error) => {
+    addToast(error.message || 'Failed to setup payment method', 'error');
+  };
+
+  const handleCancelAdd = () => {
+    setShowAddForm(false);
+    setClientSecret(null);
   };
 
   const setDefault = async (paymentMethodId: string) => {
@@ -102,7 +107,7 @@ export const PaymentMethodsTab: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (loading && !paymentMethods.length) {
     return (
       <GlassPanel variant="primary" className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white/50"></div>
@@ -119,7 +124,7 @@ export const PaymentMethodsTab: React.FC = () => {
           <div>
             <h4 className="font-medium text-green-400">Secure Payment Storage</h4>
             <p className="text-gray-200 text-sm dark:text-gray-300">
-              All payment information is encrypted and tokenized. We never store raw payment data.
+              All payment information is encrypted and tokenized by Stripe. We never store your raw card details.
             </p>
           </div>
         </div>
@@ -178,7 +183,7 @@ export const PaymentMethodsTab: React.FC = () => {
           </GlassPanel>
         ))}
 
-        {paymentMethods.length === 0 && (
+        {paymentMethods.length === 0 && !showAddForm && (
           <GlassPanel variant="primary" className="text-center py-12">
             <CreditCard className="mx-auto h-12 w-12 text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Payment Methods</h3>
@@ -191,135 +196,35 @@ export const PaymentMethodsTab: React.FC = () => {
       {!showAddForm && (
         <Button
           variant="primary"
-          onClick={() => setShowAddForm(true)}
+          onClick={handleAddClick}
+          disabled={initializingSetup}
           className="w-full flex items-center justify-center gap-2"
         >
-          <Plus size={16} />
-          Add Payment Method
+          {initializingSetup ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+          ) : (
+            <Plus size={16} />
+          )}
+          {initializingSetup ? 'Initializing Secure Setup...' : 'Add Payment Method'}
         </Button>
       )}
 
       {/* Add Payment Method Form */}
-      {showAddForm && (
+      {showAddForm && clientSecret && (
         <GlassPanel variant="primary" className="p-6">
-          <form onSubmit={handleAddPaymentMethod} className="space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Lock className="text-blue-400" size={16} />
-              <h3 className="font-medium text-gray-900 dark:text-white">Add New Payment Method</h3>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Payment Type</label>
-              <select
-                value={formData.type}
-                onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as any }))}
-                className="w-full p-3 rounded-lg bg-white/20 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="card">Credit/Debit Card</option>
-                <option value="bank">Bank Account</option>
-                <option value="crypto">Crypto Wallet</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Nickname</label>
-              <input
-                type="text"
-                value={formData.nickname}
-                onChange={(e) => setFormData(prev => ({ ...prev, nickname: e.target.value }))}
-                className="w-full p-3 rounded-lg bg-white/20 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g., My Visa Card"
-                required
-              />
-            </div>
-
-            {formData.type === 'card' && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Card Number</label>
-                  <input
-                    type="text"
-                    onChange={(e) => setFormData(prev => ({ ...prev, cardNumber: e.target.value }))}
-                    className="w-full p-3 rounded-lg bg-white/20 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="1234 5678 9012 3456"
-                    maxLength={19}
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Expiry Month</label>
-                    <select
-                      onChange={(e) => setFormData(prev => ({ ...prev, expiryMonth: parseInt(e.target.value) }))}
-                      className="w-full p-3 rounded-lg bg-white/20 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    >
-                      <option value="">Month</option>
-                      {Array.from({ length: 12 }, (_, i) => (
-                        <option key={i + 1} value={i + 1}>{(i + 1).toString().padStart(2, '0')}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Expiry Year</label>
-                    <select
-                      onChange={(e) => setFormData(prev => ({ ...prev, expiryYear: parseInt(e.target.value) }))}
-                      className="w-full p-3 rounded-lg bg-white/20 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    >
-                      <option value="">Year</option>
-                      {Array.from({ length: 10 }, (_, i) => {
-                        const year = new Date().getFullYear() + i;
-                        return <option key={year} value={year}>{year}</option>;
-                      })}
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">CVV</label>
-                  <input
-                    type="text"
-                    onChange={(e) => setFormData(prev => ({ ...prev, cvv: e.target.value }))}
-                    className="w-full p-3 rounded-lg bg-white/20 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="123"
-                    maxLength={4}
-                    required
-                  />
-                </div>
-              </>
-            )}
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isDefault"
-                checked={formData.isDefault}
-                onChange={(e) => setFormData(prev => ({ ...prev, isDefault: e.target.checked }))}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <label htmlFor="isDefault" className="text-sm text-gray-700 dark:text-gray-200">
-                Set as default payment method
-              </label>
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <Button
-                type="submit"
-                variant="primary"
-                className="flex-1"
-              >
-                Add Payment Method
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowAddForm(false)}
-                className="flex-1 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
+          <div className="flex items-center gap-2 mb-4">
+            <Lock className="text-blue-400" size={16} />
+            <h3 className="font-medium text-gray-900 dark:text-white">Add New Card</h3>
+          </div>
+          
+          <StripeProvider options={{ clientSecret }}>
+            <StripeSetupForm
+              clientSecret={clientSecret}
+              onSuccess={handleSetupSuccess}
+              onError={handleSetupError}
+              onCancel={handleCancelAdd}
+            />
+          </StripeProvider>
         </GlassPanel>
       )}
     </div>

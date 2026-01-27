@@ -409,7 +409,13 @@ export class PostService {
         throw new Error('Original post not found');
       }
 
-      // 2. Prepare new post input as a clone
+      // 2. Verify ownership - only the original author can cross-post their own content
+      if (originalPost.author.toLowerCase() !== authorAddress.toLowerCase()) {
+        safeLogger.warn(`Unauthorized cross-post attempt: User ${authorAddress} tried to share post ${originalPostId} owned by ${originalPost.author}`);
+        throw new Error('You can only share your own posts to other communities');
+      }
+
+      // 3. Prepare new post input as a clone
       const input: CreatePostInput = {
         author: authorAddress,
         content: originalPost.content || '',
@@ -421,7 +427,7 @@ export class PostService {
         parentId: originalPostId // Link to original
       };
 
-      // 3. Create using standard method (handles user creation, validation etc)
+      // 4. Create using standard method (handles user creation, validation etc)
       // Optimization: We could bypass IPFS upload since we have CIDs, but strict types might require re-upload logic flow 
       // to be bypassed. 
       // In the modified createPost above, we check if media items are already CIDs, which they are.

@@ -982,6 +982,37 @@ export class EnhancedEscrowService {
   }
 
   /**
+   * Release funds to seller after return window expires
+   * @param escrowId ID of the escrow
+   * @param chainId Chain ID for the escrow
+   */
+  async releaseFundsAfterReturnWindow(escrowId: string, chainId: number): Promise<any> {
+    try {
+      const contract = this.getContractForChain(chainId);
+      if (!contract) {
+        throw new Error(`No contract found for chain ${chainId}`);
+      }
+
+      safeLogger.info(`Releasing funds after return window for escrow ${escrowId}`);
+
+      // Call the smart contract's releaseFundsAfterReturnWindow function
+      const tx = await contract.releaseFundsAfterReturnWindow(escrowId);
+      await tx.wait();
+
+      safeLogger.info(`Funds released successfully for escrow ${escrowId}, tx: ${tx.hash}`);
+
+      return {
+        success: true,
+        transactionHash: tx.hash,
+        blockNumber: tx.blockNumber
+      };
+    } catch (error: any) {
+      safeLogger.error('Error releasing funds after return window:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Approve escrow (buyer confirms receipt)
    * @param escrowId ID of the escrow
    * @param buyerAddress Address of the buyer

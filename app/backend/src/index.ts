@@ -514,6 +514,7 @@ import x402ResourceRoutes from './routes/x402ResourceRoutes';
 import { x402Middleware } from './middleware/x402Middleware';
 import { StripePaymentService } from './services/stripePaymentService';
 import { createFiatPaymentRoutes } from './routes/fiatPaymentRoutes';
+import { createStripeConnectRoutes } from './routes/stripeConnectRoutes';
 // Import reputation routes
 import reputationRoutes from './routes/reputationRoutes';
 import advancedReputationRoutes from './routes/advancedReputationRoutes';
@@ -616,6 +617,7 @@ const stripePaymentService = new StripePaymentService({
   apiVersion: '2023-10-16'
 });
 app.use('/api/stripe', createFiatPaymentRoutes(stripePaymentService));
+app.use('/api/stripe/connect', createStripeConnectRoutes(stripePaymentService));
 
 // Add root-level health endpoint for frontend compatibility
 app.get('/health', async (req, res) => {

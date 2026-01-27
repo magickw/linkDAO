@@ -132,6 +132,7 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
     uint256 public constant MIN_VOTING_POWER = 100; // Minimum LDAO tokens to vote
     uint256 public constant REPUTATION_DECAY_PERIOD = 365 days;
     uint256 public constant DEADLINE_GRACE_PERIOD = 3 days; // Grace period after deadline before auto-refund
+    uint256 public constant RETURN_WINDOW = 30 days; // Standard business return window for buyers
     uint256 public constant EMERGENCY_REFUND_DELAY = 24 hours; // Time lock for emergency actions
 
     // Dispute bond configuration
@@ -454,7 +455,38 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
         escrow.hasSignedRelease[msg.sender] = true;
         escrow.signatureCount++;
     }
-    
+
+    /**
+     * @notice Release funds to seller after return window expires
+     * @dev This function should be called by the backend scheduler after 30 days
+     * @param escrowId ID of the escrow
+     */
+    function releaseFundsAfterReturnWindow(uint256 escrowId) 
+        external 
+        escrowExists(escrowId) 
+        onlySameChain(escrowId)
+    {
+        Escrow storage escrow = escrows[escrowId];
+        require(escrow.status == EscrowStatus.DELIVERY_CONFIRMED, "Delivery not confirmed");
+        require(!escrow.disputeOpened, "Dispute was opened on this escrow");
+        require(escrow.resolvedAt == 0, "Escrow already resolved");
+
+        // Verify return window has expired (30 days after delivery deadline)
+        require(
+            block.timestamp >= escrow.deliveryDeadline + RETURN_WINDOW,
+            "Return window not yet expired"
+        );
+
+        // Mark as resolved and release funds
+        escrow.resolvedAt = block.timestamp;
+        escrow.status = EscrowStatus.RESOLVED_SELLER_WINS;
+
+        emit EscrowResolved(escrowId, EscrowStatus.RESOLVED_SELLER_WINS, escrow.seller);
+
+        // Release funds to seller
+        _releaseFunds(escrowId, escrow.seller);
+    }
+
     /**
      * @notice Finalize delivery confirmation and release funds
      * @param escrowId ID of the escrow
@@ -462,26 +494,28 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
      */
     function _finalizeDeliveryConfirmation(uint256 escrowId, string memory deliveryInfo) internal {
         Escrow storage escrow = escrows[escrowId];
-        
+
         // CHECKS: Validate time-lock if applicable
         if (escrow.timeLockExpiry > 0) {
             require(block.timestamp >= escrow.timeLockExpiry, "Time lock not expired");
         }
-        
+
         // EFFECTS: Update all state BEFORE external calls
         escrow.deliveryInfo = deliveryInfo;
         escrow.status = EscrowStatus.DELIVERY_CONFIRMED;
-        escrow.resolvedAt = block.timestamp;
-        
+        // NOTE: Do NOT set resolvedAt yet - funds remain locked until return window expires
+        // escrow.resolvedAt = block.timestamp; // REMOVED - funds stay locked
+
         // Update reputation scores (state changes only, no external calls)
         _updateReputationOnSuccess(escrow.buyer, escrow.seller);
-        
-        // Emit events before external calls
+
+        // Emit events
         emit DeliveryConfirmed(escrowId, deliveryInfo);
-        emit EscrowResolved(escrowId, EscrowStatus.DELIVERY_CONFIRMED, escrow.seller);
-        
-        // INTERACTIONS: External calls LAST
-        _releaseFunds(escrowId, escrow.seller);
+
+        // CRITICAL CHANGE: Do NOT release funds immediately
+        // Funds will be released after 30-day return window via releaseFundsAfterReturnWindow()
+        // This prevents payout fraud when buyers initiate returns
+        // _releaseFunds(escrowId, escrow.seller); // REMOVED
     }
 
     /**
@@ -508,7 +542,7 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable, IERC721Receiver, IERC1155Re
     function openDispute(uint256 escrowId) external payable escrowExists(escrowId) onlyParticipant(escrowId) onlySameChain(escrowId) {
         Escrow storage escrow = escrows[escrowId];
         require(escrow.status == EscrowStatus.FUNDS_LOCKED, "Invalid escrow status");
-        require(block.timestamp <= escrow.deliveryDeadline + 7 days, "Dispute period expired");
+        require(block.timestamp <= escrow.deliveryDeadline + RETURN_WINDOW, "Return/dispute period expired");
 
         // Handle dispute bond if required
         if (disputeBondRequired) {
