@@ -20,6 +20,7 @@ import { ldaoTokenService } from '@/services/web3/ldaoTokenService';
 import { createPropsComparatorIgnoring } from '@/utils/performanceUtils';
 import RichContentPreview from './RichContentPreview';
 import RichTextEditor from '@/components/EnhancedPostComposer/RichTextEditor';
+import EnhancedCommentSystem from '../EnhancedCommentSystem';
 
 // Helper function to check if post is a community post
 const isCommunityPost = (post: EnhancedPost): boolean => {
@@ -74,7 +75,7 @@ function CommunityPostCardEnhanced({
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const voteScore = isCommunityPostType && typeof post.upvotes === 'number' && typeof post.downvotes === 'number' 
+  const voteScore = isCommunityPostType && typeof post.upvotes === 'number' && typeof post.downvotes === 'number'
     ? (post.upvotes - post.downvotes) : 0;
 
   const [upvoteCount, setUpvoteCount] = useState(post.upvotes || 0);
@@ -178,7 +179,7 @@ function CommunityPostCardEnhanced({
           {/* Content */}
           <div className="mb-4">
             {post.title && post.title.trim() !== '' && (
-              <h3 
+              <h3
                 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
                 onClick={() => onOpenPost ? onOpenPost(post, communitySlug) : router.push(`/communities/${encodeURIComponent(communitySlug)}/posts/${post.shareId || post.id}`)}
               >
@@ -193,7 +194,7 @@ function CommunityPostCardEnhanced({
               onToggleExpand={() => !isStandalone && setIsExpanded(!isExpanded)}
               className="mb-4"
             />
-            
+
             {/* Media */}
             {post.mediaCids && post.mediaCids.length > 0 && (
               <div className="mt-3 grid grid-cols-1 gap-2">
@@ -224,13 +225,28 @@ function CommunityPostCardEnhanced({
               postType="community"
               userMembership={userMembership}
               userVote={userVote}
-              onComment={() => onComment ? onComment(post.id) : (onOpenPost ? onOpenPost(post, communitySlug) : router.push(`/communities/${encodeURIComponent(communitySlug)}/posts/${post.shareId || post.id}`))}
+              onComment={() => setIsExpanded(!isExpanded)}
               onReaction={onReaction}
               onTip={onTip}
               onUpvote={async () => handleVote(post.id, 'upvote')}
               onDownvote={async () => handleVote(post.id, 'downvote')}
             />
           </div>
+
+          {/* Inline Comments */}
+          {isExpanded && (
+            <div className="mt-4 border-t border-gray-100 dark:border-gray-700 pt-4">
+              <EnhancedCommentSystem
+                postId={post.id}
+                postType="community"
+                communityId={community.id}
+                userMembership={userMembership}
+                onCommentCountChange={(count) => {
+                  // Optional: Update local comment count state if needed
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
     </motion.div>

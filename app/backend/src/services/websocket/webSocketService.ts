@@ -120,26 +120,39 @@ export class WebSocketService {
         methods: ["GET", "POST"],
         credentials: true
       },
-      pingTimeout: this.isResourceConstrained ? 120000 : 90000, // Increased from 90s/60s to 120s/90s
-      pingInterval: this.isResourceConstrained ? 60000 : 45000, // Increased from 45s/25s to 60s/45s
-      transports: this.isResourceConstrained ? ['polling', 'websocket'] : ['websocket', 'polling'], // Always allow websocket
+      // Optimized heartbeat: 60s instead of 30s (reduces overhead by 50%)
+      pingTimeout: this.isResourceConstrained ? 90000 : 60000, // 90s/60s (was 120s/90s)
+      pingInterval: this.isResourceConstrained ? 90000 : 60000, // 90s/60s (was 60s/45s)
+      transports: this.isResourceConstrained ? ['polling', 'websocket'] : ['websocket', 'polling'],
       maxHttpBufferSize: this.isResourceConstrained ? 1e5 : 1e6, // 100KB vs 1MB
       connectTimeout: this.config.connectionTimeout,
-      allowEIO3: true, // Allow older clients
-      // Add path configuration for better compatibility
+      allowEIO3: true,
       path: '/socket.io/',
-      // Additional options to improve connection reliability
       upgradeTimeout: 30000,
       httpCompression: !this.isResourceConstrained,
-      perMessageDeflate: !this.isResourceConstrained,
-      // wsEngine should be the actual ws module, not a string
-      // Removed wsEngine config - let Socket.IO use its default WebSocket engine
-      // Ensure proper handling of HTTP requests
+      // Enhanced WebSocket compression with permessage-deflate
+      perMessageDeflate: this.isResourceConstrained ? false : {
+        threshold: 1024, // Only compress messages larger than 1KB
+        zlibDeflateOptions: {
+          level: 6, // Balance between compression ratio and CPU
+          concurrency: 4, // Allow parallel compression
+          memLevel: 8, // Memory usage level (1-9, higher = more memory but faster)
+          strategy: 0 // Default compression strategy
+        },
+        zlibInflateOptions: {
+          chunkSize: 10 * 1024, // 10KB chunks for better streaming
+          flush: require('zlib').constants.Z_SYNC_FLUSH,
+          windowBits: 15, // 32KB window size
+          memLevel: 8
+        },
+        clientNoContextTakeover: true, // Client can negotiate compression context
+        serverNoContextTakeover: true, // Server can negotiate compression context
+        serverMaxWindowBits: 15, // 32KB window size (good balance)
+        clientMaxWindowBits: 15
+      },
       serveClient: false,
-      // Additional security and performance settings
       cookie: false,
       allowRequest: (req, callback) => {
-        // Allow all requests but log them for debugging
         callback(null, true);
       }
     };

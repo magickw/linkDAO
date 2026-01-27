@@ -767,18 +767,22 @@ export class DatabaseService {
     }
   }
 
-  async getAllListings() {
+  async getAllListings(maxLimit: number = 1000) {
     try {
-      return await this.db.select().from(schema.listings);
+      safeLogger.warn('getAllListings called - using hard limit of', maxLimit, 'records');
+      return await this.db.select().from(schema.listings).limit(maxLimit);
     } catch (error) {
       safeLogger.error("Error getting all listings:", error);
       throw error;
     }
   }
 
-  async getActiveListings() {
+  async getActiveListings(maxLimit: number = 1000) {
     try {
-      return await this.db.select().from(schema.listings).where(eq(schema.listings.status, 'active'));
+      safeLogger.warn('getActiveListings called - using hard limit of', maxLimit, 'records');
+      return await this.db.select().from(schema.listings)
+        .where(eq(schema.listings.status, 'active'))
+        .limit(maxLimit);
     } catch (error) {
       safeLogger.error("Error getting active listings:", error);
       throw error;
@@ -1801,18 +1805,22 @@ export class DatabaseService {
     }
   }
 
-  async getAllProducts() {
+  async getAllProducts(maxLimit: number = 1000) {
     try {
-      return await this.db.select().from(schema.products);
+      safeLogger.warn('getAllProducts called - using hard limit of', maxLimit, 'records');
+      return await this.db.select().from(schema.products).limit(maxLimit);
     } catch (error) {
       safeLogger.error("Error getting all products:", error);
       throw error;
     }
   }
 
-  async getActiveProducts() {
+  async getActiveProducts(maxLimit: number = 1000) {
     try {
-      return await this.db.select().from(schema.products).where(eq(schema.products.status, 'active'));
+      safeLogger.warn('getActiveProducts called - using hard limit of', maxLimit, 'records');
+      return await this.db.select().from(schema.products)
+        .where(eq(schema.products.status, 'active'))
+        .limit(maxLimit);
     } catch (error) {
       safeLogger.error("Error getting active products:", error);
       throw error;

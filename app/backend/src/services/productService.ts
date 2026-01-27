@@ -21,12 +21,14 @@ import { safeLogger } from '../utils/safeLogger';
 import { MetadataService } from './metadataService';
 import { priceOracleService } from './priceOracleService';
 import { ValidationHelper, ValidationError } from '../models/validation';
-import { eq, and, or, like, gte, lte, inArray, desc, asc, isNull, sql } from 'drizzle-orm';
+import { queryCacheService } from './queryCacheService';
+import { eq, and, or, like, gte, lte, inArray, desc, asc, isNull, sql, lt, gt } from 'drizzle-orm';
 import * as schema from '../db/schema';
 
 export class ProductService {
   private databaseService: DatabaseService;
   private metadataService: MetadataService;
+  private cacheService = queryCacheService;
 
   constructor() {
     this.databaseService = new DatabaseService();
@@ -235,9 +237,20 @@ export class ProductService {
   async searchProducts(
     filters: ProductSearchFilters = {},
     sort: ProductSortOptions = { field: 'createdAt', direction: 'desc' },
-    pagination: PaginationOptions = { page: 1, limit: 20 }
+    pagination: PaginationOptions = { page: 1, limit: 20 },
+    cursor?: string // For cursor-based pagination
   ): Promise<ProductSearchResult> {
     const db = this.databaseService.getDatabase();
+
+    // Build cache key from filters, sort, and pagination
+    const cacheKey = this.buildCacheKey('searchProducts', { filters, sort, pagination, cursor });
+
+    // Try to get from cache first
+    const cached = await this.cacheService.get<ProductSearchResult>(cacheKey);
+    if (cached) {
+      safeLogger.info('✅ Cache hit for product search:', { filters, pagination });
+      return cached;
+    }
 
     // Build where conditions
     const conditions = [];
@@ -319,16 +332,57 @@ export class ProductService {
     const total = totalResult[0].count;
 
     // Get products with pagination
-    const offset = (pagination.page - 1) * pagination.limit;
-    const result = await db.select()
-      .from(schema.products)
-      .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
-      .leftJoin(schema.users, eq(schema.products.sellerId, schema.users.id))
-      .leftJoin(schema.sellers, eq(sql`LOWER(${schema.users.walletAddress})`, sql`LOWER(${schema.sellers.walletAddress})`))
-      .where(whereClause)
-      .orderBy(orderBy)
-      .limit(pagination.limit)
-      .offset(offset);
+    let result;
+
+    if (cursor) {
+      // Cursor-based pagination for better performance at scale
+      safeLogger.info('Using cursor-based pagination with cursor:', cursor);
+
+      // Decode cursor (base64 encoded timestamp or id)
+      let cursorValue;
+      try {
+        cursorValue = Buffer.from(cursor, 'base64').toString('utf-8');
+      } catch (error) {
+        safeLogger.error('Invalid cursor format:', error);
+        cursorValue = cursor;
+      }
+
+      // Build cursor condition based on sort direction
+      const cursorCondition = sort.direction === 'desc'
+        ? lt(orderByColumn, cursorValue)
+        : gt(orderByColumn, cursorValue);
+
+      const cursorWhereClause = whereClause
+        ? and(whereClause, cursorCondition)
+        : cursorCondition;
+
+      result = await db.select()
+        .from(schema.products)
+        .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
+        .leftJoin(schema.users, eq(schema.products.sellerId, schema.users.id))
+        .leftJoin(schema.sellers, eq(sql`LOWER(${schema.users.walletAddress})`, sql`LOWER(${schema.sellers.walletAddress})`))
+        .where(cursorWhereClause)
+        .orderBy(orderBy)
+        .limit(pagination.limit);
+    } else {
+      // Fallback to offset-based pagination (for compatibility)
+      const offset = (pagination.page - 1) * pagination.limit;
+
+      // Warn if page number is high (performance concern)
+      if (pagination.page > 100) {
+        safeLogger.warn(`⚠️  High page number (${pagination.page}) - consider using cursor-based pagination for better performance`);
+      }
+
+      result = await db.select()
+        .from(schema.products)
+        .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
+        .leftJoin(schema.users, eq(schema.products.sellerId, schema.users.id))
+        .leftJoin(schema.sellers, eq(sql`LOWER(${schema.users.walletAddress})`, sql`LOWER(${schema.sellers.walletAddress})`))
+        .where(whereClause)
+        .orderBy(orderBy)
+        .limit(pagination.limit)
+        .offset(offset);
+    }
 
     safeLogger.info('📊 Product query result sample:', {
       totalResults: result.length,
@@ -349,7 +403,7 @@ export class ProductService {
       return await this.mapProductFromDb(product, category, user, seller);
     }));
 
-    return {
+    const searchResult = {
       products,
       total,
       page: pagination.page,
@@ -358,6 +412,11 @@ export class ProductService {
       filters,
       sort,
     };
+
+    // Cache the result (short TTL for search results to ensure freshness)
+    await this.cacheService.set(cacheKey, searchResult, { ttl: 180 }); // 3 minutes
+
+    return searchResult;
   }
 
   async updateProduct(id: string, input: UpdateProductInput): Promise<Product | null> {
@@ -898,5 +957,24 @@ export class ProductService {
       createdAt: dbProduct.createdAt,
       updatedAt: dbProduct.updatedAt,
     };
+  }
+
+  /**
+   * Build cache key from query parameters
+   */
+  private buildCacheKey(operation: string, params: any): string {
+    // Sort keys for consistent cache keys
+    const sortedParams = Object.keys(params)
+      .sort()
+      .reduce((result: any, key) => {
+        result[key] = params[key];
+        return result;
+      }, {});
+
+    // Create hash of parameters
+    const paramsStr = JSON.stringify(sortedParams);
+    const hash = Buffer.from(paramsStr).toString('base64').substring(0, 32);
+
+    return `${operation}:${hash}`;
   }
 }

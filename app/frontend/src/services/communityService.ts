@@ -148,12 +148,16 @@ export class CommunityService {
         return null;
       }
 
+      // Get authentication headers to ensure isMember status is correct
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
+
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${id}`,
         {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
+            ...authHeaders,
           },
           signal: controller.signal,
         },
@@ -240,12 +244,16 @@ export class CommunityService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
     try {
+      // Get authentication headers to ensure isMember status is correct
+      const authHeaders = await enhancedAuthService.getAuthHeaders();
+
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${slug}`,
         {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
+            ...authHeaders,
           },
           signal: controller.signal,
         },
@@ -723,7 +731,7 @@ export class CommunityService {
       // Update cache
       if (community) {
         await this.offlineCacheService.cacheCommunity(community);
-        
+
         // Invalidate community cache when avatar is updated
         if (data.avatar !== undefined) {
           cacheInvalidationService.invalidateCommunity(id);
@@ -1474,7 +1482,7 @@ export class CommunityService {
   static async joinCommunity(communityId: string): Promise<boolean> {
     try {
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
         console.error('No authentication token available for joining community');
         return false;
@@ -1511,7 +1519,7 @@ export class CommunityService {
   static async leaveCommunity(communityId: string): Promise<boolean> {
     try {
       const authHeaders = await enhancedAuthService.getAuthHeaders();
-      
+
       if (!authHeaders.Authorization || authHeaders.Authorization === 'Bearer null') {
         console.error('No authentication token available for leaving community');
         return false;
