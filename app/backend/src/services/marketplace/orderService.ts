@@ -5,8 +5,8 @@ import { UserProfileService } from './userProfileService';
 import { EnhancedEscrowService } from './enhancedEscrowService';
 import { ShippingService } from './shippingService';
 import { NotificationService } from './notificationService';
-import { BlockchainEventService } from './blockchainEventService';
-import { getOrderWebSocketService } from './orderWebSocketService';
+import { BlockchainEventService } from '../blockchainEventService';
+import { getOrderWebSocketService } from '../websocket/orderWebSocketService';
 import {
   MarketplaceOrder,
   CreateOrderInput,

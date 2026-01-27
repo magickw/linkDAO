@@ -11,7 +11,7 @@ import {
 import { eq, and, desc, asc, sql, inArray, gt, lte, between } from 'drizzle-orm';
 import { logger } from '../utils/logger';
 import { EventEmitter } from 'events';
-import { getAdminWebSocketService } from './adminWebSocketService';
+import { getAdminWebSocketService } from './websocket/adminWebSocketService';
 
 export interface AdvancedReputationImpact {
   baseImpact: number;

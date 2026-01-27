@@ -8,7 +8,7 @@ import { safeLogger } from '../utils/safeLogger';
 import { sellers, orders, products, reviews, disputes, chatMessages, conversations, users } from '../db/schema';
 import { eq, sql, and, gte, desc, count, sum, avg } from 'drizzle-orm';
 import { Redis } from 'ioredis';
-import { SellerWebSocketService, getSellerWebSocketService } from './sellerWebSocketService';
+import { SellerWebSocketService, getSellerWebSocketService } from './websocket/sellerWebSocketService';
 import { NotificationService } from './notificationService';
 
 export interface TierEvaluationCriteria {

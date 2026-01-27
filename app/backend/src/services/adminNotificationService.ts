@@ -1,7 +1,7 @@
 import { DatabaseService } from './databaseService';
 import { safeLogger } from '../utils/safeLogger';
 import { PushNotificationService } from './pushNotificationService';
-import { getAdminWebSocketService } from './adminWebSocketService';
+import { getAdminWebSocketService } from './websocket/adminWebSocketService';
 
 const databaseService = new DatabaseService();
 const pushNotificationService = PushNotificationService.getInstance();

@@ -3,7 +3,7 @@ import { statuses, statusReactions, statusTips, users, statusTags, statusViews }
 import { eq, and, sql, desc, asc, isNull, aliasedTable, or } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { trendingCacheService } from './trendingCacheService';
-import { getWebSocketService } from './webSocketService';
+import { getWebSocketService } from './websocket/webSocketService';
 import { generateShareId } from '../utils/shareIdGenerator';
 import communityNotificationService from './communityNotificationService';
 

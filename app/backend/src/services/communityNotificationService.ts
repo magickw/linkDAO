@@ -1,7 +1,7 @@
 import emailService, { CommunityNotificationEmailData } from './emailService';
 import { safeLogger } from '../utils/safeLogger';
 import { pushNotificationService } from './pushNotificationService';
-import { getWebSocketService } from './webSocketService';
+import { getWebSocketService } from './websocket/webSocketService';
 import { db } from '../db';
 import { users, notificationPreferences, notifications } from '../db/schema';
 import { eq, desc, and } from 'drizzle-orm';

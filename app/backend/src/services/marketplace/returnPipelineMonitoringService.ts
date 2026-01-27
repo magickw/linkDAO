@@ -2,7 +2,7 @@ import { safeLogger } from '../utils/safeLogger';
 import { redisService } from './redisService';
 import { returnAggregationQueue } from '../workers/returnAggregationWorker';
 import { returnEventQueue } from '../queues/returnEventQueue';
-import { getAdminWebSocketService } from './adminWebSocketService';
+import { getAdminWebSocketService } from '../websocket/adminWebSocketService';
 
 // ============================================================================
 // TYPES AND INTERFACES

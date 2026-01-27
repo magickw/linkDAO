@@ -6,7 +6,7 @@ import { eq, desc, asc, and, or, like, inArray, sql, gt, lt, isNull, count } fro
 import communityNotificationService from './communityNotificationService';
 import { sanitizeMessage, sanitizeConversation, sanitizeSearchQuery } from '../utils/sanitization';
 import { cacheService } from './cacheService';
-import { getWebSocketService } from './webSocketService';
+import { getWebSocketService } from './websocket/webSocketService';
 
 // MEMORY OPTIMIZATION: Constants for limits and cleanup
 const MAX_CONVERSATIONS_PER_USER = 50;
