@@ -12,6 +12,9 @@ import ComplianceAlertsWidget from './components/ComplianceAlertsWidget';
 import TaxCharts from './components/TaxCharts';
 import { AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 
+// Mark this page as dynamic to prevent static generation errors
+export const dynamic = 'force-dynamic';
+
 /**
  * Tax Admin Dashboard
  * Main dashboard for tax management and compliance monitoring
