@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
-import { sellerAnalyticsService } from '../services/marketplace/sellerAnalyticsService';
+import { sellerAnalyticsService } from '../services/sellerAnalyticsService';
 import { z } from 'zod';
 
 // Validation schemas

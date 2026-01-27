@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { refundMonitoringService } from '../services/marketplace/refundMonitoringService';
+import { refundMonitoringService } from '../services/refundMonitoringService';
 import { stripeRefundProvider } from '../services/providers/stripeRefundProvider';
 import { paypalRefundProvider } from '../services/providers/paypalRefundProvider';
 import { blockchainRefundProvider } from '../services/providers/blockchainRefundProvider';

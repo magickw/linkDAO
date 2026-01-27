@@ -1,7 +1,7 @@
 import { DatabaseService } from './databaseService';
 import { safeLogger } from '../utils/safeLogger';
 import { OrderNotification } from '../models/Order';
-import { getWebSocketService } from './websocket/webSocketService';
+import { getWebSocketService } from './webSocketService';
 import { pushNotificationService } from './pushNotificationService';
 
 const databaseService = new DatabaseService();

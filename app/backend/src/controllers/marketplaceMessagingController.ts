@@ -2,8 +2,8 @@
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
-import { marketplaceMessagingService } from '../services/marketplace/marketplaceMessagingService';
-import { orderMessagingAutomation } from '../services/marketplace/orderMessagingAutomation';
+import { marketplaceMessagingService } from '../services/marketplaceMessagingService';
+import { orderMessagingAutomation } from '../services/orderMessagingAutomation';
 import { apiResponse } from '../utils/apiResponse';
 import { db } from '../db';
 import { messageTemplates, quickReplies } from '../db/schema';

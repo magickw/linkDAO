@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { sellerReturnPerformanceService } from '../services/marketplace/sellerReturnPerformanceService';
+import { sellerReturnPerformanceService } from '../services/sellerReturnPerformanceService';
 
 /**
  * Seller Return Performance Controller

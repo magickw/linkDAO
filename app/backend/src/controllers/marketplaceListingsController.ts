@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
-import { MarketplaceListingsService } from '../services/marketplace/marketplaceListingsService';
+import { MarketplaceListingsService } from '../services/marketplaceListingsService';
 import { createSuccessResponse, createErrorResponse } from '../utils/apiResponse';
 import { MarketplaceListingFilters } from '../types/marketplaceListing';
-import { BlockchainMarketplaceService } from '../services/marketplace/marketplaceService';
+import { BlockchainMarketplaceService } from '../services/marketplaceService';
 
 export class MarketplaceListingsController {
   private listingsService: MarketplaceListingsService;
@@ -73,7 +73,7 @@ export class MarketplaceListingsController {
               // Fetch actual seller profile data
               let sellerProfile = null;
               try {
-                const { sellerService } = await import('../services/marketplace/sellerService');
+                const { sellerService } = await import('../services/sellerService');
                 sellerProfile = await sellerService.getSellerProfile(listing.sellerAddress);
               } catch (sellerError) {
                 // Continue without seller profile data
@@ -231,7 +231,7 @@ export class MarketplaceListingsController {
       // Fetch actual seller profile data
       let sellerProfile = null;
       try {
-        const { sellerService } = await import('../services/marketplace/sellerService');
+        const { sellerService } = await import('../services/sellerService');
         sellerProfile = await sellerService.getSellerProfile(listing.sellerAddress);
       } catch (sellerError) {
         // Continue without seller profile data

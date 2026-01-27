@@ -9,7 +9,7 @@
  */
 
 import { jest, describe, it, expect } from '@jest/globals';
-import { SellerNotificationService } from '../../services/marketplace/sellerNotificationService';
+import { SellerNotificationService } from '../../services/sellerNotificationService';
 import {
   SellerNotificationInput,
   NotificationPreferences,

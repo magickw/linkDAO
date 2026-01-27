@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
-import { ProductService } from '../services/marketplace/productService';
-import { sellerService } from '../services/marketplace/sellerService';
+import { ProductService } from '../services/productService';
+import { sellerService } from '../services/sellerService';
 import { databaseService } from '../services/databaseService';
 import { eq } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { Product, ProductSortOptions } from '../models/Product';
-import { BlockchainMarketplaceService } from '../services/marketplace/marketplaceService';
-import { MarketplaceListingsService } from '../services/marketplace/marketplaceListingsService';
+import { BlockchainMarketplaceService } from '../services/marketplaceService';
+import { MarketplaceListingsService } from '../services/marketplaceListingsService';
 const productService = new ProductService();
 const marketplaceService = new BlockchainMarketplaceService();
 

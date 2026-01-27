@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
-import { sellerPerformanceMonitoringService } from '../services/marketplace/sellerPerformanceMonitoringService';
+import { sellerPerformanceMonitoringService } from '../services/sellerPerformanceMonitoringService';
 
 export class SellerPerformanceController {
   /**

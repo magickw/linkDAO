@@ -2,7 +2,7 @@
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
-import { cartService, AddToCartRequest, UpdateCartItemRequest } from '../services/marketplace/cartService';
+import { cartService, AddToCartRequest, UpdateCartItemRequest } from '../services/cartService';
 import { successResponse, errorResponse, validationErrorResponse } from '../utils/apiResponse';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 

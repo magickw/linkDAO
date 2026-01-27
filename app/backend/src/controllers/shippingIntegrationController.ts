@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { shippingIntegrationService } from '../services/marketplace/shippingIntegrationService';
+import { shippingIntegrationService } from '../services/shippingIntegrationService';
 import { safeLogger } from '../utils/safeLogger';
 import { apiResponse } from '../utils/apiResponse';
 

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { returnAnalyticsService } from '../services/marketplace/returnAnalyticsService';
+import { returnAnalyticsService } from '../services/returnAnalyticsService';
 import {
     requirePermission,
     adminRateLimit,

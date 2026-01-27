@@ -1,6 +1,6 @@
 import { DatabaseService } from '../services/databaseService';
 import { HybridPaymentOrchestrator } from '../services/hybridPaymentOrchestrator';
-import { EnhancedEscrowService } from '../services/marketplace/enhancedEscrowService';
+import { EnhancedEscrowService } from '../services/enhancedEscrowService';
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 
 describe('Checkout Process Tests', () => {

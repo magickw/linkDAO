@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
-import { ListingPublicationService } from '../services/marketplace/listingPublicationService';
-import { ProductListingService } from '../services/marketplace/listingService';
+import { ListingPublicationService } from '../services/listingPublicationService';
+import { ProductListingService } from '../services/listingService';
 import { ValidationError } from '../models/validation';
 
 export class ListingVisibilityController {

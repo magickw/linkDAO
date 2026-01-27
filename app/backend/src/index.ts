@@ -110,11 +110,11 @@ import { Pool } from 'pg';
 // Enhanced CORS middleware is already imported as a function
 
 // Import services
-import { initializeWebSocketFix, shutdownWebSocketFix } from './services/websocket/websocketConnectionFix';
-import { initializeWebSocket, shutdownWebSocket } from './services/websocket/webSocketService';
-import { initializeAdminWebSocket, shutdownAdminWebSocket } from './services/websocket/adminWebSocketService';
-import { initializeSellerWebSocket, shutdownSellerWebSocket } from './services/websocket/sellerWebSocketService';
-import { liveChatSocketService } from './services/websocket/liveChatSocketService';
+import { initializeWebSocketFix, shutdownWebSocketFix } from './services/websocketConnectionFix';
+import { initializeWebSocket, shutdownWebSocket } from './services/webSocketService';
+import { initializeAdminWebSocket, shutdownAdminWebSocket } from './services/adminWebSocketService';
+import { initializeSellerWebSocket, shutdownSellerWebSocket } from './services/sellerWebSocketService';
+import { liveChatSocketService } from './services/liveChatSocketService';
 import { memoryMonitoringService } from './services/memoryMonitoringService';
 import { comprehensiveMonitoringService } from './services/comprehensiveMonitoringService';
 import { blockchainEventService } from './services/blockchainEventService';
@@ -1223,7 +1223,7 @@ app.use('/api', csrfRoutes);
 app.get('/csrf-token', getCSRFToken);
 
 // Import order event listener service
-import { orderEventListenerService } from './services/marketplace/orderEventListenerService';
+import { orderEventListenerService } from './services/orderEventListenerService';
 
 // Import cron jobs
 import { initializeAllCronJobs, stopAllCronJobs } from './cron';
@@ -1454,12 +1454,62 @@ httpServer.listen(PORT, () => {
 
       if (enableWebSockets) {
         try {
-          const { unifiedWebSocketManager } = await import('./services/websocket/unifiedWebSocketManager');
-          unifiedWebSocketManager.initialize(httpServer, productionConfig.webSocket);
-          socketIOInitialized = true;
-          console.log('✅ Unified WebSocket Manager initialized');
+          // CRITICAL FIX: Initialize main WebSocket service FIRST
+          // This creates the single shared Socket.IO instance that all other services will use
+          const webSocketService = initializeWebSocket(httpServer, productionConfig.webSocket);
+          socketIOInitialized = true; // Mark Socket.IO as initialized to prevent fallback route 500 errors
+          console.log('✅ WebSocket service initialized (shared Socket.IO instance created)');
+          console.log(`🔌 WebSocket ready for real-time updates (High Performance Mode: ${isHighResource ? 'Active' : 'Standard'})`);
+          console.log(`📊 WebSocket config: maxConnections=${productionConfig.webSocket.maxConnections}, memoryThreshold=${productionConfig.webSocket.memoryThreshold}MB`);
+
+          // Admin WebSocket service - uses the shared Socket.IO instance via namespaces
+          if (isHighResource || !isSevereResourceConstrained) {
+            try {
+              // DO NOT pass httpServer - this would create a duplicate Socket.IO instance
+              // AdminWebSocketService should get the shared instance via getWebSocketService()
+              const adminWebSocketService = initializeAdminWebSocket(httpServer);
+              console.log('✅ Admin WebSocket service initialized (using shared Socket.IO instance)');
+              console.log(`🔧 Admin real-time dashboard ready`);
+            } catch (error) {
+              console.warn('⚠️ Admin WebSocket service initialization failed:', error);
+            }
+          } else {
+            console.log('⚠️ Admin WebSocket service disabled for resource optimization');
+          }
+
+          // Seller WebSocket service - uses the shared Socket.IO instance
+          if (isHighResource || !isSevereResourceConstrained) {
+            try {
+              const sellerWebSocketService = initializeSellerWebSocket();
+              console.log('✅ Seller WebSocket service initialized (using shared Socket.IO instance)');
+              console.log(`🛒 Seller real-time updates ready`);
+            } catch (error) {
+              console.warn('⚠️ Seller WebSocket service initialization failed:', error);
+            }
+          } else {
+            console.log('⚠️ Seller WebSocket service disabled for resource optimization');
+          }
+
+          // Live Chat Socket service - uses the shared Socket.IO instance
+          if (isHighResource || !isSevereResourceConstrained) {
+            try {
+              // Get the shared Socket.IO instance using the proper method
+              const sharedIo = webSocketService.getSocketIOServer();
+              if (sharedIo) {
+                liveChatSocketService.initialize(sharedIo);
+                console.log('✅ Live Chat Socket service initialized (using shared Socket.IO instance)');
+                console.log(`💬 Live chat support ready`);
+              } else {
+                console.warn('⚠️ Live Chat Socket service: shared Socket.IO instance not available');
+              }
+            } catch (error) {
+              console.warn('⚠️ Live Chat Socket service initialization failed:', error);
+            }
+          } else {
+            console.log('⚠️ Live Chat Socket service disabled for resource optimization');
+          }
         } catch (error) {
-          console.warn('⚠️ Unified WebSocket Manager initialization failed:', error);
+          console.warn('⚠️ WebSocket service initialization failed:', error);
         }
       } else {
         const reason = isRenderFree ? 'Render free tier' :
@@ -1590,8 +1640,9 @@ const gracefulShutdown = async (signal: string) => {
 
     // Close WebSocket services with timeout
     try {
-      const { unifiedWebSocketManager } = await import('./services/websocket/unifiedWebSocketManager');
-      unifiedWebSocketManager.shutdown();
+      shutdownWebSocket();
+      shutdownAdminWebSocket();
+      shutdownSellerWebSocket();
       console.log('✅ WebSocket services closed');
     } catch (error) {
       console.warn('⚠️ Error closing WebSocket services:', error);

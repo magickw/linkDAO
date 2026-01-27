@@ -1,11 +1,12 @@
 import { Router } from 'express';
-import { returnService } from '../services/marketplace/returnService';
-import { returnPolicyService } from '../services/marketplace/returnPolicyService';
-import { refundPaymentService } from '../services/marketplace/refundPaymentService';
-import { returnFraudDetectionService } from '../services/marketplace/returnFraudDetectionService';
-import { returnLabelService } from '../services/marketplace/returnLabelService';
-import { returnAnalyticsService } from '../services/marketplace/returnAnalyticsService';
-import { returnInspectionService } from '../services/marketplace/returnInspectionService';
+import { returnService } from '../services/returnService';
+import { returnPolicyService } from '../services/returnPolicyService';
+import { authMiddleware } from '../middleware/authMiddleware';
+import { refundPaymentService } from '../services/refundPaymentService';
+import { returnFraudDetectionService } from '../services/returnFraudDetectionService';
+import { returnLabelService } from '../services/returnLabelService';
+import { returnAnalyticsService } from '../services/returnAnalyticsService';
+import { returnInspectionService } from '../services/returnInspectionService';
 
 const router = Router();
 

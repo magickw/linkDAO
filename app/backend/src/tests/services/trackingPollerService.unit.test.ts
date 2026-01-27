@@ -1,15 +1,16 @@
 
 import { TrackingPollerService } from '../../services/trackingPollerService';
-import { ShippingService } from '../../services/marketplace/shippingService';
-import { OrderTimelineService } from '../../services/marketplace/orderTimelineService';
-import { OrderService } from '../../services/marketplace/orderService';
+import { ShippingService } from '../../services/shippingService';
+import { OrderTimelineService } from '../../services/orderTimelineService';
+import { NotificationService } from '../../services/notificationService';
+import { OrderService } from '../../services/orderService';
 import { db } from '../../db';
 
 // Mock dependencies
-jest.mock('../../services/marketplace/shippingService');
+jest.mock('../../services/shippingService');
 jest.mock('../../services/orderTimelineService');
 jest.mock('../../services/notificationService');
-jest.mock('../../services/marketplace/orderService');
+jest.mock('../../services/orderService');
 jest.mock('../../db', () => ({
     db: {
         select: jest.fn(),

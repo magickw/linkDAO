@@ -469,7 +469,7 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
       // Broadcast message to WebSocket clients (non-blocking)
       setImmediate(async () => {
         try {
-          const { getWebSocketService } = require('../services/websocket/webSocketService');
+          const { getWebSocketService } = require('../services/webSocketService');
           const wsService = getWebSocketService();
 
           if (wsService) {

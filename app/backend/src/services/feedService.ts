@@ -3,7 +3,7 @@ import { safeLogger } from '../utils/safeLogger';
 import { posts, statuses, reactions, statusReactions, tips, statusTips, users, postTags, statusTags, views, statusViews, bookmarks, statusBookmarks, shares, statusShares, follows, comments, communityMembers, communities } from '../db/schema';
 import { eq, desc, and, or, inArray, sql, gt, isNull, isNotNull, asc } from 'drizzle-orm';
 import { trendingCacheService } from './trendingCacheService';
-import { getWebSocketService } from './websocket/webSocketService';
+import { getWebSocketService } from './webSocketService';
 import { MetadataService } from './metadataService';
 import { generateShareId } from '../utils/shareIdGenerator';
 import { socialMediaIntegrationService } from './socialMediaIntegrationService';

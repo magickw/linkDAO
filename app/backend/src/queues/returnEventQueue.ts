@@ -1,8 +1,8 @@
 import { Queue, Worker, Job } from 'bullmq';
 import { safeLogger } from '../utils/safeLogger';
 import { redisService } from '../services/redisService';
-import { returnAnalyticsService } from '../services/marketplace/returnAnalyticsService';
-import { ReturnEvent } from '../services/marketplace/returnAnalyticsService';
+import { returnAnalyticsService } from '../services/returnAnalyticsService';
+import { ReturnEvent } from '../services/returnAnalyticsService';
 
 // Define the shape of data expected in the queue
 export interface ReturnEventJobData {

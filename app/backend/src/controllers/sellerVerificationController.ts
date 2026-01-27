@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { UnifiedSellerVerificationService } from '../services/marketplace/unifiedSellerVerificationService';
+import { UnifiedSellerVerificationService } from '../services/unifiedSellerVerificationService';
 import { ValidationError } from '../models/validation';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { db } from '../db';

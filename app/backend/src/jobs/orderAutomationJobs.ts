@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { orderAutomationService } from '../services/marketplace/orderAutomationService';
+import { orderAutomationService } from '../services/orderAutomationService';
 import { safeLogger } from '../utils/safeLogger';
 
 /**

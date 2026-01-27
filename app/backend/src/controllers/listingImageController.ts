@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
-import { ListingImageService, ListingImageUpload } from '../services/marketplace/listingImageService';
+import { ListingImageService, ListingImageUpload } from '../services/listingImageService';
 import { ValidationError } from '../models/validation';
 import multer from 'multer';
 

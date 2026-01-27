@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { returnReasonAnalysisService } from '../services/marketplace/returnReasonAnalysisService';
+import { returnReasonAnalysisService } from '../services/returnReasonAnalysisService';
 import { safeLogger } from '../utils/safeLogger';
 
 /**

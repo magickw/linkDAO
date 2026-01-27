@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { safeLogger } from '../utils/safeLogger';
 import { csrfProtection } from '../middleware/csrfProtection';
-import { sellerPerformanceMonitoringService } from '../services/marketplace/sellerPerformanceMonitoringService';
+import { sellerPerformanceMonitoringService } from '../services/sellerPerformanceMonitoringService';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validation';
 import { z } from 'zod';

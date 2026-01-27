@@ -2,8 +2,8 @@ import { Request, Response } from "express";
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
 import { databaseService } from "../services/databaseService";
-import { sellerService } from "../services/marketplace/sellerService";
-import { sellerListingService } from "../services/marketplace/sellerListingService";
+import { sellerService } from "../services/sellerService";
+import { sellerListingService } from "../services/sellerListingService";
 import { eq, and, or, ilike, desc, lt, gte, lte, sql } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { marketplaceUsers, sellerVerifications } from "../db/marketplaceSchema";
@@ -870,7 +870,7 @@ export class SellerController {
       safeLogger.info("Profile updates:", updates);
 
       // Use the existing seller service
-      const { sellerService } = await import('../services/marketplace/sellerService');
+      const { sellerService } = await import('../services/sellerService');
 
       try {
         const updatedProfile = await sellerService.updateSellerProfile(user.walletAddress, updates);
@@ -1129,7 +1129,7 @@ export class SellerController {
 
       safeLogger.info("Fetching public seller profile for address:", walletAddress);
 
-      const { sellerService } = await import('../services/marketplace/sellerService');
+      const { sellerService } = await import('../services/sellerService');
 
       const profile = await sellerService.getSellerProfile(walletAddress, { createIfMissing: false });
 
@@ -1169,7 +1169,7 @@ export class SellerController {
 
       safeLogger.info("Fetching seller profile for address:", walletAddress);
 
-      const { sellerService } = await import('../services/marketplace/sellerService');
+      const { sellerService } = await import('../services/sellerService');
 
       const profile = await sellerService.getSellerProfile(walletAddress);
 
@@ -1206,7 +1206,7 @@ export class SellerController {
         });
       }
 
-      const { sellerService } = await import('../services/marketplace/sellerService');
+      const { sellerService } = await import('../services/sellerService');
 
       const profile = await sellerService.createSellerProfile({
         walletAddress,
@@ -1229,7 +1229,7 @@ export class SellerController {
       const walletAddress = user.walletAddress;
       const updateData = req.body;
 
-      const { sellerService } = await import('../services/marketplace/sellerService');
+      const { sellerService } = await import('../services/sellerService');
 
       const profile = await sellerService.updateSellerProfile(walletAddress, updateData);
 
@@ -1258,7 +1258,7 @@ export class SellerController {
     try {
       const user = (req as any).user;
       const { verificationType, verificationData } = req.body;
-      const { sellerService } = await import('../services/marketplace/sellerService');
+      const { sellerService } = await import('../services/sellerService');
 
       const result = await sellerService.verifySellerProfile(user.walletAddress, verificationType);
       res.json({ success: true, data: result });
@@ -1271,7 +1271,7 @@ export class SellerController {
   // Helper methods
   private async getSellerStatsInternal(walletAddress: string) {
     try {
-      const { sellerService } = await import('../services/marketplace/sellerService');
+      const { sellerService } = await import('../services/sellerService');
       return await sellerService.getSellerStats(walletAddress);
     } catch (error) {
       safeLogger.error("Error fetching seller stats:", error);
@@ -1293,7 +1293,7 @@ export class SellerController {
 
   private async getRecentOrdersInternal(walletAddress: string, limit: number) {
     try {
-      const { sellerService } = await import('../services/marketplace/sellerService');
+      const { sellerService } = await import('../services/sellerService');
       const orders = await sellerService.getSellerOrders(walletAddress);
       return orders.slice(0, limit);
     } catch (error) {

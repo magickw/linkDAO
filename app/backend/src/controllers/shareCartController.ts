@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { shareCartService } from '../services/shareCartService';
-import { cartService } from '../services/marketplace/cartService';
+import { cartService } from '../services/cartService';
 import { successResponse, errorResponse } from '../utils/apiResponse';
 import { safeLogger } from '../utils/safeLogger';
 

@@ -2,7 +2,7 @@
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
-import { marketplaceRewardsService, MarketplaceChallengeData, ChallengeWithProgress } from '../services/marketplace/marketplaceRewardsService';
+import { marketplaceRewardsService, MarketplaceChallengeData, ChallengeWithProgress } from '../services/marketplaceRewardsService';
 import { z } from 'zod';
 
 // Validation schemas

@@ -7,7 +7,7 @@ import request from 'supertest';
 import express from 'express';
 import { CheckoutController } from '../controllers/checkoutController';
 import { redisSessionService } from '../services/redisSessionService';
-import { discountCodeService } from '../services/marketplace/discountCodeService';
+import { discountCodeService } from '../services/discountCodeService';
 import { addressVerificationService } from '../services/addressVerificationService';
 
 describe('CheckoutController Integration Tests', () => {

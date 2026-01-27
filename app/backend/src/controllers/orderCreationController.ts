@@ -5,7 +5,7 @@ import {
   OrderCreationService, 
   OrderCreationRequest, 
   OrderCreationResult 
-} from '../services/marketplace/orderCreationService';
+} from '../services/orderCreationService';
 import { AppError, ValidationError, NotFoundError } from '../middleware/errorHandler';
 
 export class OrderCreationController {
