@@ -479,6 +479,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
                   filter={postFilter}
                   onSortChange={handlePostSortChange}
                   onFilterChange={handlePostFilterChange}
+                  userMembership={membershipStatus}
                 />
               </div>
             )}

@@ -105,7 +105,7 @@ export default function PostInteractionBar({
       return;
     }
 
-    if (postType === 'community' && !userMembership) {
+    if (postType === 'community' && (!userMembership || (userMembership.isMember === false))) {
       addToast('You must join the community to comment', 'error');
       return;
     }

@@ -227,7 +227,7 @@ export default function EnhancedCommentSystem({
     // For community posts, check if community is public or if user is a member
     if (postType === 'community' && communityId && community) {
       // Only require membership for private communities or if there are special requirements
-      if (!community.isPublic && !userMembership) {
+      if (!community.isPublic && (!userMembership || userMembership.isMember === false)) {
         addToast('You must join the community to comment', 'error');
         return;
       }
@@ -235,7 +235,7 @@ export default function EnhancedCommentSystem({
       // Check for staking requirements
       if (community.settings && community.settings.stakingRequirements) {
         const commentStakingReq = community.settings.stakingRequirements.find(req => req.action === 'comment');
-        if (commentStakingReq && !userMembership) {
+        if (commentStakingReq && (!userMembership || userMembership.isMember === false)) {
           addToast(`This community requires staking ${commentStakingReq.minimumAmount} ${commentStakingReq.tokenAddress} to comment`, 'error');
           return;
         }

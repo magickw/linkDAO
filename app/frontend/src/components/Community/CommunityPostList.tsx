@@ -25,6 +25,7 @@ interface CommunityPostListProps {
   filter: string;
   onSortChange: (sort: 'hot' | 'new' | 'top') => void;
   onFilterChange: (filter: string) => void;
+  userMembership?: any;
 }
 
 interface PostFilters {
@@ -42,7 +43,8 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
   sort,
   filter,
   onSortChange,
-  onFilterChange
+  onFilterChange,
+  userMembership
 }) => {
   const [posts, setPosts] = useState<EnhancedPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -410,7 +412,7 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
                   key={post.id}
                   post={post}
                   community={postCommunity}
-                  userMembership={null}
+                  userMembership={userMembership}
                   onVote={(postId, voteType, stakeAmount) => {
                     console.log('Vote:', postId, voteType, stakeAmount);
                   }}

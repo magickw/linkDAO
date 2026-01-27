@@ -85,11 +85,11 @@ export class OrderController {
         return res.status(401).json({ message: 'Unauthorized: Wallet address not found' });
       }
 
-      const { status, limit = 50, offset = 0, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+      const { status, limit = 50, offset = 0, sortBy = 'createdAt', sortOrder = 'desc', role } = req.query;
 
       const orders = await orderService.getOrdersByUser(
         userAddress,
-        undefined, // role can be undefined for getMyOrders as user is both buyer and seller
+        role as 'buyer' | 'seller',
         { status: status as string },
         sortBy as string,
         sortOrder as 'asc' | 'desc',
@@ -130,13 +130,13 @@ export class OrderController {
       if (isNaN(numLimit) || isNaN(numOffset)) {
         return res.status(400).json({ message: "Invalid limit or offset." });
       }
-      
+
       const filters = {
         ...(status && { status: status as string }),
       };
 
       const orders = await orderService.getOrdersByUser(
-        userAddress, 
+        userAddress,
         role as 'buyer' | 'seller',
         filters,
         sortBy as string,
@@ -144,7 +144,7 @@ export class OrderController {
         numLimit,
         numOffset
       );
-      
+
       return res.status(200).json(orders);
     } catch (error) {
       safeLogger.error('Error in getOrdersByUser controller:', error);
