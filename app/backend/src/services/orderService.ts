@@ -49,7 +49,9 @@ export class OrderService {
   /**
    * Create a new order with smart contract escrow deployment
    * FIXED: Properly handles escrow with full payment amount (item + shipping + tax)
-   * Platform fee is 15% on ITEM PRICE ONLY (industry standard, not on shipping/tax)
+   * Platform fee is tiered by payment method:
+   * - Fiat: 10% (on item price only)
+   * - Crypto: 7% (on item price only)
    */
   async createOrder(input: CreateOrderInput): Promise<MarketplaceOrder> {
     try {
@@ -67,16 +69,19 @@ export class OrderService {
       const shippingCost = input.shippingCost ? parseFloat(input.shippingCost) : 0;
       const taxAmount = input.taxAmount ? parseFloat(input.taxAmount) : 0;
 
-      // Platform fee: 15% on ITEM PRICE ONLY (not on shipping or tax)
+      // Platform fee: Tiered by payment method (on ITEM PRICE ONLY, not on shipping or tax)
       // This is deducted from the seller's payout, NOT charged to buyer
-      const platformFeeRate = 0.15;
+      const paymentMethod = input.paymentMethod || 'crypto';
+      const platformFeeRate = paymentMethod === 'fiat' ? 0.10 : 0.07; // 10% fiat, 7% crypto
       const platformFee = itemPrice * platformFeeRate;
 
       // IMPORTANT: Escrow should hold the FULL PAYMENT AMOUNT
       // This includes shipping and tax (which must be released separately)
       const fullEscrowAmount = itemPrice + shippingCost + taxAmount;
 
-      safeLogger.info('Creating order with corrected escrow amount:', {
+      safeLogger.info('Creating order with tiered platform fee:', {
+        paymentMethod,
+        platformFeeRate: `${(platformFeeRate * 100).toFixed(1)}%`,
         itemPrice,
         shippingCost,
         taxAmount,
@@ -111,7 +116,7 @@ export class OrderService {
         input.taxBreakdown || [], // FIX: Store tax breakdown if provided
         input.shippingAddress,
         input.billingAddress || input.shippingAddress,
-        input.paymentMethod || 'crypto',
+        paymentMethod,
         {
           ...input.paymentDetails,
           // Store breakdown for audit trail
@@ -120,6 +125,8 @@ export class OrderService {
             shippingCost,
             taxAmount,
             platformFee,
+            platformFeeRate: `${(platformFeeRate * 100).toFixed(1)}%`,
+            paymentMethod,
             totalAmount: fullEscrowAmount,
           }
         }

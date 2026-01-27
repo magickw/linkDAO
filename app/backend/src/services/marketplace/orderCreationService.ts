@@ -131,8 +131,8 @@ export class OrderCreationService {
         throw new Error('Listing not found');
       }
 
-      // 3. Calculate order totals
-      const orderTotals = await this.calculateOrderTotals(listing, request.quantity, request.shippingAddress);
+      // 3. Calculate order totals (includes tiered platform fees)
+      const orderTotals = await this.calculateOrderTotals(listing, request.quantity, request.shippingAddress, request.paymentMethod);
 
       // 4. Generate unique order number
       const orderNumber = await this.generateOrderNumber();
@@ -241,14 +241,17 @@ export class OrderCreationService {
 
   /**
    * Calculate order totals including shipping and taxes
+   * Platform fees are tiered by payment method:
+   * - Fiat: 10% of item price
+   * - Crypto: 7% of item price
    */
-  private async calculateOrderTotals(listing: any, quantity: number, shippingAddress: any) {
+  private async calculateOrderTotals(listing: any, quantity: number, shippingAddress: any, paymentMethod: 'crypto' | 'fiat' = 'crypto') {
     const price = parseFloat(listing.price || '0');
     const subtotal = price * quantity;
     const shippingCost = 5.99; // Fixed shipping cost for now, logic can be enhanced later
 
-    // Calculate Platform Fee (15% - charged to SELLER, not included in buyer total)
-    const platformFeeRate = 0.15;
+    // Calculate Platform Fee (tiered by payment method - charged to SELLER, not included in buyer total)
+    const platformFeeRate = paymentMethod === 'fiat' ? 0.10 : 0.07; // 10% fiat, 7% crypto
     const platformFee = subtotal * platformFeeRate;
 
     // Use TaxCalculationService
@@ -279,6 +282,8 @@ export class OrderCreationService {
       shippingCost,
       tax: taxResult.taxAmount,
       platformFee, // Tracked for seller deduction, not charged to buyer
+      platformFeeRate: `${(platformFeeRate * 100).toFixed(1)}%`,
+      paymentMethod,
       total,
       taxBreakdown: taxResult.taxBreakdown
     };
