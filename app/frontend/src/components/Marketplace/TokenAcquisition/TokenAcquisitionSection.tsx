@@ -12,7 +12,6 @@ import { ShoppingCart, TrendingUp, Zap, ExternalLink, ArrowRight } from 'lucide-
 import { useRouter } from 'next/router';
 import { TokenInfo } from '@/types/web3Community';
 import PurchaseModal from './PurchaseModal';
-import PurchaseModal from './PurchaseModal';
 
 type LocalTokenInfo = TokenInfo & {
   priceUSD: number;
