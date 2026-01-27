@@ -220,7 +220,8 @@ function CommunityPostCardEnhanced({
                 communityName: community.displayName || community.name,
                 upvotes: upvoteCount,
                 downvotes: downvoteCount,
-                commentCount: post.comments
+                commentCount: post.comments,
+                viewCount: post.views || post.viewCount || 0
               }}
               postType="community"
               userMembership={userMembership}

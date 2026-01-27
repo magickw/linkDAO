@@ -115,7 +115,7 @@ export const SUPPORTED_CHAINS: ChainConfig[] = [
     nativeCurrency: ETH,
     rpcUrls: ['https://eth.llamarpc.com'],
     blockExplorerUrls: ['https://etherscan.io'],
-    supportedTokens: [USDC_MAINNET, USDT_MAINNET, ETH] // Prioritize stablecoins
+    supportedTokens: [USDC_MAINNET, USDT_MAINNET] // Only stablecoins
   },
   {
     chainId: polygon.id,
@@ -123,7 +123,7 @@ export const SUPPORTED_CHAINS: ChainConfig[] = [
     nativeCurrency: MATIC,
     rpcUrls: ['https://polygon.llamarpc.com'],
     blockExplorerUrls: ['https://polygonscan.com'],
-    supportedTokens: [USDC_POLYGON, USDT_POLYGON, MATIC] // Prioritize stablecoins
+    supportedTokens: [USDC_POLYGON, USDT_POLYGON] // Only stablecoins
   },
   {
     chainId: arbitrum.id,
@@ -131,7 +131,7 @@ export const SUPPORTED_CHAINS: ChainConfig[] = [
     nativeCurrency: { ...ETH, chainId: arbitrum.id },
     rpcUrls: ['https://arbitrum.llamarpc.com'],
     blockExplorerUrls: ['https://arbiscan.io'],
-    supportedTokens: [USDC_ARBITRUM, { ...ETH, chainId: arbitrum.id }] // Prioritize stablecoins
+    supportedTokens: [USDC_ARBITRUM] // Only stablecoins
   },
   {
     chainId: base.id,
@@ -139,7 +139,7 @@ export const SUPPORTED_CHAINS: ChainConfig[] = [
     nativeCurrency: { ...ETH, chainId: base.id },
     rpcUrls: ['https://mainnet.base.org'],
     blockExplorerUrls: ['https://basescan.org'],
-    supportedTokens: [USDC_BASE, { ...ETH, chainId: base.id }] // Prioritize stablecoins
+    supportedTokens: [USDC_BASE] // Only stablecoins
   },
   {
     chainId: sepolia.id,
@@ -147,7 +147,7 @@ export const SUPPORTED_CHAINS: ChainConfig[] = [
     nativeCurrency: ETH_SEPOLIA,
     rpcUrls: ['https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161'],
     blockExplorerUrls: ['https://sepolia.etherscan.io'],
-    supportedTokens: [USDC_SEPOLIA, ETH_SEPOLIA] // Prioritize stablecoins
+    supportedTokens: [USDC_SEPOLIA] // Only stablecoins
   },
   {
     chainId: baseSepolia.id,
@@ -155,7 +155,7 @@ export const SUPPORTED_CHAINS: ChainConfig[] = [
     nativeCurrency: { ...ETH, chainId: baseSepolia.id },
     rpcUrls: ['https://sepolia.base.org'],
     blockExplorerUrls: ['https://sepolia.basescan.org'],
-    supportedTokens: [USDC_BASE_SEPOLIA, { ...ETH, chainId: baseSepolia.id }] // Prioritize stablecoins
+    supportedTokens: [USDC_BASE_SEPOLIA] // Only stablecoins
   }
 ];
 

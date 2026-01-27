@@ -1583,6 +1583,8 @@ export class CommunityService {
           communityId: posts.communityId,
           createdAt: posts.createdAt,
           views: posts.views, // Include view count
+          upvotes: posts.upvotes, // Include upvotes
+          downvotes: posts.downvotes, // Include downvotes
           // Author info
           authorAddress: users.walletAddress,
           authorHandle: users.handle,
@@ -1629,7 +1631,11 @@ export class CommunityService {
           dao: post.dao,
           communityId: post.communityId,
           createdAt: post.createdAt,
+          communityId: post.communityId,
+          createdAt: post.createdAt,
           views: post.views || 0, // Include view count
+          upvotes: post.upvotes || 0,
+          downvotes: post.downvotes || 0,
           // Include community metadata for frontend display
           community: communityResult[0] ? {
             id: communityId,
@@ -1775,6 +1781,9 @@ export class CommunityService {
           dao: posts.dao,
           communityId: posts.communityId,
           createdAt: posts.createdAt,
+          views: posts.views,
+          upvotes: posts.upvotes,
+          downvotes: posts.downvotes,
           authorAddress: users.walletAddress,
           authorHandle: users.handle,
           shareId: posts.shareId, // Include shareId
@@ -1817,7 +1826,11 @@ export class CommunityService {
           reputationScore: post.reputationScore || 0,
           dao: post.dao,
           communityId: post.communityId,
+          communityId: post.communityId,
           createdAt: post.createdAt,
+          views: post.views || 0,
+          upvotes: post.upvotes || 0,
+          downvotes: post.downvotes || 0,
           // Include community metadata for frontend display
           community: post.communityId && communityMap.has(post.communityId) ? {
             id: post.communityId,
@@ -1871,10 +1884,10 @@ export class CommunityService {
 
       // 1. Check if community exists and its public status
       const communityResult = await db
-        .select({ 
-          id: communities.id, 
+        .select({
+          id: communities.id,
           isPublic: communities.isPublic,
-          memberCount: communities.memberCount 
+          memberCount: communities.memberCount
         })
         .from(communities)
         .where(eq(communities.id, communityId))
@@ -1908,7 +1921,7 @@ export class CommunityService {
 
         // Auto-join the user to the public community
         safeLogger.info(`Auto-joining user ${normalizedAuthorAddress} to public community ${communityId} upon posting`);
-        
+
         await db
           .insert(communityMembers)
           .values({
