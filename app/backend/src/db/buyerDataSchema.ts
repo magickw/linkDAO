@@ -1,4 +1,4 @@
-import { pgTable, varchar, text, timestamp, uuid, index, boolean, numeric, unique } from "drizzle-orm/pg-core";
+import { pgTable, varchar, text, timestamp, uuid, index, boolean, numeric, unique, integer } from "drizzle-orm/pg-core";
 import { users } from "./schema";
 
 // User Addresses - Multiple shipping and billing addresses per user
