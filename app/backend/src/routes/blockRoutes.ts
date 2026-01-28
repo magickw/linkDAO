@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { BlockController } from '../controllers/blockController';
 import rateLimit from 'express-rate-limit';
@@ -16,13 +16,19 @@ const blockRateLimit = rateLimit({
   }
 });
 
+// Async handler wrapper to properly handle promise rejections
+const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) =>
+  (req: Request, res: Response, next: NextFunction) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+
 const router = express.Router();
 const blockController = new BlockController();
 
-router.post('/block', blockRateLimit, csrfProtection, blockController.blockUser);
-router.post('/unblock', blockRateLimit, csrfProtection, blockController.unblockUser);
-router.get('/is-blocked/:blocker/:blocked', blockRateLimit, blockController.isBlocked);
-router.get('/blocked-users/:address', blockRateLimit, blockController.getBlockedUsers);
-router.get('/blocked-by/:address', blockRateLimit, blockController.getBlockedBy);
+router.post('/block', blockRateLimit, csrfProtection, asyncHandler((req, res) => blockController.blockUser(req, res)));
+router.post('/unblock', blockRateLimit, csrfProtection, asyncHandler((req, res) => blockController.unblockUser(req, res)));
+router.get('/is-blocked/:blocker/:blocked', blockRateLimit, asyncHandler((req, res) => blockController.isBlocked(req, res)));
+router.get('/blocked-users/:address', blockRateLimit, asyncHandler((req, res) => blockController.getBlockedUsers(req, res)));
+router.get('/blocked-by/:address', blockRateLimit, asyncHandler((req, res) => blockController.getBlockedBy(req, res)));
 
 export default router;
