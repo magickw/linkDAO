@@ -5,7 +5,7 @@ export interface AuthenticatedUser {
   userId: string;
   kycStatus?: string | null;
   permissions?: string[];
-  role: string;
+  role?: string;
   email?: string | null;
   isAdmin: boolean;
 }

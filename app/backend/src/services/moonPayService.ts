@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getPrimaryFrontendUrl } from '../utils/urlUtils';
 import { safeLogger } from '../utils/safeLogger';
 import crypto from 'crypto';
 
@@ -131,7 +132,7 @@ export class MoonPayService {
         baseAmount,
         walletAddress,
         externalTransactionId,
-        redirectURL: `${process.env.FRONTEND_URL}/ldao/purchase/success`,
+        redirectURL: `${getPrimaryFrontendUrl()}/ldao/purchase/success`,
         webhookUrl: `${process.env.BACKEND_URL}/api/moonpay/webhook`,
       });
 
@@ -305,7 +306,7 @@ export class MoonPayService {
       quoteCurrency,
       baseAmount: baseAmount.toString(),
       walletAddress,
-      redirectURL: `${process.env.FRONTEND_URL}/ldao/purchase/success`,
+      redirectURL: `${getPrimaryFrontendUrl()}/ldao/purchase/success`,
       ...(externalTransactionId && { externalTransactionId }),
     });
 

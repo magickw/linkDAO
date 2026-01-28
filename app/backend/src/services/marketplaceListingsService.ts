@@ -385,6 +385,9 @@ export class MarketplaceListingsService {
         })
         .returning();
 
+      const listing = result[0];
+      const parsedImages = listing.images ? JSON.parse(listing.images) : [];
+
       return {
         id: listing.id,
         sellerAddress: sellerAddress,

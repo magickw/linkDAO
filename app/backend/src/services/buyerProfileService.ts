@@ -5,8 +5,8 @@ import { eq } from 'drizzle-orm';
 export interface BuyerProfile {
     userId: string;
     totalOrders: number;
-    totalSpent: number;
-    averageOrderValue: number;
+    totalSpent: string;
+    averageOrderValue: string;
     savedAddressesCount: number;
     savedPaymentMethodsCount: number;
     wishlistItemsCount: number;
@@ -118,8 +118,8 @@ export class BuyerProfileService {
         const profile = await this.getOrCreateBuyerProfile(userId);
 
         const newTotalOrders = Number(profile.totalOrders) + 1;
-        const newTotalSpent = Number(profile.totalSpent) + orderAmount;
-        const newAverageOrderValue = newTotalSpent / newTotalOrders;
+        const newTotalSpent = (Number(profile.totalSpent) + orderAmount).toString();
+        const newAverageOrderValue = (Number(newTotalSpent) / newTotalOrders).toString();
 
         const [updatedProfile] = await db
             .update(buyerProfiles)

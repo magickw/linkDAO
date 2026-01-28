@@ -58,7 +58,7 @@ router.get('/receipts/order/:orderId', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Order ID is required' });
     }
 
-    const receipts = await receiptService.getReceiptsByOrderId(orderId);
+    const receipts = await receiptService.getReceiptByOrderId(orderId);
     
     res.json({ receipts });
   } catch (error) {

@@ -1,6 +1,6 @@
 import { cartService } from '../services/cartService';
 import { safeLogger } from '../utils/safeLogger';
-import { AuthenticatedUser } from '../middleware/authMiddleware';
+import { AuthenticatedUser } from '../types/authentication';
 
 async function testCartService() {
   safeLogger.info('Testing Cart Service...');

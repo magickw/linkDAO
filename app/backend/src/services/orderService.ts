@@ -40,10 +40,7 @@ export class OrderService {
       process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || '',
       process.env.MARKETPLACE_CONTRACT_ADDRESS || ''
     );
-    this.taxAwareEscrowService = new TaxAwareEscrowService(
-      process.env.RPC_URL || 'https://sepolia.drpc.org',
-      process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || ''
-    );
+    this.taxAwareEscrowService = new TaxAwareEscrowService(this.enhancedEscrowService);
   }
 
   /**

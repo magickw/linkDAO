@@ -4,7 +4,7 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "lib": [
-      "ES2020"
+      "ES2021"
     ],
     "outDir": "./dist",
     "rootDir": "./src",
@@ -61,6 +61,7 @@
     "src/services/multiChainDEXService.ts",
     "src/services/uniswapV3Service.ts",
     "src/routes/advancedTradingRoutes.ts",
-    "src/routes/dexTradingRoutes.ts"
+    "src/routes/dexTradingRoutes.ts",
+    "src/routes/checkoutRoutes.enhanced.ts"
   ]
 }

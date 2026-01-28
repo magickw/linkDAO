@@ -3,7 +3,7 @@ import { safeLogger } from '../utils/safeLogger';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { StripePaymentService } from '../services/stripePaymentService';
 import { stripeConnectService } from '../services/stripeConnectService';
-import { sellerProfileService } from '../services/marketplace/sellerProfileService';
+import { getPrimaryFrontendUrl } from '../utils/urlUtils';
 
 export function createStripeConnectRoutes(stripeService: StripePaymentService): express.Router {
   const router = express.Router();
@@ -54,8 +54,7 @@ export function createStripeConnectRoutes(stripeService: StripePaymentService): 
       }
 
       // Generate Account Link
-      const frontendUrls = process.env.FRONTEND_URL || 'http://localhost:3000';
-      const frontendUrl = frontendUrls.split(',')[0].trim();
+      const frontendUrl = getPrimaryFrontendUrl();
       const returnUrl = `${frontendUrl}/dashboard/seller?tab=payout&status=return`;
       const refreshUrl = `${frontendUrl}/dashboard/seller?tab=payout&status=refresh`;
 

@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { getPrimaryFrontendUrl } from '../utils/urlUtils';
 import { safeLogger } from '../utils/safeLogger';
 
 export interface EmailOptions {
@@ -470,7 +471,7 @@ export class EmailService {
             <p style="margin: 5px 0;"><strong>Priority:</strong> ${priority}</p>
           </div>
           <p>We'll respond within ${this.getResponseTime(priority)}.</p>
-          <a href="${process.env.FRONTEND_URL}/support/tickets/${ticketId}" style="display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 10px;">View Ticket</a>
+          <a href="${getPrimaryFrontendUrl()}/support/tickets/${ticketId}" style="display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 10px;">View Ticket</a>
         </div>
       </body>
       </html>
@@ -493,7 +494,7 @@ export class EmailService {
         <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; padding: 30px;">
           <h2 style="color: #1a1a1a;">Ticket Status Updated</h2>
           <p>Your support ticket <strong>${ticketId}</strong> status has been updated to: <strong>${status}</strong></p>
-          <a href="${process.env.FRONTEND_URL}/support/tickets/${ticketId}" style="display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 10px;">View Ticket</a>
+          <a href="${getPrimaryFrontendUrl()}/support/tickets/${ticketId}" style="display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 10px;">View Ticket</a>
         </div>
       </body>
       </html>
@@ -519,7 +520,7 @@ export class EmailService {
           <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #667eea;">
             <p>${response.substring(0, 200)}${response.length > 200 ? '...' : ''}</p>
           </div>
-          <a href="${process.env.FRONTEND_URL}/support/tickets/${ticketId}" style="display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 10px;">View Full Response</a>
+          <a href="${getPrimaryFrontendUrl()}/support/tickets/${ticketId}" style="display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 10px;">View Full Response</a>
         </div>
       </body>
       </html>
@@ -575,7 +576,7 @@ export class EmailService {
               We're excited to share our journey with you as we build the future of decentralized communities.
             </p>
 
-            <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
+            <a href="${getPrimaryFrontendUrl()}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
               Visit LinkDAO
             </a>
           </div>
@@ -708,7 +709,7 @@ export class EmailService {
               </p>
             </div>
 
-            <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/profile" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
+            <a href="${getPrimaryFrontendUrl()}/profile" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
               View Your Gold Balance
             </a>
           </div>
@@ -876,7 +877,7 @@ export class EmailService {
               </p>
             </div>
 
-            <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/ldao-dashboard" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
+            <a href="${getPrimaryFrontendUrl()}/ldao-dashboard" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
               View Your LDAO Balance
             </a>
           </div>
@@ -1087,7 +1088,7 @@ export class EmailService {
               </p>
             </div>
 
-            <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/marketplace/orders/${data.orderId}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
+            <a href="${getPrimaryFrontendUrl()}/marketplace/orders/${data.orderId}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
               Track Your Order
             </a>
           </div>
@@ -1373,10 +1374,10 @@ export class EmailService {
             </div>
 
             <div style="margin-top: 30px;">
-              <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/settings?tab=security" style="display: inline-block; background: #ef4444; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-right: 12px;">
+              <a href="${getPrimaryFrontendUrl()}/settings?tab=security" style="display: inline-block; background: #ef4444; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-right: 12px;">
                 Secure My Account
               </a>
-              <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/settings?tab=security&action=terminate&session=${data.sessionId}" style="display: inline-block; background: #6b7280; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px;">
+              <a href="${getPrimaryFrontendUrl()}/settings?tab=security&action=terminate&session=${data.sessionId}" style="display: inline-block; background: #6b7280; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px;">
                 This Wasn't Me
               </a>
             </div>
@@ -1464,7 +1465,7 @@ export class EmailService {
               If you didn't make this change, please secure your account immediately.
             </p>
 
-            <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/settings?tab=security" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
+            <a href="${getPrimaryFrontendUrl()}/settings?tab=security" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
               Manage Security Settings
             </a>
           </div>
@@ -1542,7 +1543,7 @@ export class EmailService {
               </ul>
             </div>
 
-            <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/settings?tab=security" style="display: inline-block; background: #dc2626; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
+            <a href="${getPrimaryFrontendUrl()}/settings?tab=security" style="display: inline-block; background: #dc2626; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
               Secure My Account Now
             </a>
           </div>
@@ -1615,7 +1616,7 @@ export class EmailService {
               </p>
             </div>
 
-            <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/settings?tab=security" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
+            <a href="${getPrimaryFrontendUrl()}/settings?tab=security" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
               View Account Activity
             </a>
           </div>
@@ -1687,7 +1688,7 @@ export class EmailService {
               </p>
             </div>
 
-            <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/settings?tab=security" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
+            <a href="${getPrimaryFrontendUrl()}/settings?tab=security" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
               Review Security Settings
             </a>
           </div>
@@ -1761,7 +1762,7 @@ export class EmailService {
               If you didn't initiate this action, please contact support immediately.
             </p>
 
-            <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/login" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
+            <a href="${getPrimaryFrontendUrl()}/login" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
               Log In
             </a>
           </div>
@@ -1806,7 +1807,7 @@ export class EmailService {
     actionUrl?: string,
     receipt?: any
   ): string {
-    const appUrl = process.env.FRONTEND_URL || 'https://linkdao.io';
+    const appUrl = getPrimaryFrontendUrl();
     const actionButton = actionUrl
       ? `<a href="${appUrl}${actionUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">View Order</a>`
       : '';
@@ -1855,7 +1856,7 @@ export class EmailService {
             <p style="color: #6c757d; font-size: 14px; margin: 0 0 10px 0;">LinkDAO - Decentralized Marketplace</p>
             <p style="color: #6c757d; font-size: 12px; margin: 0;">
               This is an automated email. Please do not reply directly.
-              <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}/notification-preferences" style="color: #667eea; text-decoration: none;">Manage notification preferences</a>
+              <a href="${getPrimaryFrontendUrl()}/notification-preferences" style="color: #667eea; text-decoration: none;">Manage notification preferences</a>
             </p>
           </div>
         </div>

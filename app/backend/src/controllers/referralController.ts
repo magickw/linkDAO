@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
+import { getPrimaryFrontendUrl } from '../utils/urlUtils';
 import { referralService } from '../services/referralService';
 import { z } from 'zod';
 
@@ -303,7 +304,7 @@ export class ReferralController {
         success: true,
         data: {
           referralCode,
-          shareUrl: `${process.env.FRONTEND_URL}/signup?ref=${referralCode}`,
+          shareUrl: `${getPrimaryFrontendUrl()}/signup?ref=${referralCode}`,
           message: 'Referral code generated successfully'
         }
       });

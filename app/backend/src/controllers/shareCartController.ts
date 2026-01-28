@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { shareCartService } from '../services/shareCartService';
 import { cartService } from '../services/cartService';
 import { successResponse, errorResponse } from '../utils/apiResponse';
+import { getPrimaryFrontendUrl } from '../utils/urlUtils';
 import { safeLogger } from '../utils/safeLogger';
 
 export class ShareCartController {
@@ -25,7 +26,7 @@ export class ShareCartController {
 
             successResponse(res, {
                 shareToken,
-                shareUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/cart/shared/${shareToken}`,
+                shareUrl: `${getPrimaryFrontendUrl()}/cart/shared/${shareToken}`,
                 expiresAt
             }, 201);
         } catch (error) {

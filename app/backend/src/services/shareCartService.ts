@@ -32,10 +32,10 @@ export class ShareCartService {
             expiresAt.setDate(expiresAt.getDate() + 7);
 
             // Insert shared cart
-            await db.execute(`
+            await (db as any).$client`
         INSERT INTO shared_carts (share_token, user_id, cart_snapshot, expires_at)
-        VALUES ($1, $2, $3, $4)
-      `, [shareToken, user.id, JSON.stringify(cartSnapshot), expiresAt]);
+        VALUES (${shareToken}, ${user.id}, ${JSON.stringify(cartSnapshot)}, ${expiresAt})
+      `;
 
             safeLogger.info(`[ShareCartService] Created shared cart with token: ${shareToken}`);
 
@@ -55,10 +55,10 @@ export class ShareCartService {
                 throw new Error('Database connection not available');
             }
 
-            const result = await db.execute(`
+            const result = await (db as any).$client`
         SELECT * FROM shared_carts
-        WHERE share_token = $1 AND expires_at > NOW()
-      `, [shareToken]);
+        WHERE share_token = ${shareToken} AND expires_at > NOW()
+      `;
 
             if (!result || result.length === 0) {
                 return null;
@@ -67,11 +67,11 @@ export class ShareCartService {
             const row = result[0] as any;
 
             // Update view count
-            await db.execute(`
+            await (db as any).$client`
         UPDATE shared_carts
         SET view_count = view_count + 1, last_viewed_at = NOW()
-        WHERE share_token = $1
-      `, [shareToken]);
+        WHERE share_token = ${shareToken}
+      `;
 
             return {
                 id: row.id,
@@ -100,10 +100,10 @@ export class ShareCartService {
                 throw new Error('Database connection not available');
             }
 
-            const result = await db.execute(`
+            const result = await (db as any).$client`
         DELETE FROM shared_carts
         WHERE expires_at < NOW()
-      `);
+      `;
 
             const deletedCount = (result as any).count || 0;
             safeLogger.info(`[ShareCartService] Deleted ${deletedCount} expired shared carts`);

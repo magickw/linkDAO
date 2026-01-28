@@ -34,7 +34,7 @@ export const metricsTrackingMiddleware = (
   };
   
   // Override end method to maintain compatibility
-  res.end = function(chunk?: any, encoding?: BufferEncoding) {
+  res.end = function(chunk?: any, encoding?: any) {
     return originalEnd.call(this, chunk, encoding);
   };
   

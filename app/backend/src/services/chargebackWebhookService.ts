@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import axios from 'axios';
 import { db } from '../db';
+import { getPrimaryFrontendUrl } from '../utils/urlUtils';
 import { orders, users } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
@@ -445,7 +446,7 @@ export class ChargebackWebhookService {
 
           <p>Please log in to your dashboard to review and respond to this chargeback.</p>
 
-          <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/seller/disputes"
+          <a href="${getPrimaryFrontendUrl()}/seller/disputes"
              style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 15px;">
             View Dispute Details
           </a>

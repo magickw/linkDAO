@@ -1,4 +1,6 @@
-import { CronJob } from 'cron';
+import * as cron from 'node-cron';
+
+type CronJob = ReturnType<typeof cron.schedule>;
 import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../../db';
 import {

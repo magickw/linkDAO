@@ -7,15 +7,7 @@ import { Request, Response } from 'express';
 import { socialMediaConnectionService } from '../services/socialMediaConnectionService';
 import { isSupportedPlatform } from '../services/oauth';
 import { safeLogger } from '../utils/safeLogger';
-import { apiResponse } from '../utils/apiResponse';
-
-// Helper to get the primary frontend URL (first one from comma-separated list)
-function getPrimaryFrontendUrl(): string {
-  const frontendUrls = process.env.FRONTEND_URL || 'http://localhost:3000';
-  // FRONTEND_URL may contain multiple comma-separated URLs for CORS
-  // Extract just the first one for redirects
-  return frontendUrls.split(',')[0].trim();
-}
+import { getPrimaryFrontendUrl } from '../utils/urlUtils';
 
 class SocialMediaOAuthController {
   /**

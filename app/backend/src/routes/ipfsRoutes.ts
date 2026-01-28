@@ -28,6 +28,9 @@ const upload = multer({
  * Upload file to IPFS
  */
 router.post('/upload', upload.single('file'), async (req, res) => {
+  let userId: string;
+  let detectedContentType: string;
+
   try {
     if (!req.file) {
       res.status(400).json({
@@ -38,10 +41,10 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     }
 
     const { pin, name, description, tags, contentType } = req.body;
-    const userId = req.headers['x-user-id'] as string || 'anonymous';
+    userId = req.headers['x-user-id'] as string || 'anonymous';
 
     // Detect content type from MIME type if not provided
-    let detectedContentType = contentType || 'document';
+    detectedContentType = contentType || 'document';
     if (!contentType && req.file.mimetype) {
       if (req.file.mimetype.startsWith('image/')) {
         detectedContentType = 'image';

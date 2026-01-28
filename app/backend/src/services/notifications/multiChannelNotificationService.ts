@@ -1,5 +1,6 @@
 // @ts-nocheck - Temporarily disabled pending twilio setup
 import twilio from 'twilio';
+import { getPrimaryFrontendUrl } from '../../utils/urlUtils';
 import { safeLogger } from '../../utils/safeLogger';
 
 interface NotificationChannel {
@@ -467,7 +468,7 @@ export class MultiChannelNotificationService {
     </div>
     <div class="footer">
       <p>LinkDAO Admin System • ${new Date().toLocaleDateString()}</p>
-      <p><a href="${process.env.FRONTEND_URL}/admin/preferences">Manage Notification Preferences</a></p>
+      <p><a href="${getPrimaryFrontendUrl()}/admin/preferences">Manage Notification Preferences</a></p>
     </div>
   </div>
 </body>

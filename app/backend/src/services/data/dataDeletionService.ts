@@ -5,7 +5,8 @@
  */
 
 import { db } from '../../db';
-import { safeLogger } from '../utils/safeLogger';
+import { getPrimaryFrontendUrl } from '../../utils/urlUtils';
+import { safeLogger } from '../../utils/safeLogger';
 import {
   users,
   posts,
@@ -530,7 +531,7 @@ export class DataDeletionService {
       }
 
       // Return the confirmation URL and code as required by Facebook
-      const baseUrl = process.env.FRONTEND_URL || 'https://linkdao.io';
+      const baseUrl = getPrimaryFrontendUrl();
       return {
         url: `${baseUrl}/data-deletion/status?confirmation=${confirmationCode}`,
         confirmation_code: confirmationCode

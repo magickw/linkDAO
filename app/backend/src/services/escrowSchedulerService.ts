@@ -37,8 +37,8 @@ interface EscrowRefundResult {
  */
 export class EscrowSchedulerService {
   private isRunning: boolean = false;
-  private expiryCheckTask: cron.ScheduledTask | null = null;
-  private sellerReleaseTask: cron.ScheduledTask | null = null;
+  private expiryCheckTask: any | null = null;
+  private sellerReleaseTask: any | null = null;
   private enhancedEscrowService: EnhancedEscrowService;
 
   // Default escrow duration in days (if not specified per escrow)

@@ -16,6 +16,7 @@
  */
 
 import crypto from 'crypto';
+import { getPrimaryFrontendUrl } from '../../utils/urlUtils';
 import { ISellerNotificationService } from './interfaces/ISellerNotificationService';
 import {
   SellerNotification,
@@ -1132,8 +1133,7 @@ export class SellerNotificationService implements ISellerNotificationService {
     notification: SellerNotification,
     orderData: OrderEmailData
   ): string {
-    const baseUrl = process.env.FRONTEND_URL || 'https://linkdao.io';
-    const actionUrl = this.getActionUrl(notification);
+          const baseUrl = getPrimaryFrontendUrl();    const actionUrl = this.getActionUrl(notification);
 
     // Format currency
     const formatCurrency = (amount: number | undefined, currency: string = 'USD'): string => {
@@ -1554,8 +1554,7 @@ export class SellerNotificationService implements ISellerNotificationService {
    * @requirement 4.7 - One-click access to order details
    */
   private getActionUrl(notification: SellerNotification): string {
-    const baseUrl = process.env.FRONTEND_URL || 'https://linkdao.io';
-
+          const baseUrl = getPrimaryFrontendUrl();
     if (notification.orderId) {
       return `${baseUrl}/seller/orders/${notification.orderId}`;
     }

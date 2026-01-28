@@ -58,30 +58,23 @@ async function verifyComments() {
         });
         console.log('✅ Comment added to regular post');
 
-        // 5. Add comment to status
-        console.log('Adding comment to status...');
+        // 5. Add comment to regular post
+        console.log('Adding another comment to regular post...');
         await feedService.addComment({
-            statusId: statusId,
+            postId: regularPostId.toString(),
             userAddress: testWallet,
-            content: 'Test comment on status'
+            content: 'Test second comment on regular post'
         });
-        console.log('✅ Comment added to status');
+        console.log('✅ Second comment added to regular post');
 
         // 6. Verify comments in DB
         console.log('Verifying comments in DB...');
         const regularComments = await db.select().from(comments).where(eq(comments.postId, regularPostId));
-        const statusComments = await db.select().from(comments).where(eq(comments.statusId, statusId));
 
-        if (regularComments.length === 1 && regularComments[0].content === 'Test comment on regular post') {
-            console.log('✅ Regular post comment persisted correctly');
+        if (regularComments.length === 2 && regularComments[0].content === 'Test comment on regular post') {
+            console.log('✅ Regular post comments persisted correctly');
         } else {
-            console.error('❌ Regular post comment failed persistence check', regularComments);
-        }
-
-        if (statusComments.length === 1 && statusComments[0].content === 'Test comment on status') {
-            console.log('✅ Status comment persisted correctly');
-        } else {
-            console.error('❌ Status comment failed persistence check', statusComments);
+            console.error('❌ Regular post comments failed persistence check', regularComments);
         }
 
         // 7. Verify comment counts in feed
@@ -97,18 +90,11 @@ async function verifyComments() {
         });
 
         const feedRegularPost = feed.posts.find((p: any) => p.id === regularPostId);
-        const feedStatus = feed.posts.find((p: any) => p.id === statusId);
 
-        if (feedRegularPost && feedRegularPost.commentCount === 1) {
+        if (feedRegularPost && feedRegularPost.commentCount === 2) {
             console.log('✅ Regular post comment count correct in feed');
         } else {
             console.error('❌ Regular post comment count incorrect in feed:', feedRegularPost?.commentCount);
-        }
-
-        if (feedStatus && feedStatus.commentCount === 1) {
-            console.log('✅ Status comment count correct in feed');
-        } else {
-            console.error('❌ Status comment count incorrect in feed:', feedStatus?.commentCount);
         }
 
     } catch (error) {

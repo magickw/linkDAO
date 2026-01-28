@@ -98,6 +98,7 @@ export interface PaymentSyncResult {
     seller: boolean;
   };
 }
+import { getPrimaryFrontendUrl } from '../utils/urlUtils';
 
 export class OrderPaymentIntegrationService {
   private databaseService: DatabaseService;
@@ -971,9 +972,12 @@ export class OrderPaymentIntegrationService {
     }));
   }
 
-  private async generateReceiptUrl(receiptNumber: string): Promise<string> {
-    // Generate URL for receipt access - could be a PDF generator or web page
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    return `${baseUrl}/receipts/${receiptNumber}`;
-  }
-}
+          private async generateReceiptUrl(receiptNumber: string): Promise<string> {
+
+            // Generate URL for receipt access - could be a PDF generator or web page
+
+            const baseUrl = getPrimaryFrontendUrl();
+
+            return `${baseUrl}/receipts/${receiptNumber}`;
+
+          }}

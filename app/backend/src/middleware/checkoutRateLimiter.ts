@@ -91,8 +91,8 @@ export class RedisRateLimiter {
           multi.pTTL(key);
 
           const results = await multi.exec();
-          current = results[0] as number;
-          const ttl = results[2] as number;
+          current = (results?.[0] as unknown as number) || 0;
+          const ttl = (results?.[2] as unknown as number) || windowMs;
           resetTime = now + ttl;
         } else {
           // Fallback to in-memory rate limiting

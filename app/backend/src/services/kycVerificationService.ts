@@ -73,7 +73,9 @@ export interface KYCWebhookEvent {
   timestamp: string;
 }
 
-export class KYCVerificationService {
+import { getPrimaryFrontendUrl } from '../utils/urlUtils';
+
+export class KycVerificationService {
   private config: KYCConfig;
   private verifications: Map<string, KYCVerificationResult> = new Map();
 
@@ -153,8 +155,8 @@ export class KYCVerificationService {
         workflowId: this.getWorkflowId(request.verificationLevel),
         userReference: verificationId,
         callbackUrl: `${process.env.BACKEND_URL}/api/kyc/webhook/jumio`,
-        successUrl: `${process.env.FRONTEND_URL}/kyc/success`,
-        errorUrl: `${process.env.FRONTEND_URL}/kyc/error`,
+        successUrl: `${getPrimaryFrontendUrl()}/kyc/success`,
+        errorUrl: `${getPrimaryFrontendUrl()}/kyc/error`,
       };
 
       const response = await axios.post(
@@ -530,3 +532,5 @@ export class KYCVerificationService {
     };
   }
 }
+
+export { KycVerificationService as KYCVerificationService };

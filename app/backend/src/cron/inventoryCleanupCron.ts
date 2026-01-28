@@ -100,10 +100,3 @@ export async function triggerInventoryCleanup(): Promise<number> {
     throw error;
   }
 }
-
-export {
-  initializeInventoryCleanupCron,
-  stopInventoryCleanupCron,
-  getInventoryCleanupCronStatus,
-  triggerInventoryCleanup
-};

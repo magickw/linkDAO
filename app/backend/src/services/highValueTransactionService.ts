@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { getPrimaryFrontendUrl } from '../utils/urlUtils';
 import { users, orders } from '../db/schema';
 import { eq, and, gte, lte, sql } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
@@ -243,7 +244,7 @@ export class HighValueTransactionService {
               <p><strong>Timestamp:</strong> ${alert.timestamp.toISOString()}</p>
             </div>
             <p>Please review this transaction in the admin dashboard.</p>
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/transactions/${alert.transactionId}"
+            <a href="${getPrimaryFrontendUrl()}/admin/transactions/${alert.transactionId}"
                style="display: inline-block; background-color: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
               Review Transaction
             </a>

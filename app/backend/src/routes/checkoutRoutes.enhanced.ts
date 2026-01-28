@@ -5,7 +5,7 @@
 import { Router } from 'express';
 import { CheckoutController } from '../controllers/checkoutController';
 import { authMiddleware } from '../middleware/authMiddleware';
-import { csrfProtection } from '../middleware/csrfMiddleware';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { checkoutRateLimits } from '../middleware/checkoutRateLimiter';
 
 const router = Router();
