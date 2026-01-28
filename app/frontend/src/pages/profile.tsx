@@ -677,7 +677,7 @@ export default function Profile() {
             <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 dark:from-blue-900/30 dark:to-purple-900/30 backdrop-blur-lg rounded-2xl shadow-xl border border-white/30 dark:border-gray-700/50 overflow-hidden mb-6">
               {/* Banner Image */}
               {(profile.bannerCid && profile.bannerCid.length > 0) && (
-                <div className="w-full h-48 md:h-64 overflow-hidden relative">
+                <div className="w-full h-56 md:h-80 overflow-hidden relative">
                   <img
                     src={profile.bannerCid || ''}
                     alt="Profile Banner"
