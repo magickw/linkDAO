@@ -2,11 +2,11 @@ import { eq, and, gte, lte, sql } from 'drizzle-orm';
 import { db } from '../../db';
 import { safeLogger } from '../../utils/safeLogger';
 import {
-  tax_liabilities,
-  tax_remittance_batches,
-  tax_remittance_batch_items,
-  tax_filings,
-  tax_compliance_alerts
+  taxLiabilities,
+  taxRemittanceBatches,
+  taxRemittanceBatchItems,
+  taxFilings,
+  taxComplianceAlerts
 } from '../../db/schema';
 
 export interface TaxPeriod {
@@ -45,13 +45,13 @@ export class TaxRemittanceService {
       // Get all unpaid tax liabilities for this period and jurisdiction
       const liabilities = await db
         .select()
-        .from(tax_liabilities)
+        .from(taxLiabilities)
         .where(
           and(
-            eq(tax_liabilities.tax_jurisdiction, period.jurisdiction),
-            gte(tax_liabilities.collection_date, period.startDate),
-            lte(tax_liabilities.collection_date, period.endDate),
-            eq(tax_liabilities.status, 'calculated')
+            eq(taxLiabilities.tax_jurisdiction, period.jurisdiction),
+            gte(taxLiabilities.collection_date, period.startDate),
+            lte(taxLiabilities.collection_date, period.endDate),
+            eq(taxLiabilities.status, 'calculated')
           )
         );
 
@@ -71,37 +71,37 @@ export class TaxRemittanceService {
 
       // Create remittance batch
       const [batch] = await db
-        .insert(tax_remittance_batches)
+        .insert(taxRemittanceBatches)
         .values({
-          batch_number: batchNumber,
-          remittance_period_start: period.startDate,
-          remittance_period_end: period.endDate,
-          total_tax_amount: totalTaxAmount,
-          total_liabilities: liabilities.length,
-          jurisdiction_breakdown: JSON.stringify(jurisdictionBreakdown),
+          batchNumber: batchNumber,
+          remittancePeriodStart: period.startDate,
+          remittancePeriodEnd: period.endDate,
+          totalTaxAmount: totalTaxAmount,
+          totalLiabilities: liabilities.length,
+          jurisdictionBreakdown: JSON.stringify(jurisdictionBreakdown),
           status: 'pending',
           remittance_provider: provider,
-          created_at: new Date(),
-          updated_at: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
         })
         .returning();
 
       // Add liabilities to batch
       for (const liability of liabilities) {
         await db
-          .insert(tax_remittance_batch_items)
+          .insert(taxRemittanceBatchItems)
           .values({
-            batch_id: batch.id,
-            tax_liability_id: liability.id,
-            created_at: new Date(),
-            updated_at: new Date(),
+            batchId: batch.id,
+            taxLiabilityId: liability.id,
+            createdAt: new Date(),
+            updatedAt: new Date(),
           });
 
         // Update liability status
         await db
-          .update(tax_liabilities)
+          .update(taxLiabilities)
           .set({ status: 'filed' })
-          .where(eq(tax_liabilities.id, liability.id));
+          .where(eq(taxLiabilities.id, liability.id));
       }
 
       safeLogger.info('Tax remittance batch created:', {
@@ -131,31 +131,31 @@ export class TaxRemittanceService {
 
       // Update batch status to paid
       await db
-        .update(tax_remittance_batches)
+        .update(taxRemittanceBatches)
         .set({
           status: 'paid',
-          paid_at: paymentDate,
-          updated_at: new Date(),
+          paidAt: paymentDate,
+          updatedAt: new Date(),
         })
-        .where(eq(tax_remittance_batches.id, batchId));
+        .where(eq(taxRemittanceBatches.id, batchId));
 
       // Get all liabilities in this batch
       const batchItems = await db
-        .select({ tax_liability_id: tax_remittance_batch_items.tax_liability_id })
-        .from(tax_remittance_batch_items)
-        .where(eq(tax_remittance_batch_items.batch_id, batchId));
+        .select({ taxLiabilityId: taxRemittanceBatchItems.taxLiabilityId })
+        .from(taxRemittanceBatchItems)
+        .where(eq(taxRemittanceBatchItems.batchId, batchId));
 
       // Update all liabilities to paid
       for (const item of batchItems) {
         await db
-          .update(tax_liabilities)
+          .update(taxLiabilities)
           .set({
             status: 'paid',
-            remittance_date: paymentDate,
-            remittance_reference: paymentReference,
-            updated_at: new Date(),
+            remittanceDate: paymentDate,
+            remittanceReference: paymentReference,
+            updatedAt: new Date(),
           })
-          .where(eq(tax_liabilities.id, item.tax_liability_id));
+          .where(eq(taxLiabilities.id, item.tax_liability_id));
       }
 
       safeLogger.info('Tax payment recorded successfully:', {
@@ -186,8 +186,8 @@ export class TaxRemittanceService {
       // Get batch information
       const [batch] = await db
         .select()
-        .from(tax_remittance_batches)
-        .where(eq(tax_remittance_batches.id, batchId));
+        .from(taxRemittanceBatches)
+        .where(eq(taxRemittanceBatches.id, batchId));
 
       if (!batch) {
         throw new Error('Remittance batch not found');
@@ -195,34 +195,34 @@ export class TaxRemittanceService {
 
       // Create filing record
       const [filing] = await db
-        .insert(tax_filings)
+        .insert(taxFilings)
         .values({
-          batch_id: batchId,
+          batchId: batchId,
           jurisdiction: batch.remittance_provider || 'MULTI',
-          filing_type: this.getFilingType(batch.remittance_period_start),
-          filing_period_start: batch.remittance_period_start,
-          filing_period_end: batch.remittance_period_end,
-          gross_sales: filingData.grossSales,
-          taxable_sales: filingData.taxableAmount,
-          tax_collected: batch.total_tax_amount,
-          tax_due: batch.total_tax_amount,
+          filingType: this.getFilingType(batch.remittance_period_start),
+          filingPeriodStart: batch.remittance_period_start,
+          filingPeriodEnd: batch.remittancePeriodEnd,
+          grossSales: filingData.grossSales,
+          taxableSales: filingData.taxableAmount,
+          taxCollected: batch.totalTaxAmount,
+          taxDue: batch.totalTaxAmount,
           status: 'filed',
-          filed_at: new Date(),
-          filing_reference: filingData.filingReference,
-          filing_provider: filingData.provider,
-          created_at: new Date(),
-          updated_at: new Date(),
+          filedAt: new Date(),
+          filingReference: filingData.filingReference,
+          filingProvider: filingData.provider,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         })
         .returning();
 
       // Update batch status
       await db
-        .update(tax_remittance_batches)
+        .update(taxRemittanceBatches)
         .set({
           status: 'filed',
-          updated_at: new Date(),
+          updatedAt: new Date(),
         })
-        .where(eq(tax_remittance_batches.id, batchId));
+        .where(eq(taxRemittanceBatches.id, batchId));
 
       safeLogger.info('Tax return filed:', { filingId: filing.id, filingReference: filingData.filingReference });
 
@@ -240,8 +240,8 @@ export class TaxRemittanceService {
     try {
       const [batch] = await db
         .select()
-        .from(tax_remittance_batches)
-        .where(eq(tax_remittance_batches.id, batchId));
+        .from(taxRemittanceBatches)
+        .where(eq(taxRemittanceBatches.id, batchId));
 
       if (!batch) {
         throw new Error('Remittance batch not found');
@@ -256,13 +256,13 @@ export class TaxRemittanceService {
         batchNumber: batch.batch_number,
         period: {
           startDate: batch.remittance_period_start,
-          endDate: batch.remittance_period_end,
+          endDate: batch.remittancePeriodEnd,
           jurisdiction: batch.remittance_provider || 'MULTI',
         },
-        totalTaxAmount: batch.total_tax_amount,
+        totalTaxAmount: batch.totalTaxAmount,
         liabilitiesCount: batch.total_liabilities,
         jurisdictionBreakdown,
-        dueDate: this.calculateDueDate(batch.remittance_period_end),
+        dueDate: this.calculateDueDate(batch.remittancePeriodEnd),
         filedDate: batch.filed_at || undefined,
         paidDate: batch.paid_at || undefined,
         status: batch.status as any,
@@ -285,11 +285,11 @@ export class TaxRemittanceService {
       // Find all overdue tax liabilities
       const overdueLiabilities = await db
         .select()
-        .from(tax_liabilities)
+        .from(taxLiabilities)
         .where(
           and(
-            lte(tax_liabilities.due_date, today),
-            eq(tax_liabilities.status, 'pending')
+            lte(taxLiabilities.due_date, today),
+            eq(taxLiabilities.status, 'pending')
           )
         );
 
@@ -298,15 +298,15 @@ export class TaxRemittanceService {
       for (const liability of overdueLiabilities) {
         // Create compliance alert
         await db
-          .insert(tax_compliance_alerts)
+          .insert(taxComplianceAlerts)
           .values({
             alert_type: 'overdue',
             severity: 'critical',
             jurisdiction: liability.tax_jurisdiction,
-            tax_liability_id: liability.id,
+            taxLiabilityId: liability.id,
             message: `Tax liability of ${liability.tax_amount} for jurisdiction ${liability.tax_jurisdiction} is overdue (due ${liability.due_date})`,
             resolved: false,
-            created_at: new Date(),
+            createdAt: new Date(),
           });
 
         alertsCreated++;
@@ -333,8 +333,8 @@ export class TaxRemittanceService {
     try {
       return await db
         .select()
-        .from(tax_compliance_alerts)
-        .where(eq(tax_compliance_alerts.resolved, resolved));
+        .from(taxComplianceAlerts)
+        .where(eq(taxComplianceAlerts.resolved, resolved));
     } catch (error) {
       safeLogger.error('Error fetching compliance alerts:', error);
       throw error;
@@ -347,13 +347,13 @@ export class TaxRemittanceService {
   async resolveComplianceAlert(alertId: string, userId: string): Promise<void> {
     try {
       await db
-        .update(tax_compliance_alerts)
+        .update(taxComplianceAlerts)
         .set({
           resolved: true,
           resolved_at: new Date(),
           resolved_by: userId,
         })
-        .where(eq(tax_compliance_alerts.id, alertId));
+        .where(eq(taxComplianceAlerts.id, alertId));
 
       safeLogger.info('Compliance alert resolved:', { alertId, userId });
     } catch (error) {

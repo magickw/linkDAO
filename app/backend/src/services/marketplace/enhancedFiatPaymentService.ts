@@ -1,7 +1,7 @@
 import { DatabaseService } from './databaseService';
 import { safeLogger } from '../../utils/safeLogger';
 import { ExchangeRateService } from './exchangeRateService';
-import { NotificationService } from './notificationService';
+import { NotificationService } from '../notificationService';
 import { UserProfileService } from './userProfileService';
 
 export interface FiatPaymentRequest {

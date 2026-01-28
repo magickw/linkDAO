@@ -1179,6 +1179,10 @@ export const escrows = pgTable("escrows", {
   onChainId: varchar("on_chain_id", { length: 255 }),
   // Resolution details
   resolution: text("resolution"),
+  // Tax tracking
+  taxEscrowAmount: numeric("tax_escrow_amount").default("0"),
+  taxEscrowRemitted: boolean("tax_escrow_remitted").default(false),
+  taxEscrowRemittedAt: timestamp("tax_escrow_remitted_at"),
 });
 
 export const reputations = pgTable("reputations", {
@@ -6661,6 +6665,118 @@ export const virusScanLogs = pgTable("virus_scan_logs", {
 }, (t) => ({
   fileHashIdx: index("idx_virus_scan_logs_file_hash").on(t.fileHash),
   scannedAtIdx: index("idx_virus_scan_logs_scanned_at").on(t.scannedAt),
+}));
+
+
+// ============================================================================
+// TAX LIABILITY TRACKING SYSTEM
+// ============================================================================
+
+// Tax Liabilities - Individual tax obligations from each transaction
+export const taxLiabilities = pgTable("tax_liabilities", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  escrowId: uuid("escrow_id").references(() => escrows.id, { onDelete: "set null" }),
+  taxJurisdiction: varchar("tax_jurisdiction", { length: 100 }).notNull(),
+  taxRate: decimal("tax_rate", { precision: 10, scale: 6 }).notNull(),
+  taxAmount: decimal("tax_amount", { precision: 20, scale: 8 }).notNull(),
+  taxableAmount: decimal("taxable_amount", { precision: 20, scale: 8 }).notNull(),
+  taxType: varchar("tax_type", { length: 50 }).notNull(),
+  collectionDate: timestamp("collection_date").notNull().defaultNow(),
+  dueDate: timestamp("due_date").notNull(),
+  remittanceDate: timestamp("remittance_date"),
+  remittanceReference: varchar("remittance_reference", { length: 255 }),
+  status: varchar("status", { length: 50 }).notNull().default("pending"),
+  remittanceProvider: varchar("remittance_provider", { length: 100 }),
+  remittanceProviderId: varchar("remittance_provider_id", { length: 255 }),
+  transactionHash: varchar("transaction_hash", { length: 255 }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  metadata: jsonb("metadata"),
+}, (t) => ({
+  orderIdIdx: index("idx_tax_liabilities_order_id").on(t.orderId),
+  escrowIdIdx: index("idx_tax_liabilities_escrow_id").on(t.escrowId),
+  jurisdictionIdx: index("idx_tax_liabilities_jurisdiction").on(t.taxJurisdiction),
+  statusIdx: index("idx_tax_liabilities_status").on(t.status),
+  dueDateIdx: index("idx_tax_liabilities_due_date").on(t.dueDate),
+  collectionDateIdx: index("idx_tax_liabilities_collection_date").on(t.collectionDate),
+  jurisdictionStatusIdx: index("idx_tax_liabilities_jurisdiction_status").on(t.taxJurisdiction, t.status),
+}));
+
+// Tax Remittance Batches - Groups multiple tax liabilities for batch processing
+export const taxRemittanceBatches = pgTable("tax_remittance_batches", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  batchNumber: varchar("batch_number", { length: 50 }).unique().notNull(),
+  remittancePeriodStart: timestamp("remittance_period_start").notNull(),
+  remittancePeriodEnd: timestamp("remittance_period_end").notNull(),
+  totalTaxAmount: decimal("total_tax_amount", { precision: 20, scale: 8 }).notNull(),
+  totalLiabilities: integer("total_liabilities").notNull(),
+  jurisdictionBreakdown: jsonb("jurisdiction_breakdown"),
+  status: varchar("status", { length: 50 }).notNull().default("pending"),
+  filedAt: timestamp("filed_at"),
+  paidAt: timestamp("paid_at"),
+  remittanceProvider: varchar("remittance_provider", { length: 100 }),
+  remittanceProviderBatchId: varchar("remittance_provider_batch_id", { length: 255 }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  notes: text("notes"),
+}, (t) => ({
+  periodIdx: index("idx_tax_remittance_batches_period").on(t.remittancePeriodStart, t.remittancePeriodEnd),
+  statusIdx: index("idx_tax_remittance_batches_status").on(t.status),
+  createdAtIdx: index("idx_tax_remittance_batches_created_at").on(t.createdAt),
+}));
+
+// Tax Remittance Batch Items - Mapping of tax liabilities to batches
+export const taxRemittanceBatchItems = pgTable("tax_remittance_batch_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  batchId: uuid("batch_id").notNull().references(() => taxRemittanceBatches.id, { onDelete: "cascade" }),
+  taxLiabilityId: uuid("tax_liability_id").notNull().references(() => taxLiabilities.id, { onDelete: "cascade" }),
+}, (t) => ({
+  batchIdIdx: index("idx_tax_batch_items_batch_id").on(t.batchId),
+  liabilityIdIdx: index("idx_tax_batch_items_liability_id").on(t.taxLiabilityId),
+}));
+
+// Tax Filings - Records tax filings with authorities for audit and compliance
+export const taxFilings = pgTable("tax_filings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  batchId: uuid("batch_id").references(() => taxRemittanceBatches.id, { onDelete: "set null" }),
+  jurisdiction: varchar("jurisdiction", { length: 100 }).notNull(),
+  filingType: varchar("filing_type", { length: 50 }).notNull(),
+  filingPeriodStart: timestamp("filing_period_start").notNull(),
+  filingPeriodEnd: timestamp("filing_period_end").notNull(),
+  grossSales: decimal("gross_sales", { precision: 20, scale: 8 }).notNull(),
+  taxableSales: decimal("taxable_sales", { precision: 20, scale: 8 }).notNull(),
+  taxCollected: decimal("tax_collected", { precision: 20, scale: 8 }).notNull(),
+  taxDue: decimal("tax_due", { precision: 20, scale: 8 }).notNull(),
+  status: varchar("status", { length: 50 }).notNull().default("draft"),
+  filedAt: timestamp("filed_at"),
+  acceptedAt: timestamp("accepted_at"),
+  filingReference: varchar("filing_reference", { length: 255 }),
+  filingProvider: varchar("filing_provider", { length: 100 }),
+  filingProviderId: varchar("filing_provider_id", { length: 255 }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  jurisdictionIdx: index("idx_tax_filings_jurisdiction").on(t.jurisdiction),
+  periodIdx: index("idx_tax_filings_period").on(t.filingPeriodStart, t.filingPeriodEnd),
+  statusIdx: index("idx_tax_filings_status").on(t.status),
+}));
+
+// Tax Compliance Alerts - Monitoring and notifications for tax compliance
+export const taxComplianceAlerts = pgTable("tax_compliance_alerts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  alertType: varchar("alert_type", { length: 100 }).notNull(),
+  severity: varchar("severity", { length: 50 }).notNull().default("info"),
+  jurisdiction: varchar("jurisdiction", { length: 100 }),
+  taxLiabilityId: uuid("tax_liability_id").references(() => taxLiabilities.id, { onDelete: "set null" }),
+  message: text("message").notNull(),
+  resolved: boolean("resolved").notNull().default(false),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: uuid("resolved_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  resolvedIdx: index("idx_tax_compliance_alerts_resolved").on(t.resolved),
+  createdAtIdx: index("idx_tax_compliance_alerts_created_at").on(t.createdAt),
 }));
 
 

@@ -1,7 +1,7 @@
 import { ethers, Contract } from 'ethers';
 import { db } from '../../db';
 import { safeLogger } from '../../utils/safeLogger';
-import { escrows, tax_liabilities } from '../../db/schema';
+import { escrows, taxLiabilities } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 
 /**

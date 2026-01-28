@@ -2,10 +2,10 @@ import { CronJob } from 'cron';
 import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../../db';
 import {
-  tax_liabilities,
-  tax_remittance_batches,
-  tax_filings,
-  tax_compliance_alerts,
+  taxLiabilities,
+  taxRemittanceBatches,
+  taxFilings,
+  taxComplianceAlerts,
 } from '../../db/schema';
 import { eq, gte, lte, and } from 'drizzle-orm';
 import { taxRemittanceService, TaxPeriod } from './taxRemittanceService';
@@ -249,9 +249,9 @@ export class TaxReportingSchedulingService {
 
       const liabilities = await db
         .select()
-        .from(tax_liabilities)
+        .from(taxLiabilities)
         .where(
-          gte(tax_liabilities.collection_date, weekAgo)
+          gte(taxLiabilities.collection_date, weekAgo)
         );
 
       const jurisdictions = new Set(liabilities.map(l => l.tax_jurisdiction));
@@ -312,11 +312,11 @@ export class TaxReportingSchedulingService {
       // Get all pending and overdue taxes
       const overdueLiabilities = await db
         .select()
-        .from(tax_liabilities)
+        .from(taxLiabilities)
         .where(
           and(
-            lte(tax_liabilities.due_date, today),
-            eq(tax_liabilities.status, 'pending')
+            lte(taxLiabilities.due_date, today),
+            eq(taxLiabilities.status, 'pending')
           )
         );
 
@@ -326,7 +326,7 @@ export class TaxReportingSchedulingService {
       // Get filing status
       const filings = await db
         .select()
-        .from(tax_filings);
+        .from(taxFilings);
 
       const filedCount = filings.filter(f => f.status === 'filed').length;
       const acceptedCount = filings.filter(f => f.status === 'accepted').length;

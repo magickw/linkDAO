@@ -33,7 +33,7 @@ import {
   SellerNotificationTiming,
 } from '../../types/sellerNotification';
 import { DatabaseService } from './databaseService';
-import { NotificationService } from './notificationService';
+import { NotificationService } from '../notificationService';
 import { WebSocketService } from '../websocket/webSocketService';
 import { EmailService } from './emailService';
 import { safeLogger } from '../../utils/safeLogger';

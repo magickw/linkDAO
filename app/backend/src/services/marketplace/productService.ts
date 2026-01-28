@@ -18,8 +18,8 @@ import {
 } from '../../models/Product';
 import { DatabaseService } from './databaseService';
 import { safeLogger } from '../../utils/safeLogger';
-import { MetadataService } from './metadataService';
-import { priceOracleService } from './priceOracleService';
+import { MetadataService } from '../metadataService';
+import { priceOracleService } from '../priceOracleService';
 import { ValidationHelper, ValidationError } from '../../models/validation';
 import { eq, and, or, like, gte, lte, inArray, desc, asc, isNull, sql } from 'drizzle-orm';
 import * as schema from '../../db/schema';

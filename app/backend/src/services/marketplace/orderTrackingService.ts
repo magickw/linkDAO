@@ -6,7 +6,7 @@
 import { DatabaseService } from './databaseService';
 import { safeLogger } from '../../utils/safeLogger';
 import { UserProfileService } from './userProfileService';
-import { NotificationService } from './notificationService';
+import { NotificationService } from '../notificationService';
 import { OrderService } from './orderService';
 import {
   MarketplaceOrder,

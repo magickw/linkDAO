@@ -2,7 +2,7 @@ import { DatabaseService } from './databaseService';
 import { safeLogger } from '../../utils/safeLogger';
 import { reputationService } from './reputationService';
 import { kycService } from './kycService';
-import { AIModerationOrchestrator, ContentInput } from './aiModerationOrchestrator';
+import { AIModerationOrchestrator, ContentInput } from '../aiModerationOrchestrator';
 import EvidenceStorageService from './evidenceStorageService';
 import { UserProfileService } from './userProfileService';
 import { z } from 'zod';
@@ -46,6 +46,7 @@ export const ScamPattern = z.enum([
 // Marketplace moderation interfaces
 export interface MarketplaceListingInput extends ContentInput {
   type: 'listing';
+  id: string;
   listingData: {
     title: string;
     description: string;

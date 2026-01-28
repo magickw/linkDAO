@@ -3,7 +3,7 @@ import { orders, orderEvents, orderAutomationLogs } from '../../db/schema';
 import { eq, and, lt, isNull, sql, or, inArray, gt } from 'drizzle-orm';
 import { safeLogger } from '../../utils/safeLogger';
 import { OrderService } from './orderService';
-import { NotificationService } from './notificationService';
+import { NotificationService } from '../notificationService';
 import { OrderStatus } from '../../models/Order';
 
 const orderService = new OrderService();

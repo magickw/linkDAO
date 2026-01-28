@@ -4,7 +4,7 @@ import { DatabaseService } from './databaseService';
 import { UserProfileService } from './userProfileService';
 import { EnhancedEscrowService } from '../enhancedEscrowService';
 import { ShippingService } from './shippingService';
-import { NotificationService } from './notificationService';
+import { NotificationService } from '../notificationService';
 import { BlockchainEventService } from '../blockchainEventService';
 import { getOrderWebSocketService } from '../../services/websocket/orderWebSocketService';
 import {

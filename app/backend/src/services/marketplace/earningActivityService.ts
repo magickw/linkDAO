@@ -7,7 +7,7 @@ import {
   posts,
   reactions
 } from '../../db/schema';
-import { notificationService } from './notificationService';
+import { notificationService } from '../notificationService';
 import { reputationService } from './reputationService';
 
 export interface EarningActivityData {

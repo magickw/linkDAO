@@ -1,6 +1,6 @@
 import { WebSocketService } from './websocket/webSocketService';
 import { safeLogger } from '../../utils/safeLogger';
-import { notificationService } from './notificationService';
+import { notificationService } from '../notificationService';
 
 export interface EarningNotification {
   userId: string;

@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import { db } from '../../db';
 import { safeLogger } from '../../utils/safeLogger';
-import { tax_liabilities } from '../../db/schema';
+import { taxLiabilities } from '../../db/schema';
 import { taxRemittanceService } from './taxRemittanceService';
 
 /**
@@ -285,21 +285,21 @@ export class StripeTaxIntegrationService {
       const dueDate = new Date(today.getFullYear(), (quarter + 1) * 3, 15);
 
       await db
-        .insert(tax_liabilities)
+        .insert(taxLiabilities)
         .values({
-          order_id: orderId,
-          tax_jurisdiction: taxJurisdiction,
-          tax_rate: 0.08, // Default rate, should be calculated from Stripe Tax
-          tax_amount: taxAmount,
-          taxable_amount: (paymentIntent.amount || 0) / 100 - taxAmount,
-          tax_type: 'sales_tax',
-          collection_date: new Date(paymentIntent.created * 1000),
-          due_date: dueDate,
+          orderId: orderId,
+          taxJurisdiction: taxJurisdiction,
+          taxRate: 0.08, // Default rate, should be calculated from Stripe Tax
+          taxAmount: taxAmount,
+          taxableAmount: (paymentIntent.amount || 0) / 100 - taxAmount,
+          taxType: 'sales_tax',
+          collectionDate: new Date(paymentIntent.created * 1000),
+          dueDate: dueDate,
           status: 'calculated',
-          remittance_provider: 'stripe_tax',
-          remittance_provider_id: paymentIntent.id,
-          created_at: new Date(),
-          updated_at: new Date(),
+          remittanceProvider: 'stripe_tax',
+          remittanceProviderId: paymentIntent.id,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         });
     } catch (error) {
       safeLogger.error('Error recording tax liability:', error);
@@ -328,23 +328,23 @@ export class StripeTaxIntegrationService {
       // Get original tax liability
       const [taxLiability] = await db
         .select()
-        .from(tax_liabilities)
+        .from(taxLiabilities)
         .where(
-          db.sql`${tax_liabilities.remittance_provider_id} = ${charge.payment_intent as string}`
+          db.sql`${taxLiabilities.remittanceProviderId} = ${charge.payment_intent as string}`
         )
         .limit(1);
 
       if (taxLiability) {
-        const refundTaxAmount = (charge.amount_refunded * taxLiability.tax_amount) / (taxLiability.tax_amount + taxLiability.taxable_amount);
+        const refundTaxAmount = (charge.amount_refunded * taxLiability.taxAmount) / (taxLiability.taxAmount + taxLiability.taxableAmount);
 
         await db
-          .update(tax_liabilities)
+          .update(taxLiabilities)
           .set({
-            tax_amount: taxLiability.tax_amount - refundTaxAmount,
+            taxAmount: taxLiability.taxAmount - refundTaxAmount,
             status: 'partial',
-            updated_at: new Date(),
+            updatedAt: new Date(),
           })
-          .where(db.sql`${tax_liabilities.remittance_provider_id} = ${charge.payment_intent as string}`);
+          .where(db.sql`${taxLiabilities.remittanceProviderId} = ${charge.payment_intent as string}`);
       }
     } catch (error) {
       safeLogger.error('Error handling tax refund:', error);

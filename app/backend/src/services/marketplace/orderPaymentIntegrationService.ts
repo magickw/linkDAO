@@ -1,8 +1,8 @@
 import { DatabaseService } from './databaseService';
 import { safeLogger } from '../../utils/safeLogger';
-import { NotificationService } from './notificationService';
+import { NotificationService } from '../notificationService';
 import { PaymentValidationService } from './paymentValidationService';
-import { EnhancedEscrowService } from './enhancedEscrowService';
+import { EnhancedEscrowService } from '../enhancedEscrowService';
 import { EnhancedFiatPaymentService } from './enhancedFiatPaymentService';
 import { ReceiptService } from './receiptService';
 import { emailService } from './emailService';

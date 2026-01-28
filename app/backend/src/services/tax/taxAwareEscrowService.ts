@@ -3,7 +3,7 @@ import { safeLogger } from '../../utils/safeLogger';
 import {
   escrows,
   orders,
-  tax_liabilities,
+  taxLiabilities,
 } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { EnhancedEscrowService } from '../enhancedEscrowService';
@@ -57,7 +57,7 @@ export class TaxAwareEscrowService {
       const [order] = await db
         .select()
         .from(orders)
-        .where(eq(orders.id, escrow.order_id || ''));
+        .where(eq(orders.id, escrow.orderId || ''));
 
       if (!order) {
         throw new Error(`Order not found for escrow: ${escrowId}`);
@@ -66,17 +66,17 @@ export class TaxAwareEscrowService {
       // Get existing tax liability if one exists
       const [existingTaxLiability] = await db
         .select()
-        .from(tax_liabilities)
-        .where(eq(tax_liabilities.order_id, order.id));
+        .from(taxLiabilities)
+        .where(eq(taxLiabilities.orderId, order.id));
 
       const taxAmount = existingTaxLiability?.tax_amount || 0;
       const totalEscrowAmount = escrow.amount;
-      const sellerAmount = totalEscrowAmount - (order.platform_fee || 0) - taxAmount;
+      const sellerAmount = totalEscrowAmount - (order.platformFee || 0) - taxAmount;
 
       safeLogger.info('Funds breakdown:', {
         totalEscrowAmount,
         sellerAmount,
-        platformFee: order.platform_fee,
+        platformFee: order.platformFee,
         taxAmount,
       });
 
@@ -87,7 +87,7 @@ export class TaxAwareEscrowService {
           escrow,
           order,
           sellerAmount,
-          order.platform_fee || 0,
+          order.platformFee || 0,
           taxAmount,
           chainId
         );
@@ -99,7 +99,7 @@ export class TaxAwareEscrowService {
         escrow,
         order,
         sellerAmount,
-        order.platform_fee || 0,
+        order.platformFee || 0,
         taxAmount
       );
     } catch (error) {
@@ -134,7 +134,7 @@ export class TaxAwareEscrowService {
       });
 
       // Create tax liability on blockchain if not already created
-      if (taxAmount > 0 && !escrow.tax_escrow_amount) {
+      if (taxAmount > 0 && !escrow.taxEscrowAmount) {
         const jurisdiction = await this.getJurisdictionFromOrder(order);
         const dueDate = new Date();
         dueDate.setDate(dueDate.getDate() + 90); // 90 days for quarterly filing
@@ -171,7 +171,7 @@ export class TaxAwareEscrowService {
       // Fund tax escrow
       if (taxAmount > 0) {
         await cryptoTaxEscrowService.fundTaxLiability(
-          parseInt(escrow.tax_escrow_amount || '0'),
+          parseInt(escrow.taxEscrowAmount || '0'),
           taxAmount,
           escrow.token_address || 'ETH'
         );
@@ -232,18 +232,18 @@ export class TaxAwareEscrowService {
       if (taxAmount > 0) {
         const [taxLiability] = await db
           .select()
-          .from(tax_liabilities)
-          .where(eq(tax_liabilities.order_id, order.id));
+          .from(taxLiabilities)
+          .where(eq(taxLiabilities.orderId, order.id));
 
         if (taxLiability) {
           await db
-            .update(tax_liabilities)
+            .update(taxLiabilities)
             .set({
               status: 'paid',
               remittance_date: new Date(),
               updated_at: new Date(),
             })
-            .where(eq(tax_liabilities.id, taxLiability.id));
+            .where(eq(taxLiabilities.id, taxLiability.id));
         }
       }
 
@@ -359,9 +359,9 @@ export class TaxAwareEscrowService {
       const liabilities = jurisdiction
         ? await db
             .select()
-            .from(tax_liabilities)
-            .where(eq(tax_liabilities.tax_jurisdiction, jurisdiction))
-        : await db.select().from(tax_liabilities);
+            .from(taxLiabilities)
+            .where(eq(taxLiabilities.tax_jurisdiction, jurisdiction))
+        : await db.select().from(taxLiabilities);
 
       const pending = liabilities.filter(l => l.status === 'pending').length;
       const pending_amount = liabilities

@@ -2,7 +2,7 @@ import { DatabaseService } from './databaseService';
 import { safeLogger } from '../../utils/safeLogger';
 import { OrderService } from './orderService';
 import { ShippingService } from './shippingService';
-import { NotificationService } from './notificationService';
+import { NotificationService } from '../notificationService';
 import { OrderStatus } from '../../models/Order';
 import crypto from 'crypto';
 import { ValidationError, NotFoundError, UnauthorizedError } from '../middleware/errorHandler';
