@@ -154,7 +154,7 @@ export const SendTokenForm: React.FC<SendTokenFormProps> = ({ onClose, initialRe
 
   if (showPreview && canShowPreview) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="p-6 pb-8 space-y-6">
         <div className="text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-4">
             <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
@@ -236,7 +236,7 @@ export const SendTokenForm: React.FC<SendTokenFormProps> = ({ onClose, initialRe
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 pb-8 space-y-6">
       {/* Your Balance Card */}
       <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 dark:from-purple-500/20 dark:to-pink-500/20 rounded-2xl p-4 border border-purple-200 dark:border-purple-800">
         <div className="flex items-center gap-3">

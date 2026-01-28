@@ -148,7 +148,8 @@ export default function BottomSheet({
       case 'half':
         return 'h-1/2';
       default:
-        return 'max-h-[90vh]';
+        // On desktop, allow the sheet to be taller to accommodate more content
+        return 'max-h-[95vh] md:max-h-[85vh]';
     }
   };
 
@@ -212,7 +213,7 @@ export default function BottomSheet({
         )}
 
         {/* Content */}
-        <div className={`flex-1 overflow-y-auto ${title ? '' : 'pt-2'}`}>
+        <div className={`flex-1 overflow-y-auto pb-4 ${title ? '' : 'pt-2'}`}>
           {children}
         </div>
       </div>
