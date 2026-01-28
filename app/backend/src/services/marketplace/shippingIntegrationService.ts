@@ -105,8 +105,7 @@ class ShippingIntegrationService {
             // Store in database
             await db.insert(shippingLabels).values({
                 orderId,
-                easypostShipmentId: boughtShipment.id,
-                easypostTrackerId: boughtShipment.tracker?.id || null,
+                                  easypostShipmentId: boughtShipment.id as string,                easypostTrackerId: boughtShipment.tracker?.id || null,
                 trackingNumber: boughtShipment.tracking_code || '',
                 carrier: boughtShipment.selected_rate?.carrier || '',
                 service: boughtShipment.selected_rate?.service || '',
