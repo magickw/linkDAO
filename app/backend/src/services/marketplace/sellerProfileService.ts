@@ -560,14 +560,13 @@ export class SellerProfileService {
       websiteUrl: seller.websiteUrl || undefined,
       socialLinks: seller.socialLinks ? this.parseSocialLinks(seller.socialLinks) : undefined,
       storeDescription: seller.storeDescription || undefined,
-      tier: seller.tier || 'basic',
-      verificationStatus: {
-        email: seller.emailVerified || false,
-        phone: seller.phoneVerified || false,
-        kyc: (seller.kycStatus as any) || 'none',
-        identity: seller.kycStatus === 'approved',
-      },
-      applicationStatus: (seller.kycStatus === 'approved' || seller.isVerified) ? 'approved' : 
+              tier: seller.tier || 'basic',
+              verificationStatus: {
+                email: seller.emailVerified || false,
+                phone: seller.phoneVerified || false,
+                kyc: (seller.kycStatus as 'none' | 'pending' | 'approved' | 'rejected') || 'none', // Cast to valid KYC status
+                identity: seller.kycStatus === 'approved',
+              } as SellerProfile['verificationStatus'],      applicationStatus: (seller.kycStatus === 'approved' || seller.isVerified) ? 'approved' : 
                          (seller.kycStatus === 'rejected') ? 'rejected' : 'approved', // Default to approved for existing sellers
       onboardingCompleted: seller.onboardingCompleted || false,
       onboardingSteps: this.parseOnboardingSteps(seller.onboardingSteps),
