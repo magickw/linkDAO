@@ -401,6 +401,17 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                   </svg>
                   <span>LDAO Dashboard</span>
                 </button>
+
+                {/* Transaction History */}
+                <button
+                  onClick={() => router.push('/wallet?tab=history')}
+                  className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-orange-900/30 dark:hover:to-red-900/30 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
+                >
+                  <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Transaction History</span>
+                </button>
               </div>
             </div>
 

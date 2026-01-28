@@ -1,5 +1,5 @@
 /**
- * Transaction History - Displays user's LDAO token transaction history
+ * Transaction History - Displays user's LDAO token transaction history with enhanced visual design
  */
 
 import React, { useState, useEffect } from 'react';
@@ -16,7 +16,14 @@ import {
   Gift,
   Download,
   Filter,
-  ExternalLink
+  ExternalLink,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Copy,
+  Zap,
+  DollarSign
 } from 'lucide-react';
 
 type Transaction = Awaited<ReturnType<typeof transactionHistoryService.getCombinedHistory>>[0];
@@ -94,24 +101,50 @@ const TransactionHistory: React.FC = () => {
     window.open(getEtherscanUrl(txHash), '_blank', 'noopener,noreferrer');
   };
 
+  const handleCopyHash = (hash: string) => {
+    navigator.clipboard.writeText(hash);
+  };
+
   const getTransactionIcon = (type: string) => {
+    const iconClass = "w-6 h-6";
     switch (type) {
       case 'transfer':
-        return <ArrowDownLeft className="text-green-400" size={16} />;
+        return <ArrowDownLeft className="text-green-400" size={20} />;
       case 'mint':
-        return <ArrowDownLeft className="text-blue-400" size={16} />;
+        return <ArrowDownLeft className="text-blue-400" size={20} />;
       case 'burn':
-        return <ArrowUpRight className="text-red-400" size={16} />;
+        return <ArrowUpRight className="text-red-400" size={20} />;
       case 'stake':
-        return <Lock className="text-purple-400" size={16} />;
+        return <Lock className="text-purple-400" size={20} />;
       case 'unstake':
-        return <Unlock className="text-yellow-400" size={16} />;
+        return <Unlock className="text-yellow-400" size={20} />;
       case 'claim':
-        return <Gift className="text-green-400" size={16} />;
+        return <Gift className="text-green-400" size={20} />;
       case 'purchase':
-        return <ArrowDownLeft className="text-blue-400" size={16} />;
+        return <Zap className="text-blue-400" size={20} />;
       default:
-        return <ArrowDownLeft className="text-gray-400" size={16} />;
+        return <ArrowDownLeft className="text-gray-400" size={20} />;
+    }
+  };
+
+  const getTransactionIconBackground = (type: string) => {
+    switch (type) {
+      case 'transfer':
+        return 'from-green-500/20 to-green-600/20';
+      case 'mint':
+        return 'from-blue-500/20 to-blue-600/20';
+      case 'burn':
+        return 'from-red-500/20 to-red-600/20';
+      case 'stake':
+        return 'from-purple-500/20 to-purple-600/20';
+      case 'unstake':
+        return 'from-yellow-500/20 to-yellow-600/20';
+      case 'claim':
+        return 'from-green-500/20 to-green-600/20';
+      case 'purchase':
+        return 'from-blue-500/20 to-blue-600/20';
+      default:
+        return 'from-gray-500/20 to-gray-600/20';
     }
   };
 
@@ -136,84 +169,141 @@ const TransactionHistory: React.FC = () => {
     }
   };
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'success':
+        return <CheckCircle className="w-4 h-4 text-green-400" />;
+      case 'failed':
+        return <XCircle className="w-4 h-4 text-red-400" />;
+      case 'pending':
+        return <Clock className="w-4 h-4 text-yellow-400 animate-pulse" />;
+      default:
+        return <AlertCircle className="w-4 h-4 text-gray-400" />;
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'success':
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-500/20 text-green-400 border border-green-500/30">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Success
+          </span>
+        );
+      case 'failed':
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-400 border border-red-500/30">
+            <XCircle className="w-3 h-3 mr-1" />
+            Failed
+          </span>
+        );
+      case 'pending':
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+            <Clock className="w-3 h-3 mr-1 animate-pulse" />
+            Pending
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-500/20 text-gray-400 border border-gray-500/30">
+            <AlertCircle className="w-3 h-3 mr-1" />
+            Unknown
+          </span>
+        );
+    }
+  };
+
   if (!isConnected) {
     return (
-      <GlassPanel variant="secondary" className="p-6 text-center">
-        <div className="text-white/50 mb-4">
-          <Filter size={48} className="mx-auto" />
+      <GlassPanel variant="secondary" className="p-8 text-center">
+        <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6">
+          <Filter size={40} className="text-white/50" />
         </div>
-        <h3 className="text-xl font-bold text-white mb-2">Connect Wallet for History</h3>
-        <p className="text-white/70 mb-4">
+        <h3 className="text-2xl font-bold text-white mb-3">Connect Wallet for History</h3>
+        <p className="text-white/70 mb-6 max-w-md mx-auto">
           Connect your wallet to view your LDAO token transaction history.
         </p>
-        <Button variant="primary">Connect Wallet</Button>
+        <Button variant="primary" className="px-8 py-3">Connect Wallet</Button>
       </GlassPanel>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 className="text-2xl font-bold text-white">Transaction History</h2>
-        
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Button
-              variant={filter === 'all' ? 'primary' : 'outline'}
-              onClick={() => setFilter('all')}
-              className="py-2 px-3 text-sm"
-            >
-              All
-            </Button>
-            <Button
-              variant={filter === 'transfers' ? 'primary' : 'outline'}
-              onClick={() => setFilter('transfers')}
-              className="py-2 px-3 text-sm"
-            >
-              Transfers
-            </Button>
-            <Button
-              variant={filter === 'staking' ? 'primary' : 'outline'}
-              onClick={() => setFilter('staking')}
-              className="py-2 px-3 text-sm"
-            >
-              Staking
-            </Button>
-            <Button
-              variant={filter === 'purchases' ? 'primary' : 'outline'}
-              onClick={() => setFilter('purchases')}
-              className="py-2 px-3 text-sm"
-            >
-              Purchases
-            </Button>
+      {/* Enhanced Header with gradient */}
+      <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-6 shadow-lg">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-bold text-white mb-1">Transaction History</h2>
+            <p className="text-white/80 text-sm">
+              {transactions.length} {transactions.length === 1 ? 'transaction' : 'transactions'}
+            </p>
           </div>
           
-          <Button
-            variant="outline"
-            onClick={handleExport}
-            className="flex items-center gap-2 py-2 px-3 text-sm border-white/30 text-white hover:bg-white/10"
-          >
-            <Download size={16} />
-            Export
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-xl p-1">
+              <Button
+                variant={filter === 'all' ? 'primary' : 'ghost'}
+                onClick={() => setFilter('all')}
+                className="py-2 px-4 text-sm font-medium"
+              >
+                All
+              </Button>
+              <Button
+                variant={filter === 'transfers' ? 'primary' : 'ghost'}
+                onClick={() => setFilter('transfers')}
+                className="py-2 px-4 text-sm font-medium"
+              >
+                Transfers
+              </Button>
+              <Button
+                variant={filter === 'staking' ? 'primary' : 'ghost'}
+                onClick={() => setFilter('staking')}
+                className="py-2 px-4 text-sm font-medium"
+              >
+                Staking
+              </Button>
+              <Button
+                variant={filter === 'purchases' ? 'primary' : 'ghost'}
+                onClick={() => setFilter('purchases')}
+                className="py-2 px-4 text-sm font-medium"
+              >
+                Purchases
+              </Button>
+            </div>
+            
+            <Button
+              variant="outline"
+              onClick={handleExport}
+              className="flex items-center gap-2 py-2 px-4 text-sm bg-white/20 border-white/30 text-white hover:bg-white/30 backdrop-blur-sm"
+            >
+              <Download size={16} />
+              Export CSV
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Loading State */}
+      {/* Enhanced Loading State */}
       {loading && (
-        <GlassPanel variant="secondary" className="p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
-          <p className="text-white/70 mt-2">Loading transaction history...</p>
+        <GlassPanel variant="secondary" className="p-12 text-center">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent mb-4"></div>
+            <p className="text-white/80 text-lg font-medium">Loading transaction history...</p>
+          </div>
         </GlassPanel>
       )}
 
-      {/* Empty State */}
+      {/* Enhanced Empty State */}
       {!loading && transactions.length === 0 && (
-        <GlassPanel variant="secondary" className="p-8 text-center">
-          <Filter className="mx-auto text-white/50 mb-4" size={48} />
-          <h3 className="text-xl font-bold text-white mb-2">No Transactions Found</h3>
-          <p className="text-white/70">
+        <GlassPanel variant="secondary" className="p-12 text-center">
+          <div className="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Filter size={48} className="text-white/50" />
+          </div>
+          <h3 className="text-2xl font-bold text-white mb-3">No Transactions Found</h3>
+          <p className="text-white/70 max-w-md mx-auto">
             {filter === 'all' 
               ? "You don't have any LDAO token transactions yet." 
               : filter === 'purchases'
@@ -223,21 +313,26 @@ const TransactionHistory: React.FC = () => {
         </GlassPanel>
       )}
 
-      {/* Transaction List */}
+      {/* Enhanced Transaction List */}
       {!loading && transactions.length > 0 && (
         <div className="space-y-4">
           {transactions.map((tx, index) => (
-            <GlassPanel key={index} variant="secondary" className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+            <GlassPanel 
+              key={index} 
+              variant="secondary" 
+              className="p-5 hover:bg-white/5 transition-all group border border-white/10 hover:border-purple-500/50"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-4">
+                  <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${getTransactionIconBackground('value' in tx ? tx.type : tx.type)} flex items-center justify-center flex-shrink-0`}>
                     {getTransactionIcon('value' in tx ? tx.type : tx.type)}
                   </div>
                   <div>
-                    <div className="font-medium text-white">
+                    <div className="font-bold text-white text-lg">
                       {getTransactionTypeLabel('value' in tx ? tx.type : tx.type)}
                     </div>
-                    <div className="text-sm text-white/70">
+                    <div className="text-sm text-white/60 flex items-center gap-2 mt-1">
+                      <Clock size={14} />
                       {normalizeTimestamp(tx.timestamp).toLocaleString()}
                     </div>
                   </div>
@@ -246,32 +341,34 @@ const TransactionHistory: React.FC = () => {
                 <div className="text-right">
                   {'value' in tx ? (
                     <>
-                      <div className={`font-bold ${tx.from === address ? 'text-red-400' : 'text-green-400'}`}>
+                      <div className={`font-bold text-2xl ${tx.from === address ? 'text-red-400' : 'text-green-400'}`}>
                         {tx.from === address ? '-' : '+'}{tx.value} LDAO
                       </div>
-                      <div className="text-sm text-white/70">
+                      <div className="text-sm text-white/70 mt-1">
                         {tx.from === address ? `To: ${formatAddress(tx.to)}` : `From: ${formatAddress(tx.from)}`}
                       </div>
                     </>
                   ) : tx.type === 'purchase' ? (
                     <>
-                      <div className="font-bold text-blue-400">
+                      <div className="font-bold text-2xl text-blue-400">
                         +{tx.amount} LDAO
                       </div>
-                      <div className="text-sm text-white/70">
+                      <div className="text-sm text-white/70 mt-1 flex items-center justify-end gap-1">
+                        <DollarSign size={14} />
                         Paid {tx.cost} {tx.currency}
                       </div>
                     </>
                   ) : (
                     <>
-                      <div className={`font-bold ${
+                      <div className={`font-bold text-2xl ${
                         tx.type === 'stake' ? 'text-purple-400' : 
                         tx.type === 'unstake' ? 'text-yellow-400' : 'text-green-400'
                       }`}>
                         {tx.type === 'claim' ? '+' : ''}{tx.amount} LDAO
                       </div>
                       {tx.rewardAmount && (
-                        <div className="text-sm text-green-400">
+                        <div className="text-sm text-green-400 mt-1 flex items-center justify-end gap-1">
+                          <Gift size={14} />
                           +{tx.rewardAmount} Rewards
                         </div>
                       )}
@@ -280,20 +377,23 @@ const TransactionHistory: React.FC = () => {
                 </div>
               </div>
               
-              <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-sm">
+              <div className="pt-4 border-t border-white/10 flex items-center justify-between">
                 <button
                   onClick={() => openEtherscan(tx.hash)}
-                  className="flex items-center gap-1 text-white/70 hover:text-blue-400 transition-colors group"
+                  className="flex items-center gap-2 text-sm text-white/70 hover:text-blue-400 transition-colors group/btn"
                 >
-                  <span>Tx: {tx.hash.substring(0, 10)}...{tx.hash.substring(tx.hash.length - 8)}</span>
-                  <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ExternalLink size={16} className="opacity-70 group-hover/btn:opacity-100" />
+                  <span className="font-mono text-xs">{tx.hash.substring(0, 10)}...{tx.hash.substring(tx.hash.length - 8)}</span>
                 </button>
-                <div className={`px-2 py-1 rounded text-xs ${
-                  tx.status === 'success'
-                    ? 'bg-green-500/20 text-green-400'
-                    : 'bg-red-500/20 text-red-400'
-                }`}>
-                  {tx.status}
+                <div className="flex items-center gap-3">
+                  {getStatusBadge(tx.status)}
+                  <button
+                    onClick={() => handleCopyHash(tx.hash)}
+                    className="p-2 text-white/50 hover:text-white/80 hover:bg-white/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                    title="Copy transaction hash"
+                  >
+                    <Copy size={16} />
+                  </button>
                 </div>
               </div>
             </GlassPanel>

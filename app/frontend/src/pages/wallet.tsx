@@ -492,16 +492,102 @@ export default function Wallet() {
                       setActiveTab('history');
                       addToast('Viewing transaction history', 'info');
                     }}
-                    className="flex flex-col items-center justify-center p-4 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/40 rounded-lg transition-colors"
+                    className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-lg transition-colors shadow-md hover:shadow-lg"
                   >
-                    <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center mb-2">
+                    <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mb-2">
                       <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">History</span>
+                    <span className="text-sm font-bold text-white">History</span>
                   </button>
                 </div>
+              </div>
+
+              {/* Recent Transactions - Prominent Section */}
+              <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8 border-2 border-orange-200 dark:border-orange-900">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900 dark:text-white">Recent Transactions</h2>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">View your latest activity</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('history')}
+                    className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-sm font-semibold rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+                  >
+                    View All
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+
+                {transactions.length === 0 ? (
+                  <div className="text-center py-8 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                    <svg className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-gray-500 dark:text-gray-400 font-medium">No recent transactions</p>
+                    <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Your transaction history will appear here</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {transactions.slice(0, 5).map((tx) => (
+                      <div
+                        key={tx.id}
+                        className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer"
+                        onClick={() => setActiveTab('history')}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                            tx.type === 'receive' 
+                              ? 'bg-green-100 dark:bg-green-900/30' 
+                              : tx.type === 'send'
+                                ? 'bg-red-100 dark:bg-red-900/30'
+                                : 'bg-blue-100 dark:bg-blue-900/30'
+                          }`}>
+                            {tx.type === 'receive' ? (
+                              <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                              </svg>
+                            ) : tx.type === 'send' ? (
+                              <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                              </svg>
+                            ) : (
+                              <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4" />
+                              </svg>
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900 dark:text-white capitalize">
+                              {tx.type === 'receive' ? 'Received' : tx.type === 'send' ? 'Sent' : tx.type}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {new Date(tx.timestamp).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={`font-bold ${tx.type === 'receive' ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
+                            {tx.type === 'receive' ? '+' : '-'}{tx.amount} {tx.token.symbol}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {formatCurrency(parseFloat(tx.valueUSD))}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Your Assets */}
