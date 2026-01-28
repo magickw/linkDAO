@@ -41,6 +41,7 @@ import { SpecificationPreview } from '../../Marketplace/Seller/SpecificationPrev
 
 import { marketplaceMessagingService } from '../../../services/marketplaceMessagingService';
 import { MessageSquare } from 'lucide-react';
+import { ReferralShare } from './ReferralShare';
 
 interface ProductDetailPageProps {
   product: {
@@ -892,6 +893,11 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 >
                   <Share2 size={20} className="text-white" />
                 </Button>
+              </div>
+
+              {/* Referral Sharing */}
+              <div className="mb-6">
+                <ReferralShare productTitle={product.title} />
               </div>
 
               {/* Trust Signals */}

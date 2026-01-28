@@ -10,6 +10,8 @@ import { marketplaceService } from '@/services/marketplaceService';
 import { mockProducts } from '@/data/mockProducts';
 import { cartService } from '@/services/cartService';
 import { wishlistService } from '@/services/wishlistService';
+import { recentlyViewedService } from '@/services/recentlyViewedService';
+import { RecentlyViewedCarousel } from '@/components/Marketplace/ProductDisplay/RecentlyViewedCarousel';
 import Layout from '@/components/Layout';
 import SEOHead from '@/components/SEO/SEOHead';
 
@@ -232,6 +234,9 @@ const ProductDetailPageRoute: React.FC = () => {
                 urlCount: imageUrls.length,
               }
             });
+
+            // Add to recently viewed
+            recentlyViewedService.addProduct(productData);
 
             // Enhance seller information by fetching full profile if needed
             let enhancedSeller = {
@@ -689,6 +694,11 @@ const ProductDetailPageRoute: React.FC = () => {
               router.push(`/marketplace/seller/store/${encodeURIComponent(sellerId)}`);
             }}
           />
+
+          {/* Recently Viewed Items */}
+          <div className="mt-12">
+            <RecentlyViewedCarousel />
+          </div>
         </div>
       </div>
     </Layout>

@@ -43,6 +43,9 @@ import { PerformanceIndicator } from '@/components/Performance/MarketplacePerfor
 import { navigationPreloadService } from '@/services/navigationPreloadService';
 import { productCache, sellerCache, searchCache } from '@/services/marketplaceDataCache';
 import TokenAcquisitionSection from '@/components/Marketplace/TokenAcquisition/TokenAcquisitionSection';
+import { ComparisonDrawer } from '@/components/Marketplace/ProductDisplay/ComparisonDrawer';
+import { RecentlyViewedCarousel } from '@/components/Marketplace/ProductDisplay/RecentlyViewedCarousel';
+import { RecommendationSection } from '@/components/Marketplace/ProductDisplay/RecommendationSection';
 
 // Define design tokens for fallback
 const fallbackDesignTokens = {
@@ -545,6 +548,9 @@ const MarketplaceContent: React.FC = () => {
             {/* Token Acquisition Section */}
             <TokenAcquisitionSection />
 
+            {/* AI Recommendations */}
+            <RecommendationSection limit={4} />
+
             <div className="bg-white/10 rounded-2xl p-6 space-y-6 text-white">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                 <div className="space-y-2">
@@ -870,6 +876,9 @@ const MarketplaceContent: React.FC = () => {
                 )}
               </section>
             </div>
+
+            {/* Recently Viewed Items */}
+            <RecentlyViewedCarousel title="Continue Browsing" />
           </div>
 
           {/* Modals */}
@@ -1186,6 +1195,9 @@ const MarketplacePage: React.FC = () => {
 
         {/* Floating Seller Action Button - Always accessible */}
         <SellerFloatingActionButton />
+
+        {/* Comparison Drawer */}
+        <ComparisonDrawer />
 
         {/* Performance Indicator - Development only */}
         <PerformanceIndicator />

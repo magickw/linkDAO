@@ -773,7 +773,7 @@ export class UnifiedMarketplaceService {
       const cacheBuster = `_=${Date.now()}`;
       const paramsString = params.toString();
       const separator = paramsString ? '&' : '';
-      const endpoint = `/api/marketplace/search-suggestions?${paramsString}${separator}${cacheBuster}`;
+      const endpoint = `/api/marketplace/search/suggestions?${paramsString}${separator}${cacheBuster}`;
       const response = await this.makeApiRequest(endpoint);
 
       if (!response.ok) {
@@ -787,6 +787,51 @@ export class UnifiedMarketplaceService {
     } catch (error) {
       console.error('Error getting search suggestions:', error);
       return [];
+    }
+  }
+
+  async getProductRecommendations(productId?: string, limit: number = 10): Promise<Product[]> {
+    try {
+      const params = new URLSearchParams({
+        limit: limit.toString()
+      });
+      if (productId) {
+        params.append('productId', productId);
+      }
+
+      const endpoint = `/api/marketplace/search/recommendations?${params.toString()}`;
+      const response = await this.makeApiRequest(endpoint);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch recommendations');
+      }
+
+      const result = await response.json();
+      return result.data?.products || result.data || [];
+    } catch (error) {
+      console.error('Error fetching recommendations:', error);
+      return [];
+    }
+  }
+
+  async compareProducts(productIds: string[]): Promise<any> {
+    try {
+      const params = new URLSearchParams({
+        productIds: productIds.join(',')
+      });
+
+      const endpoint = `/api/marketplace/search/compare?${params.toString()}`;
+      const response = await this.makeApiRequest(endpoint);
+
+      if (!response.ok) {
+        throw new Error('Failed to compare products');
+      }
+
+      const result = await response.json();
+      return result.data;
+    } catch (error) {
+      console.error('Error comparing products:', error);
+      throw error;
     }
   }
 

@@ -4,10 +4,11 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X } from 'lucide-react';
+import { Search, X, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { designTokens } from '@/design-system/tokens';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
+import { marketplaceService } from '@/services/marketplaceService';
 
 interface SearchSuggestion {
   text: string;
@@ -24,90 +25,6 @@ interface SearchBarProps {
   className?: string;
 }
 
-// Mock suggestions - in production, these would come from an API
-const getMockSuggestions = (query: string): SearchSuggestion[] => {
-  if (!query) return [];
-
-  const suggestions: SearchSuggestion[] = [];
-  const lowerQuery = query.toLowerCase();
-
-  // Popular queries
-  const popularQueries = [
-    'wireless headphones',
-    'gaming laptop',
-    'smart watch',
-    'bluetooth speaker',
-    'mechanical keyboard',
-  ];
-
-  // DeFi specific queries
-  const defiQueries = [
-    'uniswap lp position',
-    'compound yield token',
-    'aave liquidity pool',
-    'curve stablecoin pool',
-    'yearn vault tokens',
-    'lido staked eth',
-    'governance token',
-    'high apy defi',
-    'low risk defi',
-    'insured defi position',
-  ];
-
-  popularQueries
-    .filter((q) => q.includes(lowerQuery))
-    .forEach((q) => {
-      suggestions.push({ text: q, type: 'query' });
-    });
-
-  defiQueries
-    .filter((q) => q.includes(lowerQuery))
-    .forEach((q) => {
-      suggestions.push({ text: q, type: 'query', category: 'DeFi' });
-    });
-
-  // Categories
-  const categories = [
-    'Electronics',
-    'Fashion',
-    'Home & Garden',
-    'Sports',
-    'Books',
-    'Toys',
-    'DeFi',
-    'NFTs',
-    'Services',
-    'Digital Goods',
-  ];
-
-  categories
-    .filter((c) => c.toLowerCase().includes(lowerQuery))
-    .forEach((c) => {
-      suggestions.push({ text: c, category: c, type: 'category' });
-    });
-
-  // DeFi protocols
-  const defiProtocols = [
-    'Uniswap',
-    'Compound',
-    'Aave',
-    'Curve',
-    'Balancer',
-    'Yearn Finance',
-    'Lido',
-    'Rocket Pool',
-  ];
-
-  defiProtocols
-    .filter((p) => p.toLowerCase().includes(lowerQuery))
-    .forEach((p) => {
-      suggestions.push({ text: p, category: 'DeFi Protocol', type: 'category' });
-    });
-
-  // Limit to 8 suggestions
-  return suggestions.slice(0, 8);
-};
-
 export const SearchBar: React.FC<SearchBarProps> = ({
   value,
   onChange,
@@ -119,6 +36,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   const [isFocused, setIsFocused] = useState(false);
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -139,13 +57,30 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
   // Update suggestions when query changes
   useEffect(() => {
-    if (value && isFocused) {
-      const newSuggestions = getMockSuggestions(value);
-      setSuggestions(newSuggestions);
-    } else {
-      setSuggestions([]);
-    }
-    setSelectedIndex(-1);
+    const fetchSuggestions = async () => {
+      if (value && value.length >= 2 && isFocused) {
+        setIsLoading(true);
+        try {
+          const results = await marketplaceService.getSearchSuggestions(value);
+          const transformed: SearchSuggestion[] = results.map(text => ({
+            text,
+            type: 'query'
+          }));
+          setSuggestions(transformed);
+        } catch (error) {
+          console.error('Error fetching suggestions:', error);
+          setSuggestions([]);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setSuggestions([]);
+      }
+      setSelectedIndex(-1);
+    };
+
+    const timer = setTimeout(fetchSuggestions, 300);
+    return () => clearTimeout(timer);
   }, [value, isFocused]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -243,7 +178,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
       {/* Suggestions Dropdown */}
       <AnimatePresence>
-        {showSuggestions && (
+        {(showSuggestions || isLoading) && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -252,7 +187,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({
             className="absolute top-full mt-2 w-full z-50"
           >
             <GlassPanel variant="primary" className="py-2">
-              {suggestions.map((suggestion, index) => (
+              {isLoading ? (
+                <div className="flex items-center justify-center p-4 text-white/60">
+                  <Loader2 size={20} className="animate-spin mr-2" />
+                  <span>Searching...</span>
+                </div>
+              ) : suggestions.map((suggestion, index) => (
                 <button
                   key={index}
                   onClick={() => handleSuggestionClick(suggestion)}

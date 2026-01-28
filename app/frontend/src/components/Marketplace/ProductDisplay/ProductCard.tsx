@@ -24,8 +24,9 @@ import { usePrice } from '../../../hooks/useMarketplaceData';
 import { formatPrice, formatDualPrice } from '../../../utils/priceFormatter';
 import { validateProductID, validateSellerID, normalizeID } from '../../../utils/idValidator';
 import { getFallbackImage } from '../../../utils/imageUtils';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, BarChart2 } from 'lucide-react';
 import { wishlistService } from '../../../services/wishlistService';
+import { comparisonService } from '../../../services/comparisonService';
 
 import AuctionTimer from '../AuctionTimer';
 
@@ -273,6 +274,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const { actions: cartActions } = useCart();
   const { addToast } = useToast();
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isCompared, setIsCompared] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<string>('');
 
@@ -286,12 +288,25 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     setIsWishlisted(inWishlist);
 
     // Subscribe to wishlist changes
-    const unsubscribe = wishlistService.subscribe((state) => {
+    const unsubscribeWishlist = wishlistService.subscribe((state) => {
       const isInList = state.items.some(item => item.id === normalizedProductId);
       setIsWishlisted(isInList);
     });
 
-    return unsubscribe;
+    // Check if product is in comparison
+    const inComparison = comparisonService.isInComparison(normalizedProductId);
+    setIsCompared(inComparison);
+
+    // Subscribe to comparison changes
+    const unsubscribeComparison = comparisonService.subscribe((state) => {
+      const isInList = state.items.some(item => item.id === normalizedProductId);
+      setIsCompared(isInList);
+    });
+
+    return () => {
+      unsubscribeWishlist();
+      unsubscribeComparison();
+    };
   }, [normalizedProductId]);
 
   // Use centralized price data management
@@ -509,6 +524,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     } catch (error) {
       console.error('Error updating wishlist:', error);
       addToast('Failed to update wishlist. Please try again.', 'error');
+    }
+  };
+
+  const handleComparisonToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (isCompared) {
+      comparisonService.removeItem(normalizedProductId);
+      addToast(`Removed "${product.title}" from comparison`, 'info');
+    } else {
+      // Need to transform Product interface slightly if needed for service
+      // But they seem compatible enough for now
+      const success = comparisonService.addItem(product as any);
+      if (success) {
+        addToast(`Added "${product.title}" to comparison`, 'success');
+      } else {
+        addToast('Comparison list is full (max 5 items)', 'warning');
+      }
     }
   };
 
@@ -755,6 +788,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                         onClick={handleWishlistToggle}
                       >
                         {isWishlisted ? '❤️' : '🤍'}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleComparisonToggle}
+                        className={isCompared ? 'text-blue-400' : 'text-white/40'}
+                        title={isCompared ? "Remove from comparison" : "Add to comparison"}
+                      >
+                        <BarChart2 size={18} className={isCompared ? 'fill-current' : ''} />
                       </Button>
                     </>
                   )}
@@ -1042,6 +1084,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 title="Refresh Price"
               >
                 <RefreshCw size={14} />
+              </button>
+
+              {/* Compare Button */}
+              <button
+                onClick={handleComparisonToggle}
+                className={`transition-colors ${isCompared ? 'text-blue-400' : 'text-white/40 hover:text-blue-400'}`}
+                title={isCompared ? "Remove from comparison" : "Add to comparison"}
+              >
+                <BarChart2 size={16} className={isCompared ? 'fill-current' : ''} />
               </button>
             </div>
 
