@@ -3,6 +3,18 @@ import { wishlists, wishlistItems } from '../db/buyerDataSchema';
 import { eq, and, desc } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 
+/**
+ * Convert database wishlist item to WishlistItem type
+ * Converts numeric strings to numbers
+ */
+function dbToWishlistItem(item: any): WishlistItem {
+    return {
+        ...item,
+        priceAtAdd: item.priceAtAdd ? parseFloat(item.priceAtAdd) : undefined,
+        priceAlertThreshold: item.priceAlertThreshold ? parseFloat(item.priceAlertThreshold) : undefined,
+    };
+}
+
 export interface Wishlist {
     id: string;
     userId: string;
@@ -175,7 +187,7 @@ export class WishlistService {
             .where(eq(wishlistItems.wishlistId, wishlistId))
             .orderBy(desc(wishlistItems.priority), desc(wishlistItems.addedAt));
 
-        return items as WishlistItem[];
+        return items.map(dbToWishlistItem);
     }
 
     /**
@@ -188,10 +200,10 @@ export class WishlistService {
                 ...input,
                 quantity: input.quantity || 1,
                 priority: input.priority || 'medium',
-            })
+            } as any)
             .returning();
 
-        return newItem as WishlistItem;
+        return dbToWishlistItem(newItem);
     }
 
     /**
@@ -203,14 +215,14 @@ export class WishlistService {
             .set({
                 ...input,
                 updatedAt: new Date(),
-            })
+            } as any)
             .where(and(
                 eq(wishlistItems.id, itemId),
                 eq(wishlistItems.wishlistId, wishlistId)
             ))
             .returning();
 
-        return (updatedItem as WishlistItem) || null;
+        return updatedItem ? dbToWishlistItem(updatedItem) : null;
     }
 
     /**
@@ -264,7 +276,7 @@ export class WishlistService {
             if (!item.priceAlertThreshold) return false;
             const currentPrice = currentPrices.get(item.productId);
             return currentPrice !== undefined && currentPrice <= Number(item.priceAlertThreshold);
-        }) as WishlistItem[];
+        }).map(dbToWishlistItem);
     }
 
     /**
@@ -282,14 +294,14 @@ export class WishlistService {
             .set({
                 wishlistId: toWishlistId,
                 updatedAt: new Date(),
-            })
+            } as any)
             .where(and(
                 eq(wishlistItems.id, itemId),
                 eq(wishlistItems.wishlistId, fromWishlistId)
             ))
             .returning();
 
-        return (movedItem as WishlistItem) || null;
+        return movedItem ? dbToWishlistItem(movedItem) : null;
     }
 
     /**

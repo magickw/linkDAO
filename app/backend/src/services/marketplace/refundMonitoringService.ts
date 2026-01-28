@@ -1,5 +1,5 @@
 import { db } from '../../db/index';
-import { 
+import {
   refundFinancialRecords,
   refundProviderTransactions,
   refundReconciliationRecords,
@@ -7,6 +7,7 @@ import {
 } from '../../db/schema';
 import { eq, and, gte, lte, desc, sql, count, sum, avg } from 'drizzle-orm';
 import crypto from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../../utils/logger';
 
 /**

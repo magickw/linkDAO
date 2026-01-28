@@ -54,7 +54,8 @@ export function createStripeConnectRoutes(stripeService: StripePaymentService): 
       }
 
       // Generate Account Link
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const frontendUrls = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const frontendUrl = frontendUrls.split(',')[0].trim();
       const returnUrl = `${frontendUrl}/dashboard/seller?tab=payout&status=return`;
       const refreshUrl = `${frontendUrl}/dashboard/seller?tab=payout&status=refresh`;
 
