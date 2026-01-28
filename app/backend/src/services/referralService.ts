@@ -45,8 +45,9 @@ class ReferralService {
   /**
    * Generate unique referral code
    */
-  generateReferralCode(): string {
-          const codeLength = await referralConfigService.getReferralCodeLength ? await referralConfigService.getReferralCodeLength() as number : 8;    const buffer = crypto.randomBytes(codeLength);
+  async generateReferralCode(): Promise<string> {
+    const codeLength = await (referralConfigService.getReferralCodeLength ? await referralConfigService.getReferralCodeLength() as number : 8);
+    const buffer = crypto.randomBytes(codeLength);
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = '';
     for (let i = 0; i < codeLength; i++) {
@@ -85,7 +86,7 @@ class ReferralService {
       let attempts = 0;
 
       while (!isUnique && attempts < 10) {
-        referralCode = this.generateReferralCode();
+        referralCode = await this.generateReferralCode();
         const existing = await db
           .select()
           .from(referralActivities)
