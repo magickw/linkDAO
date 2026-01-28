@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter } from 'next/router';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
 // Define types for navigation state
 export interface NavigationState {
@@ -52,6 +52,8 @@ const NavigationContext = createContext<NavigationContextType | undefined>(undef
 // Provider component
 export const NavigationProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // Load user preferences from localStorage
   const getDefaultPreferences = (): UserPreferences => {
@@ -98,16 +100,18 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
   // Sync navigation state with URL
   useEffect(() => {
     const updateStateFromURL = () => {
-      const { pathname, query } = router;
+      if (!pathname) return;
 
       if (pathname === '/') {
-        const { view, community, post } = query;
+        const view = searchParams?.get('view');
+        const community = searchParams?.get('community');
+        const post = searchParams?.get('post');
 
         setNavigationState(prev => ({
           ...prev,
           activeView: view === 'community' ? 'community' : 'feed',
-          activeCommunity: typeof community === 'string' ? community : undefined,
-          activePost: typeof post === 'string' ? post : undefined,
+          activeCommunity: community || undefined,
+          activePost: post || undefined,
         }));
       } else if (pathname === '/communities') {
         // Handle the main communities page
@@ -121,13 +125,13 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
         // Extract community ID from path
         const pathParts = pathname.split('/');
         const communityId = pathParts[2];
-        const { post } = query;
+        const post = searchParams?.get('post');
 
         setNavigationState(prev => ({
           ...prev,
           activeView: 'community',
           activeCommunity: communityId,
-          activePost: typeof post === 'string' ? post : undefined,
+          activePost: post || undefined,
         }));
       } else {
         // For all other pages, reset to feed view and clear community/post
@@ -141,7 +145,7 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
     };
 
     updateStateFromURL();
-  }, [router.pathname, router.query]);
+  }, [pathname, searchParams]);
 
   // Handle responsive behavior - collapse sidebar on mobile by default
   useEffect(() => {

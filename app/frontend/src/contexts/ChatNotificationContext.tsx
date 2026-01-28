@@ -7,7 +7,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAccount } from 'wagmi';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 import { ENV_CONFIG } from '@/config/environment';
 
