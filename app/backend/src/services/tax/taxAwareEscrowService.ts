@@ -69,9 +69,9 @@ export class TaxAwareEscrowService {
         .from(taxLiabilities)
         .where(eq(taxLiabilities.orderId, order.id));
 
-      const taxAmount = existingTaxLiability?.taxAmount || 0;
-      const totalEscrowAmount = escrow.amount;
-      const sellerAmount = totalEscrowAmount - (order.platformFee || 0) - taxAmount;
+      const taxAmount = parseFloat(existingTaxLiability?.taxAmount || '0');
+      const totalEscrowAmount = parseFloat(escrow.amount);
+      const sellerAmount = totalEscrowAmount - parseFloat(order.platformFee || '0') - taxAmount;
 
       safeLogger.info('Funds breakdown:', {
         totalEscrowAmount,
@@ -87,7 +87,7 @@ export class TaxAwareEscrowService {
           escrow,
           order,
           sellerAmount,
-          order.platformFee || 0,
+          parseFloat(order.platformFee || '0'),
           taxAmount,
           chainId
         );
@@ -99,7 +99,7 @@ export class TaxAwareEscrowService {
         escrow,
         order,
         sellerAmount,
-        order.platformFee || 0,
+        parseFloat(order.platformFee || '0'),
         taxAmount
       );
     } catch (error) {
@@ -241,7 +241,7 @@ export class TaxAwareEscrowService {
             .set({
               status: 'paid',
               remittanceDate: new Date(),
-              updated_at: new Date(),
+              updatedAt: new Date(),
             })
             .where(eq(taxLiabilities.id, taxLiability.id));
         }
@@ -366,17 +366,17 @@ export class TaxAwareEscrowService {
       const pending = liabilities.filter(l => l.status === 'pending').length;
       const pending_amount = liabilities
         .filter(l => l.status === 'pending')
-        .reduce((sum, l) => sum + l.taxAmount, 0);
+        .reduce((sum, l) => sum + parseFloat(l.taxAmount), 0);
 
       const filed = liabilities.filter(l => l.status === 'filed').length;
       const filed_amount = liabilities
         .filter(l => l.status === 'filed')
-        .reduce((sum, l) => sum + l.taxAmount, 0);
+        .reduce((sum, l) => sum + parseFloat(l.taxAmount), 0);
 
       const paid = liabilities.filter(l => l.status === 'paid').length;
       const paid_amount = liabilities
         .filter(l => l.status === 'paid')
-        .reduce((sum, l) => sum + l.taxAmount, 0);
+        .reduce((sum, l) => sum + parseFloat(l.taxAmount), 0);
 
       return {
         pending: { count: pending, amount: pending_amount },
@@ -384,7 +384,7 @@ export class TaxAwareEscrowService {
         paid: { count: paid, amount: paid_amount },
         total: {
           count: liabilities.length,
-          amount: liabilities.reduce((sum, l) => sum + l.taxAmount, 0),
+          amount: liabilities.reduce((sum, l) => sum + parseFloat(l.taxAmount), 0),
         },
       };
     } catch (error) {

@@ -7,7 +7,7 @@ import { sellerListingService } from "../services/sellerListingService";
 import { eq, and, or, ilike, desc, lt, gte, lte, sql } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { marketplaceUsers, sellerVerifications } from "../db/marketplaceSchema";
-import { users, products, categories } from "../db/schema";
+import { users, products, categories, sellers } from "../db/schema";
 
 export class SellerController {
   private sellerService = sellerService;

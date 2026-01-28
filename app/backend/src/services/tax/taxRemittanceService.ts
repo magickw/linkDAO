@@ -61,12 +61,12 @@ export class TaxRemittanceService {
       }
 
       // Calculate total tax and jurisdiction breakdown
-      const totalTaxAmount = liabilities.reduce((sum, liability) => sum + liability.taxAmount, 0);
+      const totalTaxAmount = liabilities.reduce((sum, liability) => sum + parseFloat(liability.taxAmount), 0);
       const jurisdictionBreakdown: Record<string, number> = {};
 
       liabilities.forEach(liability => {
         jurisdictionBreakdown[liability.taxJurisdiction] =
-          (jurisdictionBreakdown[liability.taxJurisdiction] || 0) + liability.taxAmount;
+          (jurisdictionBreakdown[liability.taxJurisdiction] || 0) + parseFloat(liability.taxAmount);
       });
 
       // Create remittance batch
@@ -93,8 +93,6 @@ export class TaxRemittanceService {
           .values({
             batchId: batch.id,
             taxLiabilityId: liability.id,
-            createdAt: new Date(),
-            updatedAt: new Date(),
           });
 
         // Update liability status
@@ -197,7 +195,6 @@ export class TaxRemittanceService {
       const [filing] = await db
         .insert(taxFilings)
         .values({
-          batchId: batchId,
           jurisdiction: batch.remittanceProvider || 'MULTI',
           filingType: this.getFilingType(batch.remittancePeriodStart),
           filingPeriodStart: batch.remittancePeriodStart,

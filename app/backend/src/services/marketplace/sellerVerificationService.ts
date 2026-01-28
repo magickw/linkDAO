@@ -25,7 +25,7 @@ export class SellerVerificationService {
 
     // Create new verification record
     const [verification] = await db.insert(sellerVerifications).values({
-      sellerId,
+      userId: sellerId,
       legalName: request.legalName,
       ein: request.ein,
       businessAddress: request.businessAddress,
@@ -44,7 +44,7 @@ export class SellerVerificationService {
    */
   async getActiveVerification(sellerId: string): Promise<SellerVerification | null> {
     const verifications = await db.select().from(sellerVerifications)
-      .where(eq(sellerVerifications.sellerId, sellerId))
+      .where(eq(sellerVerifications.userId, sellerId))
       .orderBy(desc(sellerVerifications.submittedAt))
       .limit(1);
 

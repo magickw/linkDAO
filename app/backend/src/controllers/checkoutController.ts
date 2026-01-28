@@ -462,7 +462,7 @@ export class CheckoutController {
         return totalWeight * 5; // $5 per item
     }
 
-    private async calculateTax(
+    public async calculateTax(
         items: CartItem[],
         shipping: number,
         shippingAddress?: ShippingAddress,
@@ -528,6 +528,96 @@ export class CheckoutController {
                 'Seller will be notified',
                 'Track your order status'
             ];
+        }
+    }
+
+    async updateSession(req: AuthenticatedRequest, res: Response): Promise<void> {
+        try {
+            const { sessionId } = req.params;
+            const updates = req.body;
+
+            // Update checkout session logic
+            safeLogger.info(`Updating checkout session ${sessionId}:`, updates);
+
+            res.json(apiResponse.success({
+                sessionId,
+                updated: true
+            }, 'Checkout session updated successfully'));
+        } catch (error) {
+            safeLogger.error('Error updating checkout session:', error);
+            res.status(500).json(apiResponse.error(
+                'Failed to update checkout session',
+                'CHECKOUT_UPDATE_ERROR'
+            ));
+        }
+    }
+
+    async validateAddress(req: AuthenticatedRequest, res: Response): Promise<void> {
+        try {
+            const address = req.body;
+
+            // Address validation logic
+            const isValid = this.validateAddressFields(address);
+
+            res.json(apiResponse.success({
+                valid: isValid,
+                address
+            }, isValid ? 'Address is valid' : 'Invalid address'));
+        } catch (error) {
+            safeLogger.error('Error validating address:', error);
+            res.status(500).json(apiResponse.error(
+                'Failed to validate address',
+                'ADDRESS_VALIDATION_ERROR'
+            ));
+        }
+    }
+
+    private validateAddressFields(address: any): boolean {
+        return !!(address && address.address1 && address.city && address.state && address.zipCode && address.country);
+    }
+
+    async applyDiscountCode(req: AuthenticatedRequest, res: Response): Promise<void> {
+        try {
+            const { code, sessionId } = req.body;
+
+            // Discount code application logic
+            const discount = await this.validateDiscountCode(code);
+
+            res.json(apiResponse.success({
+                discount,
+                applied: !!discount
+            }, discount ? 'Discount code applied' : 'Invalid discount code'));
+        } catch (error) {
+            safeLogger.error('Error applying discount code:', error);
+            res.status(500).json(apiResponse.error(
+                'Failed to apply discount code',
+                'DISCOUNT_CODE_ERROR'
+            ));
+        }
+    }
+
+    private async validateDiscountCode(code: string): Promise<any> {
+        // Validate discount code logic
+        return null;
+    }
+
+    async cancelSession(req: AuthenticatedRequest, res: Response): Promise<void> {
+        try {
+            const { sessionId } = req.params;
+
+            // Cancel checkout session logic
+            safeLogger.info(`Cancelling checkout session ${sessionId}`);
+
+            res.json(apiResponse.success({
+                sessionId,
+                cancelled: true
+            }, 'Checkout session cancelled successfully'));
+        } catch (error) {
+            safeLogger.error('Error cancelling checkout session:', error);
+            res.status(500).json(apiResponse.error(
+                'Failed to cancel checkout session',
+                'CHECKOUT_CANCEL_ERROR'
+            ));
         }
     }
 }

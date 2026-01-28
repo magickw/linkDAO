@@ -205,17 +205,19 @@ export class HighValueTransactionService {
     
             // Calculate current usage
             const currentUsage = await this.calculateCurrentUsage(sellerId);
-    
+
             // Get limits based on verification level
             const transactionLimits = this.getLimitsForVerificationLevel(verificationLevel);
-    
+
             return {
               sellerId,
               isVerified: sellerData.kycVerified || false,
               verificationLevel,
                         kycStatus: kycStatus as any,
                         kycExpiresAt: sellerData.kycExpiresAt || undefined,
-                        transactionLimits,              currentUsage
+                        transactionLimits,
+                        currentUsage,
+                        canProcessTransaction: currentUsage.amount < transactionLimits.maxSingleTransaction
             };
         } catch (error) {
       safeLogger.error('Error getting seller verification status:', error);

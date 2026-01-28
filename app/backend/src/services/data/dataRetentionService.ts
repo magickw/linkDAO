@@ -3,7 +3,11 @@ import { db } from '../../db';
 import {
   user_consents,
   data_retention_policies,
-  data_retention_logs
+  data_retention_logs,
+  moderationCases,
+  contentReports,
+  moderationActions,
+  moderationAppeals
 } from '../../db/schema';
 import { eq, and, lt, sql } from 'drizzle-orm';
 import { geofencingComplianceService } from '../geofencingComplianceService';

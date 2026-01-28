@@ -560,6 +560,7 @@ export class SellerProfileService {
       websiteUrl: seller.websiteUrl || undefined,
       socialLinks: seller.socialLinks ? this.parseSocialLinks(seller.socialLinks) : undefined,
       storeDescription: seller.storeDescription || undefined,
+      isVerified: seller.isVerified || false,
                       tier: seller.tier || 'basic',
                       verificationStatus: {
                         email: seller.emailVerified || false,

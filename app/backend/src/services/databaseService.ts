@@ -2765,6 +2765,18 @@ export class DatabaseService {
     }
   }
 
+  async getUserModerationCases(userId: string) {
+    try {
+      const result = await this.db.select().from(schema.moderationCases)
+        .where(eq(schema.moderationCases.userId, userId))
+        .orderBy(desc(schema.moderationCases.createdAt));
+      return result;
+    } catch (error) {
+      safeLogger.error("Error getting user moderation cases:", error);
+      throw error;
+    }
+  }
+
   async updateModerationCase(id: number, updates: Partial<{
     status: string;
     decision: string;

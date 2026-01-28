@@ -1,511 +1,214 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
+import { Send, Smile, Paperclip, X, Mic } from 'lucide-react';
+import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import { EmojiPicker } from './EmojiPicker';
 import { QuickReplyPanel } from './QuickReplyPanel';
 import { VoiceMessageRecorder } from './VoiceMessageRecorder';
-import { Mic } from 'lucide-react';
-
-// Helper function to get the backend URL
-const getBackendUrl = (): string => {
-  let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    if (hostname === 'www.linkdao.io' || hostname === 'linkdao.io' || hostname === 'app.linkdao.io') {
-      backendUrl = 'https://api.linkdao.io';
-    }
-  }
-  return backendUrl;
-};
-
-interface Attachment {
-  id: string;
-  type: string;
-  mimeType: string;
-  filename: string;
-  size: number;
-  url: string;
-  cid: string;
-}
 
 interface MessageInputProps {
-  onSendMessage: (content: string, contentType?: 'text' | 'image' | 'file' | 'voice', attachments?: Attachment[], metadata?: any) => void;
-  onTyping: (isTyping: boolean) => void;
-  disabled?: boolean;
-  placeholder?: string;
-  replyTarget?: any;
-  quoteTarget?: any;
-  onCancelTarget?: () => void;
+  newMessage: string;
+  setNewMessage: (msg: string) => void;
+  handleSendMessage: () => void;
+  handleKeyPress: (e: React.KeyboardEvent) => void;
+  isUploading: boolean;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  setShowAttachmentModal: (show: boolean) => void;
+  replyingTo: { messageId: string; username: string; content: string } | null;
+  quotingTo: { messageId: string; username: string; content: string } | null;
+  setReplyingTo: (val: any) => void;
+  setQuotingTo: (val: any) => void;
+  handleTyping?: () => void;
 }
 
 export const MessageInput: React.FC<MessageInputProps> = ({
-  onSendMessage,
-  onTyping,
-  disabled = false,
-  placeholder = "Type a message...",
-  replyTarget,
-  quoteTarget,
-  onCancelTarget,
+  newMessage,
+  setNewMessage,
+  handleSendMessage,
+  handleKeyPress,
+  isUploading,
+  fileInputRef,
+  handleFileUpload,
+  setShowAttachmentModal,
+  replyingTo,
+  quotingTo,
+  setReplyingTo,
+  setQuotingTo,
+  handleTyping
 }) => {
-  const [message, setMessage] = useState('');
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
+  const { touchTargetClasses } = useMobileOptimization();
+  
+  // State for advanced features
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showQuickReplies, setShowQuickReplies] = useState(false);
-  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [attachmentPreview, setAttachmentPreview] = useState<{ file: File; preview: string } | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const [isRecording, setIsRecording] = useState(false);
 
-  const truncateAddress = (address: string) => {
-    if (!address) return 'Unknown';
-    if (address.length <= 10) return address;
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  // Auto-resize textarea
+  useEffect(() => {
+    if (messageInputRef.current) {
+      messageInputRef.current.style.height = 'auto';
+      messageInputRef.current.style.height = `${Math.min(messageInputRef.current.scrollHeight, 200)}px`;
+    }
+  }, [newMessage]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setNewMessage(e.target.value);
+    if (handleTyping) handleTyping();
   };
 
-  // Handle message input changes
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    setMessage(value);
-    
-    // Auto-resize textarea
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
-    }
-    
-    // Handle typing indicators
-    if (value.trim()) {
-      onTyping(true);
-      
-      // Clear existing timeout
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-      
-      // Set new timeout to stop typing indicator
-      typingTimeoutRef.current = setTimeout(() => {
-        onTyping(false);
-      }, 1000);
-    } else {
-      onTyping(false);
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-    }
-  }, [onTyping]);
-
-  // Handle sending message
-  const handleSendMessage = useCallback(() => {
-    const trimmedMessage = message.trim();
-    if (trimmedMessage && !disabled) {
-      const metadata: any = {};
-      if (replyTarget) {
-        metadata.replyToId = replyTarget.id;
-      }
-      if (quoteTarget) {
-        metadata.quotedMessageId = quoteTarget.id;
-      }
-
-      onSendMessage(trimmedMessage, 'text', [], metadata);
-      setMessage('');
-      onCancelTarget?.();
-      onTyping(false);
-      
-      // Reset textarea height
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-      }
-      
-      // Clear typing timeout
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-    }
-  }, [message, disabled, onSendMessage, onTyping, replyTarget, quoteTarget, onCancelTarget]);
-
-  // Handle key press
-  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  }, [handleSendMessage]);
-
-  // Handle emoji selection
-  const handleEmojiSelect = useCallback((emoji: string) => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const newMessage = message.slice(0, start) + emoji + message.slice(end);
-      
-      setMessage(newMessage);
-      
-      // Set cursor position after emoji
-      setTimeout(() => {
-        textarea.selectionStart = textarea.selectionEnd = start + emoji.length;
-        textarea.focus();
-      }, 0);
-    }
-    
+  const handleEmojiSelect = (emoji: any) => {
+    setNewMessage(prev => prev + emoji.native);
     setShowEmojiPicker(false);
-  }, [message]);
+    if (messageInputRef.current) {
+      messageInputRef.current.focus();
+    }
+  };
 
-  // Handle quick reply selection
-  const handleQuickReplySelect = useCallback((content: string) => {
-    setMessage(content);
+  const handleQuickReplySelect = (reply: string) => {
+    setNewMessage(reply);
     setShowQuickReplies(false);
+    if (messageInputRef.current) {
+      messageInputRef.current.focus();
+    }
+  };
+
+  const handleVoiceMessage = (audioBlob: Blob) => {
+    // In a real implementation, this would upload the blob similarly to a file attachment
+    // For now, we'll construct a synthetic file event or call a prop to handle voice
+    // This assumes the parent component or file upload handler can handle blobs or we extend the interface
+    const file = new File([audioBlob], "voice-message.webm", { type: "audio/webm" });
     
-    // Focus textarea
-    setTimeout(() => {
-      textareaRef.current?.focus();
-    }, 0);
-  }, []);
-
-  // Handle file upload
-  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Show preview for images
-    if (file.type.startsWith('image/')) {
-      const preview = URL.createObjectURL(file);
-      setAttachmentPreview({ file, preview });
-      return;
-    }
-
-    setIsUploading(true);
-
-    try {
-      // Create FormData for file upload
-      const formData = new FormData();
-      formData.append('file', file);
-
-      // Upload file to messaging attachments endpoint
-      const response = await fetch(`${getBackendUrl()}/api/messaging/attachments`, {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && result.data) {
-          const attachment = result.data as Attachment;
-          const contentType = file.type.startsWith('image/') ? 'image' : 'file';
-          onSendMessage(attachment.filename, contentType, [attachment]);
-        } else {
-          console.error('File upload failed:', result.message);
-        }
-      } else {
-        console.error('File upload failed');
+    // Create a synthetic event to reuse the file upload handler
+    // Ideally, we would update the interface to accept a direct file/blob
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+    
+    const syntheticEvent = {
+      target: {
+        files: dataTransfer.files
       }
-    } catch (error) {
-      console.error('Error uploading file:', error);
-    } finally {
-      setIsUploading(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  }, [onSendMessage]);
+    } as unknown as React.ChangeEvent<HTMLInputElement>;
 
-  // Handle sending image with optional caption
-  const handleSendImageWithCaption = useCallback(async () => {
-    if (!attachmentPreview) return;
-
-    setIsUploading(true);
-
-    try {
-      const formData = new FormData();
-      formData.append('file', attachmentPreview.file);
-
-      const response = await fetch(`${getBackendUrl()}/api/messaging/attachments`, {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && result.data) {
-          const attachment = result.data as Attachment;
-          const caption = message.trim() || attachment.filename;
-          
-          const metadata: any = {};
-          if (replyTarget) metadata.replyToId = replyTarget.id;
-          if (quoteTarget) metadata.quotedMessageId = quoteTarget.id;
-
-          onSendMessage(caption, 'image', [attachment], metadata);
-          setMessage('');
-          onCancelTarget?.();
-        }
-      }
-    } catch (error) {
-      console.error('Error uploading image:', error);
-    } finally {
-      setIsUploading(false);
-      // Clean up preview
-      URL.revokeObjectURL(attachmentPreview.preview);
-      setAttachmentPreview(null);
-    }
-  }, [attachmentPreview, message, onSendMessage, replyTarget, quoteTarget, onCancelTarget]);
-
-  // Handle canceling attachment preview
-  const handleCancelAttachment = useCallback(() => {
-    if (attachmentPreview) {
-      URL.revokeObjectURL(attachmentPreview.preview);
-      setAttachmentPreview(null);
-    }
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  }, [attachmentPreview]);
-
-  // Handle voice message recording complete
-  const handleVoiceRecordingComplete = useCallback(async (audioBlob: Blob) => {
-    setIsUploading(true);
-    setShowVoiceRecorder(false);
-
-    try {
-      const formData = new FormData();
-      formData.append('audio', audioBlob, 'voice_message.webm');
-
-      const response = await fetch('/api/messaging/voice-messages', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && result.data) {
-          const voiceMessage = result.data as Attachment;
-          
-          const metadata: any = {};
-          if (replyTarget) metadata.replyToId = replyTarget.id;
-          if (quoteTarget) metadata.quotedMessageId = quoteTarget.id;
-
-          onSendMessage('Voice message', 'voice', [voiceMessage], metadata);
-          onCancelTarget?.();
-        }
-      }
-    } catch (error) {
-      console.error('Error uploading voice message:', error);
-    } finally {
-      setIsUploading(false);
-    }
-  }, [onSendMessage, replyTarget, quoteTarget, onCancelTarget]);
-
-  // Cleanup on unmount
-  React.useEffect(() => {
-    return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-      if (attachmentPreview) {
-        URL.revokeObjectURL(attachmentPreview.preview);
-      }
-    };
-  }, [attachmentPreview]);
-
-  // Show voice recorder
-  if (showVoiceRecorder) {
-    return (
-      <div className="message-input p-4">
-        <VoiceMessageRecorder
-          onSend={handleVoiceRecordingComplete}
-          onCancel={() => setShowVoiceRecorder(false)}
-        />
-      </div>
-    );
-  }
+    handleFileUpload(syntheticEvent);
+    setIsRecording(false);
+  };
 
   return (
-    <div className="message-input">
-      {/* Reply/Quote Target Preview */}
-      {(replyTarget || quoteTarget) && (
-        <div className={`px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3 ${replyTarget ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-gray-100 dark:bg-gray-800'}`}>
-          <div className={`w-1 h-8 rounded-full ${replyTarget ? 'bg-blue-500' : 'bg-gray-400'}`} />
-          <div className="flex-1 min-w-0">
-            <p className={`text-xs font-bold ${replyTarget ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`}>
-              {replyTarget ? `Replying to ${truncateAddress(replyTarget.fromAddress)}` : `Quoting ${truncateAddress(quoteTarget.fromAddress)}`}
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-              {replyTarget ? replyTarget.content : quoteTarget.content}
-            </p>
-          </div>
-          <button
-            onClick={onCancelTarget}
-            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
-
-      {/* Attachment Preview */}
-      {attachmentPreview && (
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="relative inline-block">
-            <img
-              src={attachmentPreview.preview}
-              alt="Preview"
-              className="max-h-48 rounded-lg"
-            />
-            <button
-              onClick={handleCancelAttachment}
-              className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full
-                       hover:bg-red-600 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <div className="mt-2 flex items-center space-x-2">
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Add a caption..."
-              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-            />
-            <button
-              onClick={handleSendImageWithCaption}
-              disabled={isUploading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700
-                       disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isUploading ? 'Sending...' : 'Send'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Quick Reply Panel */}
+    <div className="flex flex-col border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      {/* Quick Replies Panel - Show when requested */}
       {showQuickReplies && (
-        <QuickReplyPanel
-          onSelectReply={handleQuickReplySelect}
-          className="border-b border-gray-200 dark:border-gray-700"
-        />
+        <QuickReplyPanel onSelect={handleQuickReplySelect} onClose={() => setShowQuickReplies(false)} />
+      )}
+
+      {/* Emoji Picker */}
+      {showEmojiPicker && (
+        <div className="absolute bottom-20 right-4 z-50">
+          <EmojiPicker onSelect={handleEmojiSelect} onClickOutside={() => setShowEmojiPicker(false)} />
+        </div>
       )}
 
       <div className="p-4">
-        <div className="flex items-end space-x-2">
-          {/* Quick Replies Toggle */}
-          <button
-            onClick={() => setShowQuickReplies(!showQuickReplies)}
-            disabled={disabled}
-            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200
-                     hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors
-                     disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Quick replies"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-            </svg>
-          </button>
+        <input
+          type="file"
+          ref={fileInputRef}
+          className="hidden"
+          onChange={handleFileUpload}
+        />
 
-          {/* File Upload Button */}
+        {/* Reply/Quote Preview Banner */}
+        {(replyingTo || quotingTo) && (
+          <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-between border-l-4 border-blue-500">
+            <div className="flex flex-col text-sm overflow-hidden">
+              <span className="font-semibold text-blue-500 dark:text-blue-400">
+                {replyingTo ? `Replying to ${replyingTo.username}` : `Quoting ${quotingTo?.username}`}
+              </span>
+              <span className="text-gray-600 dark:text-gray-300 truncate">
+                {replyingTo ? replyingTo.content : quotingTo?.content}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                setReplyingTo(null);
+                setQuotingTo(null);
+              }}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+
+        <div className="flex items-end space-x-2">
           <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={disabled || isUploading}
-            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200
-                     hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors
-                     disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`p-3 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 ${touchTargetClasses}`}
+            onClick={() => setShowAttachmentModal(true)}
+            disabled={isUploading}
             title="Attach file"
           >
-            {isUploading ? (
-              <div className="w-5 h-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
-            ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-              </svg>
-            )}
+            <Paperclip size={20} />
           </button>
 
-          {/* Voice Message Button */}
-          <button
-            onClick={() => setShowVoiceRecorder(true)}
-            disabled={disabled || isUploading}
-            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200
-                     hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors
-                     disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Voice message"
-          >
-            <Mic className="w-5 h-5" />
-          </button>
-
-          {/* Message Input Container */}
           <div className="flex-1 relative">
             <textarea
-              ref={textareaRef}
-              value={message}
-              onChange={handleInputChange}
-              onKeyPress={handleKeyPress}
-              placeholder={placeholder}
-              disabled={disabled}
+              ref={messageInputRef}
+              value={newMessage}
+              onChange={handleChange}
+              onKeyDown={handleKeyPress}
+              placeholder="Type a message..."
+              className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl px-4 py-3 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none max-h-[200px]"
               rows={1}
-              className="w-full px-4 py-2 pr-12 border border-gray-300 dark:border-gray-600 rounded-2xl
-                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                       focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                       disabled:opacity-50 disabled:cursor-not-allowed
-                       resize-none overflow-hidden"
-              style={{ minHeight: '40px', maxHeight: '120px' }}
             />
-
-            {/* Emoji Button */}
-            <button
+            <button 
+              className="absolute right-3 bottom-3 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              disabled={disabled}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1
-                       text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200
-                       hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors
-                       disabled:opacity-50 disabled:cursor-not-allowed"
               title="Add emoji"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <Smile size={20} />
             </button>
-
-            {/* Emoji Picker */}
-            {showEmojiPicker && (
-              <div className="absolute bottom-full right-0 mb-2">
-                <EmojiPicker
-                  onEmojiSelect={handleEmojiSelect}
-                  onClose={() => setShowEmojiPicker(false)}
-                />
-              </div>
-            )}
           </div>
 
-          {/* Send Button */}
-          <button
-            onClick={handleSendMessage}
-            disabled={disabled || !message.trim() || isUploading}
-            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700
-                     disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title="Send message"
+          {/* Show Voice Recorder if input is empty, otherwise Send button */}
+          {!newMessage.trim() && !isRecording ? (
+            <div className="relative">
+               {/* Just a trigger for voice recording, the actual component might need to be rendered conditionally or overlay */}
+               <button
+                className={`p-3 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 ${touchTargetClasses}`}
+                onClick={() => setIsRecording(true)}
+                title="Record voice message"
+              >
+                <Mic size={20} />
+              </button>
+              
+              {isRecording && (
+                <div className="absolute bottom-0 right-0 z-50">
+                  <VoiceMessageRecorder 
+                    onRecordingComplete={handleVoiceMessage}
+                    onCancel={() => setIsRecording(false)}
+                  />
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              className={`p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition-transform active:scale-95 ${touchTargetClasses}`}
+              onClick={handleSendMessage}
+              disabled={!newMessage.trim()}
+            >
+              <Send size={20} />
+            </button>
+          )}
+        </div>
+        
+        {/* Quick actions bar */}
+        <div className="flex mt-2 px-1">
+          <button 
+            className="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 font-medium"
+            onClick={() => setShowQuickReplies(!showQuickReplies)}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-            </svg>
+            Quick Replies
           </button>
         </div>
-
-        {/* Hidden File Input - expanded to support more file types */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          onChange={handleFileUpload}
-          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,video/*"
-          className="hidden"
-        />
       </div>
     </div>
   );

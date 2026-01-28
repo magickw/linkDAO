@@ -1,12 +1,14 @@
 import { db } from '../../db';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { 
-  users, 
+import {
+  users,
   userGemBalance,
   gemTransaction,
-  payments
+  payments,
+  stakingPositions,
+  earningActivities
 } from '../../db/schema';
-import { 
+import {
   marketplaceRewards,
   earningChallenges,
   userChallengeProgress

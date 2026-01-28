@@ -7,36 +7,52 @@ export interface VerificationRequest {
 
 export interface SellerVerification {
   id: string;
-  sellerId: string;
+  userId: string;
   status: 'pending' | 'verified' | 'rejected' | 'expired';
-  
+
   // Legal information
   legalName?: string;
   ein?: string;
   businessAddress?: string;
-  
+
   // Document storage references
   einDocumentId?: string;
   businessLicenseId?: string;
   addressProofId?: string;
-  
+
   // Verification metadata
   verificationMethod?: string;
   verificationReference?: string;
-  
+
   // Risk assessment
   riskScore?: 'low' | 'medium' | 'high';
   riskFactors?: string;
-  
+
   // Timestamps
   submittedAt: Date;
   verifiedAt?: Date;
   expiresAt?: Date;
-  
+
   // Audit trail
   reviewedBy?: string;
   rejectionReason?: string;
   notes?: string;
+
+  // Progress tracking
+  progressStatus?: string;
+  progressUpdatedAt?: Date;
+
+  // Reputation metrics
+  reputationScore?: number;
+  totalVolume?: string;
+  successfulTransactions?: number;
+  disputeRate?: string;
+  lastTierUpdate?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+
+  // Tier information
+  currentTier?: string;
 }
 
 export interface VerificationResult {

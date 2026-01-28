@@ -178,7 +178,7 @@ export default function BottomSheet({
       {/* Bottom Sheet */}
       <div
         ref={sheetRef}
-        className={`relative w-full bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl transition-transform duration-300 ease-out ${getHeightClass()} ${className}`}
+        className={`relative w-full bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl transition-transform duration-300 ease-out flex flex-col ${getHeightClass()} ${className}`}
         style={{
           transform: getTransform(),
           willChange: 'transform'
