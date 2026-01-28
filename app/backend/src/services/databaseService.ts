@@ -1051,16 +1051,32 @@ export class DatabaseService {
     }
   }
 
-  async createEscrow(listingId: string, buyerId: string, sellerId: string, amount: string,
-    deliveryInfo?: string) {
+  async createEscrow(data: {
+    listingId: string;
+    orderId?: string;
+    buyerId: string;
+    sellerId: string;
+    amount: string;
+    deliveryInfo?: string;
+    paymentMethod?: string;
+    tokenAddress?: string;
+    onChainId?: string;
+    expiresAt?: Date;
+  }) {
     try {
       const result = await this.db.insert(schema.escrows).values({
-        listingId,
-        buyerId,
-        sellerId,
-        amount,
-        deliveryInfo: deliveryInfo || null,
-        deliveryConfirmed: false
+        listingId: data.listingId,
+        orderId: data.orderId || null,
+        buyerId: data.buyerId,
+        sellerId: data.sellerId,
+        amount: data.amount,
+        deliveryInfo: data.deliveryInfo || null,
+        deliveryConfirmed: false,
+        paymentMethod: data.paymentMethod || 'crypto',
+        tokenAddress: data.tokenAddress || null,
+        onChainId: data.onChainId || null,
+        expiresAt: data.expiresAt || null,
+        createdAt: new Date()
       }).returning();
 
       return result[0];

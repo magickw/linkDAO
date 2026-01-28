@@ -635,12 +635,14 @@ export class EnhancedEscrowService {
         listingIdToUse = listing.id;
       }
 
-      const dbEscrow = await databaseService.createEscrow(
-        listingIdToUse,
-        buyer.id,
-        seller.id,
-        amount
-      );
+      const dbEscrow = await databaseService.createEscrow({
+        listingId: listingIdToUse,
+        buyerId: buyer.id,
+        sellerId: seller.id,
+        amount: amount,
+        paymentMethod: 'crypto',
+        tokenAddress: tokenAddress
+      });
 
       if (!dbEscrow) {
         throw new Error('Failed to create escrow in database');

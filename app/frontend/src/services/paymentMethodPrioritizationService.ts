@@ -664,13 +664,15 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
     stablecoinResult: any
   ): PrioritizedPaymentMethod[] {
     // Safety check
-    if (!stablecoinResult?.prioritizedStablecoins) {
+    if (!stablecoinResult || !stablecoinResult.prioritizedStablecoins || !Array.isArray(stablecoinResult.prioritizedStablecoins) || stablecoinResult.prioritizedStablecoins.length === 0) {
       return allMethods;
     }
 
     // Merge stablecoin-enhanced methods back into the full list
     const stablecoinMap = new Map<string, PrioritizedPaymentMethod>(
-      stablecoinResult.prioritizedStablecoins.map((m: PrioritizedPaymentMethod) => [m.method.id, m])
+      stablecoinResult.prioritizedStablecoins
+        .filter((m: any) => m && m.method && m.method.id)
+        .map((m: PrioritizedPaymentMethod) => [m.method.id, m])
     );
 
     const mergedMethods: PrioritizedPaymentMethod[] = allMethods.map(method => {
@@ -771,20 +773,25 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
 
   // Performance optimization helper methods
   private generatePrioritizationCacheKey(context: PrioritizationContext): string {
+    if (!context || !context.availablePaymentMethods) {
+      return `prioritization_empty_${Date.now()}`;
+    }
+
     const methodIds = context.availablePaymentMethods
-      .map(m => m.type)
+      .map(m => m?.type || 'unknown')
       .sort()
       .join(',');
 
     const userContextHash = this.hashUserContext(context.userContext);
-    const amount = Math.round(context.transactionAmount);
+    const amount = Math.round(context.transactionAmount || 0);
 
     return `prioritization_${methodIds}_${userContextHash}_${amount}`;
   }
 
   private hashUserContext(userContext: UserContext): string {
+    if (!userContext) return 'no_context';
     // Create a simple hash of relevant user context data
-    const contextString = `${userContext.chainId}_${userContext.userAddress || 'anonymous'}`;
+    const contextString = `${userContext.chainId || 0}_${userContext.userAddress || 'anonymous'}`;
     return btoa(contextString).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
   }
 

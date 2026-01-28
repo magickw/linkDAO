@@ -284,6 +284,15 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       // Note: Tax is NOT included in transactionAmount - it's displayed separately in TransactionSummary
       const baseAmount = subtotal + shipping;
 
+      // Safety check: ensure availablePaymentMethods is not empty
+      const availablePaymentMethods = await getAvailablePaymentMethods();
+      if (!availablePaymentMethods || !Array.isArray(availablePaymentMethods) || availablePaymentMethods.length === 0) {
+        console.warn('⚠️ No available payment methods, adding fallback methods');
+        setPrioritizationResult(null);
+        setError('Unable to load payment options. Please refresh the page.');
+        return;
+      }
+
       // Create prioritization context WITHOUT wallet balance detection
       // Balance will only be checked when user selects a crypto payment method
       const context: PrioritizationContext = {
@@ -303,21 +312,15 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
             autoSelectBestOption: true
           }
         },
-        availablePaymentMethods: await getAvailablePaymentMethods(),
+        availablePaymentMethods,
         marketConditions: await getCurrentMarketConditions()
       };
-
-      // Safety check: ensure availablePaymentMethods is not empty
-      if (!context.availablePaymentMethods || context.availablePaymentMethods.length === 0) {
-        console.warn('⚠️ No available payment methods, adding fallback methods');
-        context.availablePaymentMethods = await getAvailablePaymentMethods();
-      }
 
       console.log('🔍 Payment context:', {
         hasWallet: !!address,
         chainId: context.userContext.chainId,
-        availableMethodsCount: context.availablePaymentMethods.length,
-        fiatAvailable: context.availablePaymentMethods.some(m => m.type === PaymentMethodType.FIAT_STRIPE)
+        availableMethodsCount: (context.availablePaymentMethods || []).length,
+        fiatAvailable: (context.availablePaymentMethods || []).some(m => m?.type === PaymentMethodType.FIAT_STRIPE)
       });
 
       // Get prioritized payment methods
@@ -748,6 +751,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
     // Platform fee is NOT included - that's charged to sellers
     const finalTotal = subtotal + shipping + tax + gasFee;
 
+    const exchangeRate = selectedPaymentMethod?.costEstimate?.exchangeRate || 1;
+
     return (
       <GlassPanel variant="secondary" className="p-6">
         <h3 className="text-lg font-semibold text-white mb-4">Order Summary</h3>
@@ -842,7 +847,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
             {selectedPaymentMethod?.method.type !== PaymentMethodType.FIAT_STRIPE && selectedPaymentMethod?.method.token && (
               <div className="text-right text-xs text-white/50">
-                ≈ {((finalTotal / (selectedPaymentMethod?.costEstimate?.exchangeRate || 1))).toFixed(4)} {selectedPaymentMethod?.method.token?.symbol}
+                ≈ {(finalTotal / exchangeRate).toFixed(4)} {selectedPaymentMethod?.method.token?.symbol}
               </div>
             )}
           </div>

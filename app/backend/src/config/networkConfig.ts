@@ -7,6 +7,7 @@ export interface NetworkConfig {
     chainId: number;
     name: string;
     rpcUrl: string;
+    fallbackRpcUrls?: string[];
     escrowContractAddress: string;
     marketplaceContractAddress?: string;
     isTestnet: boolean;
@@ -21,6 +22,7 @@ export const NETWORK_CONFIGS: Record<number, NetworkConfig> = {
         chainId: 1,
         name: 'Ethereum Mainnet',
         rpcUrl: process.env.ETHEREUM_RPC_URL || 'https://eth.llamarpc.com',
+        fallbackRpcUrls: ['https://rpc.ankr.com/eth', 'https://cloudflare-eth.com'],
         escrowContractAddress: process.env.ETHEREUM_ESCROW_CONTRACT || '0x0000000000000000000000000000000000000000',
         marketplaceContractAddress: process.env.ETHEREUM_MARKETPLACE_CONTRACT || '',
         isTestnet: false
@@ -30,7 +32,12 @@ export const NETWORK_CONFIGS: Record<number, NetworkConfig> = {
     11155111: {
         chainId: 11155111,
         name: 'Sepolia Testnet',
-        rpcUrl: process.env.SEPOLIA_RPC_URL || 'https://sepolia.drpc.org',
+        rpcUrl: process.env.SEPOLIA_RPC_URL || 'https://rpc.ankr.com/eth_sepolia',
+        fallbackRpcUrls: [
+            'https://ethereum-sepolia-rpc.publicnode.com',
+            'https://eth-sepolia.public.blastapi.io',
+            'https://sepolia.drpc.org'
+        ],
         escrowContractAddress: process.env.SEPOLIA_ESCROW_CONTRACT || '0xa5c2126de8CC1a998833E97CdE6d185aDb4B3AD1',
         marketplaceContractAddress: process.env.SEPOLIA_MARKETPLACE_CONTRACT || '',
         isTestnet: true

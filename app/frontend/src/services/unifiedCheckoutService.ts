@@ -3,6 +3,7 @@ import { StripePaymentService } from './stripePaymentService';
 import { ExchangeRateService } from './exchangeRateService';
 import { x402PaymentService, type X402PaymentRequest } from './x402PaymentService';
 import { enhancedAuthService } from './enhancedAuthService';
+import { API_BASE_URL } from '../config/api';
 import {
   PrioritizedPaymentMethod,
   PaymentMethodType,
@@ -103,7 +104,7 @@ export class UnifiedCheckoutService {
     this.cryptoPaymentService = cryptoPaymentService;
     this.stripePaymentService = stripePaymentService;
     this.exchangeRateService = new ExchangeRateService();
-    this.apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    this.apiBaseUrl = API_BASE_URL;
   }
 
   private async shouldAttemptRequest(): Promise<boolean> {
