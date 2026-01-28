@@ -48,9 +48,9 @@ export class TaxRemittanceService {
         .from(taxLiabilities)
         .where(
           and(
-            eq(taxLiabilities.tax_jurisdiction, period.jurisdiction),
-            gte(taxLiabilities.collection_date, period.startDate),
-            lte(taxLiabilities.collection_date, period.endDate),
+            eq(taxLiabilities.taxJurisdiction, period.jurisdiction),
+            gte(taxLiabilities.collectionDate, period.startDate),
+            lte(taxLiabilities.collectionDate, period.endDate),
             eq(taxLiabilities.status, 'calculated')
           )
         );
@@ -61,12 +61,12 @@ export class TaxRemittanceService {
       }
 
       // Calculate total tax and jurisdiction breakdown
-      const totalTaxAmount = liabilities.reduce((sum, liability) => sum + liability.tax_amount, 0);
+      const totalTaxAmount = liabilities.reduce((sum, liability) => sum + liability.taxAmount, 0);
       const jurisdictionBreakdown: Record<string, number> = {};
 
       liabilities.forEach(liability => {
-        jurisdictionBreakdown[liability.tax_jurisdiction] =
-          (jurisdictionBreakdown[liability.tax_jurisdiction] || 0) + liability.tax_amount;
+        jurisdictionBreakdown[liability.taxJurisdiction] =
+          (jurisdictionBreakdown[liability.taxJurisdiction] || 0) + liability.taxAmount;
       });
 
       // Create remittance batch
@@ -80,7 +80,7 @@ export class TaxRemittanceService {
           totalLiabilities: liabilities.length,
           jurisdictionBreakdown: JSON.stringify(jurisdictionBreakdown),
           status: 'pending',
-          remittance_provider: provider,
+          remittanceProvider: provider,
           createdAt: new Date(),
           updatedAt: new Date(),
         })
@@ -155,7 +155,7 @@ export class TaxRemittanceService {
             remittanceReference: paymentReference,
             updatedAt: new Date(),
           })
-          .where(eq(taxLiabilities.id, item.tax_liability_id));
+          .where(eq(taxLiabilities.id, item.taxLiabilityId));
       }
 
       safeLogger.info('Tax payment recorded successfully:', {
@@ -198,9 +198,9 @@ export class TaxRemittanceService {
         .insert(taxFilings)
         .values({
           batchId: batchId,
-          jurisdiction: batch.remittance_provider || 'MULTI',
-          filingType: this.getFilingType(batch.remittance_period_start),
-          filingPeriodStart: batch.remittance_period_start,
+          jurisdiction: batch.remittanceProvider || 'MULTI',
+          filingType: this.getFilingType(batch.remittancePeriodStart),
+          filingPeriodStart: batch.remittancePeriodStart,
           filingPeriodEnd: batch.remittancePeriodEnd,
           grossSales: filingData.grossSales,
           taxableSales: filingData.taxableAmount,
@@ -247,24 +247,24 @@ export class TaxRemittanceService {
         throw new Error('Remittance batch not found');
       }
 
-      const jurisdictionBreakdown = batch.jurisdiction_breakdown
-        ? JSON.parse(batch.jurisdiction_breakdown as string)
+      const jurisdictionBreakdown = batch.jurisdictionBreakdown
+        ? JSON.parse(batch.jurisdictionBreakdown as string)
         : {};
 
       return {
         batchId: batch.id,
-        batchNumber: batch.batch_number,
+        batchNumber: batch.batchNumber,
         period: {
-          startDate: batch.remittance_period_start,
+          startDate: batch.remittancePeriodStart,
           endDate: batch.remittancePeriodEnd,
-          jurisdiction: batch.remittance_provider || 'MULTI',
+          jurisdiction: batch.remittanceProvider || 'MULTI',
         },
         totalTaxAmount: batch.totalTaxAmount,
-        liabilitiesCount: batch.total_liabilities,
+        liabilitiesCount: batch.totalLiabilities,
         jurisdictionBreakdown,
         dueDate: this.calculateDueDate(batch.remittancePeriodEnd),
-        filedDate: batch.filed_at || undefined,
-        paidDate: batch.paid_at || undefined,
+        filedDate: batch.filedAt || undefined,
+        paidDate: batch.paidAt || undefined,
         status: batch.status as any,
       };
     } catch (error) {
@@ -288,7 +288,7 @@ export class TaxRemittanceService {
         .from(taxLiabilities)
         .where(
           and(
-            lte(taxLiabilities.due_date, today),
+            lte(taxLiabilities.dueDate, today),
             eq(taxLiabilities.status, 'pending')
           )
         );
@@ -300,11 +300,11 @@ export class TaxRemittanceService {
         await db
           .insert(taxComplianceAlerts)
           .values({
-            alert_type: 'overdue',
+            alertType: 'overdue',
             severity: 'critical',
-            jurisdiction: liability.tax_jurisdiction,
+            jurisdiction: liability.taxJurisdiction,
             taxLiabilityId: liability.id,
-            message: `Tax liability of ${liability.tax_amount} for jurisdiction ${liability.tax_jurisdiction} is overdue (due ${liability.due_date})`,
+            message: `Tax liability of ${liability.taxAmount} for jurisdiction ${liability.taxJurisdiction} is overdue (due ${liability.dueDate})`,
             resolved: false,
             createdAt: new Date(),
           });
@@ -313,9 +313,9 @@ export class TaxRemittanceService {
 
         safeLogger.warn('Overdue tax liability detected:', {
           liabilityId: liability.id,
-          jurisdiction: liability.tax_jurisdiction,
-          dueDate: liability.due_date,
-          amount: liability.tax_amount,
+          jurisdiction: liability.taxJurisdiction,
+          dueDate: liability.dueDate,
+          amount: liability.taxAmount,
         });
       }
 
@@ -350,8 +350,8 @@ export class TaxRemittanceService {
         .update(taxComplianceAlerts)
         .set({
           resolved: true,
-          resolved_at: new Date(),
-          resolved_by: userId,
+          resolvedAt: new Date(),
+          resolvedBy: userId,
         })
         .where(eq(taxComplianceAlerts.id, alertId));
 

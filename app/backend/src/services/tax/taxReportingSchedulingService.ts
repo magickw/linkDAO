@@ -251,10 +251,10 @@ export class TaxReportingSchedulingService {
         .select()
         .from(taxLiabilities)
         .where(
-          gte(taxLiabilities.collection_date, weekAgo)
+          gte(taxLiabilities.collectionDate, weekAgo)
         );
 
-      const jurisdictions = new Set(liabilities.map(l => l.tax_jurisdiction));
+      const jurisdictions = new Set(liabilities.map(l => l.taxJurisdiction));
 
       const summary: Record<string, any> = {
         period: { start: weekAgo, end: today },
@@ -266,7 +266,7 @@ export class TaxReportingSchedulingService {
       };
 
       liabilities.forEach(liability => {
-        summary.total_amount += liability.tax_amount;
+        summary.total_amount += liability.taxAmount;
 
         switch (liability.status) {
           case 'pending':
@@ -281,17 +281,17 @@ export class TaxReportingSchedulingService {
             break;
         }
 
-        if (!summary.by_jurisdiction[liability.tax_jurisdiction]) {
-          summary.by_jurisdiction[liability.tax_jurisdiction] = {
+        if (!summary.by_jurisdiction[liability.taxJurisdiction]) {
+          summary.by_jurisdiction[liability.taxJurisdiction] = {
             count: 0,
             amount: 0,
             statuses: {},
           };
         }
 
-        const jur = summary.by_jurisdiction[liability.tax_jurisdiction];
+        const jur = summary.by_jurisdiction[liability.taxJurisdiction];
         jur.count += 1;
-        jur.amount += liability.tax_amount;
+        jur.amount += liability.taxAmount;
         jur.statuses[liability.status] = (jur.statuses[liability.status] || 0) + 1;
       });
 
@@ -315,7 +315,7 @@ export class TaxReportingSchedulingService {
         .from(taxLiabilities)
         .where(
           and(
-            lte(taxLiabilities.due_date, today),
+            lte(taxLiabilities.dueDate, today),
             eq(taxLiabilities.status, 'pending')
           )
         );
@@ -335,7 +335,7 @@ export class TaxReportingSchedulingService {
       return {
         generated_at: today,
         overdue_liabilities: overdueLiabilities.length,
-        overdue_amount: overdueLiabilities.reduce((sum, l) => sum + l.tax_amount, 0),
+        overdue_amount: overdueLiabilities.reduce((sum, l) => sum + l.taxAmount, 0),
         pending_alerts: alerts.length,
         filing_status: {
           filed: filedCount,

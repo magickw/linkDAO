@@ -69,7 +69,7 @@ export class TaxAwareEscrowService {
         .from(taxLiabilities)
         .where(eq(taxLiabilities.orderId, order.id));
 
-      const taxAmount = existingTaxLiability?.tax_amount || 0;
+      const taxAmount = existingTaxLiability?.taxAmount || 0;
       const totalEscrowAmount = escrow.amount;
       const sellerAmount = totalEscrowAmount - (order.platformFee || 0) - taxAmount;
 
@@ -223,7 +223,7 @@ export class TaxAwareEscrowService {
           metadata: {
             seller_amount: sellerAmount,
             platform_fee: platformFee,
-            tax_amount: taxAmount,
+            taxAmount: taxAmount,
           },
         })
         .where(eq(escrows.id, escrowId));
@@ -240,7 +240,7 @@ export class TaxAwareEscrowService {
             .update(taxLiabilities)
             .set({
               status: 'paid',
-              remittance_date: new Date(),
+              remittanceDate: new Date(),
               updated_at: new Date(),
             })
             .where(eq(taxLiabilities.id, taxLiability.id));
@@ -360,23 +360,23 @@ export class TaxAwareEscrowService {
         ? await db
             .select()
             .from(taxLiabilities)
-            .where(eq(taxLiabilities.tax_jurisdiction, jurisdiction))
+            .where(eq(taxLiabilities.taxJurisdiction, jurisdiction))
         : await db.select().from(taxLiabilities);
 
       const pending = liabilities.filter(l => l.status === 'pending').length;
       const pending_amount = liabilities
         .filter(l => l.status === 'pending')
-        .reduce((sum, l) => sum + l.tax_amount, 0);
+        .reduce((sum, l) => sum + l.taxAmount, 0);
 
       const filed = liabilities.filter(l => l.status === 'filed').length;
       const filed_amount = liabilities
         .filter(l => l.status === 'filed')
-        .reduce((sum, l) => sum + l.tax_amount, 0);
+        .reduce((sum, l) => sum + l.taxAmount, 0);
 
       const paid = liabilities.filter(l => l.status === 'paid').length;
       const paid_amount = liabilities
         .filter(l => l.status === 'paid')
-        .reduce((sum, l) => sum + l.tax_amount, 0);
+        .reduce((sum, l) => sum + l.taxAmount, 0);
 
       return {
         pending: { count: pending, amount: pending_amount },
@@ -384,7 +384,7 @@ export class TaxAwareEscrowService {
         paid: { count: paid, amount: paid_amount },
         total: {
           count: liabilities.length,
-          amount: liabilities.reduce((sum, l) => sum + l.tax_amount, 0),
+          amount: liabilities.reduce((sum, l) => sum + l.taxAmount, 0),
         },
       };
     } catch (error) {

@@ -346,8 +346,8 @@ export class CryptoTaxEscrowService {
       await db
         .update(escrows)
         .set({
-          tax_escrow_amount: taxAmount,
-          tax_escrow_remitted: false,
+          taxEscrowAmount: taxAmount,
+          taxEscrowRemitted: false,
           metadata: {
             taxJurisdiction,
             cryptoTaxLiabilityId,
@@ -378,8 +378,8 @@ export class CryptoTaxEscrowService {
       await db
         .update(escrows)
         .set({
-          tax_escrow_remitted: true,
-          tax_escrow_remitted_at: new Date(),
+          taxEscrowRemitted: true,
+          taxEscrowRemitted_at: new Date(),
           metadata: {
             taxRemittanceTransactionHash: transactionHash,
           },

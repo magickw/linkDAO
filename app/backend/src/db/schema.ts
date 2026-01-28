@@ -1156,6 +1156,7 @@ export const offers = pgTable("offers", {
 export const escrows = pgTable("escrows", {
   id: uuid("id").defaultRandom().primaryKey(),
   listingId: uuid("listing_id").references(() => listings.id),
+  orderId: uuid("order_id").references(() => orders.id),
   buyerId: uuid("buyer_id").references(() => users.id),
   sellerId: uuid("seller_id").references(() => users.id),
   amount: numeric("amount").notNull(), // Using numeric for better precision

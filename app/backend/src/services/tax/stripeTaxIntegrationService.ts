@@ -59,7 +59,7 @@ export class StripeTaxIntegrationService {
         })),
       });
 
-      const totalTaxAmount = taxCalculation.tax_amount_estimate;
+      const totalTaxAmount = taxCalculation.taxAmount_estimate;
       const jurisdiction = this.getJurisdictionFromAddress(customerAddress);
 
       // Calculate effective tax rate
@@ -67,8 +67,8 @@ export class StripeTaxIntegrationService {
 
       const lineItemTaxes = (taxCalculation.line_items?.data || []).map(item => ({
         reference: item.reference,
-        taxAmount: item.tax_amount_estimate,
-        taxRate: item.amount > 0 ? item.tax_amount_estimate / item.amount : 0,
+        taxAmount: item.taxAmount_estimate,
+        taxRate: item.amount > 0 ? item.taxAmount_estimate / item.amount : 0,
       }));
 
       safeLogger.info('Stripe tax calculation completed:', {
