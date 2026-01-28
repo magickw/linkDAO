@@ -388,7 +388,7 @@ export class MessagingController {
 
       const { id } = req.params;
 
-      const result = await messagingService.deleteConversation({
+      const result = await (messagingService as any).deleteConversation({
         conversationId: id,
         userAddress
       });
@@ -420,7 +420,7 @@ export class MessagingController {
 
       const { id } = req.params;
 
-      const result = await messagingService.archiveConversation({
+      const result = await (messagingService as any).archiveConversation({
         conversationId: id,
         userAddress
       });
@@ -452,7 +452,7 @@ export class MessagingController {
 
       const { id } = req.params;
 
-      const result = await messagingService.unarchiveConversation({
+      const result = await (messagingService as any).unarchiveConversation({
         conversationId: id,
         userAddress
       });
@@ -485,7 +485,7 @@ export class MessagingController {
       const { id } = req.params;
       const { content, recipientPublicKey } = req.body;
 
-      const encryptedMessage = await messagingService.encryptMessage({
+      const encryptedMessage = await (messagingService as any).encryptMessage({
         messageId: id,
         content,
         recipientPublicKey,
@@ -520,7 +520,7 @@ export class MessagingController {
       const { id } = req.params;
       const { encryptedContent, encryptionMetadata } = req.body;
 
-      const decryptedMessage = await messagingService.decryptMessage({
+      const decryptedMessage = await (messagingService as any).decryptMessage({
         messageId: id,
         encryptedContent,
         encryptionMetadata,
@@ -1058,8 +1058,7 @@ export class MessagingController {
         safeLogger.warn(`[FileUpload] File validation failed: ${validationResult.errors.join(', ')}`);
         res.status(400).json(apiResponse.error(
           `File validation failed: ${validationResult.errors[0]}`,
-          400,
-          { errors: validationResult.errors }
+          400
         ));
         return;
       }
@@ -1119,11 +1118,7 @@ export class MessagingController {
 
         res.status(400).json(apiResponse.error(
           'File rejected: Virus detected',
-          400,
-          {
-            viruses: scanResult.viruses,
-            scanner: scanResult.scanner
-          }
+          400
         ));
         return;
       }

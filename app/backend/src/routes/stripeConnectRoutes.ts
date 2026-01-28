@@ -4,6 +4,7 @@ import { authMiddleware } from '../middleware/authMiddleware';
 import { StripePaymentService } from '../services/stripePaymentService';
 import { stripeConnectService } from '../services/stripeConnectService';
 import { getPrimaryFrontendUrl } from '../utils/urlUtils';
+import { sellerProfileService } from '../services/sellerProfileService';
 
 export function createStripeConnectRoutes(stripeService: StripePaymentService): express.Router {
   const router = express.Router();

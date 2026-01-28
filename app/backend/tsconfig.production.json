@@ -3,7 +3,7 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "commonjs",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "lib": [
       "ES2021"
     ],
@@ -45,13 +45,6 @@
     "**/*.spec.ts",
     "tests/**/*",
     "src/tests/**/*",
-    "coverage/**/*",
-    "src/controllers/**/*",
-    "src/services/**/*",
-    "src/routes/**/*",
-    "src/middleware/**/*",
-    "src/db/**/*",
-    "src/config/**/*",
-    "src/scripts/**/*"
+    "coverage/**/*"
   ]
 }

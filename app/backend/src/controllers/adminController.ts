@@ -966,7 +966,7 @@ export class AdminController {
         return res.status(400).json({ error: 'Escrow ID is required' });
       }
 
-      const status = await this.enhancedEscrowService.getEscrowStatusOnChain(
+      const status = await this.enhancedEscrowService.getEscrowStatus(
         id,
         chainId ? parseInt(chainId as string) : undefined
       );

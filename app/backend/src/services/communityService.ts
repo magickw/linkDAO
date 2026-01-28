@@ -1631,8 +1631,6 @@ export class CommunityService {
           dao: post.dao,
           communityId: post.communityId,
           createdAt: post.createdAt,
-          communityId: post.communityId,
-          createdAt: post.createdAt,
           views: post.views || 0, // Include view count
           upvotes: post.upvotes || 0,
           downvotes: post.downvotes || 0,
@@ -1825,7 +1823,6 @@ export class CommunityService {
           stakedValue: post.stakedValue ? Number(post.stakedValue) : 0,
           reputationScore: post.reputationScore || 0,
           dao: post.dao,
-          communityId: post.communityId,
           communityId: post.communityId,
           createdAt: post.createdAt,
           views: post.views || 0,

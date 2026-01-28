@@ -58,7 +58,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     const metadata = await ipfsIntegrationService.uploadDocument(req.file.buffer, {
       title: name || req.file.originalname,
       description: description,
-      contentType: detectedContentType,
+      contentType: detectedContentType as any,
       userId: userId,
       tags: tags ? tags.split(',') : [],
       mimeType: req.file.mimetype // Pass the actual MIME type

@@ -137,7 +137,7 @@ export function isMimeTypeAllowed(mimeType: string): boolean {
 // Helper to check if an extension is blocked
 export function isExtensionBlocked(filename: string): boolean {
     const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'));
-    return FILE_UPLOAD_CONFIG.blockedExtensions.includes(ext);
+    return FILE_UPLOAD_CONFIG.blockedExtensions.includes(ext as any);
 }
 
 // Helper to get max file size for a MIME type
