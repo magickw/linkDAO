@@ -103,6 +103,8 @@
     "src/services/analytics/**/*",
     "src/services/user/**/*",
     "src/services/workflow/**/*",
+    "src/services/websocket/**/*",
+    "src/services/databaseService.ts",
     "src/routes/advancedTradingRoutes.ts",
     "src/routes/dexTradingRoutes.ts",
     "src/routes/checkoutRoutes.enhanced.ts",
