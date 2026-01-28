@@ -249,7 +249,7 @@ router.post('/:applicationId/application/review', csrfProtection,
 // Seller Applications Routes (DEPRECATED - use /application/* routes above)
 router.get('/applications', sellerController.getSellerApplications.bind(sellerController));
 router.get('/applications/:applicationId', sellerController.getSellerApplication.bind(sellerController));
-router.post('/applications/:applicationId/review', csrfProtection, sellerController.reviewSellerApplication.bind(sellerController));
+router.post('/applications/:applicationId/review', csrfProtection, sellerController.reviewSellerApplicationNew.bind(sellerController));
 router.get('/applications/:applicationId/risk-assessment', sellerController.getSellerRiskAssessment.bind(sellerController));
 
 // Seller Performance Routes
