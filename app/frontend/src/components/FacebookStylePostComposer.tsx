@@ -163,6 +163,8 @@ const FacebookStylePostComposer = React.memo(({
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
       }
+      // Clear link queue to prevent memory accumulation
+      linkQueueRef.current.clear();
     };
   }, []);
 
@@ -469,14 +471,33 @@ const FacebookStylePostComposer = React.memo(({
 
     setSelectedFiles(prev => [...prev, ...files]);
 
-    // Create previews
+    // Create previews with proper cleanup
+    const readers: FileReader[] = [];
+    let completedReads = 0;
+
     files.forEach(file => {
       const reader = new FileReader();
+      readers.push(reader);
+
       reader.onload = (event) => {
         if (event.target?.result) {
           setPreviews(prev => [...prev, event.target!.result as string]);
         }
+        completedReads++;
+        // Clean up reader reference after processing
+        if (completedReads === files.length) {
+          readers.length = 0; // Clear the readers array
+        }
       };
+
+      reader.onerror = () => {
+        completedReads++;
+        console.error('FileReader error for file:', file.name);
+        if (completedReads === files.length) {
+          readers.length = 0;
+        }
+      };
+
       reader.readAsDataURL(file);
     });
   }, [maxFileSize]);
@@ -503,14 +524,33 @@ const FacebookStylePostComposer = React.memo(({
 
     setSelectedFiles(prev => [...prev, ...files]);
 
-    // Create previews for videos
+    // Create previews for videos with proper cleanup
+    const readers: FileReader[] = [];
+    let completedReads = 0;
+
     files.forEach(file => {
       const reader = new FileReader();
+      readers.push(reader);
+
       reader.onload = (event) => {
         if (event.target?.result) {
           setPreviews(prev => [...prev, event.target!.result as string]);
         }
+        completedReads++;
+        // Clean up reader reference after processing
+        if (completedReads === files.length) {
+          readers.length = 0; // Clear the readers array
+        }
       };
+
+      reader.onerror = () => {
+        completedReads++;
+        console.error('FileReader error for video:', file.name);
+        if (completedReads === files.length) {
+          readers.length = 0;
+        }
+      };
+
       reader.readAsDataURL(file);
     });
   }, [maxFileSize]);

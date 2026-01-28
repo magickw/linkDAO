@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
-import { 
-  ContentType, 
-  RichPostInput, 
-  PostDraft, 
+import {
+  ContentType,
+  RichPostInput,
+  PostDraft,
   MediaFile,
   LinkPreview,
   PollData,
@@ -20,6 +20,15 @@ import { HashtagMentionInput } from './HashtagMentionInput';
 import { PollCreator } from './PollCreator';
 import { ProposalCreator } from './ProposalCreator';
 import RichTextEditor from './RichTextEditor';
+
+// Define placeholders outside component to prevent recreation on every render
+const PLACEHOLDER_HINTS = [
+  "Share your latest DAO proposal 🧠",
+  "Post your NFT drop 🚀",
+  "Comment on trending governance votes 🏛️",
+  "Share what you're building in Web3 💻",
+  "Ask the community a question 🤔"
+];
 
 export default function EnhancedPostComposer({
   context,
@@ -61,9 +70,11 @@ export default function EnhancedPostComposer({
   // Initialize auto-saver
   useEffect(() => {
     autoSaverRef.current = DraftService.createAutoSaver(context, communityId);
-    
+
     return () => {
       autoSaverRef.current?.cancel();
+      // Nullify ref to prevent stale closures
+      autoSaverRef.current = null;
     };
   }, [context, communityId]);
 
@@ -254,18 +265,12 @@ export default function EnhancedPostComposer({
 
   // Get placeholder text based on content type - with rotating suggestions
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
-  const placeholders = [
-    "Share your latest DAO proposal 🧠",
-    "Post your NFT drop 🚀",
-    "Comment on trending governance votes 🏛️",
-    "Share what you're building in Web3 💻",
-    "Ask the community a question 🤔"
-  ];
 
   useEffect(() => {
     if (!isExpanded) {
+      // Only set interval when composer is collapsed to save resources
       const interval = setInterval(() => {
-        setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
+        setPlaceholderIndex((prev) => (prev + 1) % PLACEHOLDER_HINTS.length);
       }, 3000);
       return () => clearInterval(interval);
     }
@@ -280,7 +285,7 @@ export default function EnhancedPostComposer({
     }
     return context === 'community'
       ? "Share your thoughts with the community..."
-      : isExpanded ? "What's happening in Web3?" : placeholders[placeholderIndex];
+      : isExpanded ? "What's happening in Web3?" : PLACEHOLDER_HINTS[placeholderIndex];
   }, [poll, proposal, context, isExpanded, placeholderIndex]);
 
   // Collapsed state

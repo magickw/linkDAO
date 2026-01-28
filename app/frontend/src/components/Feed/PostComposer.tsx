@@ -54,9 +54,25 @@ export const PostComposer: React.FC<PostComposerProps> = ({
 
   const editorRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const objectUrlsRef = useRef<Map<number, string>>(new Map());
 
   const { isConnected } = useWeb3();
   const { addToast } = useToast();
+
+  // Cleanup Object URLs on unmount and when files are removed
+  useEffect(() => {
+    return () => {
+      // Revoke all Object URLs when component unmounts
+      objectUrlsRef.current.forEach(url => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (error) {
+          console.warn('Failed to revoke Object URL:', error);
+        }
+      });
+      objectUrlsRef.current.clear();
+    };
+  }, []);
 
   // Mock user suggestions (in production, fetch from API)
   const userSuggestions: UserSuggestion[] = [
@@ -259,7 +275,14 @@ export const PostComposer: React.FC<PostComposerProps> = ({
   };
 
   const removeMediaFile = (index: number) => {
-    setMedia(prev => prev.filter((_, i) => i !== index));
+    setMedia(prev => {
+      const revokedUrl = objectUrlsRef.current.get(index);
+      if (revokedUrl) {
+        URL.revokeObjectURL(revokedUrl);
+        objectUrlsRef.current.delete(index);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   // Close suggestion dropdowns when clicking outside
@@ -404,32 +427,41 @@ export const PostComposer: React.FC<PostComposerProps> = ({
 
         {media.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {media.map((file, index) => (
-              <div key={index} className="relative group">
-                {file.type.startsWith('image/') && (
-                  <img
-                    src={URL.createObjectURL(file)}
-                    alt={file.name}
-                    className="w-full h-24 object-cover rounded-lg"
-                  />
-                )}
-                {file.type.startsWith('video/') && (
-                  <div className="w-full h-24 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                    <span className="text-2xl">🎬</span>
+            {media.map((file, index) => {
+              // Get or create cached Object URL for this file
+              let objectUrl = objectUrlsRef.current.get(index);
+              if (!objectUrl) {
+                objectUrl = URL.createObjectURL(file);
+                objectUrlsRef.current.set(index, objectUrl);
+              }
+
+              return (
+                <div key={index} className="relative group">
+                  {file.type.startsWith('image/') && (
+                    <img
+                      src={objectUrl}
+                      alt={file.name}
+                      className="w-full h-24 object-cover rounded-lg"
+                    />
+                  )}
+                  {file.type.startsWith('video/') && (
+                    <div className="w-full h-24 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                      <span className="text-2xl">🎬</span>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => removeMediaFile(index)}
+                    disabled={isPosting}
+                    className="absolute top-1 right-1 p-3 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] min-w-[44px]"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  <div className="absolute bottom-1 left-1 right-1 px-1 py-0.5 bg-black bg-opacity-50 text-white text-xs rounded truncate">
+                    {file.name}
                   </div>
-                )}
-                <button
-                  onClick={() => removeMediaFile(index)}
-                  disabled={isPosting}
-                  className="absolute top-1 right-1 p-3 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] min-w-[44px]"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                <div className="absolute bottom-1 left-1 right-1 px-1 py-0.5 bg-black bg-opacity-50 text-white text-xs rounded truncate">
-                  {file.name}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
