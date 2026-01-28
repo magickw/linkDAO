@@ -46,8 +46,7 @@ class ReferralService {
    * Generate unique referral code
    */
   generateReferralCode(): string {
-    const codeLength = referralConfigService.getReferralCodeLength ? referralConfigService.getReferralCodeLength() as number : 8;
-    const buffer = crypto.randomBytes(codeLength);
+          const codeLength = await referralConfigService.getReferralCodeLength ? await referralConfigService.getReferralCodeLength() as number : 8;    const buffer = crypto.randomBytes(codeLength);
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = '';
     for (let i = 0; i < codeLength; i++) {

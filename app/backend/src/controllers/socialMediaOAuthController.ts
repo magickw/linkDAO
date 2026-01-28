@@ -8,6 +8,7 @@ import { socialMediaConnectionService } from '../services/socialMediaConnectionS
 import { isSupportedPlatform } from '../services/oauth';
 import { safeLogger } from '../utils/safeLogger';
 import { getPrimaryFrontendUrl } from '../utils/urlUtils';
+import { ApiResponse } from '../utils/apiResponse';
 
 class SocialMediaOAuthController {
   /**
@@ -20,27 +21,22 @@ class SocialMediaOAuthController {
       const userId = (req as any).user?.id || (req as any).userId;
 
       if (!userId) {
-        res.status(401).json(apiResponse.error('Authentication required', 401));
-        return;
+        return ApiResponse.unauthorized(res, 'Authentication required');
       }
 
       if (!platform || !isSupportedPlatform(platform)) {
-        res.status(400).json(apiResponse.error(`Unsupported platform: ${platform}. Supported: twitter, facebook, linkedin, threads`, 400));
-        return;
+        return ApiResponse.badRequest(res, `Unsupported platform: ${platform}. Supported: twitter, facebook, linkedin, threads`);
       }
 
       const result = await socialMediaConnectionService.initiateOAuth(userId, platform);
 
-      res.json(apiResponse.success({
+      return ApiResponse.success(res, {
         authUrl: result.authUrl,
         platform,
-      }, `Redirect to ${platform} to authorize`));
+      });
     } catch (error) {
       safeLogger.error('OAuth initiation error:', error);
-      res.status(500).json(apiResponse.error(
-        error instanceof Error ? error.message : 'Failed to initiate OAuth',
-        500
-      ));
+      return ApiResponse.serverError(res, error instanceof Error ? error.message : 'Failed to initiate OAuth');
     }
   }
 
@@ -63,13 +59,11 @@ class SocialMediaOAuthController {
       }
 
       if (!code || !state) {
-        res.status(400).json(apiResponse.error('Missing code or state parameter', 400));
-        return;
+        return ApiResponse.badRequest(res, 'Missing code or state parameter');
       }
 
       if (!platform || !isSupportedPlatform(platform)) {
-        res.status(400).json(apiResponse.error(`Unsupported platform: ${platform}`, 400));
-        return;
+        return ApiResponse.badRequest(res, `Unsupported platform: ${platform}`);
       }
 
       const connection = await socialMediaConnectionService.completeOAuth(
@@ -99,8 +93,7 @@ class SocialMediaOAuthController {
       const userId = (req as any).user?.id || (req as any).userId;
 
       if (!userId) {
-        res.status(401).json(apiResponse.error('Authentication required', 401));
-        return;
+        return ApiResponse.unauthorized(res, 'Authentication required');
       }
 
       const connections = await socialMediaConnectionService.getConnections(userId);
@@ -117,10 +110,10 @@ class SocialMediaOAuthController {
         lastUsedAt: conn.lastUsedAt,
       }));
 
-      res.json(apiResponse.success(safeConnections, 'Connections retrieved'));
+      return ApiResponse.success(res, safeConnections);
     } catch (error) {
       safeLogger.error('Get connections error:', error);
-      res.status(500).json(apiResponse.error('Failed to get connections', 500));
+      return ApiResponse.serverError(res, 'Failed to get connections');
     }
   }
 
@@ -134,23 +127,20 @@ class SocialMediaOAuthController {
       const userId = (req as any).user?.id || (req as any).userId;
 
       if (!userId) {
-        res.status(401).json(apiResponse.error('Authentication required', 401));
-        return;
+        return ApiResponse.unauthorized(res, 'Authentication required');
       }
 
       if (!platform || !isSupportedPlatform(platform)) {
-        res.status(400).json(apiResponse.error(`Unsupported platform: ${platform}`, 400));
-        return;
+        return ApiResponse.badRequest(res, `Unsupported platform: ${platform}`);
       }
 
       const connection = await socialMediaConnectionService.getConnection(userId, platform);
 
       if (!connection) {
-        res.status(404).json(apiResponse.error(`No ${platform} connection found`, 404));
-        return;
+        return ApiResponse.notFound(res, `No ${platform} connection found`);
       }
 
-      res.json(apiResponse.success({
+      return ApiResponse.success(res, {
         id: connection.id,
         platform: connection.platform,
         platformUsername: connection.platformUsername,
@@ -159,10 +149,10 @@ class SocialMediaOAuthController {
         status: connection.status,
         connectedAt: connection.connectedAt,
         lastUsedAt: connection.lastUsedAt,
-      }, 'Connection retrieved'));
+      });
     } catch (error) {
       safeLogger.error('Get connection error:', error);
-      res.status(500).json(apiResponse.error('Failed to get connection', 500));
+      return ApiResponse.serverError(res, 'Failed to get connection');
     }
   }
 
@@ -176,21 +166,19 @@ class SocialMediaOAuthController {
       const userId = (req as any).user?.id || (req as any).userId;
 
       if (!userId) {
-        res.status(401).json(apiResponse.error('Authentication required', 401));
-        return;
+        return ApiResponse.unauthorized(res, 'Authentication required');
       }
 
       if (!platform || !isSupportedPlatform(platform)) {
-        res.status(400).json(apiResponse.error(`Unsupported platform: ${platform}`, 400));
-        return;
+        return ApiResponse.badRequest(res, `Unsupported platform: ${platform}`);
       }
 
       await socialMediaConnectionService.disconnectPlatform(userId, platform);
 
-      res.json(apiResponse.success(null, `${platform} disconnected successfully`));
+      return ApiResponse.success(res, null);
     } catch (error) {
       safeLogger.error('Disconnect platform error:', error);
-      res.status(500).json(apiResponse.error('Failed to disconnect platform', 500));
+      return ApiResponse.serverError(res, 'Failed to disconnect platform');
     }
   }
 
@@ -204,20 +192,17 @@ class SocialMediaOAuthController {
       const userId = (req as any).user?.id || (req as any).userId;
 
       if (!userId) {
-        res.status(401).json(apiResponse.error('Authentication required', 401));
-        return;
+        return ApiResponse.unauthorized(res, 'Authentication required');
       }
 
       if (!platform || !isSupportedPlatform(platform)) {
-        res.status(400).json(apiResponse.error(`Unsupported platform: ${platform}`, 400));
-        return;
+        return ApiResponse.badRequest(res, `Unsupported platform: ${platform}`);
       }
 
       const connection = await socialMediaConnectionService.getConnection(userId, platform);
 
       if (!connection) {
-        res.status(404).json(apiResponse.error(`No ${platform} connection found`, 404));
-        return;
+        return ApiResponse.notFound(res, `No ${platform} connection found`);
       }
 
       // Attempt to refresh
@@ -226,17 +211,14 @@ class SocialMediaOAuthController {
       // Get updated connection
       const updatedConnection = await socialMediaConnectionService.getConnection(userId, platform);
 
-      res.json(apiResponse.success({
+      return ApiResponse.success(res, {
         id: updatedConnection?.id,
         platform: updatedConnection?.platform,
         status: updatedConnection?.status,
-      }, 'Connection refreshed successfully'));
+      });
     } catch (error) {
       safeLogger.error('Refresh connection error:', error);
-      res.status(500).json(apiResponse.error(
-        error instanceof Error ? error.message : 'Failed to refresh connection',
-        500
-      ));
+      return ApiResponse.serverError(res, error instanceof Error ? error.message : 'Failed to refresh connection');
     }
   }
 }

@@ -5,6 +5,7 @@ import { ShippingService } from '../services/shippingService';
 import { ReceiptService } from '../services/receiptService';
 import { NotificationService } from '../services/notificationService';
 import { BlockchainEventService } from '../services/blockchainEventService';
+import { safeLogger } from '../utils/safeLogger';
 import {
   CreateOrderInput,
   UpdateOrderInput,

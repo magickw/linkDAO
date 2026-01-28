@@ -500,42 +500,111 @@ export class DatabaseService {
     }
   }
 
-  async getPostsByTag(tag: string) {
-    try {
-      safeLogger.info(`Getting posts by tag: ${tag}`);
-      const result = await this.db
+      async getPostsByTag(tag: string) {
 
-        .select({
-          id: schema.posts.id,
-          authorId: schema.posts.authorId,
-          title: schema.posts.title,
-          content: schema.posts.content,
-          contentCid: schema.posts.contentCid,
-          parentId: schema.posts.parentId,
-          mediaCids: schema.posts.mediaCids,
-          tags: schema.posts.tags,
-          stakedValue: schema.posts.stakedValue,
-          reputationScore: schema.posts.reputationScore,
-          dao: schema.posts.dao,
-          communityId: schema.posts.communityId,
-          pollId: schema.posts.pollId,
-          isTokenGated: schema.posts.isTokenGated,
-          gatedContentPreview: schema.posts.gatedContentPreview,
-          moderationStatus: schema.posts.moderationStatus,
-          moderationWarning: schema.posts.moderationWarning,
-          riskScore: schema.posts.riskScore,
-          createdAt: schema.posts.createdAt,
-          updatedAt: schema.posts.updatedAt,
-        })
-        .from(schema.posts)
-        .orderBy(desc(schema.posts.createdAt));
-      safeLogger.info(`Retrieved ${result.length} posts from database`);
-      return result;
-    } catch (error) {
-      safeLogger.error("Error getting all posts:", error);
-      throw error;
-    }
-  }
+        try {
+
+          safeLogger.info(`Getting posts by tag: ${tag}`);
+
+          const result = await this.db
+
+  
+
+            .select({
+
+              id: schema.posts.id,
+
+              authorId: schema.posts.authorId,
+
+              title: schema.posts.title,
+
+              content: schema.posts.content,
+
+              contentCid: schema.posts.contentCid,
+
+              parentId: schema.posts.parentId,
+
+              mediaCids: schema.posts.mediaCids,
+
+              tags: schema.posts.tags,
+
+              stakedValue: schema.posts.stakedValue,
+
+              reputationScore: schema.posts.reputationScore,
+
+              dao: schema.posts.dao,
+
+              communityId: schema.posts.communityId,
+
+              pollId: schema.posts.pollId,
+
+              isTokenGated: schema.posts.isTokenGated,
+
+              gatedContentPreview: schema.posts.gatedContentPreview,
+
+              moderationStatus: schema.posts.moderationStatus,
+
+              moderationWarning: schema.posts.moderationWarning,
+
+              riskScore: schema.posts.riskScore,
+
+              createdAt: schema.posts.createdAt,
+
+              updatedAt: schema.posts.updatedAt,
+
+            })
+
+            .from(schema.posts)
+
+            .where(sql`${schema.posts.tags} @> ${JSON.stringify([tag])}::jsonb`);
+
+          return result;
+
+        } catch (error) {
+
+          safeLogger.error(`Error getting posts by tag ${tag}:`, error);
+
+          throw error;
+
+        }
+
+      }
+
+    
+
+      // Repost operations
+
+      async getUserRepostIds(userId: string): Promise<Set<string>> {
+
+        try {
+
+          safeLogger.info(`Getting repost IDs for user: ${userId}`);
+
+          const reposts = await this.db
+
+            .select({ postId: schema.posts.parentId }) // Assuming reposts have parentId pointing to original post
+
+            .from(schema.posts)
+
+            .where(and(
+
+              eq(schema.posts.authorId, userId),
+
+              eq(schema.posts.isRepost, true)
+
+            ));
+
+          return new Set(reposts.map(r => r.postId).filter((id): id is string => id !== null));
+
+        } catch (error) {
+
+          safeLogger.error(`Error getting user repost IDs for user ${userId}:`, error);
+
+          return new Set();
+
+        }
+
+      }
 
 
 
@@ -1452,16 +1521,28 @@ export class DatabaseService {
         // Release inventory hold as consumed
         if (orderData.inventoryHoldId) {
           await this.releaseInventoryHold(orderData.inventoryHoldId, 'order_completed');
-        }
-      });
-    } catch (error) {
-      safeLogger.error("Error fulfilling order:", error);
-      throw error;
-    }
-  }
-
-  async getOrderById(id: string) {
-    try {
+                  }
+                });
+              } catch (error) {
+                safeLogger.error("Error fulfilling order:", error);
+                throw error;
+              }
+            }
+        
+            async getReferralCount(referralCode: string): Promise<number> {
+              try {
+                const [result] = await this.db
+                  .select({ count: sql<number>`count(*)` })
+                  .from(schema.referralActivities)
+                  .where(eq(schema.referralActivities.referralCode, referralCode));
+                return result?.count || 0;
+              } catch (error) {
+                safeLogger.error(`Error getting referral count for code ${referralCode}:`, error);
+                throw error;
+              }
+            }
+        
+            async getOrderById(id: string) {    try {
       const result = await this.db.select().from(schema.orders).where(eq(schema.orders.id, id));
       return result[0] || null;
     } catch (error) {
