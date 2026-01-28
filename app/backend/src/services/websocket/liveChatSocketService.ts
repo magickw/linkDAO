@@ -28,7 +28,7 @@ interface Agent {
   activeSessions: string[];
 }
 
-class LiveChatSocketService {
+export class LiveChatSocketService {
   private sessions: Map<string, ChatSession> = new Map();
   private userSockets: Map<string, string> = new Map();
   private agents: Map<string, Agent> = new Map();

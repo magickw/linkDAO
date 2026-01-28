@@ -129,7 +129,7 @@ export const wishlistItems = pgTable("wishlist_items", {
     productId: uuid("product_id").notNull(), // References products.id
 
     // Item Details
-    quantity: numeric("quantity").default("1"),
+    quantity: integer("quantity").default(1),
     priority: varchar("priority", { length: 20 }).default("medium"), // 'high' | 'medium' | 'low'
     notes: text("notes"),
 
@@ -153,14 +153,14 @@ export const buyerProfiles = pgTable("buyer_profiles", {
     userId: uuid("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
 
     // Quick Stats
-    totalOrders: numeric("total_orders").default("0"),
+    totalOrders: integer("total_orders").default(0),
     totalSpent: numeric("total_spent", { precision: 20, scale: 2 }).default("0"),
     averageOrderValue: numeric("average_order_value", { precision: 20, scale: 2 }).default("0"),
 
     // Saved Items Count
-    savedAddressesCount: numeric("saved_addresses_count").default("0"),
-    savedPaymentMethodsCount: numeric("saved_payment_methods_count").default("0"),
-    wishlistItemsCount: numeric("wishlist_items_count").default("0"),
+    savedAddressesCount: integer("saved_addresses_count").default(0),
+    savedPaymentMethodsCount: integer("saved_payment_methods_count").default(0),
+    wishlistItemsCount: integer("wishlist_items_count").default(0),
 
     // Preferences
     preferredCurrency: varchar("preferred_currency", { length: 10 }).default("USD"),

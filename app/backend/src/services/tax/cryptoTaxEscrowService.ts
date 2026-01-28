@@ -379,7 +379,7 @@ export class CryptoTaxEscrowService {
         .update(escrows)
         .set({
           taxEscrowRemitted: true,
-          taxEscrowRemitted_at: new Date(),
+          taxEscrowRemittedAt: new Date(),
           metadata: {
             taxRemittanceTransactionHash: transactionHash,
           },

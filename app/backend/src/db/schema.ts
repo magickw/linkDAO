@@ -798,6 +798,8 @@ export const products = pgTable("products", {
   mainCategory: varchar("main_category", { length: 50 }), // For easier categorization without joins
   subCategory: varchar("sub_category", { length: 100 }),
   isPhysical: boolean("is_physical").default(false),
+  isService: boolean("is_service").default(false),
+  serviceType: varchar("service_type", { length: 50 }),
   priceFiat: numeric("price_fiat", { precision: 20, scale: 2 }),
   metadataUri: text("metadata_uri"), // IPFS hash for digital goods/metadata
   // DeFi specific fields from marketplace_products

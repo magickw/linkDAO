@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { AuthenticatedUser } from '../middleware/authMiddleware';
+import { AuthenticatedUser } from '../types/authentication';
 import crypto from 'crypto';
 
 interface SharedCart {
@@ -60,11 +60,11 @@ export class ShareCartService {
         WHERE share_token = $1 AND expires_at > NOW()
       `, [shareToken]);
 
-            if (!result.rows || result.rows.length === 0) {
+            if (!result || result.length === 0) {
                 return null;
             }
 
-            const row = result.rows[0] as any;
+            const row = result[0] as any;
 
             // Update view count
             await db.execute(`
@@ -105,7 +105,7 @@ export class ShareCartService {
         WHERE expires_at < NOW()
       `);
 
-            const deletedCount = result.rowCount || 0;
+            const deletedCount = (result as any).count || 0;
             safeLogger.info(`[ShareCartService] Deleted ${deletedCount} expired shared carts`);
 
             return deletedCount;

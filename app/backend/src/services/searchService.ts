@@ -514,7 +514,7 @@ export class SearchService {
     basedOn?: string;
   }): Promise<any[]> {
     // Import the recommendation service dynamically to avoid circular dependencies
-    const { RecommendationService } = await import('./recommendationService');
+    const { RecommendationService } = require('./recommendationService');
     const recommendationService = new RecommendationService();
     
     if (options.userId) {
@@ -537,7 +537,7 @@ export class SearchService {
     basedOn?: string;
   }): Promise<any[]> {
     // Import the recommendation service dynamically to avoid circular dependencies
-    const { RecommendationService } = await import('./recommendationService');
+    const { RecommendationService } = require('./recommendationService');
     const recommendationService = new RecommendationService();
     
     if (options.userId) {
@@ -1444,7 +1444,7 @@ export class SearchService {
   async getTrendingContent(limit: number = 20, timeframe: string = 'day'): Promise<any> {
     try {
       // Dynamically import RecommendationService to avoid circular dependencies
-      const { RecommendationService } = await import('./recommendationService');
+      const { RecommendationService } = require('./recommendationService');
       const recommendationService = new RecommendationService();
       
       // Map timeframe to the format expected by recommendation service
@@ -1545,7 +1545,7 @@ export class SearchService {
     if (product.sellerId) {
       try {
         // Import review service dynamically to avoid circular dependencies
-        const { reviewService } = await import('./reviewService');
+        const { reviewService } = require('./reviewService');
         const reviewStats = await reviewService.getReviewStats(product.sellerId);
         sellerRating = reviewStats.averageRating;
       } catch (error) {

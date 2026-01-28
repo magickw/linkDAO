@@ -1,14 +1,13 @@
 import { EventEmitter } from 'events';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../../db';
 import { 
   adminAuditLog, 
   users,
   adminSessions
-} from '../db/schema';
+} from '../../db/schema';
 import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
-import crypto from 'crypto';
-import { v4 as uuidv4 } from 'uuid';
+import crypto, { randomUUID } from 'crypto';
 
 // Security Audit Event Interface
 export interface SecurityAuditEvent {
@@ -233,7 +232,7 @@ export class SecurityAuditService extends EventEmitter {
     try {
       const auditEvent: SecurityAuditEvent = {
         ...event,
-        id: uuidv4(),
+        id: randomUUID(),
         timestamp: new Date()
       };
 
@@ -403,7 +402,7 @@ export class SecurityAuditService extends EventEmitter {
     const event: SecurityAuditEvent = { 
       ...baseEvent, 
       details,
-      id: uuidv4(),
+      id: randomUUID(),
       timestamp: new Date()
     };
     return this.logSecurityEvent(event);
@@ -431,7 +430,7 @@ export class SecurityAuditService extends EventEmitter {
     const event: SecurityAuditEvent = { 
       ...baseEvent, 
       details,
-      id: uuidv4(),
+      id: randomUUID(),
       timestamp: new Date()
     };
     return this.logSecurityEvent(event);
@@ -464,7 +463,7 @@ export class SecurityAuditService extends EventEmitter {
     const event: SecurityAuditEvent = { 
       ...baseEvent, 
       details,
-      id: uuidv4(),
+      id: randomUUID(),
       timestamp: new Date()
     };
     return this.logSecurityEvent(event);
@@ -519,7 +518,7 @@ export class SecurityAuditService extends EventEmitter {
     const event: SecurityAuditEvent = { 
       ...baseEvent, 
       details: { ...details, threatIndicators },
-      id: uuidv4(),
+      id: randomUUID(),
       timestamp: new Date()
     };
     return this.logSecurityEvent(event);
@@ -545,7 +544,7 @@ export class SecurityAuditService extends EventEmitter {
     affectedSystems: string[],
     indicators: string[]
   ): Promise<SecurityIncident> {
-    const incidentId = uuidv4();
+    const incidentId = randomUUID();
     
     const incident: SecurityIncident = {
       id: incidentId,
@@ -672,7 +671,7 @@ export class SecurityAuditService extends EventEmitter {
     detectedBy: string,
     discrepancy: string
   ): Promise<TamperDetectionRecord> {
-    const recordId = uuidv4();
+    const recordId = randomUUID();
     
     const tamperRecord: Omit<TamperDetectionRecord, 'createdAt' | 'updatedAt'> = {
       id: recordId,

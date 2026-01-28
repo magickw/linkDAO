@@ -51,8 +51,7 @@ export class UnifiedWebSocketManager {
       perMessageDeflate: {
         threshold: 1024, // Only compress messages larger than 1KB
         zlibDeflateOptions: {
-          level: 6, // Balance between compression ratio and CPU
-          concurrency: 4 // Allow parallel compression
+          level: 6 // Balance between compression ratio and CPU
         },
         zlibInflateOptions: {
           chunkSize: 10 * 1024, // 10KB chunks for better streaming

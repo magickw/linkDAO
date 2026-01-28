@@ -205,7 +205,7 @@ export class ServiceHealthMonitor {
   private async checkDatabase(): Promise<boolean> {
     try {
       // Simple database connectivity check
-      const { db } = await import('../db/index');
+      const { db } = require('../db/index');
       await db.execute('SELECT 1');
       return true;
     } catch (error) {
@@ -240,7 +240,7 @@ export class ServiceHealthMonitor {
   private async checkFeedService(): Promise<boolean> {
     try {
       // Check if feed service can handle basic operations
-      const { feedService } = await import('./feedService');
+      const { feedService } = require('./feedService');
       // This is a lightweight check - just verify the service exists and is responsive
       return typeof feedService.getTrendingPosts === 'function';
     } catch (error) {
@@ -251,7 +251,7 @@ export class ServiceHealthMonitor {
   private async checkCommunityService(): Promise<boolean> {
     try {
       // Check if community service can handle basic operations
-      const { communityService } = await import('./communityService');
+      const { communityService } = require('./communityService');
       return typeof communityService.getTrendingCommunities === 'function';
     } catch (error) {
       return false;

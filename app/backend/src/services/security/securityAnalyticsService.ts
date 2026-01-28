@@ -8,9 +8,9 @@
  */
 
 import { EventEmitter } from 'events';
-import { logger } from '../utils/logger';
-import { securityMonitoringService } from './securityMonitoringService';
-import { SecurityEvent, SecuritySeverity, SecurityEventType } from './securityMonitoringService';
+import { logger } from '../../utils/logger';
+import { securityMonitoringService } from '../securityMonitoringService';
+import { SecurityEvent, SecuritySeverity, SecurityEventType } from '../securityMonitoringService';
 import { securityThreatDetectionService } from './securityThreatDetectionService';
 import { complianceMonitoringService } from './complianceMonitoringService';
 

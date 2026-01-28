@@ -6,11 +6,11 @@
  */
 
 import { EventEmitter } from 'events';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import crypto from 'crypto';
-import { securityConfig } from '../config/securityConfig';
-import { securityMonitoringService, SecurityEvent, SecurityEventType, SecuritySeverity } from './securityMonitoringService';
-import { comprehensiveAuditService } from './comprehensiveAuditService';
+import { securityConfig } from '../../config/securityConfig';
+import { securityMonitoringService, SecurityEvent, SecurityEventType, SecuritySeverity } from '../securityMonitoringService';
+import { comprehensiveAuditService } from '../comprehensiveAuditService';
 
 export interface ThreatPattern {
   id: string;

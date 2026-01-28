@@ -539,6 +539,10 @@ export class RedisService {
   isRedisEnabled(): boolean {
     return this.useRedis;
   }
+
+  isRedisConnected(): boolean {
+    return this.isConnected;
+  }
   
   getRedisStatus(): { enabled: boolean; connected: boolean; reconnectAttempts: number; maxReconnectAttempts: number } {
     return {

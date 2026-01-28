@@ -7,15 +7,15 @@ import {
     securityAlertsConfig,
     securityAlerts,
     privacySettings
-} from '../db/schema/securitySchema';
-import { emailAnalytics } from '../db/schema/emailAnalyticsSchema';
-import { users } from '../db/schema';
+} from '../../db/schema/securitySchema';
+import { emailAnalytics } from '../../db/schema/emailAnalyticsSchema';
+import { users } from '../../db/schema';
 import { eq, and, desc, gte, count, sql } from 'drizzle-orm';
 import * as speakeasy from 'speakeasy';
 import * as QRCode from 'qrcode';
 import * as crypto from 'crypto';
-import { emailService } from './emailService';
-import { generateTrackingId, generateUnsubscribeToken } from '../routes/email';
+import { emailService } from '../emailService';
+import { generateTrackingId, generateUnsubscribeToken } from '../../routes/email';
 
 export class SecurityService {
     // ============ Helper Methods ============

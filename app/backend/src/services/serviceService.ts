@@ -23,7 +23,7 @@ import {
   ServiceStats
 } from '../types/service';
 import { eq, and, or, gte, lte, like, desc, asc, sql, count } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 export class ServiceService {
   // Service Category Management
@@ -37,7 +37,7 @@ export class ServiceService {
 
   // Service Management
   async createService(providerId: string, serviceData: CreateServiceRequest): Promise<Service> {
-    const serviceId = uuidv4();
+    const serviceId = randomUUID();
     
     const [newService] = await db.insert(services).values({
       id: serviceId,
@@ -178,7 +178,7 @@ export class ServiceService {
     // Insert new availability
     if (availability.length > 0) {
       const availabilityRecords = availability.map(avail => ({
-        id: uuidv4(),
+        id: randomUUID(),
         serviceId,
         dayOfWeek: avail.dayOfWeek,
         startTime: avail.startTime,
@@ -203,7 +203,7 @@ export class ServiceService {
 
   // Booking Management
   async createBooking(clientId: string, bookingData: CreateBookingRequest): Promise<ServiceBooking> {
-    const bookingId = uuidv4();
+    const bookingId = randomUUID();
 
     // Get service details
     const [service] = await db.select().from(services)
@@ -239,7 +239,7 @@ export class ServiceService {
     // Create milestones if provided
     if (bookingData.milestones && bookingData.milestones.length > 0) {
       const milestoneRecords = bookingData.milestones.map((milestone, index) => ({
-        id: uuidv4(),
+        id: randomUUID(),
         bookingId,
         milestoneNumber: index + 1,
         title: milestone.title,
@@ -318,7 +318,7 @@ export class ServiceService {
 
   // Provider Profile Management
   async createProviderProfile(userId: string, profileData: Partial<ServiceProviderProfile>): Promise<ServiceProviderProfile> {
-    const profileId = uuidv4();
+    const profileId = randomUUID();
 
     const [newProfile] = await db.insert(serviceProviderProfiles).values({
       id: profileId,

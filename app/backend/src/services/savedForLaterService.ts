@@ -2,7 +2,7 @@ import { db } from '../db';
 import { savedForLater, products, users } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
-import { AuthenticatedUser } from '../middleware/authMiddleware';
+import { AuthenticatedUser } from '../types/authentication';
 
 export interface SavedItem {
     id: string;

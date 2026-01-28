@@ -389,12 +389,10 @@ export class SystemHealthMonitoringService extends EventEmitter {
     this.alertRules.push({
       name: 'service-failure-warning',
       condition: (metrics) => {
-        const failedServices = Object.values(metrics.services)
-          .filter(service => service.status === 'failed').length;
         // Only alert if there are failed services AND they're critical services (not just external dependencies)
-        const criticalFailedServices = Object.values(metrics.services)
-          .filter(service => service.status === 'failed' && 
-                         !['ENS', 'Ethereum_RPC', 'external_services'].includes(service.name as any))
+        const criticalFailedServices = Object.entries(metrics.services)
+          .filter(([name, service]) => service.status === 'failed' && 
+                         !['ENS', 'Ethereum_RPC', 'external_services'].includes(name))
           .length;
         return criticalFailedServices > 0;
       },

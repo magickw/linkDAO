@@ -2,7 +2,7 @@ import axios from 'axios';
 import { db } from '../db/index';
 import { returns, returnStatusHistory } from '../db/schema';
 import { eq } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { safeLogger } from '../utils/logger';
 
 export interface TrackingInfo {
@@ -372,7 +372,7 @@ export class ReturnTrackingService {
   ): Promise<void> {
     try {
       await db.insert(returnStatusHistory).values({
-        id: uuidv4(),
+        id: randomUUID(),
         returnId,
         fromStatus,
         toStatus,

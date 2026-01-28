@@ -3,6 +3,7 @@ import { db } from '../../db';
 import { safeLogger } from '../../utils/safeLogger';
 import { taxLiabilities } from '../../db/schema';
 import { taxRemittanceService } from './taxRemittanceService';
+import { sql } from 'drizzle-orm';
 
 /**
  * Stripe Tax Integration Service
@@ -59,7 +60,7 @@ export class StripeTaxIntegrationService {
         })),
       });
 
-      const totalTaxAmount = taxCalculation.taxAmount_estimate;
+      const totalTaxAmount = taxCalculation.tax_amount_exclusive;
       const jurisdiction = this.getJurisdictionFromAddress(customerAddress);
 
       // Calculate effective tax rate
@@ -67,8 +68,8 @@ export class StripeTaxIntegrationService {
 
       const lineItemTaxes = (taxCalculation.line_items?.data || []).map(item => ({
         reference: item.reference,
-        taxAmount: item.taxAmount_estimate,
-        taxRate: item.amount > 0 ? item.taxAmount_estimate / item.amount : 0,
+        taxAmount: item.tax_amount_exclusive,
+        taxRate: item.amount > 0 ? item.tax_amount_exclusive / item.amount : 0,
       }));
 
       safeLogger.info('Stripe tax calculation completed:', {
@@ -329,22 +330,20 @@ export class StripeTaxIntegrationService {
       const [taxLiability] = await db
         .select()
         .from(taxLiabilities)
-        .where(
-          db.sql`${taxLiabilities.remittanceProviderId} = ${charge.payment_intent as string}`
-        )
-        .limit(1);
+                  .where(
+                    sql`${taxLiabilities.remittanceProviderId} = ${charge.payment_intent as string}`
+                  )        .limit(1);
 
       if (taxLiability) {
         const refundTaxAmount = (charge.amount_refunded * taxLiability.taxAmount) / (taxLiability.taxAmount + taxLiability.taxableAmount);
 
         await db
           .update(taxLiabilities)
-          .set({
-            taxAmount: taxLiability.taxAmount - refundTaxAmount,
-            status: 'partial',
-            updatedAt: new Date(),
-          })
-          .where(db.sql`${taxLiabilities.remittanceProviderId} = ${charge.payment_intent as string}`);
+                      .set({
+                        taxAmount: sql`${taxLiabilities.taxAmount} - ${refundTaxAmount.toString()}`,
+                        status: 'partial',
+                        updatedAt: new Date(),
+                      })          .where(db.sql`${taxLiabilities.remittanceProviderId} = ${charge.payment_intent as string}`);
       }
     } catch (error) {
       safeLogger.error('Error handling tax refund:', error);
