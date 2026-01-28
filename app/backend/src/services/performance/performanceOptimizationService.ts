@@ -1,9 +1,9 @@
 import { EventEmitter } from 'events';
-import { PerceptualHashingService, DuplicateDetectionResult } from './perceptualHashingService';
-import { TextHashingService, TextDuplicateResult } from './textHashingService';
-import { VendorApiOptimizer } from './vendorApiOptimizer';
-import { ModerationCacheService, CachedModerationResult } from './moderationCacheService';
-import { circuitBreakerService } from './circuitBreakerService';
+import { perceptualHashingService } from './perceptualHashingService';
+import { textHashingService } from './textHashingService';
+import { vendorApiOptimizer } from './vendorApiOptimizer';
+import { moderationCacheService } from './moderationCacheService';
+import { circuitBreakerService } from '../circuitBreakerService';
 
 export interface ContentInput {
   id: string;

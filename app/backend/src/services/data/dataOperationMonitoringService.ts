@@ -1,5 +1,5 @@
-import { logger } from '../utils/logger';
-import { performanceMonitoringService } from './performanceMonitoringService';
+import { logger } from '../../utils/logger';
+import { performanceMonitoringService } from '../performanceMonitoringService';
 
 // Database operation metrics
 interface DatabaseMetrics {

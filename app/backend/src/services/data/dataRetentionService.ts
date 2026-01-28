@@ -1,14 +1,12 @@
-import { eq, lt, and, sql } from 'drizzle-orm';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../../db';
-import { 
-  moderationCases, 
-  moderationActions, 
-  contentReports, 
-  moderationAppeals 
-} from '../db/schema';
-import { geofencingComplianceService } from './geofencingComplianceService';
-
+import {
+  user_consents,
+  data_retention_policies,
+  data_retention_logs
+} from '../../db/schema';
+import { eq, and, lt, sql } from 'drizzle-orm';
+import { geofencingComplianceService } from '../geofencingComplianceService';
 export interface RetentionPolicy {
   id: string;
   name: string;

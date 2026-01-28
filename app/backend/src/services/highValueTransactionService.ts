@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { getPrimaryFrontendUrl } from '../utils/urlUtils';
 import { users, orders } from '../db/schema';
+import { marketplaceUsers } from '../db/marketplaceSchema';
 import { eq, and, gte, lte, sql } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { NotificationService } from './notificationService';
@@ -177,43 +178,46 @@ export class HighValueTransactionService {
    * Get seller's verification status and limits
    */
   async getSellerVerificationStatus(sellerId: string): Promise<SellerVerificationStatus> {
-    try {
-      // Get seller from database
-      const [seller] = await db.select().from(users).where(eq(users.id, sellerId)).limit(1);
-
-      if (!seller) {
-        return this.getDefaultVerificationStatus(sellerId);
-      }
-
-      // Parse seller verification data
-      const verificationLevel = (seller.kycStatus === 'approved' || seller.kycStatus === 'verified')
-        ? this.determineVerificationLevel(seller)
-        : 'none';
-
-      const kycStatus = this.mapKycStatus(seller.kycStatus);
-
-      // Calculate current usage
-      const currentUsage = await this.calculateCurrentUsage(sellerId);
-
-      // Get limits based on verification level
-      const transactionLimits = this.getLimitsForVerificationLevel(verificationLevel);
-
-      // Determine if seller can process transactions
-      const canProcessTransaction = kycStatus === 'approved' || currentUsage.daily < this.DEFAULT_THRESHOLDS.basicVerificationLimit;
-
-      return {
-        sellerId,
-        isVerified: kycStatus === 'approved',
-        verificationLevel: verificationLevel as 'none' | 'basic' | 'enhanced' | 'premium',
-        kycStatus,
-        kycExpiresAt: seller.kycExpiresAt || undefined,
-        transactionLimits,
-        currentUsage,
-        canProcessTransaction,
-        requiredAction: !canProcessTransaction ? 'Complete KYC verification to continue selling' : undefined
-      };
-
-    } catch (error) {
+          try {
+            // Get seller from database with marketplace verification info
+            const [sellerData] = await db
+                        .select({
+                          id: users.id,
+                          walletAddress: users.walletAddress,
+                          kycVerified: marketplaceUsers.kycVerified,
+                          kycVerificationDate: marketplaceUsers.kycVerificationDate,
+                          kycExpiresAt: marketplaceUsers.kycVerificationDate // Fallback or add column if exists
+                        })              .from(users)
+              .leftJoin(marketplaceUsers, eq(users.id, marketplaceUsers.userId))
+              .where(eq(users.id, sellerId))
+              .limit(1);
+    
+            if (!sellerData) {
+              return this.getDefaultVerificationStatus(sellerId);
+            }
+    
+            // Parse seller verification data
+            const verificationLevel = sellerData.kycVerified
+              ? this.determineVerificationLevel(sellerData as any)
+              : 'none';
+    
+            const kycStatus = sellerData.kycVerified ? 'approved' : 'not_started';
+    
+            // Calculate current usage
+            const currentUsage = await this.calculateCurrentUsage(sellerId);
+    
+            // Get limits based on verification level
+            const transactionLimits = this.getLimitsForVerificationLevel(verificationLevel);
+    
+            return {
+              sellerId,
+              isVerified: sellerData.kycVerified || false,
+              verificationLevel,
+                        kycStatus: kycStatus as any,
+                        kycExpiresAt: sellerData.kycExpiresAt || undefined,
+                        transactionLimits,              currentUsage
+            };
+        } catch (error) {
       safeLogger.error('Error getting seller verification status:', error);
       return this.getDefaultVerificationStatus(sellerId);
     }

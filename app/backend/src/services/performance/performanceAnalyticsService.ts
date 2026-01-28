@@ -1,8 +1,8 @@
 import { EventEmitter } from 'events';
-import { safeLogger } from '../utils/safeLogger';
-import { enhancedSystemHealthService, SystemHealthScore } from './enhancedSystemHealthService';
-import { capacityPlanningService, PerformanceBottleneck } from './capacityPlanningService';
-import { systemHealthMonitoringService, HealthMetrics } from './systemHealthMonitoringService';
+import { safeLogger } from '../../utils/safeLogger';
+import { enhancedSystemHealthService } from './enhancedSystemHealthService';
+import { capacityPlanningService } from './capacityPlanningService';
+import { systemHealthMonitoringService } from '../systemHealthMonitoringService';
 
 export interface PerformanceMetric {
   name: string;

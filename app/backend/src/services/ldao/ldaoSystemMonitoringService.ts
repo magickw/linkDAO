@@ -1,6 +1,6 @@
-import { safeLogger } from '../utils/safeLogger';
-import { notificationService } from './notificationService';
-import { emailService } from './emailService';
+import { safeLogger } from '../../utils/safeLogger';
+import { notificationService } from '../notificationService';
+import { emailService } from '../emailService';
 
 export interface SystemMetrics {
   id: string;

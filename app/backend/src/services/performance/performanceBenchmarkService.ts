@@ -6,8 +6,8 @@
  */
 
 import { db } from '../../db';
-import { logger } from '../utils/logger';
-import { comprehensiveAuditService } from './comprehensiveAuditService';
+import { logger } from '../../utils/logger';
+import { comprehensiveAuditService } from '../comprehensiveAuditService';
 import * as crypto from 'crypto';
 
 export interface BenchmarkMetric {

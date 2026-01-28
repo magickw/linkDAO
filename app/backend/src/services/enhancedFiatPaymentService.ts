@@ -676,10 +676,9 @@ export class EnhancedFiatPaymentService {
         userId: user.id,
         provider: paymentMethod.provider,
         methodType: 'credit_card', // Standardize on credit_card for now
-        stripePaymentMethodId: paymentMethod.id,
-        last4: paymentMethod.last4,
-        cardBrand: paymentMethod.brand,
-        cardExpMonth: paymentMethod.expiryMonth?.toString(),
+                  stripePaymentMethodId: paymentMethod.id,
+                  cardLast4: paymentMethod.last4,
+                  cardBrand: paymentMethod.brand,        cardExpMonth: paymentMethod.expiryMonth?.toString(),
         cardExpYear: paymentMethod.expiryYear?.toString(),
         isDefault: paymentMethod.isDefault,
         status: 'active',

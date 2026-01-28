@@ -1,18 +1,17 @@
-import { db } from '../db/index';
-import { eq, and, desc, sql } from 'drizzle-orm';
-import {
-  orders,
-  users,
-  earningActivities,
-  stakingPositions
-} from '../db/schema';
-import {
+import { db } from '../../db';
+import { 
+  users, 
+  userGemBalance,
+  gemTransaction,
+  payments
+} from '../../db/schema';
+import { 
   marketplaceRewards,
   earningChallenges,
   userChallengeProgress
-} from '../db/marketplaceSchema';
-import { marketplaceRewardsService } from './marketplaceRewardsService';
-import { safeLogger } from '../utils/safeLogger';
+} from '../../db/marketplaceSchema';
+import { marketplaceRewardsService } from '../marketplaceRewardsService';
+import { safeLogger } from '../../utils/safeLogger';
 
 export interface LDAOStakingInfo {
   totalStaked: string;

@@ -1,9 +1,9 @@
-import { ReceiptService } from './receiptService';
-import { safeLogger } from '../utils/safeLogger';
+import { ReceiptService } from '../receiptService';
+import { safeLogger } from '../../utils/safeLogger';
 import { 
   LDAOPurchaseReceipt,
   ReceiptStatus
-} from '../types/receipt';
+} from '../../types/receipt';
 
 export interface LDAOPurchaseData {
   transactionId: string;

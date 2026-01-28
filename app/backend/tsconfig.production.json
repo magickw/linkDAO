@@ -5,7 +5,7 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "lib": [
-      "ES2020"
+      "ES2021"
     ],
     "outDir": "./dist",
     "rootDir": "./src",

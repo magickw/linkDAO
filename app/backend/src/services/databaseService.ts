@@ -105,16 +105,32 @@ export class DatabaseService {
     }
   }
   // User operations
-  async getUserById(id: string) {
-    try {
-      const result = await this.db.select().from(schema.users).where(eq(schema.users.id, id));
-      return result[0] || null;
-    } catch (error) {
-      safeLogger.error("Error getting user by ID:", error);
-      throw error;
-    }
-  }
-
+      async getUserById(id: string) {
+        try {
+          const result = await this.db.select().from(schema.users).where(eq(schema.users.id, id));
+          return result[0] || null;
+        } catch (error) {
+          safeLogger.error("Error getting user by ID:", error);
+          throw error;
+        }
+      }
+  
+      async createUser(walletAddress: string, handle?: string) {
+        try {
+          const [newUser] = await this.db.insert(schema.users).values({
+            walletAddress: walletAddress.toLowerCase(),
+            handle: handle || `user_${walletAddress.substring(2, 8).toLowerCase()}`,
+            displayName: handle || `User ${walletAddress.substring(2, 8)}`,
+            role: 'user',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }).returning();
+          return newUser;
+        } catch (error) {
+          safeLogger.error("Error creating user:", error);
+          throw error;
+        }
+      }
   async getUserByAddress(address: string) {
     try {
       const normalizedAddress = address.toLowerCase();

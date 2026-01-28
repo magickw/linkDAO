@@ -4,10 +4,10 @@
  */
 
 import fs from 'fs/promises';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import path from 'path';
 import archiver from 'archiver';
-import { securityConfig } from '../config/securityConfig';
+import { securityConfig } from '../../config/securityConfig';
 
 export interface DataCategory {
   name: string;

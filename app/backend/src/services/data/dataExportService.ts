@@ -1,5 +1,5 @@
-import { safeLogger } from '../utils/safeLogger';
-import { emailService } from './emailService';
+import { safeLogger } from '../../utils/safeLogger';
+import { emailService } from '../emailService';
 import archiver from 'archiver';
 import fs from 'fs';
 import path from 'path';

@@ -99,24 +99,23 @@ export class MarketplaceMessagingService {
         lastActivity: new Date()
       }).returning();
 
-      // Add participants with roles
-      await db.insert(conversationParticipants).values([
-        {
-          conversationId: newConversation[0].id,
-          userId: order.buyerId,
-          walletAddress: buyerAddress,
-          role: 'buyer',
-          joinedAt: new Date()
-        },
-        {
-          conversationId: newConversation[0].id,
-          userId: order.sellerId,
-          walletAddress: sellerAddress,
-          role: 'seller',
-          joinedAt: new Date()
-        }
-      ]);
-
+              // Add participants with roles
+              await db.insert(conversationParticipants).values([
+                {
+                  conversationId: newConversation[0].id,
+                  userId: order.buyerId,
+                  walletAddress: buyerAddress,
+                  role: 'buyer',
+                  joinedAt: new Date()
+                },
+                {
+                  conversationId: newConversation[0].id,
+                  userId: order.sellerId,
+                  walletAddress: sellerAddress,
+                  role: 'seller',
+                  joinedAt: new Date()
+                }
+              ] as any);
       return newConversation[0];
     } catch (error) {
       safeLogger.error('Error creating order conversation:', error);

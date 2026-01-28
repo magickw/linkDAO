@@ -138,20 +138,20 @@ export class OrderCreationService {
       const orderNumber = await this.generateOrderNumber();
 
       // 5. Create order record
-      const order = await this.databaseService.createOrder(
-        request.listingId,
-        request.buyerAddress,
-        listing.sellerId, // sellerId
-        orderTotals.total.toString(),
-        'USDC', // paymentToken
-        undefined, // escrowId
-        undefined, // variantId
-        undefined, // orderId
-        orderTotals.tax.toString(),
-        orderTotals.shippingCost.toString(),
-        orderTotals.platformFee.toString(),
-        orderTotals.taxBreakdown,
-        request.shippingAddress,
+              const order = await this.databaseService.createOrder(
+                request.listingId,
+                request.buyerAddress,
+                listing.sellerId, // sellerId
+                orderTotals.total.toString(),
+                'USDC', // paymentToken
+                1, // quantity
+                undefined, // escrowId
+                undefined, // variantId
+                undefined, // orderId
+                orderTotals.tax.toString(),
+                orderTotals.shippingCost.toString(),
+                orderTotals.platformFee.toString(),
+                orderTotals.taxBreakdown,        request.shippingAddress,
         request.billingAddress || request.shippingAddress, // Fallback to shipping if billing not provided
         request.paymentMethod,
         request.paymentDetails

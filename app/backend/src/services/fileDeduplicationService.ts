@@ -49,9 +49,11 @@ export class FileDeduplicationService {
         const fileHash = this.generateFileHash(fileBuffer);
 
         try {
-            const existing = await db.query.fileAttachments.findFirst({
-                where: eq(fileAttachments.fileHash, fileHash)
-            });
+            const results = await db.select().from(fileAttachments)
+                .where(eq(fileAttachments.fileHash, fileHash))
+                .limit(1);
+            
+            const existing = results[0];
 
             if (existing) {
                 safeLogger.info(`[Deduplication] Found duplicate file: ${fileHash}`);
@@ -213,9 +215,11 @@ export class FileDeduplicationService {
      */
     async getFileByHash(fileHash: string): Promise<FileMetadata | null> {
         try {
-            const file = await db.query.fileAttachments.findFirst({
-                where: eq(fileAttachments.fileHash, fileHash)
-            });
+            const results = await db.select().from(fileAttachments)
+                .where(eq(fileAttachments.fileHash, fileHash))
+                .limit(1);
+            
+            const file = results[0];
 
             if (!file) return null;
 
@@ -249,7 +253,7 @@ export class FileDeduplicationService {
         duplicateCount: number;
     }> {
         try {
-            const files = await db.query.fileAttachments.findMany();
+            const files = await db.select().from(fileAttachments);
 
             const totalFiles = files.length;
             const totalSize = files.reduce((sum, f) => sum + f.sizeBytes, 0);

@@ -22,7 +22,7 @@ import {
   oauthStates,
   notifications,
   notificationPreferences
-} from '../db/schema';
+} from '../../db/schema';
 import { eq, and, or, sql } from 'drizzle-orm';
 import * as crypto from 'crypto';
 

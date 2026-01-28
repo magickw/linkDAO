@@ -1,5 +1,5 @@
 import * as crypto from 'crypto';
-import { logger } from '../utils/logger';
+import { logger } from '../../utils/logger';
 
 /**
  * Data Encryption and Privacy Controls Service

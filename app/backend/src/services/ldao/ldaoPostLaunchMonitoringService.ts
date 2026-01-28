@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
-import { logger } from '../utils/logger';
+import { logger } from '../../utils/logger';
 import { db } from '../../db';
-import { purchaseTransactions, earningActivities, stakingPositions } from '../db/schema';
+import { purchaseTransactions, earningActivities, stakingPositions } from '../../db/schema';
 import { eq, gte, lte, desc, sql, and } from 'drizzle-orm';
 
 export interface SystemMetrics {

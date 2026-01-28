@@ -1,9 +1,9 @@
 import { eq, desc, and, gte, lte } from 'drizzle-orm';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../../db';
-import { communityReferralPrograms, userInteractions, notifications } from '../db/schema';
-import { emailService } from './emailService';
-import { notificationService } from './notificationService';
+import { communityReferralPrograms, userInteractions, notifications } from '../../db/schema';
+import { emailService } from '../emailService';
+import { notificationService } from '../notificationService';
 
 export interface MarketingCampaign {
   id: string;

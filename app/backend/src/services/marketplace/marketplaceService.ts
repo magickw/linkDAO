@@ -838,15 +838,15 @@ export class BlockchainMarketplaceService {
         }));
       }
 
-      const dbOrder = await this.withTimeout(databaseService.createOrder(
-        listingId,
-        buyerUser.id,
-        sellerUser.id,
-        amount,
-        paymentToken,
-        escrowId
-      ));
-
+              const dbOrder = await this.withTimeout(databaseService.createOrder(
+                listingId,
+                buyerUser.id,
+                sellerUser.id,
+                amount,
+                paymentToken,
+                1,
+                escrowId
+              ));
       if (!dbOrder) return null;
 
       const order: MarketplaceOrder = {

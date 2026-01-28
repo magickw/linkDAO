@@ -4,7 +4,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 
 export interface DataMinimizationRule {
   ruleId: string;

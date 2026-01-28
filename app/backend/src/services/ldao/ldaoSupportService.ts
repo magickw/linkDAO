@@ -1,10 +1,10 @@
 import { eq, desc, and, gte, like } from 'drizzle-orm';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../../db';
-import { supportTickets, supportFAQ, supportCategories, ticketResponses } from '../db/schema/supportSchema';
-import emailService from './emailService';
-import { createNotification } from './notificationHelper';
-import { escapeLikePattern, generateSecureId } from '../utils/securityUtils';
+import { supportTickets, supportFAQ, supportCategories, ticketResponses } from '../../db/schema/supportSchema';
+import emailService from '../emailService';
+import { createNotification } from '../notificationHelper';
+import { escapeLikePattern, generateSecureId } from '../../utils/securityUtils';
 
 export interface SupportTicket {
   id: string;
