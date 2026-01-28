@@ -261,6 +261,13 @@ export class LinkedInOAuthProvider extends BaseOAuthProvider {
     try {
       const adaptedContent = this.adaptContent(content);
 
+      // DEBUG: Log what we received
+      safeLogger.info('LinkedIn postContent - Processing media', {
+        mediaUrlsCount: adaptedContent.mediaUrls?.length || 0,
+        mediaUrls: adaptedContent.mediaUrls || [],
+        textLength: adaptedContent.text?.length || 0,
+      });
+
       // Get user info to get the person URN
       const userInfo = await this.getUserInfo(accessToken);
       const personUrn = `urn:li:person:${userInfo.platformUserId}`;
@@ -285,15 +292,20 @@ export class LinkedInOAuthProvider extends BaseOAuthProvider {
       // Handle image uploads if media URLs are provided
       if (adaptedContent.mediaUrls && adaptedContent.mediaUrls.length > 0) {
         const uploadedAssets: string[] = [];
+        safeLogger.info('LinkedIn image upload - Starting', { count: adaptedContent.mediaUrls.length });
 
         for (const mediaUrl of adaptedContent.mediaUrls) {
           try {
+            safeLogger.info('LinkedIn image upload - Processing URL', { mediaUrl });
+
             // Register the upload with LinkedIn
             const uploadInfo = await this.registerImageUpload(accessToken, personUrn);
             if (!uploadInfo) {
-              safeLogger.warn('Failed to register LinkedIn image upload for:', { mediaUrl });
+              safeLogger.warn('Failed to register LinkedIn image upload for:', { mediaUrl, uploadInfo });
               continue;
             }
+
+            safeLogger.info('LinkedIn image registered', { asset: uploadInfo.asset });
 
             // Download the image from the source URL
             const imageResponse = await fetch(mediaUrl);
@@ -303,6 +315,7 @@ export class LinkedInOAuthProvider extends BaseOAuthProvider {
             }
 
             const imageBuffer = await imageResponse.arrayBuffer();
+            safeLogger.info('Image downloaded successfully', { mediaUrl, size: imageBuffer.byteLength });
 
             // Upload the image to LinkedIn
             const uploadSuccess = await this.uploadImageToLinkedIn(
@@ -314,11 +327,15 @@ export class LinkedInOAuthProvider extends BaseOAuthProvider {
             if (uploadSuccess) {
               uploadedAssets.push(uploadInfo.asset);
               safeLogger.info('Successfully uploaded image to LinkedIn:', { asset: uploadInfo.asset });
+            } else {
+              safeLogger.warn('Image upload to LinkedIn returned false', { mediaUrl });
             }
           } catch (uploadError) {
             safeLogger.error('Error uploading image to LinkedIn:', { mediaUrl, error: uploadError });
           }
         }
+
+        safeLogger.info('LinkedIn image upload - Completed', { successCount: uploadedAssets.length, totalCount: adaptedContent.mediaUrls.length });
 
         // If we have uploaded assets, update the payload to include images
         if (uploadedAssets.length > 0) {
@@ -327,10 +344,13 @@ export class LinkedInOAuthProvider extends BaseOAuthProvider {
             status: 'READY',
             media: asset,
           }));
+          safeLogger.info('LinkedIn post updated with images', { count: uploadedAssets.length });
+        } else {
+          safeLogger.warn('All image uploads failed, posting text-only', { mediaUrlsCount: adaptedContent.mediaUrls.length });
         }
-      }
-      // Add link if present (only if no images, as LinkedIn prefers one or the other)
-      else if (adaptedContent.link) {
+      } else if (adaptedContent.link) {
+        // Add link if present (only if no images, as LinkedIn prefers one or the other)
+        safeLogger.info('No media URLs provided, adding link', { link: adaptedContent.link });
         postPayload.specificContent['com.linkedin.ugc.ShareContent'].shareMediaCategory = 'ARTICLE';
         postPayload.specificContent['com.linkedin.ugc.ShareContent'].media = [
           {
@@ -338,6 +358,8 @@ export class LinkedInOAuthProvider extends BaseOAuthProvider {
             originalUrl: adaptedContent.link,
           },
         ];
+      } else {
+        safeLogger.info('No media URLs or links provided to LinkedIn');
       }
 
       const response = await fetch(LINKEDIN_SHARE_URL, {
