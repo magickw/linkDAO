@@ -485,8 +485,7 @@ export class OrderController {
 
       const notifications = await notificationService.getUserNotifications(
         userAddress,
-        Number(limit),
-        Number(offset)
+        { limit: Number(limit), offset: Number(offset) }
       );
 
       return res.json(notifications);
@@ -501,12 +500,8 @@ export class OrderController {
   async markNotificationAsRead(req: Request, res: Response): Promise<Response> {
     try {
       const { notificationId } = req.params;
-
-      const success = await notificationService.markAsRead(notificationId);
-
-      if (!success) {
-        throw new NotFoundError('Notification not found');
-      }
+      const userAddress = req.user!.walletAddress;
+      await notificationService.markAsRead(userAddress, notificationId);
 
       return res.status(204).send();
     } catch (error: any) {
@@ -524,11 +519,7 @@ export class OrderController {
     try {
       const { userAddress } = req.params;
 
-      const success = await notificationService.markAllAsRead(userAddress);
-
-      if (!success) {
-        throw new AppError('Failed to mark notifications as read');
-      }
+      await notificationService.markAllAsRead(userAddress);
 
       return res.status(204).send();
     } catch (error: any) {
@@ -561,11 +552,7 @@ export class OrderController {
       const { userAddress } = req.params;
       const preferences = req.body;
 
-      const success = await notificationService.updateNotificationPreferences(userAddress, preferences);
-
-      if (!success) {
-        throw new AppError('Failed to update notification preferences');
-      }
+      await notificationService.updateNotificationPreferences(userAddress, preferences);
 
       return res.status(204).send();
     } catch (error: any) {

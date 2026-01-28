@@ -141,7 +141,7 @@ export class DatabaseConnectionPool {
 
   // Transaction wrapper with automatic retry
   public async withTransaction<T>(
-    callback: (sql: postgres.Sql) => Promise<T>,
+    callback: (sql: postgres.TransactionSql) => Promise<T>,
     maxRetries: number = 3
   ): Promise<T> {
     let lastError: Error;

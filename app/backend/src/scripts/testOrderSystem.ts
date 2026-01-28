@@ -196,10 +196,10 @@ async function testOrderSystem() {
     // Step 11: Test Notification System
     safeLogger.info('🔔 Step 11: Testing notification system...');
     await notificationService.sendOrderNotification(
+      order.id,
       testOrderInput.buyerAddress,
       'ORDER_COMPLETED',
-      order.id,
-      { message: 'Test notification from order system' }
+      'Test notification from order system'
     );
     safeLogger.info('✅ Test notification sent\n');
 

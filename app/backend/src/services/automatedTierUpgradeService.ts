@@ -712,12 +712,7 @@ class AutomatedTierUpgradeService {
         notification.walletAddress,
         'TIER_UPGRADE',
         `tier-upgrade-${Date.now()}`,
-        {
-          fromTier: notification.fromTier,
-          toTier: notification.toTier,
-          newBenefits: notification.newBenefits,
-          upgradeDate: notification.upgradeDate,
-        }
+        `Tier upgraded from ${notification.fromTier} to ${notification.toTier}`
       );
 
       safeLogger.info(`Tier upgrade notification sent to ${notification.walletAddress}`);
@@ -753,13 +748,7 @@ class AutomatedTierUpgradeService {
         notification.walletAddress,
         'TIER_DOWNGRADE',
         `tier-downgrade-${Date.now()}`,
-        {
-          fromTier: notification.fromTier,
-          toTier: notification.toTier,
-          newBenefits: notification.newBenefits,
-          downgradeDate: notification.downgradeDate,
-          reason: notification.reason,
-        }
+        `Tier downgraded from ${notification.fromTier} to ${notification.toTier}. Reason: ${notification.reason}`
       );
 
       safeLogger.info(`Tier downgrade notification sent to ${notification.walletAddress}`);

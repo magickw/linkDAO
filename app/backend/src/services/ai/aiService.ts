@@ -1,10 +1,10 @@
 import OpenAI from 'openai';
 import { safeLogger } from '../../utils/safeLogger';
 import { DatabaseService } from '../databaseService';
-import { BlockchainMarketplaceService } from './marketplaceService';
+// import { BlockchainMarketplaceService } from './marketplaceService';
 
 const databaseService = new DatabaseService();
-const marketplaceService = new BlockchainMarketplaceService();
+// const marketplaceService = new BlockchainMarketplaceService();
 
 export interface AIBotConfig {
   name: string;

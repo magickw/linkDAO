@@ -1,6 +1,12 @@
 import { OpenAI } from 'openai';
 import { safeLogger } from '../../utils/safeLogger';
-import * as tf from '@tensorflow/tfjs-node';
+// Temporarily disable TensorFlow due to version compatibility issues
+// import * as tf from '@tensorflow/tfjs-node';
+
+// Stub types for TensorFlow
+const tf: any = {};
+type TfModel = any;
+
 let sharp;
 let sharpAvailable = false;
 
@@ -90,8 +96,8 @@ export interface DocumentAnalysisResult {
 
 export class AIEvidenceAnalysisService {
   private openai: OpenAI;
-  private imageModel: tf.LayersModel | null = null;
-  private textModel: tf.LayersModel | null = null;
+  private imageModel: TfModel | null = null;
+  private textModel: TfModel | null = null;
 
   constructor() {
     this.openai = new OpenAI({
@@ -952,30 +958,18 @@ export class AIEvidenceAnalysisService {
     }
   }
 
-  private async createMockImageModel(): Promise<tf.LayersModel> {
+  private async createMockImageModel(): Promise<TfModel> {
     // Create a simple mock model for demonstration
-    const model = tf.sequential({
-      layers: [
-        tf.layers.dense({ inputShape: [224 * 224 * 3], units: 128, activation: 'relu' }),
-        tf.layers.dense({ units: 64, activation: 'relu' }),
-        tf.layers.dense({ units: 1, activation: 'sigmoid' })
-      ]
-    });
-    
-    return model;
+    // Disabled due to TensorFlow compatibility issues
+    safeLogger.warn('TensorFlow models disabled due to compatibility issues');
+    return {} as TfModel;
   }
 
-  private async createMockTextModel(): Promise<tf.LayersModel> {
+  private async createMockTextModel(): Promise<TfModel> {
     // Create a simple mock model for demonstration
-    const model = tf.sequential({
-      layers: [
-        tf.layers.dense({ inputShape: [100], units: 64, activation: 'relu' }),
-        tf.layers.dense({ units: 32, activation: 'relu' }),
-        tf.layers.dense({ units: 1, activation: 'sigmoid' })
-      ]
-    });
-    
-    return model;
+    // Disabled due to TensorFlow compatibility issues
+    safeLogger.warn('TensorFlow text models disabled due to compatibility issues');
+    return {} as TfModel;
   }
 }
 

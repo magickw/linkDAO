@@ -145,8 +145,7 @@ export class NotificationController {
         try {
             const { userId, title, body, data } = req.body;
 
-            await this.notificationService.enqueueNotification({
-                userId,
+            await this.notificationService.enqueueNotification(userId, {
                 title,
                 message: body,
                 data,
@@ -176,7 +175,7 @@ export class NotificationController {
             const page = parseInt(req.query.page as string) || 1;
             const offset = (page - 1) * limit;
 
-            const notifications = await this.notificationService.getUserNotifications(userId, limit, offset);
+            const notifications = await this.notificationService.getUserNotifications(userId, { limit, offset });
             const unreadCount = await this.notificationService.getUnreadCount(userId);
             const totalCount = await this.notificationService.getTotalCount(userId);
 
@@ -207,13 +206,10 @@ export class NotificationController {
     markAsRead = async (req: AuthenticatedRequest, res: Response) => {
         try {
             const { id } = req.params;
-            const success = await this.notificationService.markAsRead(id);
-
-            if (success) {
-                res.json({ success: true, message: 'Marked as read' });
-            } else {
-                res.status(404).json({ success: false, error: 'Notification not found' });
-            }
+            const userId = req.user!.walletAddress;
+            await this.notificationService.markAsRead(userId, id);
+            
+            res.json({ success: true, message: 'Marked as read' });
         } catch (error) {
             console.error('Error marking as read:', error);
             res.status(500).json({ success: false, error: 'Failed to mark as read' });

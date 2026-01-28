@@ -1,10 +1,10 @@
 
-import { MarketplaceOrder as Order } from '../models/Order';
+import { Order as MarketplaceOrder } from '../../models/Order';
 import { db } from '../../db';
 import { orders, orderEvents } from '../../db/schema';
 import { sql, eq, count, sum, avg, desc } from 'drizzle-orm';
 import { safeLogger } from '../../utils/safeLogger';
-import { cacheService } from './cacheService';
+// import { cacheService } from './cacheService';
 
 // --- Existing Dashboard Interfaces ---
 
@@ -113,7 +113,7 @@ export interface AdminOrderFilters {
   paymentMethod?: string;
 }
 
-export interface AdminOrderDetails extends Order {
+export interface AdminOrderDetails extends MarketplaceOrder {
   timeline: any[]; // Order events
   auditLog: any[]; // Admin actions on this order
   availableActions: string[]; // List of actions admin can perform (e.g. 'refund', 'override_status')
@@ -133,7 +133,7 @@ export interface IAdminDashboardService {
   getDashboardMetrics(adminId: string, options?: any): Promise<DashboardMetrics>;
 }
 
-import { FinancialMonitoringService } from './financialMonitoringService'; // New Import
+// import { FinancialMonitoringService } from './financialMonitoringService'; // New Import
 
 // ... existing imports
 
@@ -144,7 +144,7 @@ export class AdminDashboardService implements IAdminDashboardService {
   private userPreferences: Map<string, UserPreferences> = new Map();
   private alerts: Map<string, AdminAlert> = new Map();
   private usageAnalytics: Map<string, any> = new Map();
-  private financialService: FinancialMonitoringService; // New property
+  // private financialService: FinancialMonitoringService; // New property
 
   // OPTIMIZED: Cleanup intervals and size limits
   private maxMapSize = 1000;
@@ -152,7 +152,7 @@ export class AdminDashboardService implements IAdminDashboardService {
   private actionHistoryLimit = 100;
 
   constructor() {
-    this.financialService = new FinancialMonitoringService(); // Initialize
+    // this.financialService = new FinancialMonitoringService(); // Initialize
     this.initializeDefaultData();
     this.setupPeriodicCleanup();
   }

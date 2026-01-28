@@ -6,7 +6,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { eq, and, gt } from 'drizzle-orm';
 import { users, adminSessions, adminAuditLog } from '../../db/schema';
-import { AdminAuthFix } from '../utils/adminAuthFix';
+// import { AdminAuthFix } from '../utils/adminAuthFix';
 
 const connectionString = process.env.DATABASE_URL!;
 const sql = postgres(connectionString, { ssl: 'require' });
@@ -271,7 +271,7 @@ export class AdminAuthService {
 
       // Apply admin auth fix for configured admin address
       if (user.walletAddress) {
-        await AdminAuthFix.ensureAdminPermissions(user.walletAddress);
+        // await AdminAuthFix.ensureAdminPermissions(user.walletAddress);
       }
 
       await this.resetLoginAttempts(user.id);

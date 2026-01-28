@@ -10,6 +10,8 @@ async function testCartService() {
     id: '123e4567-e89b-12d3-a456-426614174000',
     address: '0x1234567890123456789012345678901234567890',
     walletAddress: '0x1234567890123456789012345678901234567890',
+    userId: '123e4567-e89b-12d3-a456-426614174000',
+    isAdmin: false,
   };
 
   try {

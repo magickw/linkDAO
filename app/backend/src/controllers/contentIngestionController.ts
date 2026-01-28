@@ -306,14 +306,17 @@ export class ContentIngestionController {
 
       // Get user's moderation cases
       const userId3 = String(user.userId || (user as any).id);
-      const cases = await databaseService.getUserModerationCases(
-        userId3,
-        {
-          page: pageNum,
-          limit: limitNum,
-          status: status as string
-        }
-      );
+      let cases = await databaseService.getUserModerationCases(userId3);
+      
+      // Apply client-side filtering and pagination
+      if (status) {
+        cases = cases.filter((c: any) => c.status === status);
+      }
+      
+      // Apply pagination
+      const startIndex = (pageNum - 1) * limitNum;
+      const endIndex = startIndex + limitNum;
+      cases = cases.slice(startIndex, endIndex);
 
       res.json({
         data: {

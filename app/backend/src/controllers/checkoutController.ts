@@ -546,8 +546,7 @@ export class CheckoutController {
         } catch (error) {
             safeLogger.error('Error updating checkout session:', error);
             res.status(500).json(apiResponse.error(
-                'Failed to update checkout session',
-                'CHECKOUT_UPDATE_ERROR'
+                'Failed to update checkout session'
             ));
         }
     }
@@ -566,8 +565,7 @@ export class CheckoutController {
         } catch (error) {
             safeLogger.error('Error validating address:', error);
             res.status(500).json(apiResponse.error(
-                'Failed to validate address',
-                'ADDRESS_VALIDATION_ERROR'
+                'Failed to validate address'
             ));
         }
     }
@@ -590,8 +588,7 @@ export class CheckoutController {
         } catch (error) {
             safeLogger.error('Error applying discount code:', error);
             res.status(500).json(apiResponse.error(
-                'Failed to apply discount code',
-                'DISCOUNT_CODE_ERROR'
+                'Failed to apply discount code'
             ));
         }
     }
@@ -615,8 +612,7 @@ export class CheckoutController {
         } catch (error) {
             safeLogger.error('Error cancelling checkout session:', error);
             res.status(500).json(apiResponse.error(
-                'Failed to cancel checkout session',
-                'CHECKOUT_CANCEL_ERROR'
+                'Failed to cancel checkout session'
             ));
         }
     }

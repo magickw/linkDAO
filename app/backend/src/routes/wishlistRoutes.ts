@@ -160,12 +160,12 @@ router.post('/:id/items', asyncHandler(async (req, res) => {
             // Get seller's wallet address
             const sellerProfile = await userProfileService.getProfileById(product.sellerId);
             if (sellerProfile && sellerProfile.walletAddress) {
-                await notificationService.sendSellerNotification(
-                    sellerProfile.walletAddress,
-                    'PRODUCT_FAVORITED',
-                    productId,
-                    { productTitle: product.title }
-                );
+                await notificationService.sendSellerNotification({
+                    sellerId: sellerProfile.walletAddress,
+                    type: 'PRODUCT_FAVORITED',
+                    message: `Your product "${product.title}" was favorited`,
+                    data: { productId }
+                });
             }
         }
     } catch (notifyError) {
