@@ -1,4 +1,4 @@
-import ipfsService from './ipfsService';
+import ipfsService from '../ipfsService';
 import { safeLogger } from '../../utils/safeLogger';
 import { EvidenceBundle, ModerationCase, AIModelResult } from '../../models/ModerationModels';
 import crypto from 'crypto';

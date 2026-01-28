@@ -5,6 +5,7 @@ import { supportTickets, supportFAQ, supportCategories, ticketResponses } from '
 import emailService from '../emailService';
 import { createNotification } from '../notificationHelper';
 import { escapeLikePattern, generateSecureId } from '../../utils/securityUtils';
+import { getWebSocketService } from '../websocket/webSocketService';
 
 export interface SupportTicket {
   id: string;
@@ -476,7 +477,6 @@ class LDAOSupportService {
       //   updatedAt: new Date()
       // }).returning();
 
-      const { getWebSocketService } = await import('./websocket/webSocketService');
       const wsService = getWebSocketService();
       
       if (wsService && typeof (wsService as any).broadcast === 'function') {
@@ -524,7 +524,6 @@ class LDAOSupportService {
       //   .where(eq(supportChatSessions.id, chatSessionId));
 
       // Broadcast message via WebSocket
-      const { getWebSocketService } = await import('./websocket/webSocketService');
       const wsService = getWebSocketService();
       
       if (wsService && typeof (wsService as any).broadcast === 'function') {
@@ -572,7 +571,6 @@ class LDAOSupportService {
       //   .where(eq(supportChatSessions.id, chatSessionId));
 
       // Notify user via WebSocket
-      const { getWebSocketService } = await import('./websocket/webSocketService');
       const wsService = getWebSocketService();
       
       if (wsService) {

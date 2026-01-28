@@ -1,4 +1,4 @@
-import { contentModerationML, MLModerationResult } from './ai/contentModerationML';
+import { contentModerationML, MLModerationResult } from '../ai/contentModerationML';
 import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../../db';
 import { posts, users } from '../../db/schema';

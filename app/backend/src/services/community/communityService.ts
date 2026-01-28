@@ -45,8 +45,8 @@ try {
   safeLogger.warn('Some community tables not available:', error.message);
 }
 import { feedService } from '../feedService';
-import { generateShareId } from '../utils/shareIdGenerator';
-import { sanitizeInput, sanitizeObject, validateLength, InputSanitizer, SANITIZATION_CONFIGS } from '../utils/sanitizer';
+import { generateShareId } from '../../utils/shareIdGenerator';
+import { sanitizeInput, sanitizeObject, validateLength, InputSanitizer, SANITIZATION_CONFIGS } from '../../utils/sanitizer';
 import { communityCacheService, CommunityCacheService } from './communityCacheService';
 import { socialMediaIntegrationService } from '../socialMediaIntegrationService';
 import { SocialPlatform } from './oauth/baseOAuthProvider';

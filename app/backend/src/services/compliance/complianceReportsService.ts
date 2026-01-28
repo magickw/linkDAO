@@ -6,7 +6,7 @@
  */
 
 import { db } from '../../db';
-import { logger } from '../utils/logger';
+import { logger } from '../../utils/logger';
 import { comprehensiveAuditService } from './comprehensiveAuditService';
 
 export interface ComplianceReport {

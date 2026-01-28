@@ -7,7 +7,7 @@
 
 import { db } from '../../db';
 import { users } from '../../db/schema';
-import { logger } from '../utils/logger';
+import { logger } from '../../utils/logger';
 import { comprehensiveAuditService } from './comprehensiveAuditService';
 import { realTimeComplianceAlertService } from './realTimeComplianceAlertService';
 import { eq } from 'drizzle-orm';

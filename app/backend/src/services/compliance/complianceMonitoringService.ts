@@ -8,7 +8,7 @@
 import { EventEmitter } from 'events';
 import { safeLogger } from '../../utils/safeLogger';
 import crypto from 'crypto';
-import { securityConfig } from '../config/securityConfig';
+import { securityConfig } from '../../config/securityConfig';
 import { comprehensiveAuditService } from './comprehensiveAuditService';
 import { complianceService } from './complianceService';
 
