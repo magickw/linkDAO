@@ -1127,8 +1127,9 @@ app.use('/api/marketplace/promo-codes', promoCodeRoutes);
 
 // 3. PRODUCT VARIANTS (specific pattern matching)
 // -------------------------------------------------------------------------
-const productVariantRoutes = require('./routes/productVariantRoutes').default;
-app.use('/api/marketplace/products', productVariantRoutes);
+// NOTE: productVariantRoutes is excluded from tsconfig - commenting out to prevent runtime errors
+// const productVariantRoutes = require('./routes/productVariantRoutes').default;
+// app.use('/api/marketplace/products', productVariantRoutes);
 
 // 4. SEPARATE SELLER NAMESPACE (alternative API path)
 // -------------------------------------------------------------------------
