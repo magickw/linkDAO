@@ -83,13 +83,31 @@ export class StatusController {
 
         if (platformsToShare.length > 0) {
           try {
+            // Convert media CIDs to IPFS gateway URLs before passing to social media
+            let resolvedMediaUrls: string[] | undefined;
+            if (media && Array.isArray(media)) {
+              resolvedMediaUrls = media.map(url => {
+                // Check if it's already a URL
+                if (url.startsWith('http')) return url;
+                // Check if it's a CID (v0 or v1)
+                if (url.startsWith('Qm') || url.startsWith('bafy')) {
+                  return `https://ipfs.io/ipfs/${url}`;
+                }
+                return url;
+              });
+              console.log('🔍 [DEBUG-CREATE] Converted media CIDs to URLs:', {
+                original: media,
+                resolved: resolvedMediaUrls
+              });
+            }
+
             // Post to connected platforms asynchronously (don't block response)
             socialMediaResults = await socialMediaIntegrationService.postToConnectedPlatforms(
               status.id,
               authenticatedUser.id,
               platformsToShare,
               content,
-              media, // Pass media URLs if available
+              resolvedMediaUrls, // Pass resolved media URLs
               'status' // This is a user status
             );
 
