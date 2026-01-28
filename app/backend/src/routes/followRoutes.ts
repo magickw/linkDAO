@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { FollowController } from '../controllers/followController';
 import rateLimit from 'express-rate-limit';
@@ -16,14 +16,20 @@ const followRateLimit = rateLimit({
   }
 });
 
+// Async handler wrapper to properly handle promise rejections
+const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) =>
+  (req: Request, res: Response, next: NextFunction) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+
 const router = express.Router();
 const followController = new FollowController();
 
-router.post('/follow', followRateLimit, csrfProtection,  followController.follow);
-router.post('/unfollow', followRateLimit, csrfProtection,  followController.unfollow);
-router.get('/followers/:address', followRateLimit, followController.getFollowers);
-router.get('/following/:address', followRateLimit, followController.getFollowing);
-router.get('/is-following/:follower/:following', followRateLimit, followController.isFollowing);
-router.get('/count/:address', followRateLimit, followController.getFollowCount);
+router.post('/follow', followRateLimit, csrfProtection, asyncHandler((req, res) => followController.follow(req, res)));
+router.post('/unfollow', followRateLimit, csrfProtection, asyncHandler((req, res) => followController.unfollow(req, res)));
+router.get('/followers/:address', followRateLimit, asyncHandler((req, res) => followController.getFollowers(req, res)));
+router.get('/following/:address', followRateLimit, asyncHandler((req, res) => followController.getFollowing(req, res)));
+router.get('/is-following/:follower/:following', followRateLimit, asyncHandler((req, res) => followController.isFollowing(req, res)));
+router.get('/count/:address', followRateLimit, asyncHandler((req, res) => followController.getFollowCount(req, res)));
 
 export default router;

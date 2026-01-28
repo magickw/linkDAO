@@ -99,7 +99,7 @@ export class FollowController {
       const result = await followService.unfollow(sanitizedFollower, sanitizedFollowing);
 
       if (result) {
-        res.json({ message: 'Successfully unffollowed' });
+        res.json({ message: 'Successfully unfollowed' });
       } else {
         res.status(400).json({
           error: 'VALIDATION_ERROR',
