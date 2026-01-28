@@ -1672,6 +1672,8 @@ export class CommunityController {
 
 
   // Update moderation feedback (auth required)
+  async updateModerationFeedback(req: Request, res: Response): Promise<void> {
+    try {
       const userAddress = (req as AuthenticatedRequest).user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
@@ -2004,7 +2006,9 @@ export class CommunityController {
         defaultReputation,
         sendWelcomeMessage,
         skipExisting
-      }); res.json(createSuccessResponse(result, {}));
+      });
+
+      res.json(createSuccessResponse(result, {}));
     } catch (error) {
       safeLogger.error('Error importing members:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to import members'));

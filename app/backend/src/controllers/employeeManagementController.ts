@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { eq, and, or, like, inArray } from 'drizzle-orm';
+import { eq, and, or, like, inArray, isNull, lt } from 'drizzle-orm';
 import { users } from '../db/schema';
 import { AdminAuthService } from '../services/adminAuthService';
 import { safeLogger } from '../utils/safeLogger';
@@ -639,8 +639,6 @@ class EmployeeManagementController {
       const inactivityDays = parseInt(process.env.EMPLOYEE_INACTIVITY_DAYS || '90', 10);
       const inactivityThreshold = new Date();
       inactivityThreshold.setDate(inactivityThreshold.getDate() - inactivityDays);
-
-      const { isNull, lt } = await import('drizzle-orm');
 
       const inactiveEmployees = await db
         .select()
