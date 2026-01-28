@@ -49,7 +49,7 @@ import cookieParser from 'cookie-parser';
 // dotenv is loaded via 'import dotenv/config' at the top of this file
 
 // Import security configuration and middleware
-import { validateSecurityConfig } from './config/securityConfig';
+import { validateSecurityConfig } from './config/securityConfig.js';
 import {
   rateLimitWithCache,
   cachingMiddleware
