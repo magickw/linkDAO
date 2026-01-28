@@ -54,7 +54,7 @@ class ContentModerationQueueService {
 
     // Initialize queues
     this.fastQueue = new Queue<ContentModerationJob>('content-moderation-fast', {
-      connection: this.redis,
+      connection: this.redis as any,
       defaultJobOptions: {
         removeOnComplete: 100,
         removeOnFail: 50,
@@ -67,7 +67,7 @@ class ContentModerationQueueService {
     });
 
     this.slowQueue = new Queue<ContentModerationJob>('content-moderation-slow', {
-      connection: this.redis,
+      connection: this.redis as any,
       defaultJobOptions: {
         removeOnComplete: 50,
         removeOnFail: 25,
@@ -81,7 +81,7 @@ class ContentModerationQueueService {
 
     // Initialize queue events for monitoring
     this.queueEvents = new QueueEvents('content-moderation', {
-      connection: this.redis,
+      connection: this.redis as any,
     });
 
     // Initialize workers
@@ -97,7 +97,7 @@ class ContentModerationQueueService {
         return this.processFastLaneJob(job);
       },
       {
-        connection: this.redis,
+        connection: this.redis as any,
         concurrency: 10, // Higher concurrency for fast processing
         limiter: {
           max: 100, // Max 100 jobs per duration
@@ -113,7 +113,7 @@ class ContentModerationQueueService {
         return this.processSlowLaneJob(job);
       },
       {
-        connection: this.redis,
+        connection: this.redis as any,
         concurrency: 3, // Lower concurrency for resource-intensive processing
         limiter: {
           max: 20, // Max 20 jobs per duration

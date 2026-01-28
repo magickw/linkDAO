@@ -263,6 +263,7 @@ export class HybridPaymentOrchestrator {
             platformFee: fiatPlatformFee,
             gasFee: 0,
             taxAmount,
+            totalFees: fiatProcessingFee + fiatPlatformFee + taxAmount,
             currency: request.currency
           },
           totalAmount: fiatTotalAmount,
