@@ -1034,7 +1034,6 @@ process.stdout.write('✅ Leaderboard, Treasury, Post Management, Announcement, 
 // Legacy authentication routes
 // app.use('/api/auth', createDefaultAuthRoutes());
 // Use the enhanced auth routes instead
-app.use('/api/auth', require('./routes/authRoutes').default);
 // Security routes
 app.use('/api/security', securityRoutes);
 app.use('/api/email', emailRoutes);
@@ -1333,6 +1332,10 @@ app.use('/api/social-media', socialMediaOAuthRoutes);
 // Security audit routes
 import securityAuditRoutes from './routes/securityAuditRoutes';
 app.use('/api/security-audit', securityAuditRoutes);
+
+// Auth routes
+import authRoutes from './routes/authRoutes';
+app.use('/api/auth', authRoutes);
 
 // Data export routes
 import dataExportRoutes from './routes/dataExportRoutes';
