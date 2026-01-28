@@ -28,6 +28,12 @@ export interface SellerProfile {
   };
   storeDescription?: string;
   // Business Information
+  verificationStatus?: {
+    email: boolean;
+    phone: boolean;
+    kyc: string;
+    identity: boolean;
+  };
   payoutSettings?: any; // JSON with fiat withdrawal details
   legalBusinessName?: string;
   businessType?: string;

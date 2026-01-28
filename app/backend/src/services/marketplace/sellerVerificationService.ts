@@ -1,7 +1,7 @@
 import { eq, and, lt } from 'drizzle-orm';
 import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../../db';
-import { sellerVerifications } from '../database/schemas/sellerVerification';
+import { sellerVerifications } from '../../db/marketplaceSchema';
 import { sellers } from '../../db/schema';
 import { SellerVerification, VerificationRequest } from '../../types/sellerVerification';
 import { ValidationError } from '../../models/validation';

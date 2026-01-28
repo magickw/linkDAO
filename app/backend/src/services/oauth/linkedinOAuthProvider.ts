@@ -403,13 +403,12 @@ export class LinkedInOAuthProvider extends BaseOAuthProvider {
     try {
       const response = await fetch(uploadUrl, {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/octet-stream',
-        },
-        body: imageBuffer,
-      });
-
+                  headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/octet-stream',
+                  },
+                  body: imageBuffer as any,
+                });
       if (!response.ok) {
         safeLogger.error('LinkedIn image upload failed:', { status: response.status });
         return false;

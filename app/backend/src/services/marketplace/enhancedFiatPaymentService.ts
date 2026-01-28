@@ -1,8 +1,8 @@
-import { DatabaseService } from './databaseService';
+import { DatabaseService } from '../databaseService';
 import { safeLogger } from '../../utils/safeLogger';
-import { ExchangeRateService } from './exchangeRateService';
+import { ExchangeRateService } from '../exchangeRateService';
 import { NotificationService } from '../notificationService';
-import { UserProfileService } from './userProfileService';
+import { UserProfileService } from '../userProfileService';
 
 export interface FiatPaymentRequest {
   orderId: string;

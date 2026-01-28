@@ -2,8 +2,8 @@ import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs/promises';
 import { safeLogger } from '../../utils/safeLogger';
-import { selfHostedStorageService } from '../services/selfHostedStorageService';
-import { storageAuthMiddleware, fileAccessMiddleware } from '../middleware/storageAuthMiddleware';
+import { selfHostedStorageService } from '../selfHostedStorageService';
+import { storageAuthMiddleware, fileAccessMiddleware } from '../../middleware/storageAuthMiddleware';
 
 // Configuration
 const CDN_BASE_PATH = process.env.CDN_BASE_PATH || '/cdn';

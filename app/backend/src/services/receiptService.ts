@@ -1,6 +1,6 @@
 import { DatabaseService } from './databaseService';
 import { safeLogger } from '../utils/safeLogger';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 const databaseService = new DatabaseService();
 
@@ -29,6 +29,33 @@ export interface ReceiptData {
 
 export class ReceiptService {
   /**
+   * Generate and store a receipt for a marketplace order
+   */
+  async generateMarketplaceReceipt(data: any): Promise<any> {
+    return this.generateReceipt({
+      ...data,
+      paymentMethod: data.paymentMethod || 'crypto'
+    });
+  }
+
+  /**
+   * Generate and store a receipt for an LDAO token purchase
+   */
+  async generateLDAOPurchaseReceipt(data: any): Promise<any> {
+    return this.generateReceipt({
+      ...data,
+      orderId: data.transactionId || randomUUID(),
+      paymentMethod: data.paymentMethod || 'crypto',
+      items: [{
+        description: 'LDAO Tokens',
+        quantity: data.tokensPurchased || 1,
+        price: data.amount,
+        total: data.amount
+      }]
+    });
+  }
+
+  /**
    * Generate and store a receipt for a completed checkout
    */
   async generateReceipt(data: ReceiptData): Promise<any> {
@@ -36,7 +63,7 @@ export class ReceiptService {
       const receiptNumber = `RCP-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
       const receiptRecord = {
-        id: uuidv4(),
+        id: randomUUID(),
         orderId: data.orderId,
         receiptNumber,
         buyerInfo: {

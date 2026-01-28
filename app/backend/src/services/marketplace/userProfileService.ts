@@ -1,8 +1,8 @@
-import { databaseService } from './databaseService';
+import { databaseService } from '../databaseService';
 import { safeLogger } from '../../utils/safeLogger';
 import { users } from '../../db/schema';
 import { eq, sql } from "drizzle-orm";
-import { DataEncryptionService } from './dataEncryptionService';
+import { DataEncryptionService } from '../dataEncryptionService';
 import { 
   UserProfile, 
   CreateUserProfileInput, 

@@ -12,6 +12,79 @@ import { contentPreviewService } from '@/services/contentPreviewService';
 // So I should import from types.
 import { LinkPreview as LinkPreviewType } from '@/types/contentPreview';
 
+// Memoized Link Preview Item Component
+const LinkPreviewItem = React.memo<{ preview: LinkPreviewType; onRemove: (url: string) => void }>(
+  ({ preview, onRemove }) => (
+    <div className="relative flex border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700/30">
+      {preview.image && (
+        <div className="w-24 h-24 flex-shrink-0">
+          <img src={preview.image} alt={preview.title} className="w-full h-full object-cover" />
+        </div>
+      )}
+      <div className="p-3 flex-1 min-w-0 flex flex-col justify-center">
+        <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{preview.title}</h4>
+        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{preview.description}</p>
+        <span className="text-xs text-primary-500 mt-1 flex items-center gap-1">
+          <LinkIcon size={10} /> {new URL(preview.url).hostname}
+        </span>
+      </div>
+      <button
+        type="button"
+        onClick={() => onRemove(preview.url)}
+        className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full hover:bg-black/70"
+      >
+        <X size={12} />
+      </button>
+    </div>
+  )
+);
+LinkPreviewItem.displayName = 'LinkPreviewItem';
+
+// Memoized File Preview Item Component
+const FilePreviewItem = React.memo<{
+  preview: string;
+  file: File | undefined;
+  index: number;
+  maxFileSize: number;
+  onRemove: (index: number) => void;
+}>(({ preview, file, index, maxFileSize, onRemove }) => {
+  const isVideo = file?.type.startsWith('video/');
+  const fileSize = file ? ipfsUploadService.formatFileSize(file.size) : '';
+  const fileSizePercent = file ? (file.size / maxFileSize) * 100 : 0;
+  const sizeColor = fileSizePercent > 90 ? 'text-red-500' : fileSizePercent > 70 ? 'text-yellow-500' : 'text-green-500';
+
+  return (
+    <div className="relative group">
+      {isVideo ? (
+        <video
+          src={preview}
+          className="w-full h-32 object-cover rounded-lg"
+          controls
+        />
+      ) : (
+        <img
+          src={preview}
+          alt={`Preview ${index + 1}`}
+          className="w-full h-32 object-cover rounded-lg"
+        />
+      )}
+      {/* File info overlay */}
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 rounded-b-lg">
+        <div className="text-white text-xs truncate">{file?.name}</div>
+        <div className={`text - xs font - medium ${sizeColor} `}>{fileSize}</div>
+      </div>
+      <button
+        type="button"
+        onClick={() => onRemove(index)}
+        className="absolute top-2 right-2 w-6 h-6 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white hover:bg-opacity-70 transition-all"
+      >
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  );
+});
+FilePreviewItem.displayName = 'FilePreviewItem';
+
 interface FacebookStylePostComposerProps {
   onSubmit: (postData: CreatePostInput) => Promise<void>;
   isLoading: boolean;
@@ -63,6 +136,10 @@ const FacebookStylePostComposer = React.memo(({
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const locationPickerRef = useRef<HTMLDivElement>(null);
 
+  // Debounce refs for link detection
+  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const linkQueueRef = useRef<Set<string>>(new Set());
+
   // Close pickers when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -75,7 +152,18 @@ const FacebookStylePostComposer = React.memo(({
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Cleanup debounce timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
   }, []);
 
   // Get max file size from service
@@ -109,27 +197,41 @@ const FacebookStylePostComposer = React.memo(({
     return text.match(urlRegex) || [];
   }, []);
 
-  const fetchLinkPreview = useCallback(async (url: string) => {
-    if (fetchingPreviews.has(url)) return;
+  // Process link preview queue with concurrency limit (max 2 simultaneous)
+  const processPreviews = useCallback(async () => {
+    const urlsToProcess = Array.from(linkQueueRef.current);
+    if (urlsToProcess.length === 0) return;
 
-    setFetchingPreviews(prev => new Set(prev).add(url));
+    linkQueueRef.current.clear();
 
-    try {
-      const preview = await contentPreviewService.generatePreview(url);
-      if (preview && preview.type === 'link' && preview.data) {
-        setLinkPreviews(prev => {
-          if (prev.some(p => p.url === url)) return prev;
-          return [...prev, preview.data as LinkPreviewType];
-        });
-      }
-    } catch (error) {
-      console.error('Failed to fetch link preview:', error);
-    } finally {
-      setFetchingPreviews(prev => {
-        const next = new Set(prev);
-        next.delete(url);
-        return next;
-      });
+    // Process max 2 URLs simultaneously
+    for (let i = 0; i < urlsToProcess.length; i += 2) {
+      const batch = urlsToProcess.slice(i, i + 2);
+      await Promise.all(
+        batch.map(async (url) => {
+          if (fetchingPreviews.has(url)) return;
+
+          setFetchingPreviews(prev => new Set(prev).add(url));
+
+          try {
+            const preview = await contentPreviewService.generatePreview(url);
+            if (preview && preview.type === 'link' && preview.data) {
+              setLinkPreviews(prev => {
+                if (prev.some(p => p.url === url)) return prev;
+                return [...prev, preview.data as LinkPreviewType];
+              });
+            }
+          } catch (error) {
+            console.error('Failed to fetch link preview:', error);
+          } finally {
+            setFetchingPreviews(prev => {
+              const next = new Set(prev);
+              next.delete(url);
+              return next;
+            });
+          }
+        })
+      );
     }
   }, [fetchingPreviews]);
 
@@ -222,16 +324,26 @@ const FacebookStylePostComposer = React.memo(({
     const text = e.target.value;
     setContent(text);
 
-    // Debounced link detection could be better, but simple is fine for now
-    const detected = detectLinks(text);
-    if (detected) {
-      detected.forEach(url => {
-        if (!linkPreviews.some(p => p.url === url)) {
-          fetchLinkPreview(url);
-        }
-      });
+    // Clear previous debounce timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
     }
-  }, [detectLinks, fetchLinkPreview, linkPreviews]);
+
+    // Set new debounce timeout for link detection (500ms)
+    debounceTimeoutRef.current = setTimeout(async () => {
+      const detected = detectLinks(text);
+      if (detected.length > 0) {
+        // Add new URLs to queue
+        detected.forEach(url => {
+          if (!linkPreviews.some(p => p.url === url)) {
+            linkQueueRef.current.add(url);
+          }
+        });
+        // Process the queue
+        await processPreviews();
+      }
+    }, 500);
+  }, [detectLinks, linkPreviews, processPreviews]);
 
   // Extract video URLs from content
   const extractVideoLinks = useCallback((text: string) => {
@@ -457,48 +569,21 @@ const FacebookStylePostComposer = React.memo(({
         {/* File Previews */}
         {previews.length > 0 && (
           <div className="grid grid-cols-2 gap-2">
-            {previews.map((preview, index) => {
-              const file = selectedFiles[index];
-              const isVideo = file?.type.startsWith('video/');
-              const fileSize = file ? ipfsUploadService.formatFileSize(file.size) : '';
-              const fileSizePercent = file ? (file.size / maxFileSize) * 100 : 0;
-              const sizeColor = fileSizePercent > 90 ? 'text-red-500' : fileSizePercent > 70 ? 'text-yellow-500' : 'text-green-500';
-
-              return (
-                <div key={index} className="relative group">
-                  {isVideo ? (
-                    <video
-                      src={preview}
-                      className="w-full h-32 object-cover rounded-lg"
-                      controls
-                    />
-                  ) : (
-                    <img
-                      src={preview}
-                      alt={`Preview ${index + 1}`}
-                      className="w-full h-32 object-cover rounded-lg"
-                    />
-                  )}
-                  {/* File info overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 rounded-b-lg">
-                    <div className="text-white text-xs truncate">{file?.name}</div>
-                    <div className={`text - xs font - medium ${sizeColor} `}>{fileSize}</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeFile(index)}
-                    className="absolute top-2 right-2 w-6 h-6 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white hover:bg-opacity-70 transition-all"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              );
-            })}
+            {previews.map((preview, index) => (
+              <FilePreviewItem
+                key={`${selectedFiles[index]?.name}-${index}`}
+                preview={preview}
+                file={selectedFiles[index]}
+                index={index}
+                maxFileSize={maxFileSize}
+                onRemove={removeFile}
+              />
+            ))}
           </div>
         )}
       </div>
     );
-  }, [previews, selectedFiles, removeFile, videoEmbeds]);
+  }, [previews, selectedFiles, removeFile, videoEmbeds, maxFileSize]);
 
   return (
     <div className={`group rounded - xl shadow - sm hover: shadow - md border border - gray - 200 dark: border - gray - 700 ${className} bg - white dark: bg - gray - 800 transition - all duration - 300 focus - within: ring - 2 focus - within: ring - primary - 500 / 20 focus - within: border - primary - 500 / 50`}>
@@ -539,27 +624,7 @@ const FacebookStylePostComposer = React.memo(({
               {linkPreviews.length > 0 && (
                 <div className="mt-3 space-y-2">
                   {linkPreviews.map((preview, idx) => (
-                    <div key={idx} className="relative flex border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700/30">
-                      {preview.image && (
-                        <div className="w-24 h-24 flex-shrink-0">
-                          <img src={preview.image} alt={preview.title} className="w-full h-full object-cover" />
-                        </div>
-                      )}
-                      <div className="p-3 flex-1 min-w-0 flex flex-col justify-center">
-                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{preview.title}</h4>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{preview.description}</p>
-                        <span className="text-xs text-primary-500 mt-1 flex items-center gap-1">
-                          <LinkIcon size={10} /> {new URL(preview.url).hostname}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeLinkPreview(preview.url)}
-                        className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full hover:bg-black/70"
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
+                    <LinkPreviewItem key={`${preview.url}-${idx}`} preview={preview} onRemove={removeLinkPreview} />
                   ))}
                 </div>
               )}

@@ -1,9 +1,9 @@
 import { ethers } from 'ethers';
 import { safeLogger } from '../../utils/safeLogger';
 import { getTokenAddress } from '../../config/tokenAddresses';
-import { DatabaseService } from './databaseService';
-import { UserProfileService } from './userProfileService';
-import { ExchangeRateService } from './exchangeRateService';
+import { DatabaseService } from '../databaseService';
+import { UserProfileService } from '../userProfileService';
+import { ExchangeRateService } from '../exchangeRateService';
 import { NETWORK_CONFIGS } from '../../config/networkConfig';
 
 export interface PaymentValidationRequest {

@@ -391,9 +391,8 @@ export class ReturnAnalyticsService {
       // Invalidate relevant caches
       await this.invalidateEventCaches(event.returnId);
 
-      // Queue for background processing (metrics calculation, etc.)
-      const { queueReturnEvent } = await import('../queues/returnEventQueue');
-      await queueReturnEvent(event);
+              // Queue for background processing (metrics calculation, etc.)
+              const { queueReturnEvent } = await import('../../queues/returnEventQueue');      await queueReturnEvent(event);
 
       // Trigger real-time updates immediately
       await this.triggerRealtimeUpdate(event);
@@ -818,9 +817,8 @@ export class ReturnAnalyticsService {
       // Get fresh metrics
       const metrics = await this.getRealtimeMetrics();
 
-      // Get admin WebSocket service instance
-      const { getWebSocketService } = await import('./webSocketService');
-      const wsService = getWebSocketService();
+              // Get admin WebSocket service instance
+              const { getWebSocketService } = await import('../websocket/webSocketService');      const wsService = getWebSocketService();
 
       if (wsService && (wsService as any).io) {
         // We need to access the AdminWebSocketService instance or use the io instance directly

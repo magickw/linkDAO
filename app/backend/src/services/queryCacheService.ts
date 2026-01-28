@@ -41,7 +41,7 @@ export class QueryCacheService {
       // Try Redis first (if available)
       if (redisService.isRedisConnected()) {
         const redisKey = this.buildRedisKey(key);
-        const cached = await redisService.getClient().get(redisKey);
+        const cached = await (redisService.getClient() as any).get(redisKey);
         if (cached) {
           const parsed = JSON.parse(cached) as CacheEntry<T>;
 
@@ -107,7 +107,7 @@ export class QueryCacheService {
       // Store in Redis (if available)
       if (redisService.isRedisConnected()) {
         const redisKey = this.buildRedisKey(key);
-        await redisService.getClient().setex(
+        await (redisService.getClient() as any).setEx(
           redisKey,
           ttl,
           JSON.stringify(entry)
@@ -141,7 +141,7 @@ export class QueryCacheService {
       // Remove from Redis
       if (redisService.isRedisConnected()) {
         const redisKey = this.buildRedisKey(key);
-        await redisService.getClient().del(redisKey);
+        await (redisService.getClient() as any).del(redisKey);
       }
 
       // Remove from memory cache
@@ -160,9 +160,10 @@ export class QueryCacheService {
     try {
       // Remove from Redis by pattern
       if (redisService.isRedisConnected()) {
-        const keys = await redisService.getClient().keys(this.buildRedisKey(pattern));
+        const client = redisService.getClient() as any;
+        const keys = await client.keys(this.buildRedisKey(pattern));
         if (keys.length > 0) {
-          await redisService.getClient().del(...keys);
+          await client.del(...keys);
           safeLogger.info(`Invalidated ${keys.length} cache entries matching pattern: ${pattern}`);
         }
       }
@@ -192,9 +193,10 @@ export class QueryCacheService {
     try {
       // Clear Redis
       if (redisService.isRedisConnected()) {
-        const keys = await redisService.getClient().keys(this.buildRedisKey('*'));
+        const client = redisService.getClient() as any;
+        const keys = await client.keys(this.buildRedisKey('*'));
         if (keys.length > 0) {
-          await redisService.getClient().del(...keys);
+          await client.del(...keys);
           safeLogger.info(`Cleared ${keys.length} Redis cache entries`);
         }
       }

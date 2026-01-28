@@ -707,7 +707,7 @@ export class ProductService {
     if (dbUser?.id) {
       try {
         // Import review service dynamically to avoid circular dependencies
-        const { reviewService } = await import('./reviewService');
+        const { reviewService } = await import('../reviewService');
         const reviewStats = await reviewService.getReviewStats(dbUser.id);
         sellerRating = reviewStats.averageRating;
       } catch (error) {

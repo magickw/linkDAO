@@ -138,7 +138,7 @@ export class CacheService {
         // Use the shared client instance if it exists
         const client = redisService.getClient();
         if (client) {
-          this.redis = client;
+          this.redis = client as any;
           this.isConnected = redisStatus.connected;
           // Note: event handlers are managed by redisService
         } else {
@@ -147,7 +147,7 @@ export class CacheService {
           try {
             await redisService.connect();
             const newStatus = redisService.getRedisStatus();
-            this.redis = redisService.getClient();
+            this.redis = redisService.getClient() as any;
             this.isConnected = newStatus.connected;
           } catch (connError) {
             safeLogger.warn('⚠️ Could not immediately connect to Redis, will retry on operation');

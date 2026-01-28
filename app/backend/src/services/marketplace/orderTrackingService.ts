@@ -14,7 +14,7 @@ import {
   OrderEvent,
   OrderAnalytics
 } from '../../models/Order';
-import { AppError, NotFoundError, ForbiddenError } from '../middleware/errorHandler';
+import { AppError, NotFoundError, ForbiddenError } from '../../middleware/errorHandler';
 import { shippingProviderService } from './shippingProviderService';
 import { db } from '../../db';
 import { escrows } from '../../db/schema';
