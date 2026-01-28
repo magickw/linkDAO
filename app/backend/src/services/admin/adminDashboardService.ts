@@ -1,9 +1,9 @@
 
 import { MarketplaceOrder as Order } from '../models/Order';
 import { db } from '../../db';
-import { orders, orderEvents } from '../db/schema';
+import { orders, orderEvents } from '../../db/schema';
 import { sql, eq, count, sum, avg, desc } from 'drizzle-orm';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { cacheService } from './cacheService';
 
 // --- Existing Dashboard Interfaces ---

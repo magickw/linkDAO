@@ -94,6 +94,7 @@
     "@easypost/api": "^8.4.0",
     "@nestjs/common": "^11.1.8",
     "@swc/cli": "^0.7.9",
+    "@swc/core": "^1.15.10",
     "@tensorflow/tfjs-node": "^0.1.11",
     "@types/bcrypt": "^6.0.0",
     "@types/express-fileupload": "^1.5.1",

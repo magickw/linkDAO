@@ -1,4 +1,4 @@
-import { DatabaseService } from './databaseService';
+import { DatabaseService } from '../databaseService';
 import { safeLogger } from '../../utils/safeLogger';
 import { RedisService } from './redisService';
 import { users } from '../../db/schema';

@@ -1,7 +1,7 @@
-import { getAIService } from './aiService';
-import { safeLogger } from '../utils/safeLogger';
+import { getAIService } from '../aiService';
+import { safeLogger } from '../../utils/safeLogger';
 import { communityService } from './communityService';
-import { analyticsService } from './analyticsService';
+import { analyticsService } from '../analyticsService';
 
 const aiService = getAIService();
 const communitySvc = communityService;

@@ -1,7 +1,7 @@
 import { contentModerationML, MLModerationResult } from './ai/contentModerationML';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../../db';
-import { posts, users } from '../db/schema';
+import { posts, users } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 
 // Import moderation table conditionally

@@ -1,10 +1,10 @@
-import { DatabaseService } from './databaseService';
+import { DatabaseService } from '../databaseService';
 import { safeLogger } from '../../utils/safeLogger';
 import { reputationService } from './reputationService';
 import { kycService } from './kycService';
 import { AIModerationOrchestrator, ContentInput } from '../aiModerationOrchestrator';
 import EvidenceStorageService from './evidenceStorageService';
-import { UserProfileService } from './userProfileService';
+import { UserProfileService } from '../userProfileService';
 import { z } from 'zod';
 
 // Marketplace-specific moderation schemas

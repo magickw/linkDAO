@@ -1,11 +1,11 @@
-import { DatabaseService } from './databaseService';
+import { DatabaseService } from '../databaseService';
 import { safeLogger } from '../../utils/safeLogger';
 import { NotificationService } from '../notificationService';
 import { PaymentValidationService } from './paymentValidationService';
 import { EnhancedEscrowService } from '../enhancedEscrowService';
 import { EnhancedFiatPaymentService } from './enhancedFiatPaymentService';
 import { ReceiptService } from './receiptService';
-import { emailService } from './emailService';
+import { emailService } from '../emailService';
 import { ReceiptStatus } from '../../types/receipt';
 import { ethers } from 'ethers';
 import { refundPaymentService, RefundResult } from './refundPaymentService';

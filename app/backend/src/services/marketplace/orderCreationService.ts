@@ -1,4 +1,4 @@
-import { DatabaseService } from './databaseService';
+import { DatabaseService } from '../databaseService';
 import { safeLogger } from '../../utils/safeLogger';
 import { NotificationService } from '../notificationService';
 import { HybridPaymentOrchestrator } from './hybridPaymentOrchestrator';

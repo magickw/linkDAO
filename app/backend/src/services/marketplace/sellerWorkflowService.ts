@@ -1,4 +1,4 @@
-import { DatabaseService } from './databaseService';
+import { DatabaseService } from '../databaseService';
 import { safeLogger } from '../../utils/safeLogger';
 import { OrderService } from './orderService';
 import { ShippingService } from './shippingService';

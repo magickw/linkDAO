@@ -1,7 +1,7 @@
 import { AIModerationOrchestrator, ContentInput, EnsembleDecision, ModerationResult } from './aiModerationOrchestrator';
-import { safeLogger } from '../utils/safeLogger';
-import { databaseService } from './databaseService';
-import { moderationCases } from '../db/schema';
+import { safeLogger } from '../../utils/safeLogger';
+import { databaseService } from '../databaseService';
+import { moderationCases } from '../../db/schema';
 import { eq, desc, and, gte, lte, sql } from 'drizzle-orm';
 
 export interface RiskFactor {

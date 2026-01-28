@@ -16,7 +16,7 @@ import {
   BulkImageUploadResult,
   ProductAnalytics
 } from '../../models/Product';
-import { DatabaseService } from './databaseService';
+import { DatabaseService } from '../databaseService';
 import { safeLogger } from '../../utils/safeLogger';
 import { MetadataService } from '../metadataService';
 import { priceOracleService } from '../priceOracleService';

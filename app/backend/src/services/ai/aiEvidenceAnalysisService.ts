@@ -1,5 +1,5 @@
 import { OpenAI } from 'openai';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import * as tf from '@tensorflow/tfjs-node';
 let sharp;
 let sharpAvailable = false;
@@ -17,7 +17,7 @@ try {
 }
 import crypto from 'crypto';
 import { db } from '../../db';
-import { disputes } from '../db/schema';
+import { disputes } from '../../db/schema';
 import { eq } from 'drizzle-orm';
 
 export interface EvidenceAnalysisResult {

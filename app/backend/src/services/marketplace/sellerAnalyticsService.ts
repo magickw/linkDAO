@@ -13,7 +13,7 @@ import {
 } from '../../db/schema';
 import { eq, sql, and, gte, lte, desc, asc, count, sum, avg, isNotNull } from 'drizzle-orm';
 import { Redis } from 'ioredis';
-import { databaseService } from './databaseService';
+import { databaseService } from '../databaseService';
 
 export interface SellerPerformanceMetrics {
   sellerId: string;

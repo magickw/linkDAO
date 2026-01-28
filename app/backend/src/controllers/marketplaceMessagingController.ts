@@ -8,7 +8,7 @@ import { apiResponse } from '../utils/apiResponse';
 import { db } from '../db';
 import { messageTemplates, quickReplies } from '../db/schema';
 import { sanitizeMessageTemplate, sanitizeQuickReply } from '../utils/sanitization';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 
 export class MarketplaceMessagingController {
   /**

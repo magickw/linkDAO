@@ -1,6 +1,6 @@
-import { DatabaseService } from './databaseService';
-import { safeLogger } from '../utils/safeLogger';
-import { users, follows, posts, reactions, tips, communities } from '../db/schema';
+import { DatabaseService } from '../databaseService';
+import { safeLogger } from '../../utils/safeLogger';
+import { users, follows, posts, reactions, tips, communities } from '../../db/schema';
 import { eq, desc, sql, and, or, ne, count, avg, sum, inArray } from 'drizzle-orm';
 
 export interface RecommendationScore {

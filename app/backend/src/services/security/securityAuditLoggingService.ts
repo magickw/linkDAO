@@ -4,7 +4,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import crypto from 'crypto';
 
 export interface SecurityAuditEvent {

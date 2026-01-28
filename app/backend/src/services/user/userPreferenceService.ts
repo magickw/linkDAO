@@ -4,13 +4,13 @@
  */
 
 import { eq, desc, and, lt, isNull, or } from 'drizzle-orm';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../../db';
 import { 
   paymentMethodPreferences, 
   paymentMethodUsageHistory, 
   paymentMethodPreferenceOverrides 
-} from '../db/schema';
+} from '../../db/schema';
 import crypto from 'crypto';
 
 export interface PaymentMethodPreference {

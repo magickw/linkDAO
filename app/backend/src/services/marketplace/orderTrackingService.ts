@@ -3,9 +3,9 @@
  * Features: Order history, search, filtering, timeline, and notifications
  */
 
-import { DatabaseService } from './databaseService';
+import { DatabaseService } from '../databaseService';
 import { safeLogger } from '../../utils/safeLogger';
-import { UserProfileService } from './userProfileService';
+import { UserProfileService } from '../userProfileService';
 import { NotificationService } from '../notificationService';
 import { OrderService } from './orderService';
 import {

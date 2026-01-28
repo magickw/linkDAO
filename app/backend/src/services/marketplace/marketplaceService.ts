@@ -11,11 +11,11 @@ import {
   MarketplaceDispute,
   UserReputation,
   AIModeration
-} from '../../../models/Marketplace';
+} from '../../models/Marketplace';
 import { databaseService } from '../databaseService'; // Import the singleton instance
 import { UserProfileService } from '../userProfileService';
 import { eq, sql } from 'drizzle-orm';
-import { safeLogger } from '../../../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../../db'; // Import database instance for health checks
 
 // Use the singleton instance instead of creating a new one

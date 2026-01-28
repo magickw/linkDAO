@@ -1,4 +1,5 @@
 import { db } from '../../db';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { 
   users, 
   userGemBalance,

@@ -5,7 +5,7 @@ import {
   vendor_configurations,
   admin_audit_logs,
   alert_configurations
-} from '../db/schema';
+} from '../../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 
 export interface PolicyConfiguration {

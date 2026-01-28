@@ -17,7 +17,7 @@
 
 import crypto from 'crypto';
 import { getPrimaryFrontendUrl } from '../../utils/urlUtils';
-import { ISellerNotificationService } from './interfaces/ISellerNotificationService';
+import { ISellerNotificationService } from '../interfaces/ISellerNotificationService';
 import {
   SellerNotification,
   SellerNotificationInput,
@@ -33,10 +33,10 @@ import {
   PriorityDetermination,
   SellerNotificationTiming,
 } from '../../types/sellerNotification';
-import { DatabaseService } from './databaseService';
+import { DatabaseService } from '../databaseService';
 import { NotificationService } from '../notificationService';
 import { WebSocketService } from '../websocket/webSocketService';
-import { EmailService } from './emailService';
+import { EmailService } from '../emailService';
 import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../../db';
 import { notifications } from '../../db/schema';

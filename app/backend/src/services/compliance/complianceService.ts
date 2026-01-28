@@ -6,8 +6,8 @@
  */
 
 import { db } from '../../db';
-import { safeLogger } from '../utils/safeLogger';
-import { users } from '../db/schema';
+import { safeLogger } from '../../utils/safeLogger';
+import { users } from '../../db/schema';
 import { securityConfig } from '../config/securityConfig';
 import AuditLoggingService from './auditLoggingService';
 

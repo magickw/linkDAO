@@ -17,7 +17,7 @@
 
 import crypto from 'crypto';
 import { getPrimaryFrontendUrl } from '../utils/urlUtils';
-import { ISellerNotificationService } from './marketplace/interfaces/ISellerNotificationService';
+import { ISellerNotificationService } from './interfaces/ISellerNotificationService';
 import {
   SellerNotification,
   SellerNotificationInput,

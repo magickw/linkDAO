@@ -1,11 +1,11 @@
 import bcrypt from 'bcrypt';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { eq, and, gt } from 'drizzle-orm';
-import { users, adminSessions, adminAuditLog } from '../db/schema';
+import { users, adminSessions, adminAuditLog } from '../../db/schema';
 import { AdminAuthFix } from '../utils/adminAuthFix';
 
 const connectionString = process.env.DATABASE_URL!;

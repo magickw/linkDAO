@@ -1,4 +1,4 @@
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { openaiService } from './ai/openaiService';
 
 interface ModerationResult {

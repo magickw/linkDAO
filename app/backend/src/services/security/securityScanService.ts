@@ -1,4 +1,4 @@
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 
 interface SecurityScanResult {
   status: 'safe' | 'warning' | 'blocked';

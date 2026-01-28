@@ -1,6 +1,6 @@
-import { DatabaseService } from './databaseService';
-import { safeLogger } from '../utils/safeLogger';
-import { users, follows, posts, reactions, tips } from '../db/schema';
+import { DatabaseService } from '../databaseService';
+import { safeLogger } from '../../utils/safeLogger';
+import { users, follows, posts, reactions, tips } from '../../db/schema';
 import { eq, desc, sql, and, count, sum } from 'drizzle-orm';
 
 export interface ReputationMetrics {

@@ -1,6 +1,6 @@
-import { databaseService } from './databaseService';
-import { safeLogger } from '../utils/safeLogger';
-import { moderationCases, contentReports } from '../db/schema';
+import { databaseService } from '../databaseService';
+import { safeLogger } from '../../utils/safeLogger';
+import { moderationCases, contentReports } from '../../db/schema';
 import { eq, and, gte, desc } from 'drizzle-orm';
 import { aiContentRiskScoringService } from './aiContentRiskScoringService';
 

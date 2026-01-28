@@ -1,7 +1,7 @@
 import { ProductListingService } from './listingService';
 import { safeLogger } from '../../utils/safeLogger';
 import { RedisService } from './redisService';
-import { DatabaseService } from './databaseService';
+import { DatabaseService } from '../databaseService';
 import { Product } from '../../models/Product';
 import { eq, and } from 'drizzle-orm';
 import * as schema from '../../db/schema';

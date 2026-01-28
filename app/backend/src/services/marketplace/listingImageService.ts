@@ -1,6 +1,6 @@
 import { ProductListingService } from './listingService';
 import ImageStorageService from './imageStorageService';
-import { DatabaseService } from './databaseService';
+import { DatabaseService } from '../databaseService';
 import { RedisService } from './redisService';
 import { ValidationError } from '../../models/validation';
 import { eq } from 'drizzle-orm';

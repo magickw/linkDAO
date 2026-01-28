@@ -6,7 +6,7 @@
  */
 
 import { db } from '../../db';
-import { users } from '../db/schema';
+import { users } from '../../db/schema';
 import { logger } from '../utils/logger';
 import { comprehensiveAuditService } from './comprehensiveAuditService';
 import { realTimeComplianceAlertService } from './realTimeComplianceAlertService';

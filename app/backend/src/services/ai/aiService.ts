@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
-import { safeLogger } from '../utils/safeLogger';
-import { DatabaseService } from './databaseService';
+import { safeLogger } from '../../utils/safeLogger';
+import { DatabaseService } from '../databaseService';
 import { BlockchainMarketplaceService } from './marketplaceService';
 
 const databaseService = new DatabaseService();

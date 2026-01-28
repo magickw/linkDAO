@@ -1,5 +1,5 @@
 import Redis from 'ioredis';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 
 interface CacheOptions {
   ttl?: number; // Time to live in seconds

@@ -14,7 +14,7 @@ import { ProductService } from './productService';
 import { safeLogger } from '../../utils/safeLogger';
 import { BlockchainMarketplaceService } from './marketplaceService';
 import ImageStorageService from './imageStorageService';
-import { DatabaseService } from './databaseService';
+import { DatabaseService } from '../databaseService';
 import { RedisService } from './redisService';
 import { ValidationHelper, ValidationError } from '../../models/validation';
 import { eq, and, or, like, gte, lte, inArray, desc, asc, isNull, sql } from 'drizzle-orm';

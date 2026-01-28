@@ -4,7 +4,7 @@ import { getTokenAddress } from '../../config/tokenAddresses';
 import { EnhancedFiatPaymentService } from './enhancedFiatPaymentService';
 import { EnhancedEscrowService } from '../enhancedEscrowService';
 import { ExchangeRateService } from './exchangeRateService';
-import { DatabaseService } from './databaseService';
+import { DatabaseService } from '../databaseService';
 import { NotificationService } from '../notificationService';
 import { StripePaymentService } from './stripePaymentService';
 import { TaxCalculationService } from './taxCalculationService';

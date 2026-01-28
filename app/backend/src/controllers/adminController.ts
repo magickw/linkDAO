@@ -967,8 +967,7 @@ export class AdminController {
       }
 
       const status = await this.enhancedEscrowService.getEscrowStatus(
-        id,
-        chainId ? parseInt(chainId as string) : undefined
+        id
       );
 
       res.json({ success: true, data: status });
