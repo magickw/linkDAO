@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Conversation, Message } from '../../types/messaging';
 import { MessageBubble } from './MessageBubble';
+import { SwipeableBubble } from './SwipeableBubble';
 import { MessageInput } from './MessageInput';
 import { TypingIndicator } from './TypingIndicator';
 import { useWebSocket } from '../../hooks/useWebSocket';
@@ -575,7 +576,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
             <>
               {messages.map((message, index) => (
                 <div key={message.id} id={`message-${message.id}`}>
-                  <MessageBubble
+                  <SwipeableBubble
                     message={message}
                     isOwn={message.fromAddress === currentUserAddress}
                     currentUserAddress={currentUserAddress}
@@ -601,6 +602,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
                     onThreadClick={(messageId) => setActiveThreadId(messageId)}
                     onJumpToMessage={scrollToMessage}
                     onReactionToggle={handleReactionToggle}
+                    onReply={(msg) => setReplyTarget(msg)}
                   />
                 </div>
               ))}

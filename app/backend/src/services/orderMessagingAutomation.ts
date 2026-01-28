@@ -198,6 +198,27 @@ export class OrderMessagingAutomation {
   }
 
   /**
+   * Handle order delivered event
+   */
+  async onOrderDelivered(orderId: string) {
+    try {
+      const conversation = await this.getOrderConversation(orderId);
+      if (!conversation) return null;
+
+      await this.marketplaceMessaging.sendOrderNotification(
+        conversation.id,
+        'delivery_confirmation',
+        { order_id: orderId }
+      );
+
+      return conversation;
+    } catch (error) {
+      safeLogger.error('Error handling order delivered event:', error);
+      return null;
+    }
+  }
+
+  /**
    * Get conversation for an order
    */
   private async getOrderConversation(orderId: string) {

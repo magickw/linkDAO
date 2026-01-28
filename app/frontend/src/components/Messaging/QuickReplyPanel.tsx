@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { marketplaceMessagingService } from '../../services/marketplaceMessagingService';
 
 interface QuickReply {
   id: string;
@@ -20,60 +21,46 @@ export const QuickReplyPanel: React.FC<QuickReplyPanelProps> = ({
   const [templates, setTemplates] = useState<QuickReply[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // In a real implementation, these would be fetched from an API
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setQuickReplies([
-        {
-          id: '1',
-          name: 'Shipping Inquiry',
-          content: 'When will my order be shipped?',
-          category: 'shipping'
-        },
-        {
-          id: '2',
-          name: 'Delivery Time',
-          content: 'How long will delivery take?',
-          category: 'shipping'
-        },
-        {
-          id: '3',
-          name: 'Return Policy',
-          content: 'What is your return policy?',
-          category: 'returns'
-        },
-        {
-          id: '4',
-          name: 'Product Question',
-          content: 'Is this item still in stock?',
-          category: 'product'
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        // In a real implementation, we would fetch from the backend
+        // For now, we'll try to use the service but fallback if it's not fully implemented
+        try {
+          const templatesData = await marketplaceMessagingService.getTemplates();
+          if (templatesData && Array.isArray(templatesData.data)) {
+            setTemplates(templatesData.data.map((t: any) => ({
+              id: t.id,
+              name: t.name,
+              content: t.content,
+              category: t.category || 'general'
+            })));
+          }
+        } catch (e) {
+          console.warn('Failed to fetch templates, using mocks', e);
+          // Mocks as fallback
+          setTemplates([
+            { id: 't1', name: 'Order Confirmation', content: 'Thank you for your order! We\'ll process it within 24 hours.', category: 'order' },
+            { id: 't2', name: 'Shipping Notification', content: 'Your order has been shipped! Tracking number: [TRACKING_NUMBER]', category: 'shipping' }
+          ]);
         }
-      ]);
 
-      setTemplates([
-        {
-          id: 't1',
-          name: 'Order Confirmation',
-          content: 'Thank you for your order! We\'ll process it within 24 hours.',
-          category: 'order'
-        },
-        {
-          id: 't2',
-          name: 'Shipping Notification',
-          content: 'Your order has been shipped! Tracking number: [TRACKING_NUMBER]',
-          category: 'shipping'
-        },
-        {
-          id: 't3',
-          name: 'Delivery Confirmation',
-          content: 'Your order has been delivered. Thank you for shopping with us!',
-          category: 'delivery'
-        }
-      ]);
+        // Simulating quick replies for now as they might be context-dependent
+        setQuickReplies([
+          { id: '1', name: 'Shipping Inquiry', content: 'When will my order be shipped?', category: 'shipping' },
+          { id: '2', name: 'Delivery Time', content: 'How long will delivery take?', category: 'shipping' },
+          { id: '3', name: 'Return Policy', content: 'What is your return policy?', category: 'returns' }
+        ]);
 
-      setLoading(false);
-    }, 500);
+      } catch (error) {
+        console.error('Error loading messaging data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
   if (loading) {

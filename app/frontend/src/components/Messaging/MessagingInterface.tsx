@@ -221,7 +221,6 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   const [messages, setMessages] = useState<ChannelMessage[]>([]);
 
   const [newMessage, setNewMessage] = useState('');
-  const [conversations, setConversations] = useState([]);
 
   // Mobile swipe gesture state
   const [swipeStates, setSwipeStates] = useState<Record<string, { x: number; opacity: number }>>({});

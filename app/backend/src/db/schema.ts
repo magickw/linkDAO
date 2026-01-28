@@ -1025,6 +1025,13 @@ export const sellers = pgTable("sellers", {
   kycSubmittedAt: timestamp("kyc_submitted_at"),
   kycVerifiedAt: timestamp("kyc_verified_at"),
   kycRejectionReason: text("kyc_rejection_reason"),
+  // Application status tracking (onboarding review process)
+  applicationStatus: varchar("application_status", { length: 20 }).default("pending"), // pending | under_review | approved | rejected | resubmitted
+  applicationSubmittedAt: timestamp("application_submitted_at"),
+  applicationReviewedAt: timestamp("application_reviewed_at"),
+  applicationReviewedBy: uuid("application_reviewed_by"), // Admin user who reviewed
+  applicationRejectionReason: text("application_rejection_reason"), // Why application was rejected
+  applicationAdminNotes: text("application_admin_notes"), // Admin notes during review
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

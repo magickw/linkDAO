@@ -546,6 +546,12 @@ export class UnifiedSellerAPIClient {
     }
   }
 
+  async submitApplication(): Promise<any> {
+    return await this.request<any>(`${this.baseURL}/application/submit`, {
+      method: 'POST',
+    }, true);
+  }
+
   async updateOnboardingStep(walletAddress: string, stepId: string, data: any): Promise<void> {
     // The backend expects { completed: true } in the request body
     // We send the data as well for storage, but ensure completed is set to true

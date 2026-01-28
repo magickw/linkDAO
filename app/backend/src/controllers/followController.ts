@@ -73,6 +73,7 @@ export class FollowController {
       console.log('[FollowController] unfollow request:', { follower, following });
 
       if (!follower || !following) {
+        console.warn('[FollowController] Missing follower or following address');
         res.status(400).json({
           error: 'VALIDATION_ERROR',
           message: 'Both follower and following addresses are required',
@@ -86,6 +87,7 @@ export class FollowController {
       try {
         sanitizedFollower = sanitizeWalletAddress(follower);
         sanitizedFollowing = sanitizeWalletAddress(following);
+        console.log('[FollowController] Sanitized addresses:', { sanitizedFollower, sanitizedFollowing });
       } catch (validationError: any) {
         console.warn('[FollowController] Unfollow validation failed:', validationError.message);
         res.status(400).json({
@@ -96,7 +98,9 @@ export class FollowController {
         return;
       }
 
+      console.log('[FollowController] Calling followService.unfollow...');
       const result = await followService.unfollow(sanitizedFollower, sanitizedFollowing);
+      console.log('[FollowController] followService.unfollow result:', result);
 
       if (result) {
         res.json({ message: 'Successfully unfollowed' });
@@ -108,10 +112,11 @@ export class FollowController {
         });
       }
     } catch (error: any) {
-      console.error('Error in unfollow:', error);
+      console.error('[FollowController] Error in unfollow:', error);
       res.status(500).json({
         error: 'UNFOLLOW_ERROR',
         message: error.message || 'Failed to unfollow user',
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
         timestamp: new Date().toISOString()
       });
     }

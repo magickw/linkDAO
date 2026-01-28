@@ -12,7 +12,7 @@ export class MessagingController {
   // Get user's conversations
   async getConversations(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -45,7 +45,7 @@ export class MessagingController {
   // Start new conversation
   async startConversation(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -96,7 +96,7 @@ export class MessagingController {
   // Get conversation details
   async getConversationDetails(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -128,7 +128,7 @@ export class MessagingController {
   // Get conversation messages
   async getConversationMessages(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -187,7 +187,7 @@ export class MessagingController {
   // Send message
   async sendMessage(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -277,7 +277,7 @@ export class MessagingController {
   // Mark conversation as read
   async markConversationAsRead(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -380,7 +380,7 @@ export class MessagingController {
   // Delete conversation
   async deleteConversation(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -412,7 +412,7 @@ export class MessagingController {
   // Archive conversation
   async archiveConversation(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -444,7 +444,7 @@ export class MessagingController {
   // Unarchive conversation
   async unarchiveConversation(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -476,7 +476,7 @@ export class MessagingController {
   // Encrypt message content
   async encryptMessage(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -511,7 +511,7 @@ export class MessagingController {
   // Decrypt message content
   async decryptMessage(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -546,7 +546,7 @@ export class MessagingController {
   // Update message delivery status
   async updateMessageStatus(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -580,7 +580,7 @@ export class MessagingController {
   // Delete message
   async deleteMessage(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -622,7 +622,7 @@ export class MessagingController {
   // Search messages
   async searchMessages(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -657,7 +657,7 @@ export class MessagingController {
   // Get message thread (replies)
   async getMessageThread(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -689,7 +689,7 @@ export class MessagingController {
   // Block user
   async blockUser(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -722,7 +722,7 @@ export class MessagingController {
   // Unblock user
   async unblockUser(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -754,7 +754,7 @@ export class MessagingController {
   // Get blocked users
   async getBlockedUsers(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -776,7 +776,7 @@ export class MessagingController {
   // Report content
   async reportContent(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -811,7 +811,7 @@ export class MessagingController {
   // Get conversation participants
   async getConversationParticipants(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -843,7 +843,7 @@ export class MessagingController {
   // Add participant to group conversation
   async addParticipant(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -878,7 +878,7 @@ export class MessagingController {
   // Remove participant from group conversation
   async removeParticipant(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -911,7 +911,7 @@ export class MessagingController {
   // Update participant role
   async updateParticipantRole(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -946,7 +946,7 @@ export class MessagingController {
   // Create group conversation
   async createGroupConversation(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -987,7 +987,7 @@ export class MessagingController {
   // Update group settings
   async updateGroupSettings(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -1027,7 +1027,7 @@ export class MessagingController {
   // Upload message attachment (images, documents, etc.)
   async uploadAttachment(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -1193,7 +1193,7 @@ export class MessagingController {
   // Upload voice message
   async uploadVoiceMessage(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -1255,7 +1255,7 @@ export class MessagingController {
   // Get link preview (Open Graph metadata)
   async getLinkPreview(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -1298,7 +1298,7 @@ export class MessagingController {
   // Add reaction to message
   async addReaction(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -1339,7 +1339,7 @@ export class MessagingController {
   // Remove reaction from message
   async removeReaction(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -1379,7 +1379,7 @@ export class MessagingController {
   // Get reactions for a message
   async getReactions(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -1399,7 +1399,7 @@ export class MessagingController {
   // Pin message
   async pinMessage(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -1436,7 +1436,7 @@ export class MessagingController {
   // Unpin message
   async unpinMessage(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -1473,7 +1473,7 @@ export class MessagingController {
   // Get pinned messages for a conversation
   async getPinnedMessages(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -1501,7 +1501,7 @@ export class MessagingController {
   // Edit message
   async editMessage(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
@@ -1541,7 +1541,7 @@ export class MessagingController {
   // Get full message thread (parent + all replies)
   async getFullMessageThread(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;

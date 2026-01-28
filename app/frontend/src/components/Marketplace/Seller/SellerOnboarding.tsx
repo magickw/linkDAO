@@ -37,6 +37,7 @@ function SellerOnboardingComponent({ onComplete }: SellerOnboardingProps) {
     goToStep,
     nextStep,
     previousStep,
+    submitApplication,
     isCompleted,
     progress,
   } = useSellerOnboarding();
@@ -54,6 +55,15 @@ function SellerOnboardingComponent({ onComplete }: SellerOnboardingProps) {
     }
     return {};
   });
+
+  // Call submitApplication when isCompleted becomes true
+  React.useEffect(() => {
+    if (isCompleted && address) {
+      submitApplication().catch(err => {
+        console.error('Failed to submit application automatically:', err);
+      });
+    }
+  }, [isCompleted, address, submitApplication]);
 
   // Save to localStorage whenever stepData changes
   React.useEffect(() => {
@@ -186,8 +196,12 @@ function SellerOnboardingComponent({ onComplete }: SellerOnboardingProps) {
       // Auto-advance to next step
       if (currentStep < steps.length - 1) {
         nextStep();
-      } else if (onComplete) {
-        onComplete();
+      } else {
+        // Last step completed, submit application
+        await submitApplication();
+        if (onComplete) {
+          onComplete();
+        }
       }
     } catch (err) {
       console.error('Failed to complete step:', err);
@@ -413,8 +427,12 @@ function SellerOnboardingContent({
       // Auto-advance to next step
       if (currentStep < steps.length - 1) {
         nextStep();
-      } else if (onComplete) {
-        onComplete();
+      } else {
+        // Last step completed, submit application
+        await submitApplication();
+        if (onComplete) {
+          onComplete();
+        }
       }
     } catch (err) {
       console.error('Failed to complete step:', err);

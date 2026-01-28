@@ -73,7 +73,7 @@ export class OrderTrackingController {
   async getOrderById(req: Request, res: Response): Promise<Response> {
     try {
       const { orderId } = req.params;
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
 
       if (!userAddress) {
         throw new ForbiddenError('User address not found');
@@ -103,7 +103,7 @@ export class OrderTrackingController {
   async getOrderTimeline(req: Request, res: Response): Promise<Response> {
     try {
       const { orderId } = req.params;
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
 
       if (!userAddress) {
         throw new ForbiddenError('User address not found');
@@ -156,7 +156,7 @@ export class OrderTrackingController {
     try {
       const { orderId } = req.params;
       const { status, metadata } = req.body;
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
 
       if (!userAddress) {
         throw new ForbiddenError('User address not found');
@@ -188,7 +188,7 @@ export class OrderTrackingController {
     try {
       const { orderId } = req.params;
       const { trackingNumber, carrier, estimatedDelivery } = req.body;
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
 
       if (!userAddress) {
         throw new ForbiddenError('User address not found');
@@ -221,7 +221,7 @@ export class OrderTrackingController {
     try {
       const { orderId } = req.params;
       const { deliveryInfo } = req.body;
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
 
       if (!userAddress) {
         throw new ForbiddenError('User address not found');
@@ -277,7 +277,7 @@ export class OrderTrackingController {
   async getTrackingInfo(req: Request, res: Response): Promise<Response> {
     try {
       const { orderId } = req.params;
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
 
       if (!userAddress) {
         throw new ForbiddenError('User address not found');
@@ -378,7 +378,7 @@ export class OrderTrackingController {
   async markNotificationAsRead(req: Request, res: Response): Promise<Response> {
     try {
       const { notificationId } = req.params;
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
 
       if (!userAddress) {
         throw new ForbiddenError('User address not found');
@@ -429,7 +429,7 @@ export class OrderTrackingController {
   async bulkUpdateOrderStatus(req: Request, res: Response): Promise<Response> {
     try {
       const { orderIds, status, metadata } = req.body;
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
 
       if (!userAddress) {
         throw new ForbiddenError('User address not found');

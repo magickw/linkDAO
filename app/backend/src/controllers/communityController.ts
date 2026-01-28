@@ -1618,7 +1618,7 @@ export class CommunityController {
   async getMyCommunities(req: Request, res: Response): Promise<void> {
     try {
       const user = (req as AuthenticatedRequest).user;
-      const userAddress = user?.address || user?.walletAddress;
+      const userAddress = user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
         return;
@@ -1645,7 +1645,7 @@ export class CommunityController {
   // Get communities created by the authenticated user
   async getUserCreatedCommunities(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address || req.user?.walletAddress;
+      const userAddress = req.user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(createErrorResponse('UNAUTHORIZED', 'User not authenticated'));
         return;
@@ -1672,9 +1672,7 @@ export class CommunityController {
 
 
   // Update moderation feedback (auth required)
-  async updateModerationFeedback(req: Request, res: Response): Promise<void> {
-    try {
-      const userAddress = (req as AuthenticatedRequest).user?.address;
+      const userAddress = (req as AuthenticatedRequest).user?.walletAddress;
       if (!userAddress) {
         res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
         return;

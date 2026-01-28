@@ -128,6 +128,26 @@ router.get('/conversations/:id/analytics',
   marketplaceMessagingController.getConversationAnalytics
 );
 
+// Seller Messaging Analytics (by address for service compatibility)
+router.get('/seller/:address/messaging-analytics',
+  validateRequest({
+    params: {
+      address: { type: 'string', required: true }
+    }
+  }),
+  marketplaceMessagingController.getSellerMessagingAnalytics
+);
+
+// Seller Messaging Metrics
+router.get('/seller/:address/messaging-metrics',
+  validateRequest({
+    params: {
+      address: { type: 'string', required: true }
+    }
+  }),
+  marketplaceMessagingController.getSellerMessagingMetrics
+);
+
 router.get('/seller/analytics/messaging',
   marketplaceMessagingController.getSellerMessagingAnalytics
 );

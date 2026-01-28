@@ -18,7 +18,7 @@ router.post('/:communityId/comments/:commentId/vote', csrfProtection,  authMiddl
   try {
     const { commentId } = req.params;
     const { voteType, amount = '1.0' } = req.body; // 'upvote' or 'downvote'
-    const userAddress = req.user?.address;
+    const userAddress = req.user?.walletAddress;
 
     if (!userAddress) {
       return res.status(401).json({

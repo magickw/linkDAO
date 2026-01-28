@@ -371,19 +371,16 @@ export class SellerVerificationService {
       .where(eq(sellerVerifications.id, verificationId))
       .returning();
 
-    // Update seller status in marketplace schema
+    // Update seller status in main schema
     if (updated) {
-      // Find the seller record using userId
-      const [seller] = await db.select()
-        .from(sellers)
-        .where(eq(sellers.walletAddress, (updated as any).userId))
-        .limit(1);
-      
-      if (seller) {
-        await db.update(sellers)
-          .set({ isVerified: true })
-          .where(eq(sellers.id, seller.id));
-      }
+      // Update using sellerId from verification record
+      await db.update(sellers)
+        .set({
+          isVerified: true,
+          kycStatus: 'verified',
+          kycVerifiedAt: new Date()
+        })
+        .where(eq(sellers.id, updated.sellerId));
     }
 
     return updated;

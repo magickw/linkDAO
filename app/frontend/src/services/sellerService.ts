@@ -270,6 +270,11 @@ class SellerService {
     await unifiedSellerAPIClient.updateOnboardingStep(walletAddress, stepId, data);
   }
 
+  async submitApplication(): Promise<any> {
+    console.log('Submitting seller application for review');
+    return await unifiedSellerAPIClient.submitApplication();
+  }
+
   // Seller Profile Management - Using Unified API Client
   async getSellerProfile(walletAddress: string): Promise<SellerProfile | null> {
     // Check cache first using the new method

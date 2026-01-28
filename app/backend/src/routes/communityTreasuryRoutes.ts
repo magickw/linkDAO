@@ -78,7 +78,7 @@ router.post('/:id/treasury/proposals', csrfProtection,  authMiddleware, async (r
   try {
     const { id: communityId } = req.params;
     const { title, description, amount, tokenAddress, recipient } = req.body;
-    const proposerAddress = req.user?.address;
+    const proposerAddress = req.user?.walletAddress;
 
     if (!proposerAddress) {
       return res.status(401).json({ error: 'Authentication required' });

@@ -153,7 +153,7 @@ router.get('/profile', sellerController.getProfile.bind(sellerController));
 router.get('/stats', sellerController.getStats.bind(sellerController));
 
 // GET /api/sellers/onboarding - Get onboarding steps
-router.get('/onboarding', sellerController.getOnboardingSteps.bind(sellerController));
+router.get('/onboarding', sellerController.getOnboardingProgress.bind(sellerController));
 
 // PUT /api/sellers/onboarding/:stepId - Update onboarding step
 router.put('/onboarding/:stepId', csrfProtection,
@@ -166,7 +166,7 @@ router.put('/onboarding/:stepId', csrfProtection,
       data: { type: 'object', optional: true }
     }
   }),
-  sellerController.updateOnboardingStep.bind(sellerController)
+  sellerController.updateOnboardingStepNew.bind(sellerController)
 );
 
 // GET /api/sellers/tier - Get seller tier information
@@ -195,8 +195,58 @@ router.post('/verify', csrfProtection,
   sellerController.requestVerification.bind(sellerController)
 );
 
+// Application Management Routes (NEW - replaces legacy routes)
+// POST /api/sellers/application/submit - Submit onboarding application for review (SELLER)
+router.post('/application/submit', csrfProtection,
+  sellerController.submitApplicationForReview.bind(sellerController)
+);
+
+// GET /api/sellers/application/status - Get application review status (SELLER)
+router.get('/application/status',
+  sellerController.getApplicationStatus.bind(sellerController)
+);
+
+// PUT /api/sellers/application/step/:stepId - Update onboarding step (SELLER)
+router.put('/application/step/:stepId', csrfProtection,
+  validateRequest({
+    params: {
+      stepId: { type: 'string', required: true }
+    },
+    body: {
+      completed: { type: 'boolean', required: true }
+    }
+  }),
+  sellerController.updateOnboardingStepNew.bind(sellerController)
+);
+
+// GET /api/sellers/application/progress - Get onboarding progress (SELLER)
+router.get('/application/progress',
+  sellerController.getOnboardingProgress.bind(sellerController)
+);
+
+// GET /api/sellers/admin/applications - List all applications (ADMIN)
+router.get('/admin/applications',
+  sellerController.getSellerApplicationsNew.bind(sellerController)
+);
+
+// POST /api/sellers/:applicationId/application/review - Review application (ADMIN)
+// Note: This requires admin role, enforced in middleware
+router.post('/:applicationId/application/review', csrfProtection,
+  validateRequest({
+    params: {
+      applicationId: { type: 'string', required: true }
+    },
+    body: {
+      status: { type: 'string', required: true, enum: ['approved', 'rejected', 'under_review'] },
+      rejectionReason: { type: 'string', optional: true },
+      adminNotes: { type: 'string', optional: true }
+    }
+  }),
+  sellerController.reviewSellerApplicationNew.bind(sellerController)
+);
+
 // Legacy routes for backward compatibility
-// Seller Applications Routes
+// Seller Applications Routes (DEPRECATED - use /application/* routes above)
 router.get('/applications', sellerController.getSellerApplications.bind(sellerController));
 router.get('/applications/:applicationId', sellerController.getSellerApplication.bind(sellerController));
 router.post('/applications/:applicationId/review', csrfProtection, sellerController.reviewSellerApplication.bind(sellerController));

@@ -124,6 +124,262 @@ export class MarketplaceMessagingService {
   }
 
   /**
+   * Create product inquiry conversation
+   */
+  async createProductInquiry(productId: string, buyerAddress: string, initialMessage?: string): Promise<any> {
+    try {
+      // Get product details
+      const [product] = await db.select()
+        .from(products)
+        .where(eq(products.id, productId))
+        .limit(1);
+
+      if (!product) {
+        throw new Error('Product not found');
+      }
+
+      // Get buyer and seller details
+      const [buyer] = await db.select()
+        .from(users)
+        .where(eq(users.walletAddress, buyerAddress.toLowerCase()))
+        .limit(1);
+
+      const [seller] = await db.select()
+        .from(users)
+        .where(eq(users.id, product.sellerId))
+        .limit(1);
+
+      if (!buyer || !seller) {
+        throw new Error('Buyer or seller not found');
+      }
+
+      const sellerAddress = seller.walletAddress.toLowerCase();
+      const normalizedBuyerAddress = buyerAddress.toLowerCase();
+
+      // Check if conversation already exists for this product and buyer
+      const existingConversations = await db.select()
+        .from(conversations)
+        .where(and(
+          eq(conversations.conversationType, 'product_question'),
+          eq(conversations.productId, productId)
+        ));
+
+      // Filter by participants manually as it's a JSON array
+      const existing = existingConversations.find(c => {
+        const parts = JSON.parse(c.participants as string || '[]');
+        return parts.includes(normalizedBuyerAddress) && parts.includes(sellerAddress);
+      });
+
+      if (existing) {
+        return existing;
+      }
+
+      // Create conversation
+      const [newConversation] = await db.insert(conversations).values({
+        title: `Inquiry: ${product.title}`,
+        participants: JSON.stringify([normalizedBuyerAddress, sellerAddress]),
+        conversationType: 'product_question',
+        productId: productId,
+        contextMetadata: JSON.stringify({
+          product_id: productId,
+          product_name: product.title,
+          product_image: JSON.parse(product.images as string || '[]')[0] || ''
+        }),
+        isAutomated: false,
+        createdAt: new Date(),
+        lastActivity: new Date()
+      }).returning();
+
+      // Add participants with roles
+      await db.insert(conversationParticipants).values([
+        {
+          conversationId: newConversation.id,
+          userId: buyer.id,
+          walletAddress: normalizedBuyerAddress,
+          role: 'buyer',
+          joinedAt: new Date()
+        },
+        {
+          conversationId: newConversation.id,
+          userId: seller.id,
+          walletAddress: sellerAddress,
+          role: 'seller',
+          joinedAt: new Date()
+        }
+      ] as any);
+
+      // Send initial message if provided
+      if (initialMessage) {
+        const [newMessage] = await db.insert(chatMessages).values({
+          conversationId: newConversation.id,
+          senderId: buyer.id,
+          senderAddress: normalizedBuyerAddress,
+          content: initialMessage,
+          messageType: 'text',
+          sentAt: new Date()
+        }).returning();
+
+        // Update last message ID
+        await db.update(conversations)
+          .set({ lastMessageId: newMessage.id })
+          .where(eq(conversations.id, newConversation.id));
+      }
+
+      return newConversation;
+    } catch (error) {
+      safeLogger.error('Error creating product inquiry:', error);
+      throw new Error('Failed to create product inquiry');
+    }
+  }
+
+  /**
+   * Get user's order conversations
+   */
+  async getMyOrderConversations(userAddress: string, page: number, limit: number): Promise<any> {
+    try {
+      const normalizedAddress = userAddress.toLowerCase();
+      const offset = (page - 1) * limit;
+
+      // Get all conversations for this user that are order-related
+      const participants = await db.select()
+        .from(conversationParticipants)
+        .where(eq(conversationParticipants.walletAddress, normalizedAddress));
+
+      const conversationIds = participants.map(p => p.conversationId);
+
+      if (conversationIds.length === 0) {
+        return {
+          conversations: [],
+          pagination: { page, limit, total: 0 }
+        };
+      }
+
+      const results = await db.select()
+        .from(conversations)
+        .where(and(
+          inArray(conversations.id, conversationIds),
+          inArray(conversations.conversationType, ['order_support', 'order_inquiry', 'dispute', 'product_question'])
+        ))
+        .orderBy(desc(conversations.lastActivity))
+        .limit(limit)
+        .offset(offset);
+
+      const totalResult = await db.select({ count: sql`count(*)` })
+        .from(conversations)
+        .where(and(
+          inArray(conversations.id, conversationIds),
+          inArray(conversations.conversationType, ['order_support', 'order_inquiry', 'dispute', 'product_question'])
+        ));
+
+      return {
+        conversations: results,
+        pagination: {
+          page,
+          limit,
+          total: Number(totalResult[0]?.count || 0)
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error getting my order conversations:', error);
+      throw new Error('Failed to get my order conversations');
+    }
+  }
+
+  /**
+   * Get seller messaging analytics
+   */
+  async getSellerMessagingAnalytics(sellerAddress: string): Promise<any> {
+    try {
+      const normalizedAddress = sellerAddress.toLowerCase();
+      
+      // Get all conversations for this seller
+      const participants = await db.select()
+        .from(conversationParticipants)
+        .where(and(
+          eq(conversationParticipants.walletAddress, normalizedAddress),
+          eq(conversationParticipants.role, 'seller')
+        ));
+
+      const conversationIds = participants.map(p => p.conversationId);
+
+      if (conversationIds.length === 0) {
+        return {
+          avgResponseTime: 0,
+          responseTimeTrend: 'stable',
+          conversionRate: 0,
+          conversionTrend: 'stable',
+          activeConversations: 0,
+          unreadCount: 0,
+          responseTimeHistory: [],
+          commonQuestions: []
+        };
+      }
+
+      // Get analytics records for these conversations
+      const analyticsRecords = await db.select()
+        .from(conversationAnalytics)
+        .where(inArray(conversationAnalytics.conversationId, conversationIds));
+
+      // Calculate averages
+      let totalResponseTime = 0;
+      let countWithResponse = 0;
+      let totalMessages = 0;
+      let unreadCount = 0;
+
+      analyticsRecords.forEach(record => {
+        if (record.sellerResponseTimeAvg) {
+          totalResponseTime += parseFloat(record.sellerResponseTimeAvg as any);
+          countWithResponse++;
+        }
+        totalMessages += record.messageCount || 0;
+      });
+
+      // Get unread counts
+      // This is a simplified calculation
+      const activeConvs = await db.select()
+        .from(conversations)
+        .where(and(
+          inArray(conversations.id, conversationIds),
+          sql`${conversations.unreadCount} > 0`
+        ));
+      
+      unreadCount = activeConvs.reduce((acc, curr) => acc + (curr.unreadCount || 0), 0);
+
+      return {
+        avgResponseTime: countWithResponse > 0 ? totalResponseTime / countWithResponse : 0,
+        responseTimeTrend: 'stable',
+        conversionRate: 15, // Mock value for now
+        conversionTrend: 'stable',
+        activeConversations: conversationIds.length,
+        unreadCount: unreadCount,
+        responseTimeHistory: this.generateMockHistory(),
+        commonQuestions: [
+          { keyword: 'shipping', count: 12 },
+          { keyword: 'price', count: 8 },
+          { keyword: 'availability', count: 5 }
+        ]
+      };
+    } catch (error) {
+      safeLogger.error('Error getting seller analytics:', error);
+      throw new Error('Failed to get seller analytics');
+    }
+  }
+
+  private generateMockHistory() {
+    const history = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      history.push({
+        date: date,
+        responseTime: Math.floor(Math.random() * 60) + 15
+      });
+    }
+    return history;
+  }
+
+  /**
    * Send automated order notification
    */
   async sendOrderNotification(

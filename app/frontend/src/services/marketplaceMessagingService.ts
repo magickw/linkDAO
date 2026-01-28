@@ -52,6 +52,31 @@ export class MarketplaceMessagingService {
   }
 
   /**
+   * Create product inquiry conversation
+   */
+  async createProductInquiry(productId: string, initialMessage?: string) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/marketplace/messaging/conversations/product/${productId}`, {
+        method: 'POST',
+        signal: this.createTimeoutSignal(10000),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ initialMessage })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create product inquiry');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error creating product inquiry:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Send message
    */
   async sendMessage(conversationId: string, content: string) {

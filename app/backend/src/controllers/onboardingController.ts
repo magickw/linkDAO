@@ -10,7 +10,7 @@ export class OnboardingController {
      */
     async getUserPreferences(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
-            const userAddress = req.user?.address;
+            const userAddress = req.user?.walletAddress;
 
             if (!userAddress) {
                 res.status(401).json(apiResponse.error('Authentication required', 401));
@@ -36,7 +36,7 @@ export class OnboardingController {
      */
     async saveUserPreferences(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
-            const userAddress = req.user?.address;
+            const userAddress = req.user?.walletAddress;
 
             if (!userAddress) {
                 res.status(401).json(apiResponse.error('Authentication required', 401));
@@ -68,7 +68,7 @@ export class OnboardingController {
      */
     async skipOnboarding(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
-            const userAddress = req.user?.address;
+            const userAddress = req.user?.walletAddress;
 
             if (!userAddress) {
                 res.status(401).json(apiResponse.error('Authentication required', 401));
@@ -89,7 +89,7 @@ export class OnboardingController {
      */
     async needsOnboarding(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
-            const userAddress = req.user?.address;
+            const userAddress = req.user?.walletAddress;
 
             if (!userAddress) {
                 res.status(401).json(apiResponse.error('Authentication required', 401));

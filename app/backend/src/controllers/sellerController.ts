@@ -124,58 +124,338 @@ export class SellerController {
     }
   }
 
-  // Review seller application
-  async reviewSellerApplication(req: Request, res: Response) {
+  // Get seller applications (ADMIN ONLY)
+  // ===================================
+  async getSellerApplicationsNew(req: Request, res: Response) {
+    try {
+      const { status, page = 1, limit = 20 } = req.query;
+      const db = databaseService.getDatabase();
+
+      let query = db.select().from(sellers);
+
+      const whereClauses = [];
+      if (status) {
+        whereClauses.push(eq(sellers.applicationStatus, status as string));
+      }
+
+      if (whereClauses.length > 0) {
+        query = query.where(and(...whereClauses));
+      }
+
+      const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+      const results = await query
+        .orderBy(desc(sellers.applicationSubmittedAt), desc(sellers.createdAt))
+        .limit(parseInt(limit as string))
+        .offset(offset);
+
+      // Get total count
+      const totalCountResult = await db.select({ count: sql<number>`count(*)` })
+        .from(sellers)
+        .where(whereClauses.length > 0 ? and(...whereClauses) : undefined);
+      const totalCount = totalCountResult[0]?.count || 0;
+
+      res.json({
+        success: true,
+        data: {
+          applications: results,
+          pagination: {
+            total: totalCount,
+            page: parseInt(page as string),
+            limit: parseInt(limit as string),
+            totalPages: Math.ceil(totalCount / parseInt(limit as string))
+          }
+        }
+      });
+    } catch (error) {
+      safeLogger.error("Error fetching seller applications:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch seller applications"
+      });
+    }
+  }
+
+  // Review seller application (ADMIN ONLY)
+  // ====================================
+  // This endpoint handles admin review of seller onboarding applications
+  // Replaces the incomplete reviewSellerApplication() method below
+  async reviewSellerApplicationNew(req: Request, res: Response) {
     try {
       const { applicationId } = req.params;
-      const { status, notes, rejectionReason, requiredInfo } = req.body;
+      const { status, rejectionReason, adminNotes } = req.body;
+      const adminUserId = (req as any).user?.id;
+
+      // Validate required fields
+      if (!status || !['approved', 'rejected', 'under_review'].includes(status)) {
+        return res.status(400).json({
+          error: "Invalid status. Must be one of: approved, rejected, under_review"
+        });
+      }
+
+      if (status === 'rejected' && !rejectionReason) {
+        return res.status(400).json({
+          error: "Rejection reason is required when rejecting application"
+        });
+      }
+
+      // Import service dynamically to avoid circular dependency
+      const { sellerApplicationService } = await import("../services/sellerApplicationService");
+
+      // Convert applicationId to number if it's numeric
+      const sellerId = parseInt(applicationId);
+      if (isNaN(sellerId)) {
+        return res.status(400).json({
+          error: "Invalid seller ID format"
+        });
+      }
+
+      // Review the application
+      const updatedSeller = await sellerApplicationService.reviewApplication(sellerId, {
+        status: status as 'approved' | 'rejected' | 'under_review',
+        rejectionReason,
+        adminNotes,
+        reviewedByUserId: adminUserId
+      });
+
+      if (!updatedSeller) {
+        return res.status(404).json({
+          error: "Seller application not found"
+        });
+      }
+
+      // Log the review action
+      safeLogger.info(`Application reviewed for seller ${sellerId}:`, {
+        status,
+        adminId: adminUserId,
+        rejectionReason: status === 'rejected' ? rejectionReason : null
+      });
+
+      res.json({
+        success: true,
+        message: `Application ${status} successfully`,
+        data: {
+          sellerId: updatedSeller.id,
+          applicationStatus: updatedSeller.applicationStatus,
+          reviewedAt: updatedSeller.applicationReviewedAt
+        }
+      });
+    } catch (error) {
+      safeLogger.error("Error reviewing seller application:", error);
+      res.status(500).json({
+        error: "Failed to review seller application",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  }
+
+  // Submit application for review (SELLER)
+  // ======================================
+  // Called when seller completes all onboarding steps
+  async submitApplicationForReview(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      if (!user?.walletAddress) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
 
       const db = databaseService.getDatabase();
 
-      // Update seller verification tier based on review
-      let newTier = 'standard';
-      if (status === 'approved') {
-        newTier = 'verified';
-      } else if (status === 'rejected') {
-        newTier = 'unverified';
+      // Get seller by wallet address
+      const [seller] = await db.select()
+        .from(marketplaceUsers)
+        .leftJoin(users, eq(marketplaceUsers.userId, users.id))
+        .where(eq(users.walletAddress, user.walletAddress));
+
+      if (!seller) {
+        return res.status(404).json({
+          error: "Seller profile not found. Please complete onboarding first."
+        });
       }
 
-      const [updatedVerification] = await db.update(sellerVerifications)
-        .set({
-          currentTier: newTier,
-          updatedAt: new Date()
-        })
-        .where(eq(sellerVerifications.userId, applicationId))
-        .returning();
+      const { sellerApplicationService } = await import("../services/sellerApplicationService");
 
-      if (!updatedVerification) {
-        // If no verification record exists, create one
-        const [newVerification] = await db.insert(sellerVerifications)
-          .values({
-            userId: applicationId,
-            currentTier: newTier,
-            kycVerified: false,
-            reputationScore: 0,
-            totalVolume: '0',
-            successfulTransactions: 0,
-            disputeRate: '0',
-            lastTierUpdate: new Date(),
-            createdAt: new Date(),
-            updatedAt: new Date()
-          })
-          .returning();
+      // Submit for review
+      await sellerApplicationService.submitApplicationForReview(seller.marketplace_users?.userId as any);
 
-        if (!newVerification) {
-          return res.status(404).json({ error: "Seller application not found" });
+      res.json({
+        success: true,
+        message: "Application submitted for review",
+        data: {
+          status: "pending",
+          message: "Your application is now under review. You will be notified once it's approved."
         }
-      }
-
-      res.json({ success: true });
+      });
     } catch (error) {
-      safeLogger.error("Error reviewing seller application:", error);
-      res.status(500).json({ error: "Failed to review seller application" });
+      safeLogger.error("Error submitting application for review:", error);
+      res.status(500).json({
+        error: "Failed to submit application for review",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   }
+
+  // Get application status (SELLER)
+  // ==============================
+  async getApplicationStatus(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      if (!user?.walletAddress) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const db = databaseService.getDatabase();
+
+      // Get seller by wallet address
+      const [result] = await db.select({
+        applicationStatus: marketplaceUsers.kycVerified, // Placeholder, need proper field
+        applicationSubmittedAt: marketplaceUsers.createdAt, // Placeholder
+        applicationRejectionReason: sql`NULL` // Placeholder
+      })
+        .from(marketplaceUsers)
+        .leftJoin(users, eq(marketplaceUsers.userId, users.id))
+        .where(eq(users.walletAddress, user.walletAddress));
+
+      if (!result) {
+        return res.status(404).json({
+          error: "Application status not found"
+        });
+      }
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      safeLogger.error("Error fetching application status:", error);
+      res.status(500).json({
+        error: "Failed to fetch application status"
+      });
+    }
+  }
+
+  // Update onboarding step (SELLER)
+  // ==============================
+  // Syncs frontend onboarding progress to database
+  async updateOnboardingStepNew(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      if (!user?.walletAddress) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const { stepId } = req.params;
+      const { completed } = req.body;
+
+      if (typeof completed !== 'boolean') {
+        return res.status(400).json({
+          error: "Completed must be a boolean"
+        });
+      }
+
+      const db = databaseService.getDatabase();
+
+      // Get seller by wallet address
+      const [userResult] = await db.select({ id: users.id })
+        .from(users)
+        .where(eq(users.walletAddress, user.walletAddress));
+
+      if (!userResult) {
+        return res.status(404).json({
+          error: "User not found"
+        });
+      }
+
+      const { sellerApplicationService } = await import("../services/sellerApplicationService");
+
+      // Update the step
+      await sellerApplicationService.updateOnboardingStep(
+        userResult.id,
+        stepId,
+        completed
+      );
+
+      // Get updated progress
+      const progress = await sellerApplicationService.getOnboardingProgress(userResult.id);
+
+      res.json({
+        success: true,
+        message: `Step '${stepId}' updated`,
+        data: {
+          step: stepId,
+          completed,
+          progress: progress
+        }
+      });
+    } catch (error) {
+      safeLogger.error("Error updating onboarding step:", error);
+      res.status(400).json({
+        error: "Failed to update onboarding step",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  }
+
+  // Get onboarding progress (SELLER)
+  // ================================
+  // Get current progress and completion percentage
+  async getOnboardingProgress(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      if (!user?.walletAddress) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const db = databaseService.getDatabase();
+
+      // Get seller by wallet address
+      const [userResult] = await db.select({ id: users.id })
+        .from(users)
+        .where(eq(users.walletAddress, user.walletAddress));
+
+      if (!userResult) {
+        return res.status(404).json({
+          error: "User not found"
+        });
+      }
+
+      const { sellerApplicationService } = await import("../services/sellerApplicationService");
+
+      const progress = await sellerApplicationService.getOnboardingProgress(userResult.id);
+
+      if (!progress) {
+        // Return default steps if no progress found
+        const defaultSteps = [
+          { id: 'profile_setup', completed: false, title: 'Profile Setup', description: 'Complete your seller profile', component: 'ProfileSetup', required: true },
+          { id: 'verification', completed: false, title: 'Verification', description: 'Verify your identity', component: 'Verification', required: true },
+          { id: 'payout_setup', completed: false, title: 'Payout Setup', description: 'Set up your payment methods', component: 'PayoutSetup', required: true },
+          { id: 'first_listing', completed: false, title: 'First Listing', description: 'Create your first product listing', component: 'FirstListing', required: false }
+        ];
+        return res.json({
+          success: true,
+          data: defaultSteps
+        });
+      }
+
+      // Map progress record to OnboardingStep[] format
+      const steps = [
+        { id: 'profile_setup', completed: !!progress.steps.profile_setup, title: 'Profile Setup', description: 'Complete your seller profile', component: 'ProfileSetup', required: true },
+        { id: 'verification', completed: !!progress.steps.verification, title: 'Verification', description: 'Verify your identity', component: 'Verification', required: true },
+        { id: 'payout_setup', completed: !!progress.steps.payout_setup, title: 'Payout Setup', description: 'Set up your payment methods', component: 'PayoutSetup', required: true },
+        { id: 'first_listing', completed: !!progress.steps.first_listing, title: 'First Listing', description: 'Create your first product listing', component: 'FirstListing', required: false }
+      ];
+
+      res.json({
+        success: true,
+        data: steps
+      });
+    } catch (error) {
+      safeLogger.error("Error fetching onboarding progress:", error);
+      res.status(500).json({
+        error: "Failed to fetch onboarding progress"
+      });
+    }
+  }
+
 
   // Get seller risk assessment
   async getSellerRiskAssessment(req: Request, res: Response) {

@@ -146,7 +146,7 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
   };
 
   return (
-    <div className={`flex h-[600px] bg-white dark:bg-gray-900 rounded-lg overflow-hidden ${className}`}>
+    <div className={`flex h-full min-h-[500px] md:min-h-[600px] bg-white dark:bg-gray-900 rounded-lg overflow-hidden ${className}`}>
       {/* Conversations Sidebar */}
       <div className="w-80 border-r border-gray-200 dark:border-gray-700 flex flex-col">
         {/* Header */}

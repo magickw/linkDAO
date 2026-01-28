@@ -56,20 +56,30 @@ export class FollowService {
 
   async unfollow(followerAddress: string, followingAddress: string): Promise<boolean> {
     try {
+      console.log(`[FollowService] Unfollow attempt: ${followerAddress} -> ${followingAddress}`);
+      
       // Get user IDs from addresses
+      console.log('[FollowService] Fetching follower profile...');
       const followerUser = await userProfileService.getProfileByAddress(followerAddress);
+      console.log('[FollowService] Follower profile found:', !!followerUser);
+      
+      console.log('[FollowService] Fetching following profile...');
       const followingUser = await userProfileService.getProfileByAddress(followingAddress);
+      console.log('[FollowService] Following profile found:', !!followingUser);
 
       if (!followerUser || !followingUser) {
+        console.warn('[FollowService] One or both users do not exist');
         return false; // One or both users don't exist
       }
 
       // Remove follow relationship from database
+      console.log(`[FollowService] Removing follow record: ${followerUser.id} -> ${followingUser.id}`);
       await databaseService.unfollowUser(followerUser.id, followingUser.id);
+      console.log('[FollowService] databaseService.unfollowUser completed');
 
       return true;
     } catch (error) {
-      console.error('Error in unfollow:', error);
+      console.error('[FollowService] Error in unfollow:', error);
       // Return false instead of throwing to prevent crashes
       return false;
     }

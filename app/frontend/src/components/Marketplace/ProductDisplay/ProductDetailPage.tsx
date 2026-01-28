@@ -39,6 +39,9 @@ import { AnimatedProductBadge, AnimatedTrustIndicator } from '../../../component
 import { OptimizedImage } from '../../Performance/OptimizedImageLoader';
 import { SpecificationPreview } from '../../Marketplace/Seller/SpecificationPreview';
 
+import { marketplaceMessagingService } from '../../../services/marketplaceMessagingService';
+import { MessageSquare } from 'lucide-react';
+
 interface ProductDetailPageProps {
   product: {
     id: string;
@@ -177,6 +180,24 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
       onAddToCart(product.id, quantity);
     } else {
       console.log('Adding to cart:', { productId: product.id, quantity });
+    }
+  };
+
+  const handleAskSeller = async () => {
+    try {
+      setIsBuying(true); // Reuse loading state
+      const initialMessage = `Hi! I'm interested in "${product.title}". Could you tell me more about it?`;
+      const conversation = await marketplaceMessagingService.createProductInquiry(product.id, initialMessage);
+      
+      if (conversation && conversation.id) {
+        // Navigate to the chat page
+        router.push(`/chat/${conversation.id}`);
+      }
+    } catch (error) {
+      console.error('Failed to start inquiry:', error);
+      toast?.error('Failed to start conversation with seller');
+    } finally {
+      setIsBuying(false);
     }
   };
 
@@ -840,6 +861,15 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 >
                   <ShoppingCart size={20} className="mr-2" />
                   Add to Cart
+                </Button>
+                <Button
+                  variant="outline"
+                  size="md"
+                  onClick={handleAskSeller}
+                  className="flex-1"
+                >
+                  <MessageSquare size={20} className="mr-2" />
+                  Ask Seller
                 </Button>
                 <Button
                   variant="ghost"

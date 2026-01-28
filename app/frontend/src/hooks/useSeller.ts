@@ -153,6 +153,21 @@ export function useSellerOnboarding() {
     }
   }, [currentStep]);
 
+  const submitApplication = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await sellerService.submitApplication();
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to submit application';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (address) {
       fetchOnboardingSteps();
@@ -174,6 +189,7 @@ export function useSellerOnboarding() {
     goToStep,
     nextStep,
     previousStep,
+    submitApplication,
     isCompleted,
     progress,
     refetch: fetchOnboardingSteps,

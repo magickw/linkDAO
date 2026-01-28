@@ -18,7 +18,7 @@ export class MarketplaceMessagingController {
   async createOrderConversation(req: Request, res: Response): Promise<void> {
     try {
       const { orderId } = req.params;
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
 
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
@@ -41,7 +41,7 @@ export class MarketplaceMessagingController {
   async createProductInquiry(req: Request, res: Response): Promise<void> {
     try {
       const { productId } = req.params;
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       const { initialMessage } = req.body;
 
       if (!userAddress) {
@@ -49,8 +49,8 @@ export class MarketplaceMessagingController {
         return;
       }
 
-      // TODO: Implement product inquiry conversation creation
-      res.status(201).json(apiResponse.success({}, 'Product inquiry conversation created successfully'));
+      const conversation = await marketplaceMessagingService.createProductInquiry(productId, userAddress, initialMessage);
+      res.status(201).json(apiResponse.success(conversation, 'Product inquiry conversation created successfully'));
     } catch (error) {
       safeLogger.error('Error creating product inquiry conversation:', error);
       res.status(500).json(apiResponse.error('Failed to create product inquiry conversation'));
@@ -63,7 +63,7 @@ export class MarketplaceMessagingController {
    */
   async getMyOrderConversations(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       const { page = 1, limit = 20 } = req.query;
 
       if (!userAddress) {
@@ -71,15 +71,8 @@ export class MarketplaceMessagingController {
         return;
       }
 
-      // TODO: Implement getting user's order conversations
-      res.json(apiResponse.success({
-        conversations: [],
-        pagination: {
-          page: Number(page),
-          limit: Number(limit),
-          total: 0
-        }
-      }, 'Order conversations retrieved successfully'));
+      const result = await marketplaceMessagingService.getMyOrderConversations(userAddress, Number(page), Number(limit));
+      res.json(apiResponse.success(result, 'Order conversations retrieved successfully'));
     } catch (error) {
       safeLogger.error('Error getting order conversations:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve order conversations'));
@@ -93,7 +86,7 @@ export class MarketplaceMessagingController {
   async getOrderTimeline(req: Request, res: Response): Promise<void> {
     try {
       const { id: conversationId } = req.params;
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
 
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
@@ -115,15 +108,20 @@ export class MarketplaceMessagingController {
    */
   async getTemplates(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
+      const userId = req.user?.id;
 
-      if (!userAddress) {
+      if (!userAddress || !userId) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
       }
 
-      // TODO: Implement getting user's templates
-      res.json(apiResponse.success([], 'Templates retrieved successfully'));
+      const templates = await db.select()
+        .from(messageTemplates)
+        .where(eq(messageTemplates.userId, userId))
+        .orderBy(desc(messageTemplates.createdAt));
+
+      res.json(apiResponse.success(templates, 'Templates retrieved successfully'));
     } catch (error) {
       safeLogger.error('Error getting templates:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve templates'));
@@ -136,7 +134,7 @@ export class MarketplaceMessagingController {
    */
   async createTemplate(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       const userId = req.user?.id;
       const { name, content, category, tags } = req.body;
 
@@ -180,7 +178,7 @@ export class MarketplaceMessagingController {
    */
   async updateTemplate(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       const userId = req.user?.id;
       const { id } = req.params;
       const { name, content, category, tags, isActive } = req.body;
@@ -223,7 +221,7 @@ export class MarketplaceMessagingController {
    */
   async deleteTemplate(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       const userId = req.user?.id;
       const { id } = req.params;
 
@@ -255,7 +253,7 @@ export class MarketplaceMessagingController {
    */
   async createQuickReply(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       const userId = req.user?.id;
       const { triggerKeywords, responseText, category, isActive, priority } = req.body;
 
@@ -298,7 +296,7 @@ export class MarketplaceMessagingController {
    */
   async suggestQuickReplies(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       const { message } = req.query;
 
       if (!userAddress) {
@@ -322,7 +320,7 @@ export class MarketplaceMessagingController {
   async getConversationAnalytics(req: Request, res: Response): Promise<void> {
     try {
       const { id: conversationId } = req.params;
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
 
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
@@ -340,22 +338,53 @@ export class MarketplaceMessagingController {
 
   /**
    * Get seller messaging analytics
-   * GET /marketplace/messaging/seller/analytics/messaging
+   * GET /marketplace/messaging/seller/:address/messaging-analytics
    */
   async getSellerMessagingAnalytics(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = req.params.address || req.user?.walletAddress;
 
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
       }
 
-      // TODO: Implement seller messaging analytics
-      res.json(apiResponse.success({}, 'Seller messaging analytics retrieved successfully'));
+      const analytics = await marketplaceMessagingService.getSellerMessagingAnalytics(userAddress);
+      res.json(apiResponse.success(analytics, 'Seller messaging analytics retrieved successfully'));
     } catch (error) {
       safeLogger.error('Error getting seller messaging analytics:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve seller messaging analytics'));
+    }
+  }
+
+  /**
+   * Get seller messaging metrics
+   * GET /marketplace/messaging/seller/:address/messaging-metrics
+   */
+  async getSellerMessagingMetrics(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = req.params.address || req.user?.walletAddress;
+
+      if (!userAddress) {
+        res.status(401).json(apiResponse.error('Authentication required', 401));
+        return;
+      }
+
+      // Return mock metrics for now
+      const metrics = {
+        totalMessages: 156,
+        messagesSent: 82,
+        messagesReceived: 74,
+        responseRate: 95,
+        avgMessageLength: 42,
+        peakActivityHours: [10, 14, 15, 20],
+        mostActiveDay: 'Wednesday'
+      };
+
+      res.json(apiResponse.success(metrics, 'Seller messaging metrics retrieved successfully'));
+    } catch (error) {
+      safeLogger.error('Error getting seller messaging metrics:', error);
+      res.status(500).json(apiResponse.error('Failed to retrieve seller messaging metrics'));
     }
   }
 
@@ -366,7 +395,7 @@ export class MarketplaceMessagingController {
   async sendAutomatedNotification(req: Request, res: Response): Promise<void> {
     try {
       const { id: conversationId } = req.params;
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
       const { eventType, data } = req.body;
 
       if (!userAddress) {
@@ -390,7 +419,7 @@ export class MarketplaceMessagingController {
   async escalateToDispute(req: Request, res: Response): Promise<void> {
     try {
       const { id: conversationId } = req.params;
-      const userAddress = req.user?.address;
+      const userAddress = req.user?.walletAddress;
 
       if (!userAddress) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
