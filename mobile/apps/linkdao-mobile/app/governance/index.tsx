@@ -22,6 +22,7 @@ import { governanceService, Proposal, CharityProposal, CharityProposalData } fro
 import { useAuthStore } from '../../src/store/authStore';
 import { THEME } from '../../src/constants/theme';
 import { EnhancedProposalCard } from '../../src/components/EnhancedProposalCard';
+import AIGovernanceInsights from '../../src/components/AIGovernanceInsights';
 
 type TabType = 'active' | 'ended' | 'create' | 'delegation' | 'charity' | 'analytics';
 
@@ -588,6 +589,9 @@ export default function GovernancePage() {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* AI Governance Insights */}
+        <AIGovernanceInsights showFullAnalysis={false} />
 
         {(activeTab === 'active' || activeTab === 'ended') && (
           <View style={styles.proposalsContainer}>

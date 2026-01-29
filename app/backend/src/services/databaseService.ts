@@ -1062,6 +1062,7 @@ export class DatabaseService {
     tokenAddress?: string;
     onChainId?: string;
     expiresAt?: Date;
+    taxEscrowAmount?: string;
   }) {
     try {
       const result = await this.db.insert(schema.escrows).values({
@@ -1076,6 +1077,7 @@ export class DatabaseService {
         tokenAddress: data.tokenAddress || null,
         onChainId: data.onChainId || null,
         expiresAt: data.expiresAt || null,
+        taxEscrowAmount: data.taxEscrowAmount || "0",
         createdAt: new Date()
       }).returning();
 

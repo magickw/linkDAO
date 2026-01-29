@@ -97,7 +97,11 @@ export class OrderService {
         input.buyerAddress,
         input.sellerAddress,
         input.paymentToken,
-        fullEscrowAmount.toString() // FIX: Use full amount, not just item price
+        fullEscrowAmount.toString(), // FIX: Use full amount, not just item price
+        11155111, // Default chainId
+        7, // Default duration
+        0, // Default resolution method
+        undefined // orderId will be updated later or we can pass temporary ID
       );
 
       // Create order in database with CORRECT AMOUNTS

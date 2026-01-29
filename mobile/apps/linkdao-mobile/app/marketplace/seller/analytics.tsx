@@ -21,6 +21,36 @@ interface AnalyticsData {
   averageOrderValue: number;
   topProducts: ProductStat[];
   recentActivity: Activity[];
+  revenueHistory: RevenueDataPoint[];
+  salesByCategory: CategorySales[];
+  orderStatus: OrderStatusStat[];
+  customerInsights: CustomerInsight[];
+}
+
+interface RevenueDataPoint {
+  date: string;
+  revenue: number;
+  orders: number;
+}
+
+interface CategorySales {
+  category: string;
+  sales: number;
+  revenue: number;
+  percentage: number;
+}
+
+interface OrderStatusStat {
+  status: string;
+  count: number;
+  percentage: number;
+}
+
+interface CustomerInsight {
+  label: string;
+  value: string;
+  trend: 'up' | 'down' | 'stable';
+  change: number;
 }
 
 interface ProductStat {
@@ -58,6 +88,32 @@ export default function SellerAnalyticsScreen() {
       { id: '2', type: 'view', productName: 'Smart Watch Pro', timestamp: new Date(Date.now() - 3600000).toISOString() },
       { id: '3', type: 'review', productName: 'Portable Speaker', timestamp: new Date(Date.now() - 7200000).toISOString() },
     ],
+    revenueHistory: [
+      { date: 'Jan 22', revenue: 1250, orders: 18 },
+      { date: 'Jan 23', revenue: 1820, orders: 24 },
+      { date: 'Jan 24', revenue: 980, orders: 12 },
+      { date: 'Jan 25', revenue: 2450, orders: 32 },
+      { date: 'Jan 26', revenue: 1650, orders: 21 },
+      { date: 'Jan 27', revenue: 3200, orders: 38 },
+      { date: 'Jan 28', revenue: 2100, orders: 11 },
+    ],
+    salesByCategory: [
+      { category: 'Electronics', sales: 89, revenue: 11250.00, percentage: 54 },
+      { category: 'Accessories', sales: 42, revenue: 5180.00, percentage: 25 },
+      { category: 'Audio', sales: 35, revenue: 4220.00, percentage: 21 },
+    ],
+    orderStatus: [
+      { status: 'Pending', count: 12, percentage: 8 },
+      { status: 'Processing', count: 24, percentage: 15 },
+      { status: 'Shipped', count: 35, percentage: 22 },
+      { status: 'Delivered', count: 85, percentage: 55 },
+    ],
+    customerInsights: [
+      { label: 'Total Customers', value: '1,245', trend: 'up', change: 8.5 },
+      { label: 'Repeat Customers', value: '342', trend: 'up', change: 12.3 },
+      { label: 'Avg. Orders/Customer', value: '2.4', trend: 'stable', change: 0.0 },
+      { label: 'Customer Satisfaction', value: '4.8/5', trend: 'up', change: 2.1 },
+    ],
   });
 
   const handleTimeRangeChange = (range: TimeRange) => {
@@ -77,6 +133,99 @@ export default function SellerAnalyticsScreen() {
   };
 
   const getChangeColor = (positive: boolean) => positive ? '#10b981' : '#ef4444';
+
+  const getTrendIcon = (trend: 'up' | 'down' | 'stable') => {
+    switch (trend) {
+      case 'up':
+        return <Ionicons name="arrow-up" size={12} color="#10b981" />;
+      case 'down':
+        return <Ionicons name="arrow-down" size={12} color="#ef4444" />;
+      default:
+        return <Ionicons name="remove" size={12} color="#6b7280" />;
+    }
+  };
+
+  const renderRevenueChart = () => {
+    const maxRevenue = Math.max(...analytics.revenueHistory.map(d => d.revenue));
+    const maxOrders = Math.max(...analytics.revenueHistory.map(d => d.orders));
+
+    return (
+      <View style={styles.chartContainer}>
+        <View style={styles.chartLegend}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#3b82f6' }]} />
+            <Text style={styles.legendText}>Revenue</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#10b981' }]} />
+            <Text style={styles.legendText}>Orders</Text>
+          </View>
+        </View>
+
+        <View style={styles.chartBarsContainer}>
+          {analytics.revenueHistory.map((point, index) => {
+            const revenueHeight = (point.revenue / maxRevenue) * 120;
+            const ordersHeight = (point.orders / maxOrders) * 120;
+            const isLast = index === analytics.revenueHistory.length - 1;
+
+            return (
+              <View key={point.date} style={styles.chartColumn}>
+                <View style={styles.chartBars}>
+                  <View style={[styles.chartBar, { height: revenueHeight, backgroundColor: '#3b82f6' }]} />
+                  <View style={[styles.chartBar, { height: ordersHeight, backgroundColor: '#10b981' }]} />
+                </View>
+                <Text style={[styles.chartLabel, isLast && styles.chartLabelLast]}>{point.date}</Text>
+              </View>
+            );
+          })}
+        </View>
+      </View>
+    );
+  };
+
+  const renderSalesByCategory = () => {
+    return (
+      <View style={styles.categoryList}>
+        {analytics.salesByCategory.map((category, index) => (
+          <View key={index} style={styles.categoryCard}>
+            <View style={styles.categoryHeader}>
+              <Text style={styles.categoryName}>{category.category}</Text>
+              <Text style={styles.categoryPercentage}>{category.percentage}%</Text>
+            </View>
+            <View style={styles.categoryProgressBar}>
+              <View style={[styles.categoryProgressFill, { width: `${category.percentage}%` }]} />
+            </View>
+            <View style={styles.categoryStats}>
+              <Text style={styles.categoryStatText}>{category.sales} sales</Text>
+              <Text style={styles.categoryStatText}>{formatCurrency(category.revenue)}</Text>
+            </View>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  const renderOrderStatus = () => {
+    const statusColors = {
+      'Pending': '#f59e0b',
+      'Processing': '#3b82f6',
+      'Shipped': '#8b5cf6',
+      'Delivered': '#10b981',
+    };
+
+    return (
+      <View style={styles.statusGrid}>
+        {analytics.orderStatus.map((status, index) => (
+          <View key={index} style={styles.statusCard}>
+            <View style={[styles.statusDot, { backgroundColor: statusColors[status.status as keyof typeof statusColors] || '#6b7280' }]} />
+            <Text style={styles.statusCount}>{status.count}</Text>
+            <Text style={styles.statusText}>{status.status}</Text>
+            <Text style={styles.statusPercentage}>{status.percentage}%</Text>
+          </View>
+        ))}
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -180,6 +329,41 @@ export default function SellerAnalyticsScreen() {
               <Ionicons name="arrow-up" size={16} color="#10b981" />
               <Text style={styles.aovTrendText}>+3.8% vs last period</Text>
             </View>
+          </View>
+        </View>
+
+        {/* Revenue Chart */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Revenue Trends</Text>
+          {renderRevenueChart()}
+        </View>
+
+        {/* Sales by Category */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Sales by Category</Text>
+          {renderSalesByCategory()}
+        </View>
+
+        {/* Order Status Distribution */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Order Status</Text>
+          {renderOrderStatus()}
+        </View>
+
+        {/* Customer Insights */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Customer Insights</Text>
+          <View style={styles.insightsGrid}>
+            {analytics.customerInsights.map((insight, index) => (
+              <View key={index} style={styles.insightMiniCard}>
+                <Text style={styles.insightMiniLabel}>{insight.label}</Text>
+                <Text style={styles.insightMiniValue}>{insight.value}</Text>
+                <View style={[styles.insightMiniTrend, { backgroundColor: insight.trend === 'up' ? '#d1fae5' : insight.trend === 'down' ? '#fee2e2' : '#f3f4f6' }]}>
+                  {getTrendIcon(insight.trend)}
+                  <Text style={styles.insightMiniChange}>{Math.abs(insight.change)}%</Text>
+                </View>
+              </View>
+            ))}
           </View>
         </View>
 
@@ -549,5 +733,190 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#374151',
     lineHeight: 18,
+  },
+  // Chart Styles
+  chartContainer: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  chartLegend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 24,
+    marginBottom: 16,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendText: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  chartBarsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    height: 150,
+    paddingHorizontal: 4,
+  },
+  chartColumn: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  chartBars: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 2,
+    height: 120,
+  },
+  chartBar: {
+    width: 8,
+    borderRadius: 4,
+    minHeight: 4,
+  },
+  chartLabel: {
+    fontSize: 10,
+    color: '#9ca3af',
+    marginTop: 4,
+  },
+  chartLabelLast: {
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  // Category Styles
+  categoryList: {
+    gap: 12,
+  },
+  categoryCard: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  categoryName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1f2937',
+  },
+  categoryPercentage: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#3b82f6',
+  },
+  categoryProgressBar: {
+    height: 8,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 4,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  categoryProgressFill: {
+    height: '100%',
+    backgroundColor: '#3b82f6',
+    borderRadius: 4,
+  },
+  categoryStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  categoryStatText: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  // Order Status Styles
+  statusGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  statusCard: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  statusCount: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  statusText: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginBottom: 2,
+  },
+  statusPercentage: {
+    fontSize: 12,
+    color: '#9ca3af',
+  },
+  // Customer Insights Styles
+  insightsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  insightMiniCard: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    alignItems: 'center',
+  },
+  insightMiniLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  insightMiniValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 8,
+  },
+  insightMiniTrend: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  insightMiniChange: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1f2937',
   },
 });

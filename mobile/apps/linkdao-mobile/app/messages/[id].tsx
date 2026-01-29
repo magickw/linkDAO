@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store';
 import { messagingService } from '../../src/services';
+import MessageSearchModal from '../../src/components/MessageSearchModal';
 
 interface Message {
   id: string;
@@ -55,6 +56,7 @@ export default function ChatInterfaceScreen() {
   const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
+  const [showSearchModal, setShowSearchModal] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '😡'];
@@ -200,6 +202,18 @@ export default function ChatInterfaceScreen() {
     );
   };
 
+  const handleSearchMessages = async (filters: any) => {
+    try {
+      // In production, this would call messagingService.searchInConversation
+      const searchResults = messages.filter(msg => 
+        msg.content.toLowerCase().includes(filters.query.toLowerCase())
+      );
+      setMessages(searchResults);
+    } catch (error) {
+      console.error('Search failed:', error);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -242,8 +256,8 @@ export default function ChatInterfaceScreen() {
             <Text style={styles.headerStatus}>{conversation.lastSeen}</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.headerButton}>
-          <Ionicons name="ellipsis-vertical" size={24} color="#1f2937" />
+        <TouchableOpacity style={styles.headerButton} onPress={() => setShowSearchModal(true)}>
+          <Ionicons name="search-outline" size={24} color="#1f2937" />
         </TouchableOpacity>
       </View>
 
@@ -478,6 +492,13 @@ export default function ChatInterfaceScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+      
+      <MessageSearchModal
+        visible={showSearchModal}
+        onClose={() => setShowSearchModal(false)}
+        onSearch={handleSearchMessages}
+        conversationId={id}
+      />
     </SafeAreaView>
   );
 }

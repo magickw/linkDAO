@@ -64,7 +64,11 @@ export class OrderService {
         input.buyerAddress,
         input.sellerAddress,
         input.paymentToken,
-        input.amount
+        input.amount,
+        11155111, // Default chainId
+        7, // Default duration
+        0, // Default resolution method
+        undefined // orderId
       );
 
       // Create order in database

@@ -488,7 +488,8 @@ export class EnhancedEscrowService {
     amount: string,
     chainId: number = 11155111, // Default to Sepolia
     escrowDurationDays: number = 7,
-    disputeResolutionMethod: number = 0 // 0 = AUTOMATIC, 1 = COMMUNITY_VOTING, 2 = ARBITRATOR
+    disputeResolutionMethod: number = 0, // 0 = AUTOMATIC, 1 = COMMUNITY_VOTING, 2 = ARBITRATOR
+    orderId?: string
   ): Promise<{ escrowId: string; transactionData?: any }> {
     return this._createEscrow(
       listingId,
@@ -501,7 +502,8 @@ export class EnhancedEscrowService {
       disputeResolutionMethod,
       false, // requiresMultiSig
       0,     // multiSigThreshold
-      0      // timeLockDuration
+      0,      // timeLockDuration
+      orderId
     );
   }
 
@@ -516,7 +518,8 @@ export class EnhancedEscrowService {
     disputeResolutionMethod: number = 0, // 0 = AUTOMATIC, 1 = COMMUNITY_VOTING, 2 = ARBITRATOR
     requiresMultiSig: boolean = false,
     multiSigThreshold: number = 1,
-    timeLockDurationHours: number = 0
+    timeLockDurationHours: number = 0,
+    orderId?: string
   ): Promise<{ escrowId: string; transactionData?: any }> {
     return this._createEscrow(
       listingId,
@@ -529,7 +532,8 @@ export class EnhancedEscrowService {
       disputeResolutionMethod,
       requiresMultiSig,
       multiSigThreshold,
-      timeLockDurationHours * 3600 // Convert hours to seconds
+      timeLockDurationHours * 3600, // Convert hours to seconds
+      orderId
     );
   }
 
@@ -544,7 +548,8 @@ export class EnhancedEscrowService {
     disputeResolutionMethod: number = 0, // 0 = AUTOMATIC, 1 = COMMUNITY_VOTING, 2 = ARBITRATOR
     requiresMultiSig: boolean = false,
     multiSigThreshold: number = 1,
-    timeLockDurationSeconds: number = 0
+    timeLockDurationSeconds: number = 0,
+    orderId?: string
   ): Promise<{ escrowId: string; transactionData?: any }> {
     try {
       // Validate escrow creation
@@ -641,6 +646,7 @@ export class EnhancedEscrowService {
 
       const dbEscrow = await databaseService.createEscrow({
         listingId: listingIdToUse,
+        orderId: orderId,
         buyerId: buyer.id,
         sellerId: seller.id,
         amount: amount,

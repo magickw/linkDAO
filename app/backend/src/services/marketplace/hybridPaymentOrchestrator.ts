@@ -447,7 +447,10 @@ export class HybridPaymentOrchestrator {
         request.sellerAddress,
         tokenAddress,
         pathDecision.totalAmount.toString(),
-        chainIdToUse // Use chainId from payment method, default to Sepolia
+        chainIdToUse, // Use chainId from payment method, default to Sepolia
+        7, // Default duration
+        0, // Default resolution method
+        orderRecord.id // orderId
       );
 
       // Update order with escrow details
