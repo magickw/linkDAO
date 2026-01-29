@@ -1483,16 +1483,6 @@ export class DatabaseService {
           return order;
 
         });
-
-      } catch (error) {
-
-        safeLogger.error("Error creating order:", error);
-
-        throw error;
-
-      }
-
-    }
     } catch (error) {
       safeLogger.error("Error creating order:", error);
       throw error;
