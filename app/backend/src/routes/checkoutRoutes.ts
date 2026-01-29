@@ -216,12 +216,10 @@ router.post('/payment-intent',
             }
 
             // Get or create Stripe customer
-            const customerName = user.firstName && user.lastName
-                ? `${user.firstName} ${user.lastName}`.trim()
-                : user.displayName || user.username || 'LinkDAO User';
+            const customerName = user.address || 'LinkDAO User';
 
             const customerId = await stripePaymentService.getOrCreateCustomer(
-                user.email,
+                user.email || 'unknown@linkdao.io',
                 customerName
             );
 
@@ -232,8 +230,7 @@ router.post('/payment-intent',
             const paymentIntentResult = await stripePaymentService.processPayment({
                 amount: amount, // Amount is already in cents from mobile
                 userAddress: user.address,
-                paymentMethod: 'card',
-                ldaoAmount: amount.toString(), // Metadata for tracking
+                paymentMethod: 'fiat',
             });
 
             if (!paymentIntentResult.success || !paymentIntentResult.clientSecret) {
