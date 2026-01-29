@@ -112,8 +112,8 @@ class WalletService {
       return address;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      // Only show serious errors, suppress wallet-not-found errors
-      if (!errorMsg.includes('not installed') && !errorMsg.includes('not found') && !errorMsg.includes('Redirecting')) {
+      // Only show serious errors, suppress wallet-not-found errors and SDK initialization
+      if (!errorMsg.includes('not installed') && !errorMsg.includes('not found') && !errorMsg.includes('Redirecting') && !errorMsg.includes('SDK not yet injected') && !errorMsg.includes('not yet implemented')) {
         console.error(`❌ Failed to connect to ${provider}:`, error);
       } else {
         console.log(`ℹ️ ${provider} not available:`, errorMsg);
@@ -148,7 +148,7 @@ class WalletService {
 
       return address;
     } catch (error) {
-      console.error('❌ Failed to connect to MetaMask:', error);
+      console.log('ℹ️ MetaMask unavailable:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
