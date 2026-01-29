@@ -31,15 +31,19 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
   const { user, isAuthenticated, setUser, setToken } = useAuthStore();
   const hasHandledAddressRef = useRef<Set<string>>(new Set());
   const isMountedRef = useRef(true);
+  const authInProgressRef = useRef<Map<string, boolean>>(new Map());
 
   useEffect(() => {
     isMountedRef.current = true;
 
+    const addressKey = walletAddress?.toLowerCase() || '';
+
     console.log('WalletLoginBridge: useEffect triggered', {
       autoLogin,
-      walletAddress,
+      walletAddress: addressKey,
       isAuthenticated,
-      connector: connector?.name
+      connector: connector?.name,
+      authInProgress: authInProgressRef.current.get(addressKey) || false
     });
 
     // Skip authentication if:
@@ -47,6 +51,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     // 2. No wallet address
     // 3. User is already authenticated and skipIfAuthenticated is true
     // 4. Already handled this address
+    // 5. Auth is already in progress for this address
     if (!autoLogin || !walletAddress) {
       console.log('WalletLoginBridge: Skipping login, conditions not met');
       return;
@@ -58,19 +63,28 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     }
 
     // Check if we've already handled this address
-    if (hasHandledAddressRef.current.has(walletAddress)) {
+    if (hasHandledAddressRef.current.has(addressKey)) {
       console.log('WalletLoginBridge: Skipping login, address already handled');
       return;
     }
 
-    // Mark this address as handled
-    hasHandledAddressRef.current.add(walletAddress);
-    console.log('WalletLoginBridge: Marking address as handled', walletAddress);
+    // Check if auth is already in progress for this address
+    if (authInProgressRef.current.get(addressKey)) {
+      console.log('WalletLoginBridge: Auth already in progress for this address');
+      return;
+    }
 
-    console.log(`🔐 Attempting login for wallet: ${walletAddress}`);
+    // Mark this address as handled
+    hasHandledAddressRef.current.add(addressKey);
+    console.log('WalletLoginBridge: Marking address as handled', addressKey);
+
+    console.log(`🔐 Attempting login for wallet: ${addressKey}`);
 
     // Fire-and-forget login to avoid blocking UI/navigation
     const scheduleLogin = () => {
+      // Mark auth as in progress
+      authInProgressRef.current.set(addressKey, true);
+
       Promise.resolve().then(() => {
         return authService.authenticateWallet(walletAddress, connector, 'connected');
       })
@@ -81,14 +95,14 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
           }
           if (result.success && result.token && result.user) {
             lastAuthenticatedAddress = walletAddress;
-            console.log(`✅ Login successful for ${walletAddress}`);
+            console.log(`✅ Login successful for ${addressKey}`);
             setUser(result.user);
             setToken(result.token);
             if (onLoginSuccess) {
               onLoginSuccess({ address: walletAddress, user: result.user });
             }
           } else {
-            console.error(`❌ Login failed for ${walletAddress}:`, result.error);
+            console.error(`❌ Login failed for ${addressKey}:`, result.error);
             if (onLoginError) {
               onLoginError(result.error || 'Authentication failed');
             }
@@ -104,6 +118,10 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
           if (onLoginError) {
             onLoginError(errorMessage);
           }
+        })
+        .finally(() => {
+          // Mark auth as complete
+          authInProgressRef.current.set(addressKey, false);
         });
     };
 
@@ -114,7 +132,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       console.log('WalletLoginBridge: Cleaning up effect');
       isMountedRef.current = false;
     };
-  }, [walletAddress, connector, isAuthenticated, autoLogin, onLoginSuccess, onLoginError, skipIfAuthenticated, setUser, setToken]);
+  }, [walletAddress, connector, autoLogin, onLoginSuccess, onLoginError, skipIfAuthenticated]);
 
   // Reset when wallet disconnects
   useEffect(() => {
