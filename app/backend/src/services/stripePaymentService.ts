@@ -284,6 +284,51 @@ export class StripePaymentService implements IPaymentProcessor {
     }
   }
 
+  /**
+   * Get or create Stripe customer by email
+   * Used for mobile Payment Sheet integration
+   */
+  public async getOrCreateCustomer(email: string, name?: string): Promise<string> {
+    try {
+      // Check if customer exists by email
+      const existingCustomers = await this.stripe.customers.list({
+        email,
+        limit: 1,
+      });
+
+      if (existingCustomers.data.length > 0) {
+        safeLogger.info(`Found existing Stripe customer: ${existingCustomers.data[0].id}`);
+        return existingCustomers.data[0].id;
+      }
+
+      // Create new customer
+      safeLogger.info(`Creating new Stripe customer for: ${email}`);
+      return await this.createCustomer(email, name);
+    } catch (error) {
+      safeLogger.error('Error getting/creating Stripe customer:', error);
+      throw new Error('Failed to get or create customer');
+    }
+  }
+
+  /**
+   * Create ephemeral key for customer
+   * Required for mobile Payment Sheet integration
+   */
+  public async createEphemeralKey(customerId: string): Promise<{ secret: string }> {
+    try {
+      const ephemeralKey = await this.stripe.ephemeralKeys.create(
+        { customer: customerId },
+        { apiVersion: this.config.apiVersion }
+      );
+
+      safeLogger.info(`Created ephemeral key for customer: ${customerId}`);
+      return { secret: ephemeralKey.secret };
+    } catch (error) {
+      safeLogger.error('Error creating ephemeral key:', error);
+      throw new Error('Failed to create ephemeral key');
+    }
+  }
+
   public async getPaymentMethods(customerId: string): Promise<Stripe.PaymentMethod[]> {
     try {
       const paymentMethods = await this.stripe.paymentMethods.list({

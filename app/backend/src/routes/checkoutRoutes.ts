@@ -4,8 +4,17 @@ import { authMiddleware, optionalAuthMiddleware } from '../middleware/authentica
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { safeLogger } from '../utils/safeLogger';
 import { taxCalculationService } from '../services/taxCalculationService';
+import { StripePaymentService } from '../services/stripePaymentService';
 
 const router = express.Router();
+
+// Initialize Stripe service for payment intent creation
+const stripePaymentService = new StripePaymentService({
+  secretKey: process.env.STRIPE_SECRET_KEY || '',
+  webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+  publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
+  apiVersion: '2023-10-16',
+});
 
 /**
  * Create checkout session
@@ -167,6 +176,93 @@ router.post('/validate-tax-exemption',
         } catch (error) {
             safeLogger.error('Error validating tax exemption:', error);
             res.status(500).json({ error: 'Internal server error' });
+        }
+    }
+);
+
+/**
+ * Create Payment Intent for Mobile Payment Sheet
+ * POST /api/checkout/payment-intent
+ * Required for React Native Stripe Payment Sheet integration
+ * Returns the parameters needed to initialize the native payment UI
+ */
+router.post('/payment-intent',
+    authMiddleware,
+    async (req, res) => {
+        try {
+            const { amount, currency = 'usd' } = req.body;
+            const user = (req as AuthenticatedRequest).user;
+
+            safeLogger.info('[Mobile Payment Sheet] Creating payment intent:', {
+                userId: user?.address,
+                amount,
+                currency,
+            });
+
+            // Validate amount (Stripe minimum is $0.50 USD = 50 cents)
+            if (!amount || amount < 50) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Amount must be at least $0.50 USD (50 cents)'
+                });
+            }
+
+            // Validate user email
+            if (!user?.email) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'User email is required'
+                });
+            }
+
+            // Get or create Stripe customer
+            const customerName = user.firstName && user.lastName
+                ? `${user.firstName} ${user.lastName}`.trim()
+                : user.displayName || user.username || 'LinkDAO User';
+
+            const customerId = await stripePaymentService.getOrCreateCustomer(
+                user.email,
+                customerName
+            );
+
+            // Create ephemeral key for customer (required for Payment Sheet)
+            const ephemeralKey = await stripePaymentService.createEphemeralKey(customerId);
+
+            // Create PaymentIntent
+            const paymentIntentResult = await stripePaymentService.processPayment({
+                amount: amount, // Amount is already in cents from mobile
+                userAddress: user.address,
+                paymentMethod: 'card',
+                ldaoAmount: amount.toString(), // Metadata for tracking
+            });
+
+            if (!paymentIntentResult.success || !paymentIntentResult.clientSecret) {
+                return res.status(500).json({
+                    success: false,
+                    error: paymentIntentResult.error || 'Failed to create payment intent'
+                });
+            }
+
+            safeLogger.info('[Mobile Payment Sheet] Payment intent created successfully:', {
+                paymentIntentId: paymentIntentResult.transactionId,
+                customerId,
+            });
+
+            res.status(200).json({
+                success: true,
+                data: {
+                    clientSecret: paymentIntentResult.clientSecret,
+                    ephemeralKey: ephemeralKey.secret,
+                    customer: customerId,
+                    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+                }
+            });
+        } catch (error) {
+            safeLogger.error('[Mobile Payment Sheet] Error creating payment intent:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Failed to create payment intent'
+            });
         }
     }
 );

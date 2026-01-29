@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useReducer, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, ActivityIndicator, Modal, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -246,8 +246,68 @@ export default function CheckoutScreen() {
               (paymentDetails as any).paymentIntentId = paymentSheetParams.paymentIntent;
               (paymentDetails as any).prepaid = true; 
           } else {
-              // Fallback to Legacy Flow
-              console.log('Using legacy payment flow (no native sheet params)');
+              // Fallback to Web Browser Flow
+              // Payment Sheet is unavailable, direct user to web checkout
+              console.log('Payment Sheet unavailable, falling back to web checkout');
+
+              const webCheckoutUrl = `https://linkdao.io/marketplace/checkout?sessionId=${checkoutSession.sessionId}`;
+
+              Alert.alert(
+                  'Payment Required',
+                  'Please complete your payment in your web browser to continue with your order.',
+                  [
+                      {
+                          text: 'Cancel',
+                          style: 'cancel',
+                          onPress: () => {
+                              dispatch({ type: 'SET_PROCESSING', payload: false });
+                          }
+                      },
+                      {
+                          text: 'Open Browser',
+                          onPress: async () => {
+                              try {
+                                  // Open web checkout in browser
+                                  await Linking.openURL(webCheckoutUrl);
+
+                                  // Wait for user to complete payment
+                                  // In a real implementation, you might poll for payment status
+                                  // or use deep linking to return to the app
+                                  Alert.alert(
+                                      'Payment Pending',
+                                      'Complete your payment in the browser. Once finished, return here to view your order.',
+                                      [
+                                          {
+                                              text: 'OK',
+                                              onPress: () => {
+                                                  dispatch({ type: 'SET_PROCESSING', payload: false });
+                                                  router.replace('/marketplace/orders');
+                                              }
+                                          }
+                                      ]
+                                  );
+                              } catch (error) {
+                                  console.error('Failed to open browser:', error);
+                                  Alert.alert(
+                                      'Unable to Open Browser',
+                                      'Please visit linkdao.io/marketplace/checkout to complete your payment.',
+                                      [
+                                          {
+                                              text: 'OK',
+                                              onPress: () => {
+                                                  dispatch({ type: 'SET_PROCESSING', payload: false });
+                                              }
+                                          }
+                                      ]
+                                  );
+                              }
+                          }
+                      }
+                  ]
+              );
+
+              // Stop processing here - user will complete payment in browser
+              return;
           }
       }
 

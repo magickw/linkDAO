@@ -8,16 +8,18 @@ const getOrigin = (): string => {
   if (typeof window !== 'undefined' && window.location) {
     return window.location.origin;
   }
-  // For React Native, use a default or platform-specific origin
-  return 'http://localhost:10000';
+  // For React Native, use production API as default fallback
+  return 'https://api.linkdao.io';
 };
+
+const IS_DEVELOPMENT = typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV === 'development';
 
 export const ENV_CONFIG = {
   // Backend API - fallback to window.location.origin for production
-  BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || getOrigin(),
+  BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || (IS_DEVELOPMENT ? 'http://localhost:10000' : getOrigin()),
 
   // WebSocket - derived from BACKEND_URL, Socket.IO will handle protocol upgrade automatically
-  WS_URL: process.env.NEXT_PUBLIC_WS_URL || process.env.EXPO_PUBLIC_WS_URL || getOrigin().replace(/^http/, 'ws'),
+  WS_URL: process.env.NEXT_PUBLIC_WS_URL || process.env.EXPO_PUBLIC_WS_URL || (IS_DEVELOPMENT ? 'ws://localhost:10000' : getOrigin().replace(/^http/, 'ws')),
 
   // API Timeout
   API_TIMEOUT: 30000,
