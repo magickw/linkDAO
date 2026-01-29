@@ -4,13 +4,14 @@
  */
 
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, RefreshControl, ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMessagesStore } from '../../src/store';
 import { messagingService } from '../../src/services';
 import NewConversationModal from '../../src/components/NewConversationModal';
+import MessageSearchModal from '../../src/components/MessageSearchModal';
 
 export default function MessagesScreen() {
   const conversations = useMessagesStore((state) => state.conversations);
@@ -23,6 +24,7 @@ export default function MessagesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
 
   useEffect(() => {
     loadConversations();
@@ -58,6 +60,13 @@ export default function MessagesScreen() {
     } else if (query.length === 0) {
       await loadConversations();
     }
+  };
+
+  const handleAdvancedSearch = (filters: any) => {
+    setShowSearchModal(false);
+    // Implement advanced search logic
+    console.log('Advanced search with filters:', filters);
+    // Would call messagingService.searchMessages(filters) if available
   };
 
   const handleConversationPress = async (conversationId: string) => {
@@ -103,14 +112,22 @@ export default function MessagesScreen() {
       >
         {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
+          <TouchableOpacity onPress={() => setShowSearchModal(true)} style={styles.searchTrigger}>
+            <Ionicons name="search" size={20} color="#9ca3af" />
+          </TouchableOpacity>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search conversations..."
+            placeholder="Search messages..."
             placeholderTextColor="#9ca3af"
             value={searchQuery}
             onChangeText={handleSearch}
+            onFocus={() => setShowSearchModal(true)}
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => { setSearchQuery(''); loadConversations(); }} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={20} color="#9ca3af" />
+            </TouchableOpacity>
+          )}
         </View>
         
         {/* Loading State */}
@@ -351,5 +368,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  searchTrigger: {
+    marginRight: 8,
+  },
+  clearButton: {
+    padding: 4,
   },
 });
