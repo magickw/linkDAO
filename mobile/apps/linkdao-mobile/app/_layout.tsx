@@ -200,25 +200,30 @@ export default function RootLayout() {
     const inAuthGroup = segments[0] === 'auth';
     const inTabsGroup = segments[0] === '(tabs)';
 
-    try {
-      // Navigate only after root layout is ready
-      // Redirect to auth if not authenticated and trying to access tabs
-      if (!isAuthenticated && inTabsGroup) {
-        console.log('🔄 Redirecting to auth screen (not authenticated)');
-        router.replace('/auth');
+    // Delay navigation slightly to ensure router is fully initialized
+    const navigationTimeout = setTimeout(() => {
+      try {
+        // Navigate only after root layout is ready
+        // Redirect to auth if not authenticated and trying to access tabs
+        if (!isAuthenticated && inTabsGroup) {
+          console.log('🔄 Redirecting to auth screen (not authenticated)');
+          router.replace('/auth');
+        }
+        // Redirect to tabs if authenticated and on auth screen
+        else if (isAuthenticated && inAuthGroup) {
+          console.log('🔄 Redirecting to tabs (authenticated)');
+          router.replace('/(tabs)');
+        } else {
+          console.log('✅ User is in correct route group:', segments[0]);
+        }
+      } catch (error) {
+        console.error('❌ Navigation error:', error);
+        // Reset the flag to allow retrying on next state change
+        navigationAttempted.current = false;
       }
-      // Redirect to tabs if authenticated and on auth screen
-      else if (isAuthenticated && inAuthGroup) {
-        console.log('🔄 Redirecting to tabs (authenticated)');
-        router.replace('/(tabs)');
-      } else {
-        console.log('✅ User is in correct route group:', segments[0]);
-      }
-    } catch (error) {
-      console.error('❌ Navigation error:', error);
-      // Reset the flag to allow retrying on next state change
-      navigationAttempted.current = false;
-    }
+    }, 100);
+
+    return () => clearTimeout(navigationTimeout);
   }, [isAuthenticated, isReady, segments]);
 
   return (
@@ -226,61 +231,29 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <StripeProvider publishableKey={STRIPE_KEY}>
-            {MetaMaskProvider ? (
-              // Render with MetaMaskProvider if available
-              <MetaMaskProvider
-                debug={false}
-                sdkOptions={{
-                  dappMetadata: {
-                    name: "LinkDAO Mobile",
-                    url: "https://linkdao.io",
-                  }
-                }}
-              >
-                <MetaMaskInjector />
-                <StatusBar style="auto" />
-                <WalletLoginBridge
-                  autoLogin={true}
-                  walletAddress={walletAddress as string}
-                  connector={connector as any}
-                  onLoginSuccess={({ user }) => {
-                    console.log('✅ Auto-login successful for:', user.address);
-                  }}
-                  onLoginError={(error) => {
-                    console.error('❌ Auto-login failed:', error);
-                  }}
-                />
-                <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen name="auth" options={{ headerShown: false }} />
-                  <Stack.Screen name="settings" options={{ headerShown: false }} />
-                  <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
-                </Stack>
-              </MetaMaskProvider>
-            ) : (
-              // Fallback: render without MetaMaskProvider if it failed to load
-              <>
-                <MetaMaskInjector />
-                <StatusBar style="auto" />
-                <WalletLoginBridge
-                  autoLogin={true}
-                  walletAddress={walletAddress as string}
-                  connector={connector as any}
-                  onLoginSuccess={({ user }) => {
-                    console.log('✅ Auto-login successful for:', user.address);
-                  }}
-                  onLoginError={(error) => {
-                    console.error('❌ Auto-login failed:', error);
-                  }}
-                />
-                <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen name="auth" options={{ headerShown: false }} />
-                  <Stack.Screen name="settings" options={{ headerShown: false }} />
-                  <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
-                </Stack>
-              </>
-            )}
+            {/*
+              MetaMaskProvider is disabled due to initialization issues in v0.3.12
+              All other wallet functionality (WalletConnect, etc.) works normally
+            */}
+            <MetaMaskInjector />
+            <StatusBar style="auto" />
+            <WalletLoginBridge
+              autoLogin={true}
+              walletAddress={walletAddress as string}
+              connector={connector as any}
+              onLoginSuccess={({ user }) => {
+                console.log('✅ Auto-login successful for:', user.address);
+              }}
+              onLoginError={(error) => {
+                console.error('❌ Auto-login failed:', error);
+              }}
+            />
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="auth" options={{ headerShown: false }} />
+              <Stack.Screen name="settings" options={{ headerShown: false }} />
+              <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
+            </Stack>
           </StripeProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
