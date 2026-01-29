@@ -311,37 +311,39 @@ export class DynamicPrioritizationEngine {
     }
 
     return false;
-    /**
-     * Cache management methods
-     */
-    private generateCacheKey(context: PrioritizationContext): string {
-      if (!context) return 'no_context';
-      
-      const keyComponents = [
-        context.userContext?.chainId || 0,
-        context.transactionAmount || 0,
-        context.userContext?.userAddress || 'anonymous',
-        (context.availablePaymentMethods || []).map(m => m?.id || 'unknown').sort().join(',')
-      ];
-  
-      return keyComponents.join('|');
-    }
-  
-    private generateMarketConditionsHash(marketConditions: MarketConditions): string {
-      if (!marketConditions) return 'no_conditions';
-      
-      const hashComponents = [
-        marketConditions.lastUpdated?.getTime() || 0,
-        ...(marketConditions.gasConditions || []).map(gc =>
-          `${gc?.chainId || 0}:${gc?.gasPriceUSD || 0}:${gc?.networkCongestion || 'unknown'}`
-        ),
-        ...(marketConditions.exchangeRates || []).map(er =>
-          `${er?.fromToken || 'unknown'}:${er?.toToken || 'unknown'}:${er?.rate || 0}`
-        )
-      ];
-  
-      return hashComponents.join('|');
-    }
+  }
+
+  /**
+   * Cache management methods
+   */
+  private generateCacheKey(context: PrioritizationContext): string {
+    if (!context) return 'no_context';
+
+    const keyComponents = [
+      context.userContext?.chainId || 0,
+      context.transactionAmount || 0,
+      context.userContext?.userAddress || 'anonymous',
+      (context.availablePaymentMethods || []).map(m => m?.id || 'unknown').sort().join(',')
+    ];
+
+    return keyComponents.join('|');
+  }
+
+  private generateMarketConditionsHash(marketConditions: MarketConditions): string {
+    if (!marketConditions) return 'no_conditions';
+
+    const hashComponents = [
+      marketConditions.lastUpdated?.getTime() || 0,
+      ...(marketConditions.gasConditions || []).map(gc =>
+        `${gc?.chainId || 0}:${gc?.gasPriceUSD || 0}:${gc?.networkCongestion || 'unknown'}`
+      ),
+      ...(marketConditions.exchangeRates || []).map(er =>
+        `${er?.fromToken || 'unknown'}:${er?.toToken || 'unknown'}:${er?.rate || 0}`
+      )
+    ];
+
+    return hashComponents.join('|');
+  }
 
   private getCachedResult(
     cacheKey: string,
