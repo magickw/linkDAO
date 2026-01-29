@@ -2,14 +2,45 @@
  * PDF Generation Service
  * Handles PDF generation from HTML templates using Puppeteer with browser pooling
  * Supports receipts, invoices, and other document generation
+ *
+ * IMPORTANT: puppeteer is an optional dependency and is lazy-loaded on-demand
+ * to reduce build time and memory usage during deployment.
  */
 
-import puppeteer, { Browser, Page } from 'puppeteer';
 import ejs from 'ejs';
 import path from 'path';
 import { safeLogger } from '../utils/safeLogger';
 import { S3StorageService } from './s3StorageService';
 import { randomUUID } from 'crypto';
+
+// Lazy-loaded imports
+let puppeteer: any = null;
+let Browser: any = null;
+let Page: any = null;
+
+async function ensurePuppeteer() {
+  if (puppeteer) {
+    return puppeteer;
+  }
+
+  try {
+    // Try to import puppeteer
+    puppeteer = await import('puppeteer');
+    safeLogger.info('[PDFService] Puppeteer loaded successfully');
+    return puppeteer;
+  } catch (error) {
+    safeLogger.error(
+      '[PDFService] Puppeteer not available. PDF generation will not work. ' +
+      'Install puppeteer with: npm install puppeteer',
+      error
+    );
+    throw new Error(
+      'PDF generation service is not available. Puppeteer is not installed. ' +
+      'Please install it or skip PDF generation features.'
+    );
+  }
+}
+
 
 export interface PDFGenerationOptions {
   format?: 'A4' | 'Letter';
@@ -31,8 +62,8 @@ export interface PDFGenerationResult {
 }
 
 export class PdfGenerationService {
-  private browser: Browser | null = null;
-  private pagePool: Page[] = [];
+  private browser: any = null;
+  private pagePool: any[] = [];
   private maxConcurrentPages: number = 5;
   private isInitialized: boolean = false;
   private s3StorageService: S3StorageService;
@@ -56,12 +87,15 @@ export class PdfGenerationService {
     try {
       safeLogger.info('[PDFService] Initializing PDF generation service...');
 
+      // Ensure puppeteer is available
+      const puppeteerModule = await ensurePuppeteer();
+
       const puppeteerTimeout = parseInt(process.env.PDF_GENERATION_TIMEOUT || '30000');
       const maxConcurrent = parseInt(process.env.PDF_MAX_CONCURRENT || '5');
 
       this.maxConcurrentPages = maxConcurrent;
 
-      this.browser = await puppeteer.launch({
+      this.browser = await puppeteerModule.default.launch({
         headless: true,
         args: [
           '--no-sandbox',
@@ -92,7 +126,7 @@ export class PdfGenerationService {
   /**
    * Get a page from the pool or create a new one
    */
-  private async getPage(): Promise<Page> {
+  private async getPage(): Promise<any> {
     if (!this.browser) {
       throw new Error('PDF generation service not initialized. Call initialize() first.');
     }
@@ -111,11 +145,11 @@ export class PdfGenerationService {
   /**
    * Return a page to the pool
    */
-  private releasePage(page: Page): void {
+  private releasePage(page: any): void {
     if (this.pagePool.length < this.maxConcurrentPages && !page.isClosed()) {
       this.pagePool.push(page);
     } else {
-      page.close().catch(err => safeLogger.warn('[PDFService] Error closing page:', err));
+      page.close().catch((err: any) => safeLogger.warn('[PDFService] Error closing page:', err));
     }
   }
 

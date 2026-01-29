@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: linkdao-backend
+    runtime: node
+    region: oregon
+    plan: pro
+    # Build configuration optimized for memory constraints
+    buildCommand: |
+      echo "Building LinkDAO Backend (Memory Optimized)"
+      cd app/backend && \
+      echo "Installing production dependencies only..." && \
+      npm ci --only=production && \
+      echo "Running TypeScript build..." && \
+      NODE_OPTIONS='--max-old-space-size=2048 --expose-gc --optimize-for-size' npm run build:swc
+    startCommand: npm start
+
+    # Environment configuration
+    env:
+      NODE_ENV: production
+      NODE_OPTIONS: '--max-old-space-size=3072 --expose-gc'
+      # Puppeteer is optional - will only be installed if PDF generation is explicitly needed
+      # This saves significant build time and memory during deployment
+      PUPPETEER_SKIP_DOWNLOAD: "true"
+
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: PORT
+        value: "10000"
+
