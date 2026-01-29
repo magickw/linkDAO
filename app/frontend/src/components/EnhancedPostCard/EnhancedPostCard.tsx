@@ -81,6 +81,8 @@ const areEqual = (prevProps: EnhancedPostCardProps, nextProps: EnhancedPostCardP
     prevProps.post.comments === nextProps.post.comments &&
     prevProps.post.reposts === nextProps.post.reposts &&
     prevProps.post.views === nextProps.post.views &&
+    prevProps.post.upvotes === nextProps.post.upvotes &&
+    prevProps.post.downvotes === nextProps.post.downvotes &&
     prevProps.showPreviews === nextProps.showPreviews &&
     prevProps.showSocialProof === nextProps.showSocialProof &&
     prevProps.showTrending === nextProps.showTrending
@@ -918,7 +920,7 @@ const EnhancedPostCard = React.memo(({
                     shareCount: repostCount,
                     authorProfile: post.authorProfile,
                     media: post.media,
-                    viewCount: post.views,
+                    views: post.views,
                     upvotes: upvoteCount,
                     downvotes: downvoteCount
                   }}

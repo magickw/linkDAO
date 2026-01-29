@@ -565,7 +565,7 @@ export class PostService {
         communitySlug,
         upvotes: dbPost.upvotes || 0,
         downvotes: dbPost.downvotes || 0,
-        viewCount: dbPost.viewCount || 0
+        views: dbPost.views || 0
       };
     } catch (error) {
       safeLogger.error('Error getting post by ID:', error);
@@ -608,7 +608,7 @@ export class PostService {
           onchainRef: '',
           upvotes: dbPost.upvotes || 0,
           downvotes: dbPost.downvotes || 0,
-          viewCount: dbPost.viewCount || 0,
+          views: dbPost.views || 0,
         };
       }
 
@@ -655,7 +655,7 @@ export class PostService {
         communitySlug,
         upvotes: dbPost.upvotes || 0,
         downvotes: dbPost.downvotes || 0,
-        viewCount: dbPost.viewCount || 0
+        views: dbPost.views || 0
       };
     } catch (error) {
       safeLogger.error('Error getting post by share ID:', error);
@@ -692,7 +692,7 @@ export class PostService {
         onchainRef: dbPost.onchainRef || '',
         upvotes: dbPost.upvotes || 0,
         downvotes: dbPost.downvotes || 0,
-        viewCount: dbPost.viewCount || 0
+        views: dbPost.views || 0
       };
     });
 
@@ -721,7 +721,7 @@ export class PostService {
           onchainRef: '',
           upvotes: dbPost.upvotes || 0,
           downvotes: dbPost.downvotes || 0,
-          viewCount: dbPost.viewCount || 0
+          views: dbPost.views || 0
         };
       }));
 
@@ -762,7 +762,7 @@ export class PostService {
           tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
           upvotes: dbPost.upvotes || 0,
           downvotes: dbPost.downvotes || 0,
-          viewCount: dbPost.viewCount || 0,
+          views: dbPost.views || 0,
           createdAt,
           updatedAt,
           onchainRef: dbPost.onchainRef || '',
@@ -937,7 +937,7 @@ export class PostService {
             onchainRef: dbPost.onchainRef || '',
             upvotes: dbPost.upvotes || 0,
             downvotes: dbPost.downvotes || 0,
-            viewCount: dbPost.viewCount || 0
+            views: dbPost.views || 0
           });
         } catch (postError) {
           safeLogger.error(`Error processing post ${dbPost.id}:`, postError);
@@ -1045,7 +1045,7 @@ export class PostService {
           location: dbPost.location || undefined,
           upvotes: dbPost.upvotes || 0,
           downvotes: dbPost.downvotes || 0,
-          viewCount: dbPost.viewCount || 0
+          views: dbPost.views || 0
         };
       }));
 
@@ -1077,7 +1077,7 @@ export class PostService {
           location: dbPost.location || undefined,
           upvotes: dbPost.upvotes || 0,
           downvotes: dbPost.downvotes || 0,
-          viewCount: dbPost.viewCount || 0
+          views: dbPost.views || 0
         };
       }));
 

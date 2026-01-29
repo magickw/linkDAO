@@ -10,7 +10,7 @@ interface SharedCart {
     cartSnapshot: any;
     expiresAt: Date;
     createdAt: Date;
-    viewCount: number;
+    views: number;
     lastViewedAt: Date | null;
 }
 
@@ -82,7 +82,7 @@ export class ShareCartService {
                     : row.cart_snapshot,
                 expiresAt: new Date(row.expires_at),
                 createdAt: new Date(row.created_at),
-                viewCount: row.view_count,
+                views: row.view_count,
                 lastViewedAt: row.last_viewed_at ? new Date(row.last_viewed_at) : null
             };
         } catch (error) {

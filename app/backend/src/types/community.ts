@@ -18,7 +18,7 @@ export interface Community {
   settings: CommunitySettings;
   
   // Performance tracking fields
-  viewCount?: number;
+  views?: number;
   engagementScore?: number;
   lastActiveAt?: Date;
   trendingScore?: number;

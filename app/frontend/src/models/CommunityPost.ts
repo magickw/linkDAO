@@ -15,7 +15,7 @@ export interface CommunityPost extends Omit<Post, 'parentId' | 'comments'> {
   sortOrder: number; // For custom sorting
 
   // Performance tracking fields
-  viewCount?: number;
+  views?: number;
   engagementScore: number;
   lastViewedAt?: Date;
   trendingScore?: number;

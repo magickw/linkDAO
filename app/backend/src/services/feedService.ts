@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { posts, statuses, reactions, statusReactions, tips, statusTips, users, postTags, statusTags, views, statusViews, bookmarks, statusBookmarks, shares, statusShares, follows, comments, communityMembers, communities } from '../db/schema';
+import { posts, statuses, reactions, statusReactions, tips, statusTips, users, postTags, statusTags, views, statusViews, bookmarks, statusBookmarks, shares, statusShares, follows, comments, communityMembers, communities, postVotes, statusVotes } from '../db/schema';
 import { eq, desc, and, or, inArray, sql, gt, isNull, isNotNull, asc } from 'drizzle-orm';
 import { trendingCacheService } from './trendingCacheService';
 import { getWebSocketService } from './webSocketService';
@@ -293,7 +293,7 @@ export class FeedService {
             // Engagement metrics
             upvotes: posts.upvotes,
             downvotes: posts.downvotes,
-            viewCount: posts.views,
+            views: posts.views,
             // Moderation fields
             moderationStatus: posts.moderationStatus,
             moderationWarning: posts.moderationWarning,
@@ -357,7 +357,7 @@ export class FeedService {
             // Engagement metrics
             upvotes: statuses.upvotes,
             downvotes: statuses.downvotes,
-            viewCount: statuses.views,
+            views: statuses.views,
             // Moderation fields
             moderationStatus: statuses.moderationStatus,
             moderationWarning: statuses.moderationWarning,
@@ -651,7 +651,7 @@ export class FeedService {
             createdAt: posts.createdAt,
             upvotes: posts.upvotes,
             downvotes: posts.downvotes,
-            viewCount: posts.views,
+            views: posts.views,
             shareId: posts.shareId, // Include shareId
             walletAddress: users.walletAddress,
             handle: users.handle,
@@ -677,7 +677,7 @@ export class FeedService {
             createdAt: statuses.createdAt,
             upvotes: statuses.upvotes,
             downvotes: statuses.downvotes,
-            viewCount: statuses.views,
+            views: statuses.views,
             shareId: statuses.shareId, // Include shareId
             walletAddress: users.walletAddress,
             handle: users.handle,
@@ -1527,7 +1527,7 @@ export class FeedService {
             stakedValue: posts.stakedValue,
             upvotes: posts.upvotes,
             downvotes: posts.downvotes,
-            viewCount: posts.views
+            views: posts.views
           })
           .from(posts)
           .where(eq(posts.id, postId))
@@ -1567,7 +1567,7 @@ export class FeedService {
             tags: statuses.tags,
             upvotes: statuses.upvotes,
             downvotes: statuses.downvotes,
-            viewCount: statuses.views
+            views: statuses.views
           })
           .from(statuses)
           .where(eq(statuses.id, postId))
@@ -2637,49 +2637,150 @@ export class FeedService {
     try {
       const { postId, userAddress } = data;
 
+      // Get user ID from wallet address
+      const user = await db.select({ id: users.id }).from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${userAddress})`).limit(1);
+      if (user.length === 0) {
+        throw new Error('User not found');
+      }
+      const userId = user[0].id;
+
       // Check if postId is an integer (regular post) or UUID (quick post)
       const isIntegerId = /^\d+$/.test(postId);
 
       if (isIntegerId) {
         // It's a regular post
         const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
-
         if (post.length === 0) {
           throw new Error('Post not found');
         }
 
-        // Get current post data and increment upvotes
-        const [updatedPost] = await db.update(posts)
-          .set({ upvotes: sql`${posts.upvotes} + 1` })
-          .where(eq(posts.id, postId))
-          .returning();
+        // Check if user already voted on this post
+        const existingVote = await db.select().from(postVotes)
+          .where(and(eq(postVotes.postId, parseInt(postId)), eq(postVotes.userId, userId)))
+          .limit(1);
 
-        return {
-          success: true,
-          message: 'Post upvoted successfully',
-          upvotes: updatedPost.upvotes,
-          downvotes: updatedPost.downvotes
-        };
+        if (existingVote.length > 0) {
+          // User already voted - check if they're upvoting again (remove vote) or changing from downvote
+          if (existingVote[0].voteType === 'upvote') {
+            // Remove the upvote
+            await db.delete(postVotes).where(and(eq(postVotes.postId, parseInt(postId)), eq(postVotes.userId, userId)));
+            // Update post counts
+            const [updatedPost] = await db.update(posts)
+              .set({ upvotes: sql`${posts.upvotes} - 1` })
+              .where(eq(posts.id, postId))
+              .returning();
+            return {
+              success: true,
+              message: 'Upvote removed',
+              upvotes: updatedPost.upvotes,
+              downvotes: updatedPost.downvotes
+            };
+          } else {
+            // Change from downvote to upvote
+            await db.update(postVotes)
+              .set({ voteType: 'upvote', updatedAt: new Date() })
+              .where(and(eq(postVotes.postId, parseInt(postId)), eq(postVotes.userId, userId)));
+            // Update post counts
+            const [updatedPost] = await db.update(posts)
+              .set({
+                upvotes: sql`${posts.upvotes} + 1`,
+                downvotes: sql`${posts.downvotes} - 1`
+              })
+              .where(eq(posts.id, postId))
+              .returning();
+            return {
+              success: true,
+              message: 'Changed from downvote to upvote',
+              upvotes: updatedPost.upvotes,
+              downvotes: updatedPost.downvotes
+            };
+          }
+        } else {
+          // New upvote
+          await db.insert(postVotes).values({
+            postId: parseInt(postId),
+            userId,
+            voteType: 'upvote'
+          });
+          // Update post counts
+          const [updatedPost] = await db.update(posts)
+            .set({ upvotes: sql`${posts.upvotes} + 1` })
+            .where(eq(posts.id, postId))
+            .returning();
+          return {
+            success: true,
+            message: 'Post upvoted successfully',
+            upvotes: updatedPost.upvotes,
+            downvotes: updatedPost.downvotes
+          };
+        }
       } else {
         // It's a status
         const status = await db.select().from(statuses).where(eq(statuses.id, postId)).limit(1);
-
         if (status.length === 0) {
-          throw new Error('Post not found');
+          throw new Error('Status not found');
         }
 
-        // Get current status data and increment upvotes
-        const [updatedStatus] = await db.update(statuses)
-          .set({ upvotes: sql`${statuses.upvotes} + 1` })
-          .where(eq(statuses.id, postId))
-          .returning();
+        // Check if user already voted on this status
+        const existingVote = await db.select().from(statusVotes)
+          .where(and(eq(statusVotes.statusId, postId), eq(statusVotes.userId, userId)))
+          .limit(1);
 
-        return {
-          success: true,
-          message: 'Status upvoted successfully',
-          upvotes: updatedStatus.upvotes,
-          downvotes: updatedStatus.downvotes
-        };
+        if (existingVote.length > 0) {
+          // User already voted - check if they're upvoting again (remove vote) or changing from downvote
+          if (existingVote[0].voteType === 'upvote') {
+            // Remove the upvote
+            await db.delete(statusVotes).where(and(eq(statusVotes.statusId, postId), eq(statusVotes.userId, userId)));
+            // Update status counts
+            const [updatedStatus] = await db.update(statuses)
+              .set({ upvotes: sql`${statuses.upvotes} - 1` })
+              .where(eq(statuses.id, postId))
+              .returning();
+            return {
+              success: true,
+              message: 'Upvote removed',
+              upvotes: updatedStatus.upvotes,
+              downvotes: updatedStatus.downvotes
+            };
+          } else {
+            // Change from downvote to upvote
+            await db.update(statusVotes)
+              .set({ voteType: 'upvote', updatedAt: new Date() })
+              .where(and(eq(statusVotes.statusId, postId), eq(statusVotes.userId, userId)));
+            // Update status counts
+            const [updatedStatus] = await db.update(statuses)
+              .set({
+                upvotes: sql`${statuses.upvotes} + 1`,
+                downvotes: sql`${statuses.downvotes} - 1`
+              })
+              .where(eq(statuses.id, postId))
+              .returning();
+            return {
+              success: true,
+              message: 'Changed from downvote to upvote',
+              upvotes: updatedStatus.upvotes,
+              downvotes: updatedStatus.downvotes
+            };
+          }
+        } else {
+          // New upvote
+          await db.insert(statusVotes).values({
+            statusId: postId,
+            userId,
+            voteType: 'upvote'
+          });
+          // Update status counts
+          const [updatedStatus] = await db.update(statuses)
+            .set({ upvotes: sql`${statuses.upvotes} + 1` })
+            .where(eq(statuses.id, postId))
+            .returning();
+          return {
+            success: true,
+            message: 'Status upvoted successfully',
+            upvotes: updatedStatus.upvotes,
+            downvotes: updatedStatus.downvotes
+          };
+        }
       }
     } catch (error) {
       safeLogger.error('Error upvoting post:', error);
@@ -2692,49 +2793,150 @@ export class FeedService {
     try {
       const { postId, userAddress } = data;
 
+      // Get user ID from wallet address
+      const user = await db.select({ id: users.id }).from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${userAddress})`).limit(1);
+      if (user.length === 0) {
+        throw new Error('User not found');
+      }
+      const userId = user[0].id;
+
       // Check if postId is an integer (regular post) or UUID (quick post)
       const isIntegerId = /^\d+$/.test(postId);
 
       if (isIntegerId) {
         // It's a regular post
         const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
-
         if (post.length === 0) {
           throw new Error('Post not found');
         }
 
-        // Get current post data and increment downvotes
-        const [updatedPost] = await db.update(posts)
-          .set({ downvotes: sql`${posts.downvotes} + 1` })
-          .where(eq(posts.id, postId))
-          .returning();
+        // Check if user already voted on this post
+        const existingVote = await db.select().from(postVotes)
+          .where(and(eq(postVotes.postId, parseInt(postId)), eq(postVotes.userId, userId)))
+          .limit(1);
 
-        return {
-          success: true,
-          message: 'Post downvoted successfully',
-          upvotes: updatedPost.upvotes,
-          downvotes: updatedPost.downvotes
-        };
+        if (existingVote.length > 0) {
+          // User already voted - check if they're downvoting again (remove vote) or changing from upvote
+          if (existingVote[0].voteType === 'downvote') {
+            // Remove the downvote
+            await db.delete(postVotes).where(and(eq(postVotes.postId, parseInt(postId)), eq(postVotes.userId, userId)));
+            // Update post counts
+            const [updatedPost] = await db.update(posts)
+              .set({ downvotes: sql`${posts.downvotes} - 1` })
+              .where(eq(posts.id, postId))
+              .returning();
+            return {
+              success: true,
+              message: 'Downvote removed',
+              upvotes: updatedPost.upvotes,
+              downvotes: updatedPost.downvotes
+            };
+          } else {
+            // Change from upvote to downvote
+            await db.update(postVotes)
+              .set({ voteType: 'downvote', updatedAt: new Date() })
+              .where(and(eq(postVotes.postId, parseInt(postId)), eq(postVotes.userId, userId)));
+            // Update post counts
+            const [updatedPost] = await db.update(posts)
+              .set({
+                upvotes: sql`${posts.upvotes} - 1`,
+                downvotes: sql`${posts.downvotes} + 1`
+              })
+              .where(eq(posts.id, postId))
+              .returning();
+            return {
+              success: true,
+              message: 'Changed from upvote to downvote',
+              upvotes: updatedPost.upvotes,
+              downvotes: updatedPost.downvotes
+            };
+          }
+        } else {
+          // New downvote
+          await db.insert(postVotes).values({
+            postId: parseInt(postId),
+            userId,
+            voteType: 'downvote'
+          });
+          // Update post counts
+          const [updatedPost] = await db.update(posts)
+            .set({ downvotes: sql`${posts.downvotes} + 1` })
+            .where(eq(posts.id, postId))
+            .returning();
+          return {
+            success: true,
+            message: 'Post downvoted successfully',
+            upvotes: updatedPost.upvotes,
+            downvotes: updatedPost.downvotes
+          };
+        }
       } else {
         // It's a status
         const status = await db.select().from(statuses).where(eq(statuses.id, postId)).limit(1);
-
         if (status.length === 0) {
-          throw new Error('Post not found');
+          throw new Error('Status not found');
         }
 
-        // Get current status data and increment downvotes
-        const [updatedStatus] = await db.update(statuses)
-          .set({ downvotes: sql`${statuses.downvotes} + 1` })
-          .where(eq(statuses.id, postId))
-          .returning();
+        // Check if user already voted on this status
+        const existingVote = await db.select().from(statusVotes)
+          .where(and(eq(statusVotes.statusId, postId), eq(statusVotes.userId, userId)))
+          .limit(1);
 
-        return {
-          success: true,
-          message: 'Status downvoted successfully',
-          upvotes: updatedStatus.upvotes,
-          downvotes: updatedStatus.downvotes
-        };
+        if (existingVote.length > 0) {
+          // User already voted - check if they're downvoting again (remove vote) or changing from upvote
+          if (existingVote[0].voteType === 'downvote') {
+            // Remove the downvote
+            await db.delete(statusVotes).where(and(eq(statusVotes.statusId, postId), eq(statusVotes.userId, userId)));
+            // Update status counts
+            const [updatedStatus] = await db.update(statuses)
+              .set({ downvotes: sql`${statuses.downvotes} - 1` })
+              .where(eq(statuses.id, postId))
+              .returning();
+            return {
+              success: true,
+              message: 'Downvote removed',
+              upvotes: updatedStatus.upvotes,
+              downvotes: updatedStatus.downvotes
+            };
+          } else {
+            // Change from upvote to downvote
+            await db.update(statusVotes)
+              .set({ voteType: 'downvote', updatedAt: new Date() })
+              .where(and(eq(statusVotes.statusId, postId), eq(statusVotes.userId, userId)));
+            // Update status counts
+            const [updatedStatus] = await db.update(statuses)
+              .set({
+                upvotes: sql`${statuses.upvotes} - 1`,
+                downvotes: sql`${statuses.downvotes} + 1`
+              })
+              .where(eq(statuses.id, postId))
+              .returning();
+            return {
+              success: true,
+              message: 'Changed from upvote to downvote',
+              upvotes: updatedStatus.upvotes,
+              downvotes: updatedStatus.downvotes
+            };
+          }
+        } else {
+          // New downvote
+          await db.insert(statusVotes).values({
+            statusId: postId,
+            userId,
+            voteType: 'downvote'
+          });
+          // Update status counts
+          const [updatedStatus] = await db.update(statuses)
+            .set({ downvotes: sql`${statuses.downvotes} + 1` })
+            .where(eq(statuses.id, postId))
+            .returning();
+          return {
+            success: true,
+            message: 'Status downvoted successfully',
+            upvotes: updatedStatus.upvotes,
+            downvotes: updatedStatus.downvotes
+          };
+        }
       }
     } catch (error) {
       safeLogger.error('Error downvoting post:', error);

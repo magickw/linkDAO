@@ -3,19 +3,21 @@
  * User authentication with wallet signature
  */
 
-import { useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '../../src/store';
 import { authService } from '@linkdao/shared';
+import { walletService } from '../../src/services/walletConnectService';
 
 export default function LoginScreen() {
   const [walletAddress, setWalletAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [connector, setConnector] = useState<any>(null);
+  const hasAttemptedRef = useRef<string | null>(null);
 
   const { walletAddress: paramWalletAddress, connector: paramConnector } = useLocalSearchParams();
 
@@ -27,17 +29,28 @@ export default function LoginScreen() {
 
   // Handle wallet connection from wallet-connect screen
   useEffect(() => {
-    if (paramWalletAddress) {
-      setWalletAddress(paramWalletAddress as string);
-      setIsConnected(true);
-      setConnector(paramConnector as string);
-      // Signature will be generated during authentication
-    }
+    const handleParams = async () => {
+      if (paramWalletAddress) {
+        const address = paramWalletAddress as string;
+        const connectorType = (paramConnector as string) || 'walletconnect';
+        
+        setWalletAddress(address);
+        setIsConnected(true);
+        setConnector(connectorType);
+        
+        // CRITICAL: Set and AWAIT the connection state in the wallet service
+        // so it can be used for signing messages
+        await walletService.setConnectionState(connectorType as any, address, 1);
+      }
+    };
+    
+    handleParams();
   }, [paramWalletAddress, paramConnector]);
 
   // Auto-authenticate if wallet is connected but user is not authenticated
   useEffect(() => {
-    if (isConnected && walletAddress && !isAuthenticated && !loading) {
+    if (isConnected && walletAddress && !isAuthenticated && !loading && hasAttemptedRef.current !== walletAddress) {
+      hasAttemptedRef.current = walletAddress;
       handleAutoLogin();
     }
   }, [isConnected, walletAddress, isAuthenticated, loading]);
@@ -47,6 +60,9 @@ export default function LoginScreen() {
     setLoadingStore(true);
 
     try {
+      // Ensure wallet service is initialized and state is restored
+      await walletService.initialized;
+
       const response = await authService.authenticateWallet(
         walletAddress,
         connector,

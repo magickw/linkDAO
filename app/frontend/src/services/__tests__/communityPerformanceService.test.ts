@@ -72,7 +72,7 @@ jest.mock('../communityPostService', () => ({
         depth: 0,
         sortOrder: 0,
         type: 'text',
-        viewCount: 50
+        views: 50
       },
       {
         id: 'post-2',
@@ -89,7 +89,7 @@ jest.mock('../communityPostService', () => ({
         depth: 0,
         sortOrder: 0,
         type: 'text',
-        viewCount: 75
+        views: 75
       }
     ])
   }

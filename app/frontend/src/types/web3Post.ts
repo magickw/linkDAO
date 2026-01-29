@@ -23,7 +23,7 @@ export interface PostWithWeb3Data {
   
   // Engagement metrics
   engagementScore: number;
-  viewCount: number;
+  views: number;
   commentCount: number;
   
   // Web3 specific data

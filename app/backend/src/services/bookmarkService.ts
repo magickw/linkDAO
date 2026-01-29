@@ -315,7 +315,7 @@ class BookmarkService {
             upvotes: statuses.upvotes,
             downvotes: statuses.downvotes,
             commentCount: sql<number>`0`,
-            viewCount: statuses.views
+            views: statuses.views
           }
         })
         .from(bookmarks)

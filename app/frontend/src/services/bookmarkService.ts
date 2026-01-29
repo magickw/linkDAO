@@ -21,7 +21,7 @@ export interface BookmarkedPost {
     upvotes?: number;
     downvotes?: number;
     commentCount?: number;
-    viewCount?: number;
+    views?: number;
   };
 }
 

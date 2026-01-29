@@ -15,7 +15,7 @@ export interface Post {
   // Voting and engagement fields
   upvotes?: number;
   downvotes?: number;
-  viewCount?: number;
+  views?: number;
   // Moderation fields
   moderationStatus?: 'active' | 'limited' | 'pending_review' | 'blocked';
   moderationWarning?: string | null;

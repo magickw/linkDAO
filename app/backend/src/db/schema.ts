@@ -308,6 +308,50 @@ export const statusReactions = pgTable("status_reactions", {
   })
 }));
 
+// Post Votes - track individual upvotes/downvotes on posts
+export const postVotes = pgTable("post_votes", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  voteType: varchar("vote_type", { length: 10 }).notNull(), // 'upvote' or 'downvote'
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  postIdIdx: index("idx_post_votes_post_id").on(t.postId),
+  userIdIdx: index("idx_post_votes_user_id").on(t.userId),
+  postUserUnique: unique("idx_post_votes_post_user").on(t.postId, t.userId),
+  postFk: foreignKey({
+    columns: [t.postId],
+    foreignColumns: [posts.id]
+  }),
+  userFk: foreignKey({
+    columns: [t.userId],
+    foreignColumns: [users.id]
+  })
+}));
+
+// Status Votes - track individual upvotes/downvotes on statuses
+export const statusVotes = pgTable("status_votes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  statusId: uuid("status_id").notNull().references(() => statuses.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  voteType: varchar("vote_type", { length: 10 }).notNull(), // 'upvote' or 'downvote'
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  statusIdIdx: index("idx_status_votes_status_id").on(t.statusId),
+  userIdIdx: index("idx_status_votes_user_id").on(t.userId),
+  statusUserUnique: unique("idx_status_votes_status_user").on(t.statusId, t.userId),
+  statusFk: foreignKey({
+    columns: [t.statusId],
+    foreignColumns: [statuses.id]
+  }),
+  userFk: foreignKey({
+    columns: [t.userId],
+    foreignColumns: [users.id]
+  })
+}));
+
 // Status Tips - direct token transfers to status authors
 export const statusTips = pgTable("status_tips", {
   id: serial("id").primaryKey(),

@@ -283,7 +283,7 @@ class CommunityPerformanceService {
     const reactionsPerPost = totalPosts > 0 ? totalReactions / totalPosts : 0;
     
     // Calculate view statistics (mock data for now)
-    const totalViews = recentPosts.reduce((sum, post) => sum + (post.viewCount || 0), 0);
+    const totalViews = recentPosts.reduce((sum, post) => sum + (post.views || 0), 0);
     const viewsPerPost = totalPosts > 0 ? totalViews / totalPosts : 0;
     
     // Calculate average post length

@@ -523,21 +523,21 @@ export default function Web3SocialPostCard({
   const engagementMetrics = useMemo(() => {
     const totalStaked = reactions.reduce((sum, r) => sum + r.totalStaked, 0);
     const totalReactions = reactions.reduce((sum, r) => sum + r.contributors.length, 0);
-    const viewCount = post.viewCount || 1; // Avoid division by zero
-    
+    const viewCount = post.views || 1; // Avoid division by zero
+
     // Weighted scoring system
     const stakeWeight = totalStaked * 2; // Stakes have high weight
     const reactionWeight = totalReactions * 3; // Reactions show engagement
     const commentWeight = commentCount * 5; // Comments are highly valuable
     const viewWeight = viewCount * 0.1; // Views provide baseline
-    
+
     const rawScore = stakeWeight + reactionWeight + commentWeight + viewWeight;
     const engagementScore = Math.min(Math.round(rawScore / 10), 100);
-    
+
     // Calculate engagement rate (interactions per view)
     const totalInteractions = totalReactions + commentCount + (totalStaked > 0 ? 1 : 0);
     const engagementRate = ((totalInteractions / viewCount) * 100).toFixed(1);
-    
+
     return {
       score: engagementScore,
       rate: parseFloat(engagementRate),
@@ -548,7 +548,7 @@ export default function Web3SocialPostCard({
       isHighEngagement: engagementScore > 70,
       isTrending: engagementScore > 80
     };
-  }, [reactions, commentCount, post.viewCount]);
+  }, [reactions, commentCount, post.views]);
 
   // Real-time engagement update effect
   const [lastUpdateTime, setLastUpdateTime] = useState(Date.now());

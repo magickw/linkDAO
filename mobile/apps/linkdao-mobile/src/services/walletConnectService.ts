@@ -9,6 +9,7 @@ import { Linking, Platform } from 'react-native';
 import { ethers } from 'ethers';
 // Import only types for the injected SDK state
 import type { SDKState } from '@metamask/sdk-react-native';
+import { setWalletAdapter, IWalletAdapter } from '@linkdao/shared';
 
 const STORAGE_KEY = 'wallet_connection';
 
@@ -21,23 +22,49 @@ interface WalletConnection {
   timestamp: number;
 }
 
-class WalletService {
+class WalletService implements IWalletAdapter {
   private _isConnected: boolean = false;
   private activeConnection: WalletConnection | null = null;
   private currentProvider: WalletProvider | null = null;
   // This will hold the injected SDK state from the React Provider
   private metaMaskSDKState: SDKState | null = null;
+  public initialized: Promise<void>;
+  private resolveInitialized!: () => void;
+
+  constructor() {
+    this.initialized = new Promise((resolve) => {
+      this.resolveInitialized = resolve;
+    });
+    this.initialize();
+  }
 
   /**
    * Initialize wallet service
    */
   async initialize() {
     try {
-      console.log('✅ Wallet service initialized');
       await this.restoreConnection();
+      setWalletAdapter(this); // Register as the shared wallet adapter
+      console.log('✅ Wallet service initialized and registered as shared adapter');
     } catch (error) {
       console.error('❌ Failed to initialize wallet service:', error);
+    } finally {
+      this.resolveInitialized();
     }
+  }
+
+  /**
+   * Get connected wallet addresses (IWalletAdapter interface)
+   */
+  getAccounts(): string[] {
+    return this.activeConnection?.address ? [this.activeConnection.address] : [];
+  }
+
+  /**
+   * Check if wallet is connected (IWalletAdapter interface)
+   */
+  isConnected(): boolean {
+    return this._isConnected;
   }
 
   /**
@@ -274,6 +301,7 @@ class WalletService {
    */
   async signMessage(message: string, address: string): Promise<string> {
     try {
+      await this.initialized;
       console.log('🔐 Signing message with address:', address);
       console.log('📊 Current service state:', {
         _isConnected: this._isConnected,
@@ -288,12 +316,27 @@ class WalletService {
       }
 
       // Check if we have a matching connection after potential restore
-      if (!this._isConnected || !this.activeConnection || this.activeConnection.address.toLowerCase() !== address.toLowerCase()) {
-        // If we have a current provider but no connection, allow signing anyway
-        if (this.currentProvider === 'metamask' && this.metaMaskSDKState?.provider) {
+      const isMetamaskAvailable = this.currentProvider === 'metamask' && this.metaMaskSDKState?.provider;
+      const isWalletConnectAvailable = this.currentProvider === 'walletconnect'; // We'll check actual service below
+      const isDevMock = this.currentProvider === 'dev-mock';
+
+      const hasMatchingConnection = this._isConnected && this.activeConnection && 
+                                   this.activeConnection.address.toLowerCase() === address.toLowerCase();
+
+      if (!hasMatchingConnection) {
+        if (isMetamaskAvailable) {
           console.log('⚠️ Connection state missing but MetaMask provider available, proceeding...');
-        } else if (this.currentProvider === 'walletconnect') {
-          console.log('⚠️ Connection state missing but WalletConnect provider available, proceeding...');
+        } else if (isWalletConnectAvailable) {
+          // Additional check for WC V2
+          const { walletConnectV2Service } = await import('./walletConnectV2Service');
+          if (walletConnectV2Service.isConnected()) {
+             console.log('⚠️ Connection state missing but WalletConnect V2 connected, proceeding...');
+          } else {
+             console.error('❌ WalletConnect V2 service not connected');
+             throw new Error('WalletConnect not connected');
+          }
+        } else if (isDevMock) {
+          console.log('🧪 Using dev-mock provider, proceeding...');
         } else {
           console.error('❌ Wallet connection state:', {
             _isConnected: this._isConnected,
@@ -353,6 +396,7 @@ class WalletService {
    */
   async sendTransaction(tx: ethers.TransactionRequest): Promise<string> {
     try {
+      await this.initialized;
       if (!this._isConnected) {
         throw new Error('Wallet not connected');
       }
@@ -384,11 +428,13 @@ class WalletService {
    * Switch network/chain
    */
   async switchChain(chainId: number): Promise<void> {
-    if (!this._isConnected) {
-      throw new Error('Wallet not connected');
-    }
+    try {
+      await this.initialized;
+      if (!this._isConnected) {
+        throw new Error('Wallet not connected');
+      }
 
-    console.log('🔄 Switching to chain:', chainId);
+      console.log('🔄 Switching to chain:', chainId);
     if (this.activeConnection) {
       this.activeConnection.chainId = chainId;
       await this.saveConnection(this.activeConnection);
@@ -408,6 +454,10 @@ class WalletService {
     }
 
     console.log('✅ Chain switched');
+    } catch (error) {
+      console.error('❌ Failed to switch chain:', error);
+      throw error;
+    }
   }
 
   /**

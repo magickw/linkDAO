@@ -101,7 +101,6 @@ export interface EnhancedPost {
   tipCount?: number;
   totalTipAmount?: number;
   commentCount?: number;
-  viewCount?: number;
 
   // Flag to distinguish statuses from regular posts
   isStatus?: boolean;
