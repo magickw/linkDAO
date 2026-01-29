@@ -76,8 +76,8 @@ export class BuyerProfileService {
             .values({
                 userId,
                 totalOrders: 0,
-                totalSpent: 0,
-                averageOrderValue: 0,
+                totalSpent: '0',
+                averageOrderValue: '0',
                 savedAddressesCount: 0,
                 savedPaymentMethodsCount: 0,
                 wishlistItemsCount: 0,
@@ -89,7 +89,7 @@ export class BuyerProfileService {
                 priceDropAlerts: true,
                 orderUpdates: true,
                 profileVisibility: 'private',
-            })
+            } as any)
             .returning();
 
         return newProfile as BuyerProfile;

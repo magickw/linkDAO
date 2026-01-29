@@ -1000,15 +1000,15 @@ export class EnhancedEscrowService {
    */
   async releaseFundsAfterReturnWindow(escrowId: string, chainId: number): Promise<any> {
     try {
-      const contract = this.getContractForChain(chainId);
-      if (!contract) {
+      const contracts = this.getContractsForChain(chainId);
+      if (!contracts || !contracts.escrow) {
         throw new Error(`No contract found for chain ${chainId}`);
       }
 
       safeLogger.info(`Releasing funds after return window for escrow ${escrowId}`);
 
       // Call the smart contract's releaseFundsAfterReturnWindow function
-      const tx = await contract.releaseFundsAfterReturnWindow(escrowId);
+      const tx = await contracts.escrow.releaseFundsAfterReturnWindow(escrowId);
       await tx.wait();
 
       safeLogger.info(`Funds released successfully for escrow ${escrowId}, tx: ${tx.hash}`);

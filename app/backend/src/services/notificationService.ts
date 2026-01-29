@@ -305,12 +305,16 @@ export class NotificationService {
     }
   }
 
-  async sendReceiptEmail(data: any): Promise<void> {
+  async sendReceiptEmail(emailOrData: any, orderId?: string, receipt?: any): Promise<void> {
     try {
-      safeLogger.info(`Receipt email queued for ${data.email}`, {
-        orderId: data.orderId,
-        amount: data.amount
-      });
+      if (orderId === undefined) {
+        safeLogger.info(`Receipt email queued:`, emailOrData);
+      } else {
+        safeLogger.info(`Receipt email queued for ${emailOrData}:`, {
+          orderId,
+          receipt
+        });
+      }
     } catch (error) {
       safeLogger.error('Error sending receipt email:', error);
     }

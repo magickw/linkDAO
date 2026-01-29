@@ -177,49 +177,53 @@ export class HighValueTransactionService {
   /**
    * Get seller's verification status and limits
    */
-  async getSellerVerificationStatus(sellerId: string): Promise<SellerVerificationStatus> {
-          try {
-            // Get seller from database with marketplace verification info
-            const [sellerData] = await db
-                        .select({
-                          id: users.id,
-                          walletAddress: users.walletAddress,
-                          kycVerified: marketplaceUsers.kycVerified,
-                          kycVerificationDate: marketplaceUsers.kycVerificationDate,
-                          kycExpiresAt: marketplaceUsers.kycVerificationDate // Fallback or add column if exists
-                        })              .from(users)
-              .leftJoin(marketplaceUsers, eq(users.id, marketplaceUsers.userId))
-              .where(eq(users.id, sellerId))
-              .limit(1);
-    
-            if (!sellerData) {
-              return this.getDefaultVerificationStatus(sellerId);
-            }
-    
-            // Parse seller verification data
-            const verificationLevel = sellerData.kycVerified
-              ? this.determineVerificationLevel(sellerData as any)
-              : 'none';
-    
-            const kycStatus = sellerData.kycVerified ? 'approved' : 'not_started';
-    
-            // Calculate current usage
-            const currentUsage = await this.calculateCurrentUsage(sellerId);
+  async getSellerVerificationStatus(sellerId: string, amount: number = 0): Promise<SellerVerificationStatus> {
+    try {
+      // Get seller from database with marketplace verification info
+      const [sellerData] = await db
+        .select({
+          id: users.id,
+          walletAddress: users.walletAddress,
+          kycVerified: marketplaceUsers.kycVerified,
+          kycVerificationDate: marketplaceUsers.kycVerificationDate,
+          kycExpiresAt: marketplaceUsers.kycVerificationDate // Fallback or add column if exists
+        })
+        .from(users)
+        .leftJoin(marketplaceUsers, eq(users.id, marketplaceUsers.userId))
+        .where(eq(users.id, sellerId))
+        .limit(1);
 
-            // Get limits based on verification level
-            const transactionLimits = this.getLimitsForVerificationLevel(verificationLevel);
+      if (!sellerData) {
+        return this.getDefaultVerificationStatus(sellerId);
+      }
 
-            return {
-              sellerId,
-              isVerified: sellerData.kycVerified || false,
-              verificationLevel,
-                        kycStatus: kycStatus as any,
-                        kycExpiresAt: sellerData.kycExpiresAt || undefined,
-                        transactionLimits,
-                        currentUsage,
-                        canProcessTransaction: currentUsage.amount < transactionLimits.maxSingleTransaction
-            };
-        } catch (error) {
+      // Parse seller verification data
+      const verificationLevel = sellerData.kycVerified
+        ? this.determineVerificationLevel(sellerData as any)
+        : 'none';
+
+      const kycStatus = sellerData.kycVerified ? 'approved' : 'not_started';
+
+      // Calculate current usage
+      const currentUsage = await this.calculateCurrentUsage(sellerId);
+
+      // Get limits based on verification level
+      const transactionLimits = this.getLimitsForVerificationLevel(verificationLevel);
+
+      return {
+        sellerId,
+        isVerified: sellerData.kycVerified || false,
+        verificationLevel,
+        kycStatus: kycStatus as any,
+        kycExpiresAt: sellerData.kycExpiresAt || undefined,
+        transactionLimits,
+        currentUsage,
+        canProcessTransaction: amount > 0 
+          ? (amount <= transactionLimits.singleTransactionLimit && 
+             currentUsage.daily + amount <= transactionLimits.dailyLimit)
+          : true
+      };
+    } catch (error) {
       safeLogger.error('Error getting seller verification status:', error);
       return this.getDefaultVerificationStatus(sellerId);
     }

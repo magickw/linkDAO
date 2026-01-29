@@ -35,7 +35,7 @@ interface CacheStats {
 }
 
 export class CacheService {
-  private redis: Redis | null = null; // Make redis nullable
+  private redis: any = null; // Make redis nullable and use any to support different client versions
   private isConnected: boolean = false;
   private useRedis: boolean = true; // Flag to enable/disable Redis functionality
   private config: CacheConfig;

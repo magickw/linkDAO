@@ -290,6 +290,10 @@ export class FeedService {
             displayName: users.displayName,
             profileCid: users.profileCid,
             avatarCid: users.avatarCid,
+            // Engagement metrics
+            upvotes: posts.upvotes,
+            downvotes: posts.downvotes,
+            viewCount: posts.views,
             // Moderation fields
             moderationStatus: posts.moderationStatus,
             moderationWarning: posts.moderationWarning,
@@ -350,6 +354,10 @@ export class FeedService {
             displayName: users.displayName,
             profileCid: users.profileCid,
             avatarCid: users.avatarCid,
+            // Engagement metrics
+            upvotes: statuses.upvotes,
+            downvotes: statuses.downvotes,
+            viewCount: statuses.views,
             // Moderation fields
             moderationStatus: statuses.moderationStatus,
             moderationWarning: statuses.moderationWarning,
@@ -643,7 +651,7 @@ export class FeedService {
             createdAt: posts.createdAt,
             upvotes: posts.upvotes,
             downvotes: posts.downvotes,
-
+            viewCount: posts.views,
             shareId: posts.shareId, // Include shareId
             walletAddress: users.walletAddress,
             handle: users.handle,
@@ -669,7 +677,7 @@ export class FeedService {
             createdAt: statuses.createdAt,
             upvotes: statuses.upvotes,
             downvotes: statuses.downvotes,
-
+            viewCount: statuses.views,
             shareId: statuses.shareId, // Include shareId
             walletAddress: users.walletAddress,
             handle: users.handle,
@@ -1516,7 +1524,10 @@ export class FeedService {
             dao: posts.dao,
             mediaUrls: posts.mediaUrls,
             tags: posts.tags,
-            stakedValue: posts.stakedValue
+            stakedValue: posts.stakedValue,
+            upvotes: posts.upvotes,
+            downvotes: posts.downvotes,
+            viewCount: posts.views
           })
           .from(posts)
           .where(eq(posts.id, postId))
@@ -1553,7 +1564,10 @@ export class FeedService {
             createdAt: statuses.createdAt,
             updatedAt: statuses.updatedAt,
             mediaCids: statuses.mediaCids,
-            tags: statuses.tags
+            tags: statuses.tags,
+            upvotes: statuses.upvotes,
+            downvotes: statuses.downvotes,
+            viewCount: statuses.views
           })
           .from(statuses)
           .where(eq(statuses.id, postId))

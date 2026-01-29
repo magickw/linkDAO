@@ -90,8 +90,8 @@ export interface DocumentAnalysisResult {
 
 export class AIEvidenceAnalysisService {
   private openai: OpenAI;
-  private imageModel: tf.LayersModel | null = null;
-  private textModel: tf.LayersModel | null = null;
+  private imageModel: any = null;
+  private textModel: any = null;
 
   constructor() {
     this.openai = new OpenAI({
@@ -952,12 +952,16 @@ export class AIEvidenceAnalysisService {
     }
   }
 
-  private async createMockImageModel(): Promise<tf.LayersModel> {
+  private async createMockImageModel(): Promise<any> {
     // Create a simple mock model for demonstration
+    // @ts-ignore
     const model = tf.sequential({
       layers: [
+        // @ts-ignore
         tf.layers.dense({ inputShape: [224 * 224 * 3], units: 128, activation: 'relu' }),
+        // @ts-ignore
         tf.layers.dense({ units: 64, activation: 'relu' }),
+        // @ts-ignore
         tf.layers.dense({ units: 1, activation: 'sigmoid' })
       ]
     });
@@ -965,12 +969,16 @@ export class AIEvidenceAnalysisService {
     return model;
   }
 
-  private async createMockTextModel(): Promise<tf.LayersModel> {
+  private async createMockTextModel(): Promise<any> {
     // Create a simple mock model for demonstration
+    // @ts-ignore
     const model = tf.sequential({
       layers: [
+        // @ts-ignore
         tf.layers.dense({ inputShape: [100], units: 64, activation: 'relu' }),
+        // @ts-ignore
         tf.layers.dense({ units: 32, activation: 'relu' }),
+        // @ts-ignore
         tf.layers.dense({ units: 1, activation: 'sigmoid' })
       ]
     });
