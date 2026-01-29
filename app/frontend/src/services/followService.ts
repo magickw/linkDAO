@@ -22,6 +22,7 @@ export class FollowService {
     const response = await fetch(`${BACKEND_API_BASE_URL}/api/follow/follow`, {
       method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         ...csrfHeaders,
         ...authHeaders,
       },
@@ -49,6 +50,7 @@ export class FollowService {
     const response = await fetch(`${BACKEND_API_BASE_URL}/api/follow/unfollow`, {
       method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         ...csrfHeaders,
         ...authHeaders,
       },

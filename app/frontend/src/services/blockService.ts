@@ -17,6 +17,7 @@ export class BlockService {
     const response = await fetch(`${API_BASE_URL}/api/block/block`, {
       method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         ...csrfHeaders,
         ...authHeaders,
       },
@@ -44,6 +45,7 @@ export class BlockService {
     const response = await fetch(`${API_BASE_URL}/api/block/unblock`, {
       method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         ...csrfHeaders,
         ...authHeaders,
       },
