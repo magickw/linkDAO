@@ -37,6 +37,12 @@ export class FollowService {
         });
       }
 
+      // Validate user IDs
+      if (!followerUser?.id || !followingUser?.id) {
+        console.warn('[FollowService] User IDs are invalid', { followerId: followerUser?.id, followingId: followingUser?.id });
+        return false;
+      }
+
       // Check if already following
       const isAlreadyFollowing = await this.isFollowing(followerAddress, followingAddress);
       if (isAlreadyFollowing) {
@@ -47,8 +53,12 @@ export class FollowService {
       await databaseService.followUser(followerUser.id, followingUser.id);
 
       return true;
-    } catch (error) {
-      console.error('Error in follow:', error);
+    } catch (error: any) {
+      console.error('[FollowService] Error in follow:', {
+        message: error?.message || 'Unknown error',
+        code: error?.code,
+        errorString: String(error)
+      });
       // Return false instead of throwing to prevent crashes
       return false;
     }
@@ -57,12 +67,12 @@ export class FollowService {
   async unfollow(followerAddress: string, followingAddress: string): Promise<boolean> {
     try {
       console.log(`[FollowService] Unfollow attempt: ${followerAddress} -> ${followingAddress}`);
-      
+
       // Get user IDs from addresses
       console.log('[FollowService] Fetching follower profile...');
       const followerUser = await userProfileService.getProfileByAddress(followerAddress);
       console.log('[FollowService] Follower profile found:', !!followerUser);
-      
+
       console.log('[FollowService] Fetching following profile...');
       const followingUser = await userProfileService.getProfileByAddress(followingAddress);
       console.log('[FollowService] Following profile found:', !!followingUser);
@@ -72,14 +82,23 @@ export class FollowService {
         return false; // One or both users don't exist
       }
 
+      if (!followerUser.id || !followingUser.id) {
+        console.warn('[FollowService] User IDs are invalid', { followerId: followerUser.id, followingId: followingUser.id });
+        return false; // Invalid user IDs
+      }
+
       // Remove follow relationship from database
       console.log(`[FollowService] Removing follow record: ${followerUser.id} -> ${followingUser.id}`);
-      await databaseService.unfollowUser(followerUser.id, followingUser.id);
-      console.log('[FollowService] databaseService.unfollowUser completed');
+      const result = await databaseService.unfollowUser(followerUser.id, followingUser.id);
+      console.log('[FollowService] databaseService.unfollowUser completed with result:', result);
 
-      return true;
-    } catch (error) {
-      console.error('[FollowService] Error in unfollow:', error);
+      return result;
+    } catch (error: any) {
+      console.error('[FollowService] Error in unfollow:', {
+        message: error?.message || 'Unknown error',
+        code: error?.code,
+        errorString: String(error)
+      });
       // Return false instead of throwing to prevent crashes
       return false;
     }
