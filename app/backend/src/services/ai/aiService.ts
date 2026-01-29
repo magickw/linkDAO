@@ -1,10 +1,10 @@
 import OpenAI from 'openai';
 import { safeLogger } from '../../utils/safeLogger';
 import { DatabaseService } from '../databaseService';
-// import { BlockchainMarketplaceService } from './marketplaceService';
+import { marketplaceService } from '../marketplaceService';
 
 const databaseService = new DatabaseService();
-// const marketplaceService = new BlockchainMarketplaceService();
+// marketplaceService is now imported as a singleton
 
 export interface AIBotConfig {
   name: string;
