@@ -278,12 +278,17 @@ export class PostController {
   }
 
   async repostPost(req: Request, res: Response): Promise<Response> {
+    const repostStartTime = Date.now();
+    console.log('🚀 [REPOST] === START repostPost method ===');
+
     try {
-      console.log('POST /api/posts/repost - Creating repost - v2 fix (UUID resolution)');
+      console.log('📋 [REPOST] POST /api/posts/repost - Creating repost - v3 fix (enhanced logging)');
 
       const { originalPostId, message, author, media } = req.body;
+      console.log('📥 [REPOST] Request body received:', { originalPostId, author, hasMessage: !!message });
 
       if (!originalPostId) {
+        console.log('⚠️ [REPOST] Missing originalPostId');
         return res.status(400).json({
           success: false,
           error: 'Original post ID is required'
@@ -291,6 +296,7 @@ export class PostController {
       }
 
       if (!author) {
+        console.log('⚠️ [REPOST] Missing author');
         return res.status(400).json({
           success: false,
           error: 'Author is required'
@@ -306,15 +312,20 @@ export class PostController {
           error: 'Invalid post ID format. Must be a valid UUID.'
         });
       }
+      console.log('✅ [REPOST] UUID validation passed');
 
       // Resolve author to User UUID
       let user;
+      console.log('👤 [REPOST] Resolving user profile for author:', author);
+      const userResolveStart = Date.now();
       try {
         user = await this.userProfileService.getProfileByAddress(author);
+        console.log(`⏱️ [REPOST] getProfileByAddress took ${Date.now() - userResolveStart}ms`);
         if (!user) {
           console.log('🔄 [REPOST] Creating new user profile for author:', author);
           // Create user if they don't exist
           const uniqueHandle = `user_${author.substring(0, 8)}_${Date.now()}`;
+          const createUserStart = Date.now();
           user = await this.userProfileService.createProfile({
             walletAddress: author,
             handle: uniqueHandle,
@@ -322,28 +333,44 @@ export class PostController {
             avatarCid: '',
             bioCid: ''
           });
+          console.log(`⏱️ [REPOST] createProfile took ${Date.now() - createUserStart}ms`);
         }
       } catch (userError: any) {
         console.error('❌ [REPOST] Error resolving user profile:', userError);
+        console.error('❌ [REPOST] User error details:', {
+          message: userError?.message,
+          code: userError?.code,
+          stack: userError?.stack?.substring(0, 500)
+        });
         return res.status(500).json({
           success: false,
-          error: `Failed to resolve user profile: ${userError.message}`
+          error: `Failed to resolve user profile: ${userError?.message || JSON.stringify(userError)}`
         });
       }
+      console.log('✅ [REPOST] User resolved:', { userId: user?.id, handle: user?.handle });
 
       // Log initial request
       console.log('📝 [REPOST] Request validated:', { originalPostId, author, userId: user.id });
 
       // Check if original post is a Status
+      console.log('🔍 [REPOST] Checking if post exists in statuses table...');
       let originalStatus;
+      const statusCheckStart = Date.now();
       try {
         originalStatus = await this.statusService.getStatus(originalPostId);
+        console.log(`⏱️ [REPOST] getStatus took ${Date.now() - statusCheckStart}ms, found:`, !!originalStatus);
       } catch (statusError: any) {
         console.error('❌ [REPOST] Error checking status table:', statusError);
+        console.error('❌ [REPOST] Status error details:', {
+          message: statusError?.message,
+          code: statusError?.code,
+          detail: statusError?.detail,
+          stack: statusError?.stack?.substring(0, 500)
+        });
         // If it fails here, it might be because originalPostId is not a valid UUID in the DB's eyes
         return res.status(500).json({
           success: false,
-          error: `Database error checking status: ${statusError.message}`
+          error: `Database error checking status: ${statusError?.message || JSON.stringify(statusError)}`
         });
       }
 
@@ -353,8 +380,11 @@ export class PostController {
         console.log('🔄 [REPOST] Target is already a repost. Flattening chain to point to original:', originalStatus.parentId);
         targetPostId = originalStatus.parentId;
       }
+      console.log('🎯 [REPOST] Target post ID determined:', targetPostId);
 
       // DUPLICATE CHECK: Check if user has already reposted this specific content
+      console.log('🔍 [REPOST] Checking for existing repost by user:', { userId: user.id, targetPostId });
+      const duplicateCheckStart = Date.now();
       try {
         const existingRepost = await this.database.select()
           .from(statuses) // We only care about statuses table for feed reposts
@@ -365,6 +395,8 @@ export class PostController {
           ))
           .limit(1);
 
+        console.log(`⏱️ [REPOST] Duplicate check took ${Date.now() - duplicateCheckStart}ms, results:`, existingRepost?.length || 0);
+
         if (existingRepost && existingRepost.length > 0) {
           console.log('⚠️ [REPOST] Duplicate prevented. User has already reposted:', targetPostId);
           return res.status(400).json({
@@ -374,10 +406,11 @@ export class PostController {
         }
       } catch (dbError: any) {
         console.error('❌ [REPOST] Error checking for existing repost:', dbError);
-        console.error('❌ [REPOST] Error details:', {
-          message: dbError.message,
-          code: dbError.code,
-          detail: dbError.detail
+        console.error('❌ [REPOST] DB Error details:', {
+          message: dbError?.message,
+          code: dbError?.code,
+          detail: dbError?.detail,
+          stack: dbError?.stack?.substring(0, 500)
         });
         // Continue anyway - if duplicate check fails, we can still create the repost
         // but log the warning for debugging
@@ -392,9 +425,14 @@ export class PostController {
           originalCommunityPost = await this.postService.getPostById(originalPostId);
         } catch (postError: any) {
           console.error('❌ [REPOST] Error checking posts table:', postError);
+          console.error('❌ [REPOST] Post error details:', {
+            message: postError?.message,
+            code: postError?.code,
+            stack: postError?.stack?.substring(0, 500)
+          });
           return res.status(500).json({
             success: false,
-            error: `Database error checking community posts: ${postError.message}`
+            error: `Database error checking community posts: ${postError?.message || JSON.stringify(postError)}`
           });
         }
 
@@ -412,6 +450,7 @@ export class PostController {
           error: 'Original post not found'
         });
       }
+      console.log('✅ [REPOST] Original status validated, preparing repost content');
 
       // Create repost using StatusService (store in statuses table)
       // This ensures it shows up in Home Feed / User Profile correctly, and NOT in Community Feed
@@ -420,14 +459,19 @@ export class PostController {
       const repostContent = message || '';
       let contentCid = 'pending_ipfs_upload';
 
+      console.log('📤 [REPOST] Uploading repost content to IPFS...');
+      const ipfsStart = Date.now();
       try {
         contentCid = await this.metadataService.uploadToIPFS(repostContent);
+        console.log(`⏱️ [REPOST] IPFS upload took ${Date.now() - ipfsStart}ms, CID:`, contentCid);
       } catch (ipfsError) {
-        console.warn('Failed to upload repost content to IPFS, using fallback CID:', ipfsError);
+        console.warn('⚠️ [REPOST] Failed to upload repost content to IPFS, using fallback CID:', ipfsError);
         // Fallback to a deterministic but fake CID if upload fails to allow post creation
         contentCid = `fallback-${Date.now()}-${Math.random().toString(36).substring(7)}`;
       }
 
+      console.log('🔨 [REPOST] Creating status entry with contentCid:', contentCid);
+      const createStart = Date.now();
       try {
         const newRepost = await this.statusService.createStatus({
           authorId: user.id, // Use the resolved UUID, not the wallet address
@@ -438,7 +482,9 @@ export class PostController {
           isRepost: true
         });
 
+        console.log(`⏱️ [REPOST] createStatus took ${Date.now() - createStart}ms, repost ID:`, newRepost.id);
         console.log('✅ [REPOST] Repost created successfully:', newRepost.id);
+        console.log(`⏱️ [REPOST] === TOTAL TIME: ${Date.now() - repostStartTime}ms ===`);
 
         return res.status(201).json({
           success: true,
@@ -455,7 +501,7 @@ export class PostController {
           code: createError?.code,
           detail: createError?.detail,
           constructor: createError?.constructor?.name,
-          stack: createError?.stack
+          stack: createError?.stack?.substring(0, 500)
         });
         return res.status(500).json({
           success: false,
@@ -469,8 +515,9 @@ export class PostController {
         code: error?.code,
         detail: error?.detail,
         constructor: error?.constructor?.name,
-        stack: error?.stack
+        stack: error?.stack?.substring(0, 500)
       });
+      console.log(`⏱️ [REPOST] === FAILED AFTER: ${Date.now() - repostStartTime}ms ===`);
       return res.status(500).json({
         success: false,
         error: error?.message || JSON.stringify(error) || 'Failed to create repost'
