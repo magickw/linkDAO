@@ -23,7 +23,6 @@ config.resolver.disableHierarchicalLookup = true;
 config.resolver.alias = {
   ws: 'react-native-url-polyfill',
   stream: 'readable-stream',
-  crypto: require.resolve('./crypto-polyfill.js'),
 };
 
 // 5. Add extraNodeModules to handle node: prefixed modules
