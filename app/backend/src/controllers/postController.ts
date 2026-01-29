@@ -20,7 +20,7 @@ export class PostController {
   private userProfileService: UserProfileService;
 
   private get database() {
-    return db;
+    return databaseService.getDatabase();
   }
 
   constructor() {
@@ -450,16 +450,30 @@ export class PostController {
         });
       } catch (createError: any) {
         console.error('❌ [REPOST] Error creating status entry:', createError);
+        console.error('❌ [REPOST] Error details:', {
+          message: createError?.message,
+          code: createError?.code,
+          detail: createError?.detail,
+          constructor: createError?.constructor?.name,
+          stack: createError?.stack
+        });
         return res.status(500).json({
           success: false,
-          error: `Failed to create repost entry: ${createError.message}`
+          error: `Failed to create repost entry: ${createError?.message || JSON.stringify(createError)}`
         });
       }
     } catch (error: any) {
       console.error('❌ [REPOST] Global catch - Unexpected error creating repost:', error);
+      console.error('❌ [REPOST] Global error details:', {
+        message: error?.message,
+        code: error?.code,
+        detail: error?.detail,
+        constructor: error?.constructor?.name,
+        stack: error?.stack
+      });
       return res.status(500).json({
         success: false,
-        error: error.message || 'Failed to create repost'
+        error: error?.message || JSON.stringify(error) || 'Failed to create repost'
       });
     }
   }
