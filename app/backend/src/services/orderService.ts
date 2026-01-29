@@ -181,16 +181,17 @@ export class OrderService {
       const dbOrder = await databaseService.getOrderById(orderId);
       if (!dbOrder) return null;
 
-      const [buyer, seller, product] = await Promise.all([
+      const [buyer, seller, product, dbItems] = await Promise.all([
         userProfileService.getProfileById(dbOrder.buyerId || ''),
         userProfileService.getProfileById(dbOrder.sellerId || ''),
-        dbOrder.listingId ? databaseService.getProductById(dbOrder.listingId) : null
+        dbOrder.listingId ? databaseService.getProductById(dbOrder.listingId) : null,
+        databaseService.getOrderItems(dbOrder.id)
       ]);
 
       if (!buyer || !seller) return null;
 
       const sellerProfile = await sellerService.getSellerProfile(seller.walletAddress);
-      return this.formatOrder(dbOrder, buyer, seller, dbOrder.escrowId?.toString(), product, sellerProfile);
+      return this.formatOrder(dbOrder, buyer, seller, dbOrder.escrowId?.toString(), product, sellerProfile, dbItems);
     } catch (error) {
       safeLogger.error('Error getting order:', error);
       throw error;
@@ -218,8 +219,14 @@ export class OrderService {
 
       safeLogger.info('[OrderService] DB orders found', { count: result.orders.length, total: result.total, userId });
 
+      // Fetch items for each order
+      const ordersWithItems = await Promise.all(result.orders.map(async (row: any) => {
+        const dbItems = await databaseService.getOrderItems(row.order.id);
+        return this.formatOrder(row.order, row.buyer, row.seller, row.order.escrowId?.toString(), row.product, null, dbItems);
+      }));
+
       return {
-        orders: result.orders.map((row: any) => this.formatOrder(row.order, row.buyer, row.seller, row.order.escrowId?.toString(), row.product, null)),
+        orders: ordersWithItems,
         total: result.total
       };
     } catch (error) {
@@ -749,7 +756,7 @@ export class OrderService {
     return user;
   }
 
-  private formatOrder(dbOrder: any, buyer: any, seller: any, escrowId?: string, product?: any, sellerProfile?: any): MarketplaceOrder {
+  private formatOrder(dbOrder: any, buyer: any, seller: any, escrowId?: string, product?: any, sellerProfile?: any, dbItems: any[] = []): MarketplaceOrder {
     // Parse product images if stored as JSON string
     let productImage = '';
     if (product?.images) {
@@ -761,22 +768,36 @@ export class OrderService {
       }
     }
 
-    // Calculate order total from amount
-    const orderTotal = parseFloat(dbOrder.amount) || 0;
+    // Build items array from order_items table or fallback to product
+    const items = dbItems.length > 0 
+      ? dbItems.map(item => ({
+          id: item.id.toString(),
+          productId: item.productId.toString(),
+          productName: item.productName,
+          productImage: productImage, // Simplified: use main product image for now
+          quantity: item.quantity,
+          price: parseFloat(item.unitPrice),
+          total: parseFloat(item.totalPrice),
+          taxAmount: parseFloat(item.taxAmount || '0'),
+          shippingCost: parseFloat(item.shippingCost || '0'),
+          isPhysical: product?.isPhysical ?? true,
+          isService: product?.isService ?? false
+        }))
+      : (product ? [{
+          id: product.id?.toString() || dbOrder.listingId?.toString() || '',
+          productId: product.id?.toString() || dbOrder.listingId?.toString() || '',
+          productName: product.title || 'Unknown Product',
+          productImage: productImage,
+          quantity: dbOrder.quantity || 1,
+          price: parseFloat(dbOrder.amount) / (dbOrder.quantity || 1),
+          total: parseFloat(dbOrder.amount),
+          isPhysical: product.isPhysical ?? false,
+          isService: product.isService ?? false,
+          serviceType: product.serviceType
+        }] : []);
 
-    // Build items array from product
-    const items = product ? [{
-      id: product.id?.toString() || dbOrder.listingId?.toString() || '',
-      productId: product.id?.toString() || dbOrder.listingId?.toString() || '',
-      productName: product.title || 'Unknown Product',
-      productImage: productImage,
-      quantity: dbOrder.quantity || 1,
-      price: orderTotal / (dbOrder.quantity || 1),
-      total: orderTotal,
-      isPhysical: product.isPhysical ?? false,
-      isService: product.isService ?? false,
-      serviceType: product.serviceType
-    }] : [];
+    // Calculate order total from amount
+    const orderTotal = parseFloat(dbOrder.totalAmount) || parseFloat(dbOrder.amount) || 0;
 
     // Determine if this is a service order
     const isServiceOrder = product?.isService === true || dbOrder.isServiceOrder === true;

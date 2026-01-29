@@ -246,10 +246,10 @@ export class CheckoutController {
 
             // Create order
             const order = await orderServiceInstance.createOrder({
-                listingId: cart.items[0].productId, // Simplified - assumes single item
+                listingId: cart.items[0].productId, // Keep primary listingId for backward compatibility
                 buyerAddress: req.user.walletAddress,
-                sellerAddress: cart.items[0].product?.sellerId || '', // Simplified - assumes single seller
-                amount: subtotal.toString(), // Base item price
+                sellerAddress: cart.items[0].product?.sellerId || '', 
+                amount: subtotal.toString(), // Base item price sum
                 totalAmount: total.toString(), // Final payment amount
                 paymentToken: 'USDC', // Default payment token
                 taxAmount: tax.toString(),
@@ -262,7 +262,16 @@ export class CheckoutController {
                     state: shippingAddress.state,
                     postalCode: shippingAddress.postalCode,
                     country: shippingAddress.country
-                }
+                },
+                items: cart.items.map(item => ({
+                    productId: item.productId,
+                    productName: item.product?.title || 'Unknown Product',
+                    quantity: item.quantity,
+                    unitPrice: item.product?.priceAmount || item.priceAtTime,
+                    totalPrice: (parseFloat(item.product?.priceAmount || item.priceAtTime) * item.quantity).toString(),
+                    taxAmount: 0, // Individual tax calculation could be added here if needed
+                    shippingCost: 0 // Individual shipping could be added here if needed
+                }))
             });
 
             // Initialize payment service

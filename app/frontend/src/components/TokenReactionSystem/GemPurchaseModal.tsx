@@ -222,11 +222,17 @@ const GemPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
   }, [getSelectedToken]);
 
   // Fetch USDC balance for selected network
-  const fetchUSDCBalance = useCallback(async () => {
-    if (!address || !publicClient) return;
+  const fetchStablecoinBalance = useCallback(async () => {
+    if (!address || !publicClient || !isConnected) {
+      setUsdcBalance('0');
+      return;
+    }
 
-    const token = getSelectedUSDCToken();
-    if (!token) return;
+    const token = getSelectedToken();
+    if (!token) {
+      setUsdcBalance('0');
+      return;
+    }
 
     try {
       const balance = await publicClient.readContract({
@@ -234,20 +240,20 @@ const GemPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
         abi: erc20Abi,
         functionName: 'balanceOf',
         args: [address]
-      });
+      }) as bigint;
 
       setUsdcBalance(formatUnits(balance as bigint, token.decimals));
     } catch (error) {
-      console.error('Error fetching USDC balance:', error);
+      console.error(`Error fetching ${selectedStablecoin} balance:`, error);
       setUsdcBalance('0');
     }
-  }, [address, publicClient, getSelectedUSDCToken]);
+  }, [address, publicClient, getSelectedToken, selectedStablecoin, isConnected]);
 
   // Estimate gas for USDC transfer
   const estimateGas = useCallback(async () => {
     if (!gasFeeService || !selectedPackageData || !address) return;
 
-    const token = getSelectedUSDCToken();
+    const token = getSelectedToken();
     if (!token) return;
 
     setIsEstimatingGas(true);
@@ -278,7 +284,7 @@ const GemPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
     } finally {
       setIsEstimatingGas(false);
     }
-  }, [gasFeeService, selectedPackageData, address, getSelectedUSDCToken, selectedNetworkId]);
+  }, [gasFeeService, selectedPackageData, address, getSelectedToken, selectedNetworkId]);
 
   // Load payment methods with cost comparison
   const loadPaymentMethods = useCallback(async () => {
@@ -314,31 +320,58 @@ const GemPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
 
     // USDC on various networks
     for (const [networkId, config] of Object.entries(NETWORK_CONFIGS)) {
-      const token = USDC_TOKENS[config.chainId];
-      if (!token) continue;
+      const usdcToken = USDC_TOKENS[config.chainId];
+      const usdtToken = USDT_TOKENS[config.chainId];
+      
+      if (usdcToken) {
+        methods.push({
+          method: {
+            id: networkId,
+            type: PaymentMethodType.STABLECOIN_USDC,
+            name: `USDC on ${config.name}`,
+            description: config.description,
+            chainId: config.chainId,
+            enabled: true,
+            supportedNetworks: [config.chainId],
+            token: usdcToken
+          },
+          availabilityStatus: isConnected ? 'available' : 'unavailable',
+          costEstimate: {
+            totalCost: selectedPackageData.price + config.avgGasUSD,
+            baseCost: selectedPackageData.price,
+            gasFees: config.avgGasUSD,
+            processingFees: 0,
+            platformFees: 0
+          },
+          confidence: 0.90,
+          recommendationReason: config.description
+        });
+      }
 
-      methods.push({
-        method: {
-          id: networkId,
-          type: PaymentMethodType.STABLECOIN_USDC,
-          name: `USDC on ${config.name}`,
-          description: config.description,
-          chainId: config.chainId,
-          enabled: true,
-          supportedNetworks: [config.chainId],
-          token
-        },
-        availabilityStatus: isConnected ? 'available' : 'unavailable',
-        costEstimate: {
-          totalCost: selectedPackageData.price + config.avgGasUSD,
-          baseCost: selectedPackageData.price,
-          gasFees: config.avgGasUSD,
-          processingFees: 0,
-          platformFees: 0
-        },
-        confidence: 0.90,
-        recommendationReason: config.description
-      });
+      if (usdtToken) {
+        methods.push({
+          method: {
+            id: `${networkId}-usdt`,
+            type: PaymentMethodType.STABLECOIN_USDC, // Reusing same type for now
+            name: `USDT on ${config.name}`,
+            description: config.description,
+            chainId: config.chainId,
+            enabled: true,
+            supportedNetworks: [config.chainId],
+            token: usdtToken
+          },
+          availabilityStatus: isConnected ? 'available' : 'unavailable',
+          costEstimate: {
+            totalCost: selectedPackageData.price + config.avgGasUSD,
+            baseCost: selectedPackageData.price,
+            gasFees: config.avgGasUSD,
+            processingFees: 0,
+            platformFees: 0
+          },
+          confidence: 0.85,
+          recommendationReason: `Alternative stablecoin on ${config.name}`
+        });
+      }
     }
 
     // Credit/Debit Card (Stripe)
@@ -395,10 +428,10 @@ const GemPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
 
   useEffect(() => {
     if (selectedPaymentMethod?.method.type === PaymentMethodType.STABLECOIN_USDC) {
-      fetchUSDCBalance();
+      fetchStablecoinBalance();
       estimateGas();
     }
-  }, [selectedPaymentMethod, selectedNetworkId, fetchUSDCBalance, estimateGas]);
+  }, [selectedPaymentMethod, selectedNetworkId, selectedStablecoin, fetchStablecoinBalance, estimateGas]);
 
   // Handle package selection
   const handlePackageSelect = (packageId: string) => {
@@ -410,7 +443,14 @@ const GemPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
   const handlePaymentMethodSelect = (method: PrioritizedPaymentMethod) => {
     setSelectedPaymentMethod(method);
     if (method.method.type === PaymentMethodType.STABLECOIN_USDC) {
-      setSelectedNetworkId(method.method.id);
+      // Check if this is a USDT method (e.g., "base-usdt", "polygon-usdt")
+      if (method.method.id.includes('-usdt')) {
+        setSelectedStablecoin('USDT');
+        setSelectedNetworkId(method.method.id.replace('-usdt', ''));
+      } else {
+        setSelectedStablecoin('USDC');
+        setSelectedNetworkId(method.method.id);
+      }
     }
   };
 
@@ -444,7 +484,7 @@ const GemPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
       throw new Error('Wallet not connected');
     }
 
-    const token = getSelectedUSDCToken();
+    const token = getSelectedToken();
     if (!token) throw new Error('Token not found');
 
     const networkConfig = NETWORK_CONFIGS[selectedNetworkId as keyof typeof NETWORK_CONFIGS];
@@ -472,10 +512,10 @@ const GemPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
 
     if (balance < amount) {
       const formattedBalance = formatUnits(balance, token.decimals);
-      throw new Error(`Insufficient USDC. You have ${parseFloat(formattedBalance).toFixed(2)} USDC but need ${selectedPackageData.price.toFixed(2)} USDC`);
+      throw new Error(`Insufficient ${selectedStablecoin}. You have ${parseFloat(formattedBalance).toFixed(2)} ${selectedStablecoin} but need ${selectedPackageData.price.toFixed(2)} ${selectedStablecoin}`);
     }
 
-    addToast('Please confirm the USDC transfer in your wallet...', 'info');
+    addToast(`Please confirm the ${selectedStablecoin} transfer in your wallet...`, 'info');
 
     // Execute transfer
     const hash = await walletClient.writeContract({
@@ -627,7 +667,7 @@ const GemPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
         onClose();
 
       } else if (methodType === PaymentMethodType.STABLECOIN_USDC) {
-        // USDC payment
+        // USDC/USDT payment
         if (!isConnected) {
           addToast('Please connect your wallet first', 'error');
           setIsProcessing(false);
@@ -635,12 +675,12 @@ const GemPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
         }
 
         const transactionHash = await processUSDCPayment();
-        const network = selectedNetworkId.replace('usdc-', '');
+        const network = selectedNetworkId;
 
         await completeGemPurchase(
           `crypto-${transactionHash}`,
           selectedPackage,
-          'usdc',
+          selectedStablecoin.toLowerCase(),
           network,
           transactionHash
         );
