@@ -82,53 +82,55 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     console.log(`🔐 Attempting login for wallet: ${addressKey}`);
 
     // Fire-and-forget login to avoid blocking UI/navigation
-    const scheduleLogin = () => {
+    const scheduleLogin = async () => {
       // Mark auth as in progress
       authInProgressRef.current.set(addressKey, true);
 
-      // Initialize wallet service with connection state
-      const connectorType = connector === 'walletconnect' ? 'walletconnect' : connector?.name || 'walletconnect';
-      console.log(`⚙️ Initializing wallet service with provider: ${connectorType}`);
-      walletService.setConnectionState(connectorType as any, walletAddress, 1);
-
-      Promise.resolve().then(() => {
-        return authService.authenticateWallet(walletAddress, connector, 'connected');
-      })
-        .then(result => {
-          if (!isMountedRef.current) {
-            console.log('WalletLoginBridge: Component unmounted, ignoring result');
-            return;
-          }
-          if (result.success && result.token && result.user) {
-            lastAuthenticatedAddress = walletAddress;
-            console.log(`✅ Login successful for ${addressKey}`);
-            setUser(result.user);
-            setToken(result.token);
-            if (onLoginSuccess) {
-              onLoginSuccess({ address: walletAddress, user: result.user });
-            }
-          } else {
-            console.error(`❌ Login failed for ${addressKey}:`, result.error);
-            if (onLoginError) {
-              onLoginError(result.error || 'Authentication failed');
-            }
-          }
-        })
-        .catch((error: any) => {
-          if (!isMountedRef.current) {
-            console.log('WalletLoginBridge: Component unmounted, ignoring error');
-            return;
-          }
-          const errorMessage = error?.message || 'An unknown error occurred';
-          console.error('💥 Login threw an exception:', errorMessage);
-          if (onLoginError) {
-            onLoginError(errorMessage);
-          }
-        })
-        .finally(() => {
-          // Mark auth as complete
-          authInProgressRef.current.set(addressKey, false);
+      try {
+        // Initialize wallet service with connection state
+        const connectorType = typeof connector === 'string'
+          ? connector
+          : connector?.name || 'walletconnect';
+        console.log(`⚙️ Initializing wallet service with provider: ${connectorType}`, {
+          connectorType,
+          connectorIsString: typeof connector === 'string',
+          connector,
         });
+        await walletService.setConnectionState(connectorType as any, walletAddress, 1);
+
+        const result = await authService.authenticateWallet(walletAddress, connector, 'connected');
+        if (!isMountedRef.current) {
+          console.log('WalletLoginBridge: Component unmounted, ignoring result');
+          return;
+        }
+        if (result.success && result.token && result.user) {
+          lastAuthenticatedAddress = walletAddress;
+          console.log(`✅ Login successful for ${addressKey}`);
+          setUser(result.user);
+          setToken(result.token);
+          if (onLoginSuccess) {
+            onLoginSuccess({ address: walletAddress, user: result.user });
+          }
+        } else {
+          console.error(`❌ Login failed for ${addressKey}:`, result.error);
+          if (onLoginError) {
+            onLoginError(result.error || 'Authentication failed');
+          }
+        }
+      } catch (error: any) {
+        if (!isMountedRef.current) {
+          console.log('WalletLoginBridge: Component unmounted, ignoring error');
+          return;
+        }
+        const errorMessage = error?.message || 'An unknown error occurred';
+        console.error('💥 Login threw an exception:', errorMessage);
+        if (onLoginError) {
+          onLoginError(errorMessage);
+        }
+      } finally {
+        // Mark auth as complete
+        authInProgressRef.current.set(addressKey, false);
+      }
     };
 
     // Use setTimeout(0) to defer execution to next tick

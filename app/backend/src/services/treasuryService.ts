@@ -112,12 +112,36 @@ export class TreasuryService {
                 try {
                     const contract = new ethers.Contract(token.address, erc20Abi, this.provider);
 
-                    const [balance, decimals, symbol, name] = await Promise.all([
-                        contract.balanceOf(treasuryAddress),
-                        contract.decimals(),
-                        contract.symbol(),
-                        contract.name(),
-                    ]);
+                    // Try to get balance first (cheapest operation)
+                    const balance = await contract.balanceOf(treasuryAddress);
+                    
+                    // Skip if balance is zero to avoid expensive calls
+                    if (balance === 0n) {
+                        continue;
+                    }
+
+                    // Only get metadata if balance > 0
+                    let decimals = 18;
+                    let symbol = 'UNKNOWN';
+                    let name = 'Unknown Token';
+
+                    try {
+                        decimals = await contract.decimals();
+                    } catch (e) {
+                        safeLogger.warn(`Failed to get decimals for ${token.address}, using default 18`);
+                    }
+
+                    try {
+                        symbol = await contract.symbol();
+                    } catch (e) {
+                        safeLogger.warn(`Failed to get symbol for ${token.address}`);
+                    }
+
+                    try {
+                        name = await contract.name();
+                    } catch (e) {
+                        safeLogger.warn(`Failed to get name for ${token.address}`);
+                    }
 
                     const balanceFormatted = parseFloat(ethers.formatUnits(balance, decimals));
                     const valueUSD = balanceFormatted * token.priceUSD;

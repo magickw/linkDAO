@@ -1139,7 +1139,8 @@ export class DatabaseService {
   async createOrder(listingId: string, buyerId: string, sellerId: string, amount: string,
     paymentToken: string, quantity: number = 1, escrowId?: string, variantId?: string, orderId?: string,
     taxAmount: string = '0', shippingCost: string = '0', platformFee: string = '0', taxBreakdown: any[] = [],
-    shippingAddress: any = null, billingAddress: any = null, paymentMethod: string = 'crypto', paymentDetails: any = null, totalAmount?: string) {
+    shippingAddress: any = null, billingAddress: any = null, paymentMethod: string = 'crypto', 
+    paymentDetails: any = null, totalAmount?: string, items: any[] = []) {
     try {
       return await this.db.transaction(async (tx: any) => {
 
@@ -1326,7 +1327,7 @@ export class DatabaseService {
         });
 
         // Use provided orderId if available and is valid UUID, otherwise let DB generate it
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (orderId && uuidRegex.test(orderId)) {
           orderValues.id = orderId;
         } else if (orderId) {
@@ -1337,18 +1338,47 @@ export class DatabaseService {
           }
         }
 
-        const result = await tx.insert(schema.orders).values(orderValues).returning();
+        const [order] = await tx.insert(schema.orders).values(orderValues).returning();
+
+        // 2b. Insert Order Items
+        if (items && items.length > 0) {
+          const orderItemsValues = items.map(item => ({
+            orderId: order.id,
+            productId: item.productId,
+            variantId: item.variantId || null,
+            productName: item.productName || 'Unknown Product',
+            quantity: item.quantity || 1,
+            unitPrice: item.unitPrice.toString(),
+            totalPrice: item.totalPrice.toString(),
+            taxAmount: (item.taxAmount || 0).toString(),
+            shippingCost: (item.shippingCost || 0).toString()
+          }));
+          await tx.insert(schema.orderItems).values(orderItemsValues);
+        } else {
+          // Fallback: Create single order item from main order data
+          const productName = product[0]?.title || 'Product';
+          await tx.insert(schema.orderItems).values({
+            orderId: order.id,
+            productId: listingId,
+            variantId: variantId || null,
+            productName: productName,
+            quantity: quantity,
+            unitPrice: amount,
+            totalPrice: (parseFloat(amount) * quantity).toString(),
+            taxAmount: taxAmount,
+            shippingCost: shippingCost
+          });
+        }
 
         // 3. Update inventory hold with order ID
-        const createdOrderId = result[0].id;
         await tx.update(schema.inventoryHolds)
           .set({
-            orderId: createdOrderId.toString(),
+            orderId: order.id.toString(),
             status: 'order_created'
           })
           .where(eq(schema.inventoryHolds.heldBy, buyerId));
 
-        return result[0];
+        return order;
       });
     } catch (error) {
       safeLogger.error("Error creating order:", error);
@@ -3727,6 +3757,18 @@ export class DatabaseService {
       error: row.error,
       channelStatus: {},
     };
+  }
+
+  /**
+   * Get all items for a specific order
+   */
+  async getOrderItems(orderId: string) {
+    try {
+      return await this.db.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, orderId));
+    } catch (error) {
+      safeLogger.error("Error getting order items:", error);
+      return [];
+    }
   }
 
 }

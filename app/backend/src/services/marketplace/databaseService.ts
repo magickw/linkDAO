@@ -996,220 +996,503 @@ export class DatabaseService {
     }
   }
 
-  async createOrder(listingId: string, buyerId: string, sellerId: string, amount: string,
-    paymentToken: string, quantity: number = 1, escrowId?: string, variantId?: string, orderId?: string,
-    taxAmount: string = '0', shippingCost: string = '0', platformFee: string = '0', taxBreakdown: any[] = [],
-    shippingAddress: any = null, billingAddress: any = null, paymentMethod: string = 'crypto', paymentDetails: any = null, totalAmount?: string) {
-    try {
-      return await this.db.transaction(async (tx: any) => {
+    async createOrder(listingId: string, buyerId: string, sellerId: string, amount: string,
 
-        // 1a. Handle variant inventory if variant is specified
-        if (variantId) {
-          const variantResult = await tx.execute(sql`
-            SELECT inventory, reserved_inventory, is_available
-            FROM product_variants
-            WHERE id = ${variantId}
-            FOR UPDATE
-          `);
+      paymentToken: string, quantity: number = 1, escrowId?: string, variantId?: string, orderId?: string,
 
-          if (variantResult.rows.length === 0) {
-            throw new Error('Product variant not found');
+      taxAmount: string = '0', shippingCost: string = '0', platformFee: string = '0', taxBreakdown: any[] = [],
+
+      shippingAddress: any = null, billingAddress: any = null, paymentMethod: string = 'crypto', 
+
+      paymentDetails: any = null, totalAmount?: string, items: any[] = []) {
+
+      try {
+
+        return await this.db.transaction(async (tx: any) => {
+
+  
+
+          // 1a. Handle variant inventory if variant is specified
+
+          if (variantId) {
+
+            const variantResult = await tx.execute(sql`
+
+              SELECT inventory, reserved_inventory, is_available
+
+              FROM product_variants
+
+              WHERE id = ${variantId}
+
+              FOR UPDATE
+
+            `);
+
+  
+
+            if (variantResult.rows.length === 0) {
+
+              throw new Error('Product variant not found');
+
+            }
+
+  
+
+            const variant = variantResult.rows[0];
+
+            const availableInventory = variant.inventory - variant.reserved_inventory;
+
+  
+
+            if (!variant.is_available || availableInventory < quantity) {
+
+              throw new Error('Selected variant is out of stock');
+
+            }
+
+  
+
+            // Reserve inventory for this variant
+
+            await tx.execute(sql`
+
+              UPDATE product_variants
+
+              SET reserved_inventory = reserved_inventory + ${quantity}
+
+              WHERE id = ${variantId}
+
+            `);
+
           }
 
-          const variant = variantResult.rows[0];
-          const availableInventory = variant.inventory - variant.reserved_inventory;
+  
 
-          if (!variant.is_available || availableInventory < quantity) {
-            throw new Error('Selected variant is out of stock');
-          }
+          // 1b. Check and hold inventory with pessimistic locking
 
-          // Reserve inventory for this variant
-          await tx.execute(sql`
-            UPDATE product_variants
-            SET reserved_inventory = reserved_inventory + ${quantity}
-            WHERE id = ${variantId}
+          const productResult = await tx.execute(sql`
+
+            SELECT * FROM products WHERE id = ${listingId} FOR UPDATE
+
           `);
-        }
 
-        // 1b. Check and hold inventory with pessimistic locking
-        const productResult = await tx.execute(sql`
-          SELECT * FROM products WHERE id = ${listingId} FOR UPDATE
-        `);
-        const product = productResult.rows || productResult;
+          const product = productResult.rows || productResult;
 
-        safeLogger.info('[createOrder] Searching for listing:', {
-          listingId,
-          listingIdType: typeof listingId,
-          productFound: product.length > 0
-        });
+  
 
-        if (product.length === 0) {
-          // Fallback to listings table check if not found in products (backward compatibility)
-          safeLogger.warn('[createOrder] Product not found in products table, checking listings table:', { listingId });
-          const listing = await tx.select().from(schema.listings).where(eq(schema.listings.id, listingId));
+          safeLogger.info('[createOrder] Searching for listing:', {
 
-          safeLogger.info('[createOrder] Listings table search result:', {
             listingId,
-            listingFound: listing.length > 0,
-            listingData: listing.length > 0 ? { id: listing[0].id, status: listing[0].status, itemType: listing[0].itemType } : null
+
+            listingIdType: typeof listingId,
+
+            productFound: product.length > 0
+
           });
 
-          if (listing.length === 0) {
-            // Check if it's a product that just doesn't have a listing entry yet
-            const actualProduct = await tx.select().from(schema.products).where(eq(schema.products.id, listingId)).limit(1);
-            
-            if (actualProduct.length > 0) {
-              const p = actualProduct[0];
-              safeLogger.info(`[createOrder] Found product ${listingId} without listing entry. Creating compatibility listing.`);
+  
+
+          if (product.length === 0) {
+
+            // Fallback to listings table check if not found in products (backward compatibility)
+
+            safeLogger.warn('[createOrder] Product not found in products table, checking listings table:', { listingId });
+
+            const listing = await tx.select().from(schema.listings).where(eq(schema.listings.id, listingId));
+
+  
+
+            safeLogger.info('[createOrder] Listings table search result:', {
+
+              listingId,
+
+              listingFound: listing.length > 0,
+
+              listingData: listing.length > 0 ? { id: listing[0].id, status: listing[0].status, itemType: listing[0].itemType } : null
+
+            });
+
+  
+
+            if (listing.length === 0) {
+
+              // Check if it's a product that just doesn't have a listing entry yet
+
+              const actualProduct = await tx.select().from(schema.products).where(eq(schema.products.id, listingId)).limit(1);
+
               
-              const [newListing] = await tx.insert(schema.listings).values({
-                id: p.id, // Use same ID
-                sellerId: p.sellerId,
-                productId: p.id,
-                tokenAddress: '0x0000000000000000000000000000000000000000',
-                price: p.priceAmount.toString(),
-                inventory: p.inventory,
-                itemType: 'PHYSICAL',
-                listingType: 'FIXED_PRICE',
-                metadataURI: p.metadataUri || '{}',
-                status: 'active'
-              }).returning();
-              
-              // Proceed with the new listing
-              if (newListing.inventory < quantity) {
-                throw new Error('Insufficient inventory');
-              }
-              
-              await tx.update(schema.listings)
-                .set({ inventory: sql`${schema.listings.inventory} - ${quantity}` })
-                .where(eq(schema.listings.id, newListing.id));
-            } else {
-              // Debug: Check if it might be a status ID (common mistake)
-              try {
-                const statusCheck = await tx.select({ id: schema.statuses.id }).from(schema.statuses).where(eq(schema.statuses.id, listingId));
-                if (statusCheck.length > 0) {
-                  safeLogger.error('[createOrder] listingId exists in statuses table but not products. Invalid checkout target.', { listingId });
-                  throw new Error('Cannot checkout a Status post directly. Use tips or reactions.');
+
+              if (actualProduct.length > 0) {
+
+                const p = actualProduct[0];
+
+                safeLogger.info(`[createOrder] Found product ${listingId} without listing entry. Creating compatibility listing.`);
+
+                
+
+                const [newListing] = await tx.insert(schema.listings).values({
+
+                  id: p.id, // Use same ID
+
+                  sellerId: p.sellerId,
+
+                  productId: p.id,
+
+                  tokenAddress: '0x0000000000000000000000000000000000000000',
+
+                  price: p.priceAmount.toString(),
+
+                  inventory: p.inventory,
+
+                  itemType: 'PHYSICAL',
+
+                  listingType: 'FIXED_PRICE',
+
+                  metadataURI: p.metadataUri || '{}',
+
+                  status: 'active'
+
+                }).returning();
+
+                
+
+                // Proceed with the new listing
+
+                if (newListing.inventory < quantity) {
+
+                  throw new Error('Insufficient inventory');
+
                 }
-              } catch (ignore) {
-                // Ignore UUID errors if listingId isn't a UUID
+
+                
+
+                await tx.update(schema.listings)
+
+                  .set({ inventory: sql`${schema.listings.inventory} - ${quantity}` })
+
+                  .where(eq(schema.listings.id, newListing.id));
+
+              } else {
+
+                // Debug: Check if it might be a status ID (common mistake)
+
+                try {
+
+                  const statusCheck = await tx.select({ id: schema.statuses.id }).from(schema.statuses).where(eq(schema.statuses.id, listingId));
+
+                  if (statusCheck.length > 0) {
+
+                    safeLogger.error('[createOrder] listingId exists in statuses table but not products. Invalid checkout target.', { listingId });
+
+                    throw new Error('Cannot checkout a Status post directly. Use tips or reactions.');
+
+                  }
+
+                } catch (ignore) {
+
+                  // Ignore UUID errors if listingId isn't a UUID
+
+                }
+
+  
+
+                safeLogger.error('[createOrder] Product not found in either products or listings table:', {
+
+                  listingId,
+
+                  listingIdType: typeof listingId,
+
+                  buyerId,
+
+                  sellerId
+
+                });
+
+                throw new Error('Product not found');
+
               }
 
-              safeLogger.error('[createOrder] Product not found in either products or listings table:', {
-                listingId,
-                listingIdType: typeof listingId,
-                buyerId,
-                sellerId
-              });
-              throw new Error('Product not found');
+            } else {
+
+              // Existing listing found
+
+              if (listing[0].inventory < quantity) {
+
+                throw new Error('Insufficient inventory');
+
+              }
+
+  
+
+              // Decrement legacy listing
+
+              await tx.update(schema.listings)
+
+                .set({
+
+                  inventory: sql`${schema.listings.inventory} - ${quantity}`
+
+                })
+
+                .where(eq(schema.listings.id, listingId));
+
             }
+
           } else {
-            // Existing listing found
-            if (listing[0].inventory < quantity) {
+
+            if (product[0].inventory < quantity) {
+
               throw new Error('Insufficient inventory');
+
             }
 
-            // Decrement legacy listing
-            await tx.update(schema.listings)
-              .set({
-                inventory: sql`${schema.listings.inventory} - ${quantity}`
+  
+
+            // Create inventory hold record
+
+            await tx.insert(schema.inventoryHolds).values({
+
+              productId: listingId,
+
+              quantity: quantity,
+
+              heldBy: buyerId,
+
+              orderId: null, // Will be updated after order creation
+
+              holdType: 'order_pending',
+
+              expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minute timeout
+
+              status: 'active',
+
+              metadata: JSON.stringify({
+
+                sellerId,
+
+                amount,
+
+                paymentToken,
+
+                source: 'product'
+
               })
-              .where(eq(schema.listings.id, listingId));
-          }
-        } else {
-          if (product[0].inventory < quantity) {
-            throw new Error('Insufficient inventory');
+
+            });
+
+  
+
+            // Decrement product inventory and increment holds
+
+            await tx.update(schema.products)
+
+              .set({
+
+                inventory: sql`${schema.products.inventory} - ${quantity}`,
+
+                inventoryHolds: sql`${schema.products.inventoryHolds} + ${quantity}`
+
+              })
+
+              .where(eq(schema.products.id, listingId));
+
           }
 
-          // Create inventory hold record
-          await tx.insert(schema.inventoryHolds).values({
-            productId: listingId,
-            quantity: quantity,
-            heldBy: buyerId,
-            orderId: null, // Will be updated after order creation
-            holdType: 'order_pending',
-            expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minute timeout
-            status: 'active',
-            metadata: JSON.stringify({
-              sellerId,
-              amount,
-              paymentToken,
-              source: 'product'
-            })
+  
+
+          // 2. Create Order
+
+          const generateOrderNumber = () => {
+
+            const timestamp = Date.now().toString().slice(-6);
+
+            const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+
+            return `ORD-${timestamp}-${random}`;
+
+          };
+
+  
+
+          const orderValues: any = {
+
+            listingId,
+
+            buyerId,
+
+            sellerId,
+
+            amount,
+
+            totalAmount: totalAmount || amount, // Set totalAmount explicitly
+
+            quantity,
+
+            paymentToken,
+
+            escrowId: escrowId || null,
+
+            status: 'pending',
+
+            createdAt: new Date(),
+
+            orderNumber: generateOrderNumber(), // Add user-friendly order number
+
+            taxAmount,
+
+            shippingCost,
+
+            platformFee,
+
+            taxBreakdown: JSON.stringify(taxBreakdown),
+
+            shippingAddress: shippingAddress ? (typeof shippingAddress === 'string' ? shippingAddress : JSON.stringify(shippingAddress)) : null,
+
+            billingAddress: billingAddress ? (typeof billingAddress === 'string' ? billingAddress : JSON.stringify(billingAddress)) : null,
+
+            paymentMethod,
+
+            paymentDetails: paymentDetails ? (typeof paymentDetails === 'string' ? paymentDetails : JSON.stringify(paymentDetails)) : null
+
+          };
+
+  
+
+          safeLogger.info('[createOrder] Inserting order with values:', {
+
+            orderId: orderValues.id,
+
+            orderNumber: orderValues.orderNumber,
+
+            taxAmount: orderValues.taxAmount,
+
+            shippingCost: orderValues.shippingCost,
+
+            amount: orderValues.amount,
+
+            totalAmount: orderValues.totalAmount
+
           });
 
-          // Decrement product inventory and increment holds
-          await tx.update(schema.products)
+  
+
+          // Use provided orderId if available and is valid UUID, otherwise let DB generate it
+
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+          if (orderId && uuidRegex.test(orderId)) {
+
+            orderValues.id = orderId;
+
+          } else if (orderId) {
+
+            safeLogger.warn('[createOrder] Ignored invalid UUID for orderId, letting DB generate one:', { orderId });
+
+            // Store the original orderId in checkoutSessionId as a fallback if not already set
+
+            if (!orderValues.checkoutSessionId) {
+
+              orderValues.checkoutSessionId = orderId;
+
+            }
+
+          }
+
+  
+
+          const [order] = await tx.insert(schema.orders).values(orderValues).returning();
+
+  
+
+          // 2b. Insert Order Items
+
+          if (items && items.length > 0) {
+
+            const orderItemsValues = items.map(item => ({
+
+              orderId: order.id,
+
+              productId: item.productId,
+
+              variantId: item.variantId || null,
+
+              productName: item.productName || 'Unknown Product',
+
+              quantity: item.quantity || 1,
+
+              unitPrice: item.unitPrice.toString(),
+
+              totalPrice: item.totalPrice.toString(),
+
+              taxAmount: (item.taxAmount || 0).toString(),
+
+              shippingCost: (item.shippingCost || 0).toString()
+
+            }));
+
+            await tx.insert(schema.orderItems).values(orderItemsValues);
+
+          } else {
+
+            // Fallback: Create single order item from main order data
+
+            const productName = product[0]?.title || 'Product';
+
+            await tx.insert(schema.orderItems).values({
+
+              orderId: order.id,
+
+              productId: listingId,
+
+              variantId: variantId || null,
+
+              productName: productName,
+
+              quantity: quantity,
+
+              unitPrice: amount,
+
+              totalPrice: (parseFloat(amount) * quantity).toString(),
+
+              taxAmount: taxAmount,
+
+              shippingCost: shippingCost
+
+            });
+
+          }
+
+  
+
+          // 3. Update inventory hold with order ID
+
+          await tx.update(schema.inventoryHolds)
+
             .set({
-              inventory: sql`${schema.products.inventory} - ${quantity}`,
-              inventoryHolds: sql`${schema.products.inventoryHolds} + ${quantity}`
+
+              orderId: order.id.toString(),
+
+              status: 'order_created'
+
             })
-            .where(eq(schema.products.id, listingId));
-        }
 
-        // 2. Create Order
-        const generateOrderNumber = () => {
-          const timestamp = Date.now().toString().slice(-6);
-          const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-          return `ORD-${timestamp}-${random}`;
-        };
+            .where(eq(schema.inventoryHolds.heldBy, buyerId));
 
-        const orderValues: any = {
-          listingId,
-          buyerId,
-          sellerId,
-          amount,
-          totalAmount: totalAmount || amount, // Set totalAmount explicitly
-          quantity,
-          paymentToken,
-          escrowId: escrowId || null,
-          status: 'pending',
-          createdAt: new Date(),
-          orderNumber: generateOrderNumber(), // Add user-friendly order number
-          taxAmount,
-          shippingCost,
-          platformFee,
-          taxBreakdown: JSON.stringify(taxBreakdown),
-          shippingAddress: shippingAddress ? (typeof shippingAddress === 'string' ? shippingAddress : JSON.stringify(shippingAddress)) : null,
-          billingAddress: billingAddress ? (typeof billingAddress === 'string' ? billingAddress : JSON.stringify(billingAddress)) : null,
-          paymentMethod,
-          paymentDetails: paymentDetails ? (typeof paymentDetails === 'string' ? paymentDetails : JSON.stringify(paymentDetails)) : null
-        };
+  
 
-        safeLogger.info('[createOrder] Inserting order with values:', {
-          orderId: orderValues.id,
-          orderNumber: orderValues.orderNumber,
-          taxAmount: orderValues.taxAmount,
-          shippingCost: orderValues.shippingCost,
-          amount: orderValues.amount,
-          totalAmount: orderValues.totalAmount
+          return order;
+
         });
 
-        // Use provided orderId if available and is valid UUID, otherwise let DB generate it
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (orderId && uuidRegex.test(orderId)) {
-          orderValues.id = orderId;
-        } else if (orderId) {
-          safeLogger.warn('[createOrder] Ignored invalid UUID for orderId, letting DB generate one:', { orderId });
-          // Store the original orderId in checkoutSessionId as a fallback if not already set
-          if (!orderValues.checkoutSessionId) {
-            orderValues.checkoutSessionId = orderId;
-          }
-        }
+      } catch (error) {
 
-        const result = await tx.insert(schema.orders).values(orderValues).returning();
+        safeLogger.error("Error creating order:", error);
 
-        // 3. Update inventory hold with order ID
-        const createdOrderId = result[0].id;
-        await tx.update(schema.inventoryHolds)
-          .set({
-            orderId: createdOrderId.toString(),
-            status: 'order_created'
-          })
-          .where(eq(schema.inventoryHolds.heldBy, buyerId));
+        throw error;
 
-        return result[0];
-      });
+      }
+
+    }
     } catch (error) {
       safeLogger.error("Error creating order:", error);
       throw error;
@@ -3547,6 +3830,18 @@ export class DatabaseService {
       error: row.error,
       channelStatus: {},
     };
+  }
+
+  /**
+   * Get all items for a specific order
+   */
+  async getOrderItems(orderId: string) {
+    try {
+      return await this.db.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, orderId));
+    } catch (error) {
+      safeLogger.error("Error getting order items:", error);
+      return [];
+    }
   }
 
 }

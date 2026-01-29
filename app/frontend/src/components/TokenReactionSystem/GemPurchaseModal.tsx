@@ -56,37 +56,59 @@ const USDC_TOKENS: Record<number, PaymentToken> = {
   84532: USDC_BASE_SEPOLIA
 };
 
+// USDT tokens by chain ID
+const USDT_TOKENS: Record<number, PaymentToken> = {
+  1: { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6, symbol: 'USDT' }, // Ethereum Mainnet
+  137: { address: '0xc2132D05D31c914a87C6611C105485024C443d30', decimals: 6, symbol: 'USDT' }, // Polygon
+  42161: { address: '0xFd086Bc7E529487F2b2bE33fA0408f0F4C12EbD', decimals: 6, symbol: 'USDT' }, // Arbitrum
+  8453: { address: '0x50c5725949A6F0c72E6C4a641F24049A817f0f7', decimals: 6, 'symbol': 'USDT' }, // Base
+  11155111: { address: '0x337610d27c682E347C9cD60B4cB40bA37531707e', decimals: 18, symbol: 'USDT' }, // Sepolia
+  84532: { address: '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d6a', decimals: 18, 'symbol': 'USDT' }, // Base Sepolia
+};
+
 // Network configurations with gas estimates
 const NETWORK_CONFIGS = {
-  'usdc-base': {
-    id: 'usdc-base',
+  'base': {
+    id: 'base',
     name: 'Base',
     chainId: 8453,
     description: 'Lowest gas fees (~$0.01)',
     avgGasUSD: 0.01
   },
-  'usdc-polygon': {
-    id: 'usdc-polygon',
+  'polygon': {
+    id: 'polygon',
     name: 'Polygon',
     chainId: 137,
     description: 'Low fees (~$0.05)',
     avgGasUSD: 0.05
   },
-  'usdc-arbitrum': {
-    id: 'usdc-arbitrum',
-    name: 'Arbitrum',
+  'arbitrum': {
+    id: 'arbitrum',
+    name: 'revenue',
     chainId: 42161,
     description: 'Layer 2 (~$0.02)',
     avgGasUSD: 0.02
   },
-  'usdc-ethereum': {
-    id: 'usdc-ethereum',
+  'ethereum': {
+    id: 'ethereum',
     name: 'Ethereum',
     chainId: 1,
     description: 'Mainnet (~$2-5)',
     avgGasUSD: 3.00
   }
 };
+
+// Get token for selected network and stablecoin
+const getSelectedToken = useCallback(() => {
+  const networkConfig = NETWORK_CONFIGS[selectedNetworkId as keyof typeof NETWORK_CONFIGS];
+  if (!networkConfig) return null;
+  
+  if (selectedStablecoin === 'USDC') {
+    return USDC_TOKENS[networkConfig.chainId] || null;
+  } else {
+    return USDT_TOKENS[networkConfig.chainId] || null;
+  }
+}, [selectedNetworkId, selectedStablecoin]);
 
 interface PrioritizedPaymentMethod {
   method: {
@@ -149,7 +171,8 @@ const GemPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
   // State
   const [selectedPackage, setSelectedPackage] = useState<string>('100');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PrioritizedPaymentMethod | null>(null);
-  const [selectedNetworkId, setSelectedNetworkId] = useState<string>('usdc-base');
+  const [selectedNetworkId, setSelectedNetworkId] = useState<string>('base');
+  const [selectedStablecoin, setSelectedStablecoin] = useState<'USDC' | 'USDT'>('USDC');
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<PrioritizedPaymentMethod[]>([]);
   const [isLoadingMethods, setIsLoadingMethods] = useState(true);
@@ -195,10 +218,8 @@ const GemPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
 
   // Get USDC token for current network selection
   const getSelectedUSDCToken = useCallback(() => {
-    const networkConfig = NETWORK_CONFIGS[selectedNetworkId as keyof typeof NETWORK_CONFIGS];
-    if (!networkConfig) return null;
-    return USDC_TOKENS[networkConfig.chainId] || null;
-  }, [selectedNetworkId]);
+    return getSelectedToken();
+  }, [getSelectedToken]);
 
   // Fetch USDC balance for selected network
   const fetchUSDCBalance = useCallback(async () => {

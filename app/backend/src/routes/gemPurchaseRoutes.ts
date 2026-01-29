@@ -21,6 +21,12 @@ interface GemPackage {
 }
 
 const GEM_PACKAGES: GemPackage[] = [
+  { id: '100', name: 'Starter Stack', amount: 100, price: 1.79 },
+  { id: '200', name: 'DeFi Degen', amount: 200, price: 3.59 },
+  { id: '300', name: 'Whale Pack', amount: 300, price: 5.39 },
+  { id: '500', name: 'Diamond Hands', amount: 500, price: 8.99 },
+  { id: '1000', name: 'OG Collection', amount: 1000, price: 16.99 },
+  // Legacy aliases for backward compatibility
   { id: 'small', name: 'Small Gem Pack', amount: 100, price: 4.99 },
   { id: 'medium', name: 'Medium Gem Pack', amount: 500, price: 19.99 },
   { id: 'large', name: 'Large Gem Pack', amount: 1200, price: 39.99 },
@@ -73,8 +79,18 @@ router.post('/complete', authenticateToken, csrfProtection, async (req, res) => 
     const { paymentIntentId, packageId, gemAmount, paymentMethod = 'stripe', network, transactionHash } = req.body;
     const userId = req.user?.walletAddress || req.body.userId;
 
+    // Handle different payment methods
+    if (paymentMethod === 'x402' || paymentIntentId.startsWith('x402-')) {
+      // x402 payments are already processed by x402PaymentService
+      // Just return success to confirm the frontend flow
+      safeLogger.info(`x402 payment already processed, skipping verification: ${paymentIntentId}`);
+      return res.json({
+        success: true,
+        message: 'x402 payment already completed'
+      });
+    }
+
     // Verify payment intent (with simulation bypass for dev/test)
-    // If it's a simulated ID (starts with stripe-timestamp) and we are not in production, allow it
     let isVerified = false;
 
     // Check if this is a simulated payment in non-production environment

@@ -29,6 +29,7 @@ export interface HybridCheckoutRequest {
   };
   shippingAddress?: any;
   shippingCost?: number;
+  items?: any[];
 }
 
 export interface PaymentPathDecision {
@@ -836,7 +837,8 @@ export class HybridPaymentOrchestrator {
           processingFee: pathDecision.fees.processingFee,
           platformFee: pathDecision.fees.platformFee 
         }), // Include fees in payment details
-        pathDecision.totalAmount.toString() // TOTAL buyer payment
+        pathDecision.totalAmount.toString(), // TOTAL buyer payment
+        request.items || [] // Itemized order items
       );
 
       safeLogger.info(`Successfully created order ${request.orderId}`, {

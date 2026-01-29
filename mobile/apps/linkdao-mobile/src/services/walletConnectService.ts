@@ -274,11 +274,35 @@ class WalletService {
    */
   async signMessage(message: string, address: string): Promise<string> {
     try {
+      console.log('🔐 Signing message with address:', address);
+      console.log('📊 Current service state:', {
+        _isConnected: this._isConnected,
+        activeConnection: this.activeConnection,
+        currentProvider: this.currentProvider,
+      });
+
+      // If connection state was lost, try to restore it from storage
+      if (!this._isConnected || !this.activeConnection) {
+        console.log('⚠️ Connection state lost, attempting to restore from storage...');
+        await this.restoreConnection();
+      }
+
+      // Check if we have a matching connection after potential restore
       if (!this._isConnected || !this.activeConnection || this.activeConnection.address.toLowerCase() !== address.toLowerCase()) {
+        // If we have a current provider but no connection, allow signing anyway
         if (this.currentProvider === 'metamask' && this.metaMaskSDKState?.provider) {
-          console.log('⚠️ Connection state lost, attempting to re-use provider...');
-          // proceed to try signing
+          console.log('⚠️ Connection state missing but MetaMask provider available, proceeding...');
+        } else if (this.currentProvider === 'walletconnect') {
+          console.log('⚠️ Connection state missing but WalletConnect provider available, proceeding...');
         } else {
+          console.error('❌ Wallet connection state:', {
+            _isConnected: this._isConnected,
+            hasActiveConnection: !!this.activeConnection,
+            addressMatch: this.activeConnection?.address.toLowerCase() === address.toLowerCase(),
+            currentProvider: this.currentProvider,
+            passedAddress: address,
+            storedAddress: this.activeConnection?.address,
+          });
           throw new Error('Wallet not connected or address mismatch');
         }
       }
@@ -407,7 +431,7 @@ class WalletService {
    * Set up wallet connection state directly (used by auth flow)
    * Initializes connection without doing the actual connection flow
    */
-  setConnectionState(provider: WalletProvider, address: string, chainId: number = 1): void {
+  async setConnectionState(provider: WalletProvider, address: string, chainId: number = 1): Promise<void> {
     try {
       console.log(`⚙️ Setting wallet connection state: ${provider} - ${address}`);
 
@@ -420,14 +444,13 @@ class WalletService {
         timestamp: Date.now(),
       };
 
-      // Save to storage
-      this.saveConnection(this.activeConnection).catch(e => {
-        console.warn('Failed to save connection:', e);
-      });
+      // Save to storage and wait for it to complete
+      await this.saveConnection(this.activeConnection);
 
-      console.log('✅ Connection state set');
+      console.log('✅ Connection state set and saved');
     } catch (error) {
       console.error('❌ Failed to set connection state:', error);
+      throw error;
     }
   }
 

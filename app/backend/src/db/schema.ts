@@ -1400,6 +1400,25 @@ export const orderEvents = pgTable("order_events", {
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
+// Order Items - for supporting multiple products per order
+export const orderItems = pgTable("order_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").notNull().references(() => products.id),
+  variantId: uuid("variant_id").references(() => productVariants.id),
+  productName: varchar("product_name", { length: 500 }).notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  unitPrice: numeric("unit_price", { precision: 20, scale: 8 }).notNull(),
+  totalPrice: numeric("total_price", { precision: 20, scale: 8 }).notNull(),
+  taxAmount: numeric("tax_amount", { precision: 20, scale: 8 }).default('0'),
+  shippingCost: numeric("shipping_cost", { precision: 20, scale: 8 }).default('0'),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  orderIdIdx: index("idx_order_items_order_id").on(t.orderId),
+  productIdIdx: index("idx_order_items_product_id").on(t.productId),
+}));
+
 // Tracking Records
 export const trackingRecords = pgTable("tracking_records", {
   id: serial("id").primaryKey(),
