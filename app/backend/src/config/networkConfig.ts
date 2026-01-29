@@ -32,9 +32,9 @@ export const NETWORK_CONFIGS: Record<number, NetworkConfig> = {
     11155111: {
         chainId: 11155111,
         name: 'Sepolia Testnet',
-        rpcUrl: process.env.SEPOLIA_RPC_URL || 'https://rpc.ankr.com/eth_sepolia',
+        rpcUrl: process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com',
         fallbackRpcUrls: [
-            'https://ethereum-sepolia-rpc.publicnode.com',
+            'https://rpc.ankr.com/eth_sepolia',
             'https://eth-sepolia.public.blastapi.io',
             'https://sepolia.drpc.org'
         ],

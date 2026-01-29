@@ -104,6 +104,46 @@ export default function OrderDetailsScreen() {
                     </View>
                 </View>
 
+                {/* Order Timeline */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Order Progress</Text>
+                    <View style={styles.timeline}>
+                        {getOrderTimeline(order).map((event, index) => (
+                            <View key={index} style={styles.timelineItem}>
+                                <View style={styles.timelineLine}>
+                                    <View style={[
+                                        styles.timelineDot,
+                                        event.completed && styles.timelineDotCompleted,
+                                        event.current && styles.timelineDotCurrent
+                                    ]}>
+                                        <Ionicons 
+                                            name={event.icon} 
+                                            size={16} 
+                                            color={event.completed || event.current ? '#ffffff' : '#9ca3af'} 
+                                        />
+                                    </View>
+                                    {index < getOrderTimeline(order).length - 1 && (
+                                        <View style={[
+                                            styles.timelineConnector,
+                                            (event.completed || event.current) && styles.timelineConnectorCompleted
+                                        ]} />
+                                    )}
+                                </View>
+                                <View style={styles.timelineContent}>
+                                    <Text style={[
+                                        styles.timelineTitle,
+                                        (event.completed || event.current) && styles.timelineTitleCompleted
+                                    ]}>
+                                        {event.title}
+                                    </Text>
+                                    <Text style={styles.timelineDescription}>{event.description}</Text>
+                                    <Text style={styles.timelineDate}>{event.date}</Text>
+                                </View>
+                            </View>
+                        ))}
+                    </View>
+                </View>
+
                 {/* Tracking Section */}
                 {(order.trackingNumber || order.trackingUrl) && (
                     <View style={styles.section}>

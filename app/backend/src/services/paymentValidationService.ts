@@ -133,7 +133,9 @@ export class PaymentValidationService {
 
     // Initialize default provider (valid fallback)
     const defaultRpc = process.env.RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
-    this.provider = new ethers.JsonRpcProvider(defaultRpc);
+    this.provider = new ethers.JsonRpcProvider(defaultRpc, undefined, {
+      staticNetwork: true
+    });
   }
 
   /**

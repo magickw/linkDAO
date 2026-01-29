@@ -535,6 +535,32 @@ class MessagingService {
   }
 
   /**
+   * Add reaction to a message
+   */
+  async addReaction(messageId: string, emoji: string): Promise<Message | null> {
+    const response = await apiClient.post<Message>(`/api/messaging/messages/${messageId}/reactions`, { emoji });
+
+    if (response.success && response.data) {
+      return response.data;
+    }
+
+    return null;
+  }
+
+  /**
+   * Remove reaction from a message
+   */
+  async removeReaction(messageId: string, emoji: string): Promise<Message | null> {
+    const response = await apiClient.delete<Message>(`/api/messaging/messages/${messageId}/reactions/${emoji}`);
+
+    if (response.success && response.data) {
+      return response.data;
+    }
+
+    return null;
+  }
+
+  /**
    * Search conversations
    */
   async searchConversations(query: string): Promise<Conversation[]> {

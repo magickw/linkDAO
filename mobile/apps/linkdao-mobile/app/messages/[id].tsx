@@ -4,7 +4,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Alert, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -52,7 +52,12 @@ export default function ChatInterfaceScreen() {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
+
+  const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '😡'];
 
   // Mock conversation data
   const conversation = {
@@ -139,6 +144,62 @@ export default function ChatInterfaceScreen() {
     return message.senderId === user?.id;
   };
 
+  const handleReaction = async (messageId: string, emoji: string) => {
+    try {
+      await messagingService.addReaction(messageId, emoji);
+      await loadMessages();
+      setShowReactionPicker(null);
+    } catch (error) {
+      console.error('Failed to add reaction:', error);
+    }
+  };
+
+  const handleEditMessage = (message: Message) => {
+    setEditingMessageId(message.id);
+    setEditText(message.content);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingMessageId || !editText.trim()) return;
+
+    try {
+      await messagingService.editMessage(editingMessageId, editText.trim());
+      await loadMessages();
+      setEditingMessageId(null);
+      setEditText('');
+    } catch (error) {
+      console.error('Failed to edit message:', error);
+      Alert.alert('Error', 'Failed to edit message');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setEditText('');
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    Alert.alert(
+      'Delete Message',
+      'Are you sure you want to delete this message?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await messagingService.deleteMessage(messageId);
+              await loadMessages();
+            } catch (error) {
+              console.error('Failed to delete message:', error);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -209,68 +270,139 @@ export default function ChatInterfaceScreen() {
                 isMyMessage(message) ? styles.messageWrapperMe : styles.messageWrapperOther,
               ]}
             >
-              <View
-                style={[
-                  styles.messageBubble,
-                  isMyMessage(message) ? styles.messageBubbleMe : styles.messageBubbleOther,
-                ]}
+              <TouchableOpacity
+                onLongPress={() => {
+                  if (isMyMessage(message)) {
+                    Alert.alert(
+                      'Message Options',
+                      'What would you like to do?',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Edit', onPress: () => handleEditMessage(message) },
+                        { text: 'Delete', style: 'destructive', onPress: () => handleDeleteMessage(message.id) }
+                      ]
+                    );
+                  } else {
+                    setShowReactionPicker(message.id);
+                  }
+                }}
+                activeOpacity={1}
               >
-                {/* Reply Reference */}
-                {message.replyToId && (
-                  <View style={[
-                    styles.replyContainer,
-                    isMyMessage(message) ? styles.replyContainerMe : styles.replyContainerOther
-                  ]}>
-                    <View style={styles.replyBar} />
-                    <View style={styles.replyContent}>
-                      <Text style={[styles.replyAuthor, isMyMessage(message) && styles.replyTextMe]}>
-                        Replying to {message.replyTo?.senderName || 'Original message'}
-                      </Text>
-                      <Text style={[styles.replyBody, isMyMessage(message) && styles.replyTextMe]} numberOfLines={1}>
-                        {message.replyTo?.content || 'Original message...'}
+                <View
+                  style={[
+                    styles.messageBubble,
+                    isMyMessage(message) ? styles.messageBubbleMe : styles.messageBubbleOther,
+                  ]}
+                >
+                  {/* Reply Reference */}
+                  {message.replyToId && (
+                    <View style={[
+                      styles.replyContainer,
+                      isMyMessage(message) ? styles.replyContainerMe : styles.replyContainerOther
+                    ]}>
+                      <View style={styles.replyBar} />
+                      <View style={styles.replyContent}>
+                        <Text style={[styles.replyAuthor, isMyMessage(message) && styles.replyTextMe]}>
+                          Replying to {message.replyTo?.senderName || 'Original message'}
+                        </Text>
+                        <Text style={[styles.replyBody, isMyMessage(message) && styles.replyTextMe]} numberOfLines={1}>
+                          {message.replyTo?.content || 'Original message...'}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Quote Reference */}
+                  {(message.quotedMessageId || message.metadata?.quotedMessageId) && (
+                    <View style={[
+                      styles.quoteContainer,
+                      isMyMessage(message) ? styles.quoteContainerMe : styles.quoteContainerOther
+                    ]}>
+                      <Text style={[styles.quoteText, isMyMessage(message) && styles.replyTextMe]}>
+                        "{message.content.split('\n')[0]}..."
                       </Text>
                     </View>
-                  </View>
-                )}
+                  )}
 
-                {/* Quote Reference */}
-                {(message.quotedMessageId || message.metadata?.quotedMessageId) && (
-                  <View style={[
-                    styles.quoteContainer,
-                    isMyMessage(message) ? styles.quoteContainerMe : styles.quoteContainerOther
-                  ]}>
-                    <Text style={[styles.quoteText, isMyMessage(message) && styles.replyTextMe]}>
-                      "{message.content.split('\n')[0]}..."
+                  {/* Image Attachments */}
+                  {message.attachments && message.attachments.filter(a => a.type === 'image').map((attachment, idx) => (
+                    <View key={idx} style={styles.imageAttachmentContainer}>
+                      <View style={styles.imagePlaceholder}>
+                        <Ionicons name="image-outline" size={24} color="#9ca3af" />
+                      </View>
+                    </View>
+                  ))}
+
+                  {/* Edit Mode */}
+                  {editingMessageId === message.id ? (
+                    <TextInput
+                      style={[
+                        styles.editInput,
+                        isMyMessage(message) ? styles.editInputMe : styles.editInputOther
+                      ]}
+                      value={editText}
+                      onChangeText={setEditText}
+                      multiline
+                      autoFocus
+                    />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.messageText,
+                        isMyMessage(message) ? styles.messageTextMe : styles.messageTextOther,
+                      ]}
+                    >
+                      {message.content}
                     </Text>
-                  </View>
-                )}
+                  )}
 
-                {/* Image Attachments */}
-                {message.attachments && message.attachments.filter(a => a.type === 'image').map((attachment, idx) => (
-                  <View key={idx} style={styles.imageAttachmentContainer}>
-                    <View style={styles.imagePlaceholder}>
-                      <Ionicons name="image-outline" size={24} color="#9ca3af" />
+                  <Text
+                    style={[
+                      styles.messageTime,
+                      isMyMessage(message) ? styles.messageTimeMe : styles.messageTimeOther,
+                    ]}
+                  >
+                    {formatTime(message.timestamp)}
+                  </Text>
+
+                  {/* Edit Actions */}
+                  {editingMessageId === message.id && (
+                    <View style={styles.editActions}>
+                      <TouchableOpacity
+                        style={styles.editCancelButton}
+                        onPress={handleCancelEdit}
+                      >
+                        <Text style={styles.editCancelButtonText}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.editSaveButton}
+                        onPress={handleSaveEdit}
+                      >
+                        <Text style={styles.editSaveButtonText}>Save</Text>
+                      </TouchableOpacity>
                     </View>
-                  </View>
-                ))}
+                  )}
+                </View>
+              </TouchableOpacity>
 
-                <Text
-                  style={[
-                    styles.messageText,
-                    isMyMessage(message) ? styles.messageTextMe : styles.messageTextOther,
-                  ]}
-                >
-                  {message.content}
-                </Text>
-                <Text
-                  style={[
-                    styles.messageTime,
-                    isMyMessage(message) ? styles.messageTimeMe : styles.messageTimeOther,
-                  ]}
-                >
-                  {formatTime(message.timestamp)}
-                </Text>
-              </View>
+              {/* Reactions */}
+              {message.reactions && message.reactions.length > 0 && (
+                <View style={[
+                  styles.reactionsContainer,
+                  isMyMessage(message) ? styles.reactionsContainerMe : styles.reactionsContainerOther
+                ]}>
+                  {message.reactions.map((reaction, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      style={styles.reactionChip}
+                      onPress={() => handleReaction(message.id, reaction.emoji)}
+                    >
+                      <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
+                      <Text style={styles.reactionCount}>{reaction.count}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </View>
           ))
         )}
@@ -315,6 +447,37 @@ export default function ChatInterfaceScreen() {
           )}
         </View>
       </KeyboardAvoidingView>
+
+      {/* Reaction Picker Modal */}
+      <Modal
+        visible={showReactionPicker !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowReactionPicker(null)}
+      >
+        <TouchableOpacity
+          style={styles.reactionModalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowReactionPicker(null)}
+        >
+          <View style={styles.reactionPickerContainer}>
+            <View style={styles.reactionPickerHeader}>
+              <Text style={styles.reactionPickerTitle}>React</Text>
+            </View>
+            <View style={styles.reactionPickerGrid}>
+              {REACTIONS.map((emoji) => (
+                <TouchableOpacity
+                  key={emoji}
+                  style={styles.reactionButton}
+                  onPress={() => showReactionPicker && handleReaction(showReactionPicker, emoji)}
+                >
+                  <Text style={styles.reactionEmoji}>{emoji}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -546,5 +709,104 @@ const styles = StyleSheet.create({
   emojiButton: {
     padding: 8,
     marginLeft: 8,
+  },
+  reactionModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reactionPickerContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    width: 280,
+  },
+  reactionPickerHeader: {
+    marginBottom: 12,
+  },
+  reactionPickerTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+    textAlign: 'center',
+  },
+  reactionPickerGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    flexWrap: 'wrap',
+  },
+  reactionButton: {
+    padding: 12,
+  },
+  reactionEmoji: {
+    fontSize: 32,
+  },
+  reactionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 4,
+    gap: 4,
+  },
+  reactionsContainerMe: {
+    alignSelf: 'flex-end',
+  },
+  reactionsContainerOther: {
+    alignSelf: 'flex-start',
+  },
+  reactionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 16,
+    gap: 4,
+  },
+  reactionCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  editInput: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 15,
+    minHeight: 40,
+  },
+  editInputMe: {
+    color: '#ffffff',
+  },
+  editInputOther: {
+    color: '#1f2937',
+  },
+  editActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 8,
+    gap: 8,
+  },
+  editCancelButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  editCancelButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  editSaveButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#3b82f6',
+  },
+  editSaveButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });

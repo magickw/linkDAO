@@ -8,6 +8,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Modal,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { comparisonService } from '../../src/services/comparisonService';
 
 type SortOption = 'recent' | 'price-low' | 'price-high' | 'popular';
 type Category = 'All' | string;
@@ -49,6 +50,7 @@ export default function MarketplaceScreen() {
   const [showFilters, setShowFilters] = useState(false);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [cartCount, setCartCount] = useState(0);
+  const [comparisonCount, setComparisonCount] = useState(0);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>(['All']);
@@ -72,6 +74,16 @@ export default function MarketplaceScreen() {
   useEffect(() => {
     fetchProducts();
   }, [selectedCategory, sortBy]);
+
+  // Load comparison count
+  useEffect(() => {
+    loadComparisonCount();
+  }, []);
+
+  const loadComparisonCount = async () => {
+    const count = await comparisonService.getCount();
+    setComparisonCount(count);
+  };
 
   const fetchCategories = async () => {
     try {
@@ -207,6 +219,17 @@ export default function MarketplaceScreen() {
           >
             <Ionicons name="storefront-outline" size={20} color="#3b82f6" />
             <Text style={styles.becomeSellerButtonText}>Become Seller</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.comparisonButton}
+            onPress={() => router.push('/marketplace/compare')}
+          >
+            <Ionicons name="bar-chart-outline" size={24} color="#1f2937" />
+            {comparisonCount > 0 && (
+              <View style={styles.comparisonBadge}>
+                <Text style={styles.comparisonBadgeText}>{comparisonCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.cartButton}
@@ -353,12 +376,23 @@ export default function MarketplaceScreen() {
                   <Text style={styles.productPrice}>
                     ${product.priceAmount || 0}
                   </Text>
-                  <TouchableOpacity
-                    style={styles.addButton}
-                    onPress={() => addToCart(product)}
-                  >
-                    <Ionicons name="add" size={16} color="#ffffff" />
-                  </TouchableOpacity>
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                      style={styles.compareButton}
+                      onPress={() => {
+                        comparisonService.addItem(product);
+                        loadComparisonCount();
+                      }}
+                    >
+                      <Ionicons name="bar-chart-outline" size={16} color="#6b7280" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.addButton}
+                      onPress={() => addToCart(product)}
+                    >
+                      <Ionicons name="add" size={16} color="#ffffff" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             </TouchableOpacity>
@@ -492,6 +526,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   cartBadgeText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  comparisonButton: {
+    position: 'relative',
+    marginRight: 8,
+  },
+  comparisonBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#3b82f6',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  comparisonBadgeText: {
     fontSize: 12,
     fontWeight: 'bold',
     color: '#ffffff',
@@ -703,6 +758,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#3b82f6',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  compareButton: {
+    backgroundColor: '#f3f4f6',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addButton: {
     backgroundColor: '#3b82f6',

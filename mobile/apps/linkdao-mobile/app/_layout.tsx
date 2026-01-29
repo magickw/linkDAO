@@ -22,6 +22,9 @@ import ErrorBoundary from '../src/components/ErrorBoundary';
 
 import { StripeProvider } from '@stripe/stripe-react-native';
 
+// Add polyfills for crypto and other Node modules
+import 'react-native-url-polyfill/auto';
+
 import { MetaMaskProvider, useSDK } from '@metamask/sdk-react-native';
 
 const STRIPE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_PLACEHOLDER';
@@ -198,13 +201,12 @@ export default function RootLayout() {
               sdkOptions={{
                 dappMetadata: {
                   name: "LinkDAO Mobile",
-                  url: "https://linkdao.io", // Must match your deep link url scheme if possible but generic is fine for now
+                  url: "https://linkdao.io",
                 }
               }}
             >
               <MetaMaskInjector />
               <StatusBar style="auto" />
-              {/* Auto-authentication bridge for wallet connections */}
               <WalletLoginBridge
                 autoLogin={true}
                 walletAddress={walletAddress as string}

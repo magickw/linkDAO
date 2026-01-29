@@ -7,6 +7,7 @@ import { ShippingService } from '../shippingService';
 import { NotificationService } from '../notificationService';
 import { BlockchainEventService } from '../blockchainEventService';
 import { getOrderWebSocketService } from '../websocket/orderWebSocketService';
+import { NETWORK_CONFIGS } from '../../config/networkConfig';
 import {
   MarketplaceOrder,
   CreateOrderInput,
@@ -33,9 +34,12 @@ export class OrderService {
   private enhancedEscrowService: EnhancedEscrowService;
 
   constructor() {
+    const sepoliaConfig = NETWORK_CONFIGS[11155111];
+    const rpcUrl = process.env.RPC_URL || sepoliaConfig?.rpcUrl || 'https://ethereum-sepolia-rpc.publicnode.com';
+    
     this.enhancedEscrowService = new EnhancedEscrowService(
-      process.env.RPC_URL || 'https://sepolia.drpc.org',
-      process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || '',
+      rpcUrl,
+      process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || sepoliaConfig?.escrowContractAddress || '',
       process.env.MARKETPLACE_CONTRACT_ADDRESS || ''
     );
   }

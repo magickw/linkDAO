@@ -1,5 +1,6 @@
 import { ethers } from 'ethers';
 import { safeLogger } from '../utils/safeLogger';
+import { NETWORK_CONFIGS } from '../config/networkConfig';
 
 export interface ENSValidationResult {
   isValid: boolean;
@@ -42,20 +43,21 @@ export class ENSService {
   private initializeProvider(): ethers.Provider {
     try {
       // Try to use environment-specific RPC URL first
-      const rpcUrl = process.env.ETHEREUM_SEPOLIA_RPC_URL || process.env.ETHEREUM_RPC_URL || 'https://sepolia.drpc.org';
+      const sepoliaConfig = NETWORK_CONFIGS[11155111];
+      const rpcUrl = process.env.ETHEREUM_SEPOLIA_RPC_URL || process.env.ETHEREUM_RPC_URL || sepoliaConfig?.rpcUrl || 'https://ethereum-sepolia-rpc.publicnode.com';
       if (rpcUrl) {
         // For Sepolia testnet
         if (rpcUrl.includes('sepolia')) {
           return new ethers.JsonRpcProvider(rpcUrl, {
             chainId: 11155111,
             name: 'sepolia'
-          });
+          }, { staticNetwork: true });
         }
         // For mainnet
         return new ethers.JsonRpcProvider(rpcUrl, {
           chainId: 1,
           name: 'mainnet'
-        });
+        }, { staticNetwork: true });
       }
 
       // Fallback to public providers without Infura
@@ -65,11 +67,11 @@ export class ENSService {
       });
     } catch (error) {
       safeLogger.warn('Failed to initialize custom provider, using default:', error);
-      // Use drpc.org as fallback without requiring API keys
-      return new ethers.JsonRpcProvider('https://eth.drpc.org', {
-        chainId: 1,
-        name: 'mainnet'
-      });
+      // Use publicnode.com as fallback without requiring API keys
+      return new ethers.JsonRpcProvider('https://ethereum-sepolia-rpc.publicnode.com', {
+        chainId: 11155111,
+        name: 'sepolia'
+      }, { staticNetwork: true });
     }
   }
 

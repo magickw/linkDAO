@@ -6,6 +6,7 @@ import { safeLogger } from '../utils/safeLogger';
 import { refundPaymentService, RefundResult } from './refundPaymentService';
 import { NotificationService } from './notificationService';
 import { EnhancedEscrowService } from './enhancedEscrowService';
+import { NETWORK_CONFIGS } from '../config/networkConfig';
 
 const notificationService = new NotificationService();
 
@@ -48,9 +49,12 @@ export class EscrowSchedulerService {
   private readonly AUTO_RELEASE_GRACE_PERIOD_HOURS = 720; // 30 days = 30 * 24 = 720 hours
 
   constructor() {
+    const sepoliaConfig = NETWORK_CONFIGS[11155111];
+    const rpcUrl = process.env.RPC_URL || sepoliaConfig?.rpcUrl || 'https://ethereum-sepolia-rpc.publicnode.com';
+    
     this.enhancedEscrowService = new EnhancedEscrowService(
-      process.env.RPC_URL || 'https://sepolia.drpc.org',
-      process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || '',
+      rpcUrl,
+      process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || sepoliaConfig?.escrowContractAddress || '',
       process.env.MARKETPLACE_CONTRACT_ADDRESS || ''
     );
   }

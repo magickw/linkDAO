@@ -92,7 +92,9 @@ export class EnhancedEscrowService {
 
   constructor(rpcUrl: string, enhancedEscrowContractAddress: string, marketplaceContractAddress: string) {
     // Initialize default provider (for backward compatibility)
-    this.provider = new ethers.JsonRpcProvider(rpcUrl);
+    this.provider = new ethers.JsonRpcProvider(rpcUrl, undefined, {
+      staticNetwork: true
+    });
     this.enhancedEscrowContract = null;
     this.marketplaceContract = null;
     this.paymentValidationService = new PaymentValidationService();
@@ -129,7 +131,9 @@ export class EnhancedEscrowService {
       return this.provider;
     }
 
-    const provider = new ethers.JsonRpcProvider(networkConfig.rpcUrl);
+    const provider = new ethers.JsonRpcProvider(networkConfig.rpcUrl, undefined, {
+      staticNetwork: true
+    });
     this.providerCache.set(chainId, provider);
     return provider;
   }

@@ -37,7 +37,7 @@ export class OrderService {
 
   constructor() {
     const sepoliaConfig = NETWORK_CONFIGS[11155111];
-    const rpcUrl = process.env.RPC_URL || sepoliaConfig?.rpcUrl || 'https://rpc.ankr.com/eth_sepolia';
+    const rpcUrl = process.env.RPC_URL || sepoliaConfig?.rpcUrl || 'https://ethereum-sepolia-rpc.publicnode.com';
     
     this.enhancedEscrowService = new EnhancedEscrowService(
       rpcUrl,

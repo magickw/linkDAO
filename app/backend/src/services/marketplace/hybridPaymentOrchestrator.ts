@@ -9,6 +9,7 @@ import { NotificationService } from '../notificationService';
 import { StripePaymentService } from '../stripePaymentService';
 import { TaxCalculationService } from './taxCalculationService';
 import { receiptService } from './receiptService';
+import { NETWORK_CONFIGS } from '../../config/networkConfig';
 
 export interface HybridCheckoutRequest {
   orderId: string;
@@ -81,9 +82,13 @@ export class HybridPaymentOrchestrator {
   constructor() {
     this.paymentValidationService = new PaymentValidationService();
     this.fiatPaymentService = new EnhancedFiatPaymentService();
+    // Get reliable Sepolia RPC from network config
+    const sepoliaConfig = NETWORK_CONFIGS[11155111];
+    const rpcUrl = process.env.RPC_URL || sepoliaConfig?.rpcUrl || 'https://ethereum-sepolia-rpc.publicnode.com';
+    
     this.escrowService = new EnhancedEscrowService(
-      process.env.RPC_URL || 'https://sepolia.drpc.org',
-      process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || '',
+      rpcUrl,
+      process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || sepoliaConfig?.escrowContractAddress || '',
       process.env.MARKETPLACE_CONTRACT_ADDRESS || ''
     );
     this.exchangeRateService = new ExchangeRateService();
@@ -348,11 +353,20 @@ export class HybridPaymentOrchestrator {
         safeLogger.error('[processHybridCheckout] Payment processing failed, marking order as failed:', paymentError);
         // Mark order as failed in database
         if (orderRecord && orderRecord.id) {
+          let metadata = {};
+          try {
+            metadata = typeof orderRecord.metadata === 'string' 
+              ? JSON.parse(orderRecord.metadata || '{}') 
+              : (orderRecord.metadata || {});
+          } catch (e) {
+            safeLogger.warn('Failed to parse order metadata:', e);
+          }
+
           await this.databaseService.updateOrder(orderRecord.id, {
             status: 'failed',
             metadata: JSON.stringify({
-              ...JSON.parse(orderRecord.metadata || '{}'),
-              failureReason: paymentError instanceof Error ? paymentError.message : 'Payment processing failed',
+              ...metadata,
+              failureReason: paymentError instanceof Error ? paymentError.message : String(paymentError),
               failedAt: new Date()
             })
           });
@@ -641,7 +655,10 @@ export class HybridPaymentOrchestrator {
           // Parse current metadata to remove failure info if retrying
           let currentMetadata = {};
           try {
-            currentMetadata = JSON.parse(existingOrder.metadata || '{}');
+            currentMetadata = typeof existingOrder.metadata === 'string' 
+              ? JSON.parse(existingOrder.metadata || '{}') 
+              : (existingOrder.metadata || {});
+            
             if (existingOrder.status === 'failed') {
               delete (currentMetadata as any).failureReason;
               delete (currentMetadata as any).failedAt;

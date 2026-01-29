@@ -51,10 +51,24 @@ if (typeof window === 'undefined') {
 
 // Polyfill crypto.getRandomValues for React Native using react-native-get-random-values
 // This MUST be imported before uuid or other crypto libraries
-require('react-native-get-random-values');
+try {
+  require('react-native-get-random-values');
+} catch (e) {
+  console.warn('⚠️ react-native-get-random-values not available, crypto operations may be limited');
+}
 
 if (typeof global.crypto === 'undefined') {
   global.crypto = {};
+}
+
+// Polyfill crypto.getRandomValues if not available
+if (typeof global.crypto.getRandomValues === 'undefined') {
+  global.crypto.getRandomValues = function(arr) {
+    for (let i = 0; i < arr.length; i++) {
+      arr[i] = Math.floor(Math.random() * 256);
+    }
+    return arr;
+  };
 }
 
 // Polyfill crypto.subtle for React Native

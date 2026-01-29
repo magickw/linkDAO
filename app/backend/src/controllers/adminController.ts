@@ -9,6 +9,7 @@ import { eq, desc, sql } from "drizzle-orm";
 import { users, disputes, marketplaceUsers, sellerVerifications, moderationCases, communityGovernanceProposals } from "../db/schema";
 import { AuthenticatedRequest } from "../middleware/adminAuthMiddleware";
 import { EnhancedEscrowService } from "../services/enhancedEscrowService";
+import { NETWORK_CONFIGS } from "../config/networkConfig";
 
 export class AdminController {
   private auditLoggingService: AuditLoggingService;
@@ -16,9 +17,12 @@ export class AdminController {
 
   constructor() {
     this.auditLoggingService = new AuditLoggingService();
+    const sepoliaConfig = NETWORK_CONFIGS[11155111];
+    const rpcUrl = process.env.RPC_URL || sepoliaConfig?.rpcUrl || 'https://ethereum-sepolia-rpc.publicnode.com';
+    
     this.enhancedEscrowService = new EnhancedEscrowService(
-      process.env.RPC_URL || 'https://sepolia.drpc.org',
-      process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || '',
+      rpcUrl,
+      process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || sepoliaConfig?.escrowContractAddress || '',
       process.env.MARKETPLACE_CONTRACT_ADDRESS || ''
     );
   }

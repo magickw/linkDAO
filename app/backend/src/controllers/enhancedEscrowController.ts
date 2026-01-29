@@ -9,14 +9,18 @@ import {
   EscrowRecoveryOptions
 } from '../services/enhancedEscrowService';
 import { AppError, ValidationError, NotFoundError } from '../middleware/errorHandler';
+import { NETWORK_CONFIGS } from '../config/networkConfig';
 
 export class EnhancedEscrowController {
   private enhancedEscrowService: EnhancedEscrowService;
 
   constructor() {
+    const sepoliaConfig = NETWORK_CONFIGS[11155111];
+    const rpcUrl = process.env.RPC_URL || sepoliaConfig?.rpcUrl || 'https://ethereum-sepolia-rpc.publicnode.com';
+    
     this.enhancedEscrowService = new EnhancedEscrowService(
-      process.env.RPC_URL || 'https://sepolia.drpc.org',
-      process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || '',
+      rpcUrl,
+      process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || sepoliaConfig?.escrowContractAddress || '',
       process.env.MARKETPLACE_CONTRACT_ADDRESS || ''
     );
   }
