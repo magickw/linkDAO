@@ -11,6 +11,14 @@ export class BlockService {
    */
   async blockUser(blockerAddress: string, blockedAddress: string): Promise<boolean> {
     try {
+      console.log(`[BlockService] Blocking user: ${blockerAddress} -> ${blockedAddress}`);
+
+      // Validate addresses
+      if (!blockerAddress || !blockedAddress) {
+        console.warn('[BlockService] Invalid addresses provided');
+        return false;
+      }
+
       // Check if already blocked
       const existing = await db
         .select()
@@ -24,20 +32,28 @@ export class BlockService {
         .limit(1);
 
       if (existing.length > 0) {
+        console.log('[BlockService] User already blocked');
         return false; // Already blocked
       }
 
       // Insert block relationship
+      console.log('[BlockService] Inserting block record...');
       await db.insert(blockedUsers).values({
         blockerAddress,
         blockedAddress,
         createdAt: new Date(),
       });
 
+      console.log('[BlockService] Block successful');
       return true;
-    } catch (error) {
-      console.error('Error blocking user:', error);
-      throw error;
+    } catch (error: any) {
+      console.error('[BlockService] Error blocking user:', {
+        message: error?.message || 'Unknown error',
+        code: error?.code,
+        errorString: String(error)
+      });
+      // Return false instead of throwing to prevent crashes
+      return false;
     }
   }
 
@@ -49,6 +65,14 @@ export class BlockService {
    */
   async unblockUser(blockerAddress: string, blockedAddress: string): Promise<boolean> {
     try {
+      console.log(`[BlockService] Unblocking user: ${blockerAddress} -> ${blockedAddress}`);
+
+      // Validate addresses
+      if (!blockerAddress || !blockedAddress) {
+        console.warn('[BlockService] Invalid addresses provided for unblock');
+        return false;
+      }
+
       const result = await db
         .delete(blockedUsers)
         .where(
@@ -58,10 +82,16 @@ export class BlockService {
           )
         );
 
+      console.log('[BlockService] Unblock successful');
       return true;
-    } catch (error) {
-      console.error('Error unblocking user:', error);
-      throw error;
+    } catch (error: any) {
+      console.error('[BlockService] Error unblocking user:', {
+        message: error?.message || 'Unknown error',
+        code: error?.code,
+        errorString: String(error)
+      });
+      // Return false instead of throwing to prevent crashes
+      return false;
     }
   }
 
@@ -98,15 +128,27 @@ export class BlockService {
    */
   async getBlockedUsers(blockerAddress: string): Promise<string[]> {
     try {
+      if (!blockerAddress) {
+        console.warn('[BlockService] Invalid blocker address');
+        return [];
+      }
+
+      console.log(`[BlockService] Getting blocked users for: ${blockerAddress}`);
       const results = await db
         .select({ blockedAddress: blockedUsers.blockedAddress })
         .from(blockedUsers)
         .where(eq(blockedUsers.blockerAddress, blockerAddress));
 
+      console.log(`[BlockService] Found ${results.length} blocked users`);
       return results.map(r => r.blockedAddress);
-    } catch (error) {
-      console.error('Error getting blocked users:', error);
-      throw error;
+    } catch (error: any) {
+      console.error('[BlockService] Error getting blocked users:', {
+        message: error?.message || 'Unknown error',
+        code: error?.code,
+        errorString: String(error)
+      });
+      // Return empty array instead of throwing to prevent crashes
+      return [];
     }
   }
 
@@ -117,15 +159,27 @@ export class BlockService {
    */
   async getBlockedBy(blockedAddress: string): Promise<string[]> {
     try {
+      if (!blockedAddress) {
+        console.warn('[BlockService] Invalid blocked address');
+        return [];
+      }
+
+      console.log(`[BlockService] Getting blocked by for: ${blockedAddress}`);
       const results = await db
         .select({ blockerAddress: blockedUsers.blockerAddress })
         .from(blockedUsers)
         .where(eq(blockedUsers.blockedAddress, blockedAddress));
 
+      console.log(`[BlockService] Found ${results.length} users who blocked this address`);
       return results.map(r => r.blockerAddress);
-    } catch (error) {
-      console.error('Error getting blocked by users:', error);
-      throw error;
+    } catch (error: any) {
+      console.error('[BlockService] Error getting blocked by users:', {
+        message: error?.message || 'Unknown error',
+        code: error?.code,
+        errorString: String(error)
+      });
+      // Return empty array instead of throwing to prevent crashes
+      return [];
     }
   }
 }
