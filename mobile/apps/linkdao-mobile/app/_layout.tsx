@@ -25,13 +25,30 @@ import { StripeProvider } from '@stripe/stripe-react-native';
 // Add polyfills for crypto and other Node modules
 import 'react-native-url-polyfill/auto';
 
-import { MetaMaskProvider, useSDK } from '@metamask/sdk-react-native';
+// MetaMask SDK import - wrapped with safe initialization
+let MetaMaskProvider: any = null;
+let useSDK: any = null;
+
+try {
+  const metamaskModule = require('@metamask/sdk-react-native');
+  MetaMaskProvider = metamaskModule.MetaMaskProvider;
+  useSDK = metamaskModule.useSDK;
+  console.log('✅ MetaMask SDK module loaded');
+} catch (error) {
+  console.warn('⚠️ Failed to load MetaMask SDK module:', error);
+}
 
 const STRIPE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_PLACEHOLDER';
 
 // Component to inject SDK state into the singleton service
 function MetaMaskInjector() {
   const [sdkError, setSdkError] = useState<Error | null>(null);
+
+  // If useSDK is not available, skip this component
+  if (!useSDK) {
+    console.warn('⚠️ MetaMask SDK not available, wallet features may be limited to WalletConnect');
+    return null;
+  }
 
   try {
     const sdkState = useSDK();
@@ -57,6 +74,7 @@ function MetaMaskInjector() {
     return null;
   } catch (error) {
     console.error('❌ MetaMaskInjector initialization failed:', error);
+    setSdkError(error as Error);
     return null;
   }
 }
@@ -208,35 +226,61 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <StripeProvider publishableKey={STRIPE_KEY}>
-            <MetaMaskProvider
-              debug={false}
-              sdkOptions={{
-                dappMetadata: {
-                  name: "LinkDAO Mobile",
-                  url: "https://linkdao.io",
-                }
-              }}
-            >
-              <MetaMaskInjector />
-              <StatusBar style="auto" />
-              <WalletLoginBridge
-                autoLogin={true}
-                walletAddress={walletAddress as string}
-                connector={connector as any}
-                onLoginSuccess={({ user }) => {
-                  console.log('✅ Auto-login successful for:', user.address);
+            {MetaMaskProvider ? (
+              // Render with MetaMaskProvider if available
+              <MetaMaskProvider
+                debug={false}
+                sdkOptions={{
+                  dappMetadata: {
+                    name: "LinkDAO Mobile",
+                    url: "https://linkdao.io",
+                  }
                 }}
-                onLoginError={(error) => {
-                  console.error('❌ Auto-login failed:', error);
-                }}
-              />
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="auth" options={{ headerShown: false }} />
-                <Stack.Screen name="settings" options={{ headerShown: false }} />
-                <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
-              </Stack>
-            </MetaMaskProvider>
+              >
+                <MetaMaskInjector />
+                <StatusBar style="auto" />
+                <WalletLoginBridge
+                  autoLogin={true}
+                  walletAddress={walletAddress as string}
+                  connector={connector as any}
+                  onLoginSuccess={({ user }) => {
+                    console.log('✅ Auto-login successful for:', user.address);
+                  }}
+                  onLoginError={(error) => {
+                    console.error('❌ Auto-login failed:', error);
+                  }}
+                />
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="auth" options={{ headerShown: false }} />
+                  <Stack.Screen name="settings" options={{ headerShown: false }} />
+                  <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
+                </Stack>
+              </MetaMaskProvider>
+            ) : (
+              // Fallback: render without MetaMaskProvider if it failed to load
+              <>
+                <MetaMaskInjector />
+                <StatusBar style="auto" />
+                <WalletLoginBridge
+                  autoLogin={true}
+                  walletAddress={walletAddress as string}
+                  connector={connector as any}
+                  onLoginSuccess={({ user }) => {
+                    console.log('✅ Auto-login successful for:', user.address);
+                  }}
+                  onLoginError={(error) => {
+                    console.error('❌ Auto-login failed:', error);
+                  }}
+                />
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="auth" options={{ headerShown: false }} />
+                  <Stack.Screen name="settings" options={{ headerShown: false }} />
+                  <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
+                </Stack>
+              </>
+            )}
           </StripeProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
