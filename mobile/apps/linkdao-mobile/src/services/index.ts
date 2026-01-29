@@ -23,6 +23,7 @@ export { nftService } from './nftService';
 export { reputationService } from './reputationService';
 export { documentationService } from './documentationService';
 export { blogService } from './blogService';
+export { profileService } from './profileService';
 
 export {
   isBiometricAvailable,
@@ -60,3 +61,4 @@ export type { Product, Cart, CartItem, Order, ShippingAddress } from './marketpl
 export type { BiometricAuthResult, BiometricConfig } from './biometricService';
 export type { CacheEntry, OfflineAction } from './offlineManager';
 export type { PushNotificationConfig, NotificationPermissions } from './pushNotificationService';
+export type { UserProfile, SocialLink, CreateUserProfileInput, UpdateUserProfileInput } from './profileService';

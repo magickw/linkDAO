@@ -95,7 +95,7 @@ export type ReputationEventType =
 export interface MiniProfileData {
   user: {
     id: string;
-    username: string;
+    hanndle: string;
     displayName: string;
     avatar: string;
     walletAddress: string;

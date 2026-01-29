@@ -530,9 +530,16 @@ import paymentMethodRoutes from './routes/paymentMethodRoutes';
 import wishlistRoutes from './routes/wishlistRoutes';
 import buyerProfileRoutes from './routes/buyerProfileRoutes';
 import invoiceRoutes from './routes/invoiceRoutes';
+import webhookRoutes from './routes/webhookRoutes';
+import { createQueueRoutes } from './routes/queueRoutes';
+import notificationAnalyticsRoutes from './routes/notificationAnalyticsRoutes';
 
 // Import data deletion routes (GDPR/Platform compliance for Facebook, LinkedIn)
 import dataDeletionRoutes from './routes/dataDeletionRoutes';
+
+// Import queue and batch services for document generation
+import { documentQueue } from './queues/documentQueue';
+import { documentBatchService } from './services/documentBatchService';
 
 // Import Gem Purchase Routes
 import gemPurchaseRoutes from './routes/gemPurchaseRoutes';
@@ -591,6 +598,17 @@ app.use('/api/user/wishlists', wishlistRoutes);
 app.use('/api/user/buyer-profile', buyerProfileRoutes);
 // Invoice management routes
 app.use('/api/invoices', invoiceRoutes);
+
+// Document generation and notification routes (Phases 5-7)
+// Mount webhook routes
+app.use('/webhooks', webhookRoutes);
+
+// Mount queue management routes
+app.use('/api/queue', createQueueRoutes(documentQueue, documentBatchService));
+
+// Mount notification analytics routes
+app.use('/api/notification-analytics', notificationAnalyticsRoutes);
+
 app.use('/api/communities', communityRoutes);
 app.use('/api', commentRoutes);
 app.use('/api/notifications', notificationRoutes);

@@ -43,7 +43,7 @@ interface LegacyPostResponse {
   title: string;
   content: string;
   author_id: string;
-  author_username: string;
+  author_handle: string;
   author_avatar?: string;
   created_at: string;
   upvotes: number;
@@ -56,7 +56,7 @@ interface LegacyPostResponse {
 
 interface LegacyUserResponse {
   id: string;
-  username: string;
+  handle: string;
   avatar_url?: string;
   wallet_address?: string;
   reputation_score?: number;
@@ -122,7 +122,7 @@ export function transformPostData(
 ): EnhancedPost {
   const author = transformUserProfile(authorData || {
     id: legacyData.author_id,
-    username: legacyData.author_username,
+    handle: legacyData.author_handle,
     avatar_url: legacyData.author_avatar
   });
 
@@ -170,9 +170,9 @@ export function transformPostData(
 export function transformUserProfile(legacyData: Partial<LegacyUserResponse>): UserProfile {
   return {
     id: legacyData.id || '',
-    username: legacyData.username || 'Unknown User',
+    handle: legacyData.handle || 'Unknown User',
     ensName: legacyData.ens_name,
-    avatar: legacyData.avatar_url || generateDefaultAvatar(legacyData.username || ''),
+    avatar: legacyData.avatar_url || generateDefaultAvatar(legacyData.handle || ''),
     reputation: legacyData.reputation_score || 0,
     badges: [], // Will be populated by separate API call
     walletAddress: legacyData.wallet_address || '',
@@ -302,11 +302,11 @@ function generateDefaultIcon(communityName: string): string {
   `)}`;
 }
 
-function generateDefaultAvatar(username: string): string {
-  // Generate a deterministic default avatar based on username
+function generateDefaultAvatar(handle: string): string {
+  // Generate a deterministic default avatar based on handle
   const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'];
-  const colorIndex = username.length % colors.length;
-  const initial = username.charAt(0).toUpperCase();
+  const colorIndex = handle.length % colors.length;
+  const initial = handle.charAt(0).toUpperCase();
   
   return `data:image/svg+xml,${encodeURIComponent(`
     <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">

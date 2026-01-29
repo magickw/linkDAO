@@ -353,7 +353,7 @@ export default function LDAODashboardScreen() {
               </Text>
             </View>
             <View style={styles.userInfoText}>
-              <Text style={styles.userName}>
+              <Text style={styles.handle}>
                 {user?.displayName || `${user?.address?.slice(0, 6)}...${user?.address?.slice(-4)}`}
               </Text>
               <Text style={styles.userAddress}>{user?.address || 'Not connected'}</Text>
@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
   userInfoText: {
     flex: 1,
   },
-  userName: {
+  handle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',

@@ -194,7 +194,7 @@ export interface SocialProofIndicators {
 
 export interface FollowerEngagement {
   userId: string;
-  username?: string;
+  hanndle?: string;
   displayName?: string;
   avatar?: string;
   
@@ -211,7 +211,7 @@ export interface FollowerEngagement {
 
 export interface VerifiedUserEngagement {
   userId: string;
-  username?: string;
+  hanndle?: string;
   displayName?: string;
   avatar?: string;
   
@@ -232,7 +232,7 @@ export interface VerifiedUserEngagement {
 
 export interface CommunityLeaderEngagement {
   userId: string;
-  username?: string;
+  hanndle?: string;
   displayName?: string;
   avatar?: string;
   

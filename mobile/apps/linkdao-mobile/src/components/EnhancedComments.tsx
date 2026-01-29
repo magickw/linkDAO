@@ -22,7 +22,7 @@ interface Comment {
     author: {
         id: string;
         displayName: string;
-        username: string;
+        handle: string;
         avatar?: string;
     };
     content: string;
@@ -140,7 +140,7 @@ export default function EnhancedComments({
                     {/* Author & Time */}
                     <View style={styles.commentHeader}>
                         <Text style={styles.authorName}>{item.author.displayName}</Text>
-                        <Text style={styles.username}>@{item.author.handle}</Text>
+                        <Text style={styles.handle}>@{item.author.handle}</Text>
                         <Text style={styles.timestamp}>
                             {new Date(item.createdAt).toLocaleDateString()}
                         </Text>
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
         color: '#000',
         marginRight: 6,
     },
-    username: {
+    handle: {
         fontSize: 14,
         color: '#8E8E93',
         marginRight: 6,

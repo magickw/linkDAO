@@ -24,11 +24,11 @@ export interface TipHistory {
     createdAt: string;
     sender: {
         displayName: string;
-        username: string;
+        handle: string;
     };
     recipient: {
         displayName: string;
-        username: string;
+        handle: string;
     };
 }
 

@@ -37,7 +37,7 @@ interface Report {
 
 interface BannedUser {
     id: string;
-    username: string;
+    handle: string;
     reason: string;
     bannedAt: string;
 }
@@ -228,10 +228,10 @@ export default function ModerationToolsScreen({
         <View style={styles.bannedCard}>
             <View style={styles.bannedHeader}>
                 <View style={styles.bannedAvatar}>
-                    <Text style={styles.bannedAvatarText}>{item.username.charAt(0).toUpperCase()}</Text>
+                    <Text style={styles.bannedAvatarText}>{item.handle.charAt(0).toUpperCase()}</Text>
                 </View>
                 <View style={styles.bannedInfo}>
-                    <Text style={styles.bannedUsername}>@{item.username}</Text>
+                    <Text style={styles.bannedHandle}>@{item.handle}</Text>
                     <Text style={styles.bannedReason}>{item.reason}</Text>
                     <Text style={styles.bannedDate}>Banned {item.bannedAt}</Text>
                 </View>
@@ -240,7 +240,7 @@ export default function ModerationToolsScreen({
                     onPress={() => {
                         Alert.alert(
                             'Unban User',
-                            `Remove ban for @${item.username}?`,
+                            `Remove ban for @${item.handle}?`,
                             [
                                 { text: 'Cancel', style: 'cancel' },
                                 {
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
         flex: 1,
         marginLeft: 12,
     },
-    bannedUsername: {
+    bannedHandle: {
         fontSize: 16,
         fontWeight: '600',
         color: '#000',

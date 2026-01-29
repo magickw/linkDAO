@@ -1,5 +1,5 @@
 import { safeLogger } from '../../utils/safeLogger';
-// import { openaiService } from './ai/openaiService';
+import { openaiService } from './openaiService';
 
 interface ModerationResult {
   isApproved: boolean;
@@ -201,17 +201,11 @@ export class AIModerationService {
       };
 
       // Call AI service for content analysis
-      // const aiResponse = await openaiService.generateInsight({
-      //   type: 'content_moderation' as any,
-      //   context
-      // });
-      // Temporarily return mock response due to missing service
-      const aiResponse = {
-        insight: 'Content appears to comply with community guidelines',
-        confidence: 85,
-        recommendations: ['Approve content'],
-        risk_factors: []
-      };
+      const aiResponse = await openaiService.generateInsight({
+        type: 'content_moderation' as any,
+        context
+      });
+
 
       // Parse AI response into structured result
       return this.parseAIResponse(aiResponse, content);

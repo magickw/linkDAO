@@ -38,7 +38,7 @@ export interface CommunityRole {
 export interface EnhancedUserProfile {
   id: string;
   walletAddress: string;
-  username: string;
+  hanndle: string;
   displayName: string;
   avatar: string;
   bio: string;

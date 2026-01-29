@@ -1,7 +1,7 @@
 import { DatabaseService } from '../databaseService';
 import { safeLogger } from '../../utils/safeLogger';
 import { PushNotificationService } from '../pushNotificationService';
-// import { getAdminWebSocketService } from './websocket/adminWebSocketService';
+import { getAdminWebSocketService } from '../websocket/adminWebSocketService';
 
 const databaseService = new DatabaseService();
 const pushNotificationService = PushNotificationService.getInstance();
@@ -296,18 +296,18 @@ export class AdminNotificationService {
 
   private async sendRealTimeNotification(data: AdminNotificationData): Promise<void> {
     try {
-      // const webSocketService = getAdminWebSocketService();
-      // if (webSocketService) {
-      //   webSocketService.sendToAdmin(data.adminId, 'admin_notification', {
-      //     title: data.title,
-      //     message: data.message,
-      //     actionUrl: data.actionUrl,
-      //     priority: data.priority,
-      //     category: data.category,
-      //     metadata: data.metadata,
-      //     timestamp: new Date().toISOString()
-      //   });
-      // }
+      const webSocketService = getAdminWebSocketService();
+      if (webSocketService) {
+        webSocketService.sendToAdmin(data.adminId, 'admin_notification', {
+          title: data.title,
+          message: data.message,
+          actionUrl: data.actionUrl,
+          priority: data.priority,
+          category: data.category,
+          metadata: data.metadata,
+          timestamp: new Date().toISOString()
+        });
+      }
     } catch (error) {
       safeLogger.error('Error sending real-time admin notification:', error);
     }
@@ -327,18 +327,18 @@ export class AdminNotificationService {
         return;
       }
 
-      // TODO: Implement push notification sending when sendToTokens method is available
-      // await pushNotificationService.sendToTokens(pushTokens, {
-      //   title: data.title,
-      //   body: data.message,
-      //   actionUrl: data.actionUrl,
-      //   data: {
-      //     type: data.type,
-      //     priority: data.priority,
-      //     category: data.category,
-      //     ...data.metadata
-      //   }
-      // });
+      const { pushNotificationService } = await import('../pushNotificationService');
+      await pushNotificationService.sendToUser(data.adminId, {
+        title: data.title,
+        body: data.message,
+        actionUrl: data.actionUrl,
+        data: {
+          type: data.type,
+          priority: data.priority,
+          category: data.category,
+          ...data.metadata
+        }
+      });
     } catch (error) {
       safeLogger.error('Error sending push notification:', error);
     }

@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuthStore } from '../../src/store';
-import { profileService } from '@linkdao/shared';
+import { profileService } from '../../src/services';
 
 interface SocialLink {
   platform: string;

@@ -245,7 +245,7 @@ export default function NewConversationModal({
             >
               <View style={[styles.avatar, { backgroundColor: user.avatar || '#3b82f6' }]} />
               <View style={styles.userInfo}>
-                <Text style={styles.userName}>
+                <Text style={styles.handle}>
                   {user.name || user.ens || `${user.address.slice(0, 6)}...${user.address.slice(-4)}`}
                 </Text>
                 <Text style={styles.userAddress}>{user.address}</Text>
@@ -375,7 +375,7 @@ export default function NewConversationModal({
               >
                 <View style={[styles.avatar, { backgroundColor: user.avatar || '#3b82f6' }]} />
                 <View style={styles.userInfo}>
-                  <Text style={styles.userName}>
+                  <Text style={styles.handle}>
                     {user.name || user.ens || `${user.address.slice(0, 6)}...${user.address.slice(-4)}`}
                   </Text>
                   <Text style={styles.userAddress}>{user.address}</Text>
@@ -624,7 +624,7 @@ const styles = StyleSheet.create({
   userInfo: {
     flex: 1,
   },
-  userName: {
+  handle: {
     fontSize: 15,
     fontWeight: '500',
     color: '#1f2937',

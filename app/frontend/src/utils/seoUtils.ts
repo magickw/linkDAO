@@ -64,7 +64,7 @@ export const generatePostStructuredData = (postData: any) => {
     'dateModified': postData.updatedAt || postData.createdAt || new Date().toISOString(),
     'author': {
       '@type': 'Person',
-      'name': postData.author?.displayName || postData.author?.username || 'Anonymous User',
+      'name': postData.author?.displayName || postData.author?.handle || 'Anonymous User',
       'url': postData.author?.profileUrl ? `${SEO_CONFIG.DEFAULT_URL}${postData.author.profileUrl}` : undefined
     },
     'publisher': {
@@ -89,7 +89,7 @@ export const generateProfileStructuredData = (profileData: any) => {
     '@type': 'ProfilePage',
     'mainEntity': {
       '@type': 'Person',
-      'name': profileData.displayName || profileData.username || 'LinkDAO User',
+      'name': profileData.displayName || profileData.handle || 'LinkDAO User',
       'description': truncateText(profileData.bio, SEO_CONFIG.MAX_DESCRIPTION_LENGTH),
       'url': profileData.profileUrl ? `${SEO_CONFIG.DEFAULT_URL}${profileData.profileUrl}` : undefined,
       'image': profileData.avatar ? `${SEO_CONFIG.DEFAULT_URL}${profileData.avatar}` : undefined,
@@ -160,9 +160,9 @@ export const generateSEOMetadata = (pageType: string, data: any = {}) => {
     
     case 'profile':
       return {
-        title: `${data.displayName || data.username} - LinkDAO Profile`,
+        title: `${data.displayName || data.handle} - LinkDAO Profile`,
         description: truncateText(data.bio, SEO_CONFIG.MAX_DESCRIPTION_LENGTH),
-        keywords: `Web3, profile, ${data.displayName || data.username}`,
+        keywords: `Web3, profile, ${data.displayName || data.handle}`,
         image: data.avatar || SEO_CONFIG.DEFAULT_IMAGE,
         structuredData: generateProfileStructuredData(data)
       };

@@ -111,7 +111,7 @@ class ReputationService {
    */
   async getLeaderboard(limit: number = 50): Promise<Array<{
     userId: string;
-    username: string;
+    handle: string;
     score: number;
     rank: number;
   }>> {

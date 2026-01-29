@@ -26,7 +26,7 @@ import { THEME } from '../constants/theme';
 
 interface PostComposerProps {
     onSubmit: (data: CreatePostData) => Promise<void>;
-    userName?: string;
+    handle?: string;
     placeholder?: string;
 }
 
@@ -55,7 +55,7 @@ interface LinkPreview {
 
 export function PostComposer({
     onSubmit,
-    userName = 'User',
+    handle = 'User',
     placeholder = "What's on your mind?",
 }: PostComposerProps) {
     // Content state

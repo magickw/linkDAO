@@ -18,7 +18,7 @@ import { communitiesService } from '../services';
 interface Member {
     id: string;
     displayName: string;
-    username: string;
+    handle: string;
     avatar?: string;
     role: 'owner' | 'admin' | 'moderator' | 'member';
     joinedAt: string;
@@ -70,7 +70,7 @@ export default function MemberManagementScreen({
     const filteredMembers = members.filter((member) => {
         const matchesSearch =
             member.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            member.username.toLowerCase().includes(searchQuery.toLowerCase());
+            member.handle.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesRole = selectedRole === 'all' || member.role === selectedRole;
         return matchesSearch && matchesRole;
     });
@@ -174,7 +174,7 @@ export default function MemberManagementScreen({
 
                 <View style={styles.memberInfo}>
                     <Text style={styles.memberName}>{item.displayName}</Text>
-                    <Text style={styles.memberUsername}>@{item.username}</Text>
+                    <Text style={styles.memberHandle}>@{item.handle}</Text>
                     <View style={styles.memberStats}>
                         <Text style={styles.statText}>{item.postsCount} posts</Text>
                         <Text style={styles.statText}>• Joined {new Date(item.joinedAt).toLocaleDateString()}</Text>
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: '#000',
     },
-    memberUsername: {
+    memberHandle: {
         fontSize: 14,
         color: '#8E8E93',
         marginTop: 2,

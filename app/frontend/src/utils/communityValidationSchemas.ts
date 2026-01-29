@@ -280,7 +280,7 @@ export class UserProfileValidator {
         errors.push('User ID is required and must be a string');
       }
 
-      if (!data.username || typeof data.username !== 'string') {
+      if (!data.handle || typeof data.handle !== 'string') {
         errors.push('Username is required and must be a string');
       }
 

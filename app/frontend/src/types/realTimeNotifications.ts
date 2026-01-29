@@ -65,7 +65,7 @@ export interface MentionNotification extends BaseNotification {
     postId: string;
     commentId?: string;
     mentionedBy: string;
-    mentionedByUsername: string;
+    mentionedByHandle: string;
     mentionedByAvatar?: string;
     context: string;
   };
@@ -78,7 +78,7 @@ export interface TipNotification extends BaseNotification {
     tipAmount: number;
     tokenSymbol: string;
     tipperAddress: string;
-    tipperUsername: string;
+    tipperHandle: string;
     tipperAvatar?: string;
     message?: string;
   };
@@ -116,7 +116,7 @@ export interface ReactionNotification extends BaseNotification {
     reactionType: string;
     reactionEmoji: string;
     reactorAddress: string;
-    reactorUsername: string;
+    reactorHandle: string;
     reactorAvatar?: string;
     tokenAmount?: number;
     count?: number;
@@ -131,12 +131,12 @@ export interface UpvoteNotification extends BaseNotification {
     postTitle?: string;
     postPreview?: string;
     voterAddress: string;
-    voterUsername: string;
+    voterHandle: string;
     voterAvatar?: string;
     totalUpvotes: number;
     isAggregated?: boolean;
     aggregatedCount?: number;
-    aggregatedUsers?: Array<{ address: string; username: string; avatar?: string }>;
+    aggregatedUsers?: Array<{ address: string; handle: string; avatar?: string }>;
   };
 }
 
@@ -147,7 +147,7 @@ export interface DownvoteNotification extends BaseNotification {
     postTitle?: string;
     postPreview?: string;
     voterAddress: string;
-    voterUsername: string;
+    voterHandle: string;
     voterAvatar?: string;
     totalDownvotes: number;
   };
@@ -161,7 +161,7 @@ export interface RepostNotification extends BaseNotification {
     postTitle?: string;
     postPreview?: string;
     reposterAddress: string;
-    reposterUsername: string;
+    reposterHandle: string;
     reposterAvatar?: string;
     repostComment?: string;
     totalReposts: number;
@@ -179,7 +179,7 @@ export interface AwardNotification extends BaseNotification {
     awardCost: number;
     awardMessage?: string;
     giverAddress: string;
-    giverUsername: string;
+    giverHandle: string;
     giverAvatar?: string;
     totalAwards: number;
   };
@@ -192,7 +192,7 @@ export interface BookmarkNotification extends BaseNotification {
     postTitle?: string;
     postPreview?: string;
     bookmarkerAddress: string;
-    bookmarkerUsername: string;
+    bookmarkerHandle: string;
     bookmarkerAvatar?: string;
     totalBookmarks: number;
   };
@@ -209,9 +209,9 @@ export interface OrderCreatedNotification extends BaseNotification {
     amount: number;
     currency: string;
     buyerAddress: string;
-    buyerUsername?: string;
+    buyerHandle?: string;
     sellerAddress: string;
-    sellerUsername?: string;
+    sellerHandle?: string;
     recipientType: 'buyer' | 'seller';
   };
 }
@@ -224,7 +224,7 @@ export interface OrderConfirmedNotification extends BaseNotification {
     productTitle: string;
     productImage?: string;
     sellerAddress: string;
-    sellerUsername?: string;
+    sellerHandle?: string;
     recipientType: 'buyer' | 'seller';
   };
 }
@@ -347,7 +347,7 @@ export interface DeliveryConfirmedNotification extends BaseNotification {
     productImage?: string;
     confirmedAt: string;
     buyerAddress: string;
-    buyerUsername?: string;
+    buyerHandle?: string;
     recipientType: 'buyer' | 'seller';
   };
 }
