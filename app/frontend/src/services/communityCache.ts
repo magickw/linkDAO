@@ -583,7 +583,7 @@ export class UserProfileCache {
         const data = await response.json();
         return {
           id: data.id,
-          username: data.username,
+          handle: data.handle,
           ensName: data.ens_name,
           avatar: data.avatar_url,
           reputation: data.reputation || 0,

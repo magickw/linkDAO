@@ -10,7 +10,7 @@ export interface SocialProofData {
 export interface UserProfile {
   id: string;
   address: string;
-  username?: string;
+  handle?: string;
   displayName?: string;
   avatar?: string;
   verified: boolean;

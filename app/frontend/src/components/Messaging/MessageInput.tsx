@@ -14,8 +14,8 @@ interface MessageInputProps {
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setShowAttachmentModal: (show: boolean) => void;
-  replyingTo: { messageId: string; username: string; content: string } | null;
-  quotingTo: { messageId: string; username: string; content: string } | null;
+  replyingTo: { messageId: string; handle: string; content: string } | null;
+  quotingTo: { messageId: string; handle: string; content: string } | null;
   setReplyingTo: (val: any) => void;
   setQuotingTo: (val: any) => void;
   handleTyping?: () => void;
@@ -121,7 +121,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-between border-l-4 border-blue-500">
             <div className="flex flex-col text-sm overflow-hidden">
               <span className="font-semibold text-blue-500 dark:text-blue-400">
-                {replyingTo ? `Replying to ${replyingTo.username}` : `Quoting ${quotingTo?.username}`}
+                {replyingTo ? `Replying to ${replyingTo.handle}` : `Quoting ${quotingTo?.handle}`}
               </span>
               <span className="text-gray-600 dark:text-gray-300 truncate">
                 {replyingTo ? replyingTo.content : quotingTo?.content}

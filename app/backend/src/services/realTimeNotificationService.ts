@@ -326,7 +326,7 @@ class RealTimeNotificationService {
     postId: string;
     commentId?: string;
     mentionedBy: string;
-    mentionedByUsername: string;
+    mentionedByHandle: string;
     mentionedByAvatar?: string;
     context: string;
   }): void {
@@ -337,7 +337,7 @@ class RealTimeNotificationService {
       priority: 'high',
       urgency: 'immediate',
       title: 'You were mentioned',
-      message: `${data.mentionedByUsername} mentioned you`,
+      message: `${data.mentionedByHandle} mentioned you`,
       timestamp: new Date(),
       read: false,
       dismissed: false,
@@ -353,7 +353,7 @@ class RealTimeNotificationService {
     tipAmount: number;
     tokenSymbol: string;
     tipperAddress: string;
-    tipperUsername: string;
+    tipperHandle: string;
     tipperAvatar?: string;
     message?: string;
   }): void {
@@ -364,7 +364,7 @@ class RealTimeNotificationService {
       priority: 'high',
       urgency: 'immediate',
       title: 'You received a tip!',
-      message: `${data.tipperUsername} tipped you ${data.tipAmount} ${data.tokenSymbol}`,
+      message: `${data.tipperHandle} tipped you ${data.tipAmount} ${data.tokenSymbol}`,
       timestamp: new Date(),
       read: false,
       dismissed: false,
@@ -432,7 +432,7 @@ class RealTimeNotificationService {
     reactionType: string;
     reactionEmoji: string;
     reactorAddress: string;
-    reactorUsername: string;
+    reactorHandle: string;
     reactorAvatar?: string;
     tokenAmount?: number;
   }): void {
@@ -443,7 +443,7 @@ class RealTimeNotificationService {
       priority: 'low',
       urgency: 'eventual',
       title: 'New reaction',
-      message: `${data.reactorUsername} reacted with ${data.reactionEmoji}`,
+      message: `${data.reactorHandle} reacted with ${data.reactionEmoji}`,
       timestamp: new Date(),
       read: false,
       dismissed: false,
@@ -457,7 +457,7 @@ class RealTimeNotificationService {
   public notifyNewComment(postId: string, data: {
     commentId: string;
     authorId: string;
-    authorUsername: string;
+    authorHandle: string;
     authorAvatar?: string;
     content: string;
   }): void {
@@ -478,7 +478,7 @@ class RealTimeNotificationService {
       priority: 'normal',
       urgency: 'timely',
       title: 'New comment',
-      message: `${data.authorUsername} commented on a post you're following`,
+      message: `${data.authorHandle} commented on a post you're following`,
       timestamp: new Date(),
       read: false,
       dismissed: false,

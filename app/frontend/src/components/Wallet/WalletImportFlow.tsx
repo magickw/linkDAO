@@ -132,7 +132,7 @@ export const WalletImportFlow: React.FC<WalletImportFlowProps> = ({
       // Store wallet securely
       await SecureKeyStorage.storeWallet(address, privateKeyToUse, password, {
         name: walletName || 'Imported Wallet',
-        isHardwareWallet: importMethod === 'hardware',
+        isHardwareWallet: false, // Hardware wallets not yet implemented
         chainIds: [1, 8453, 137, 42161],
       });
 
@@ -551,7 +551,16 @@ export const WalletImportFlow: React.FC<WalletImportFlowProps> = ({
         {renderStep()}
 
         {/* Footer */}
-        {step !== 'complete' && (
+        {step === 'complete' ? (
+          <div className="mt-8">
+            <button
+              onClick={onCancel || (() => {})}
+              className="w-full py-3 bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 transition-all"
+            >
+              Done
+            </button>
+          </div>
+        ) : (
           <div className="mt-8 flex space-x-3">
             {step === 'method' && (
               <button
@@ -579,8 +588,6 @@ export const WalletImportFlow: React.FC<WalletImportFlowProps> = ({
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   <span>Importing...</span>
                 </>
-              ) : step === 'complete' ? (
-                'Done'
               ) : (
                 <>
                   <span>Continue</span>

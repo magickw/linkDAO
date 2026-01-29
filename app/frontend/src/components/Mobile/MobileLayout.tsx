@@ -15,7 +15,7 @@ interface MobileLayoutProps {
   onCreatePost?: () => void;
   userAddress?: string;
   userAvatar?: string;
-  userName?: string;
+  handle?: string;
   unreadMessages?: number;
   isDarkMode?: boolean;
   onThemeToggle?: () => void;
@@ -34,7 +34,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
   onCreatePost = () => {},
   userAddress,
   userAvatar,
-  userName,
+  handle,
   unreadMessages = 0,
   isDarkMode = false,
   onThemeToggle = () => {},
@@ -151,7 +151,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
         onClose={handleMenuClose}
         userAddress={userAddress}
         userAvatar={userAvatar}
-        userName={userName}
+        userName={handle}
         onNavigate={onNavigate}
         onThemeToggle={onThemeToggle}
         onLogout={onLogout}

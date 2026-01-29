@@ -12,7 +12,7 @@ interface Comment {
   id: string;
   postId: string;
   authorId: string;
-  authorUsername: string;
+  authorHandle: string;
   authorAvatar?: string;
   content: string;
   timestamp: Date;
@@ -85,7 +85,7 @@ const LiveCommentUpdates: React.FC<LiveCommentUpdatesProps> = ({
         id: notification.metadata.commentId,
         postId: postId,
         authorId: notification.metadata.authorId,
-        authorUsername: notification.metadata.authorUsername,
+        authorHandle: notification.metadata.authorHandle,
         authorAvatar: notification.metadata.authorAvatar,
         content: notification.metadata.content,
         timestamp: new Date(notification.timestamp),
@@ -214,13 +214,13 @@ const LiveCommentUpdates: React.FC<LiveCommentUpdatesProps> = ({
     >
       <img 
         src={comment.authorAvatar || '/images/default-avatar.png'} 
-        alt={comment.authorUsername}
+        alt={comment.authorHandle}
         className="w-8 h-8 rounded-full flex-shrink-0"
       />
       <div className="flex-1 min-w-0">
         <div className="flex items-center space-x-2 mb-1">
           <span className="font-medium text-sm text-gray-900">
-            {comment.authorUsername}
+            {comment.authorHandle}
           </span>
           <span className="text-xs text-gray-500">
             {formatTimestamp(comment.timestamp)}

@@ -177,7 +177,7 @@ class ReputationService {
     return {
       user: {
         id: '',
-        username: '',
+        handle: '',
         displayName: '',
         avatar: '',
         walletAddress: '',
@@ -289,9 +289,9 @@ class ReputationService {
 
   private getMockMiniProfileData(): MiniProfileData {
     return {
-      user: {
+      user: { 
         id: 'user123',
-        username: 'cryptodev',
+        handle: 'cryptodev',
         displayName: 'Crypto Developer',
         avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
         walletAddress: '0x1234567890123456789012345678901234567890',

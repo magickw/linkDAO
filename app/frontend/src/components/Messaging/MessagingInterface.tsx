@@ -168,8 +168,8 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   const [showReactionPicker, setShowReactionPicker] = useState<{ messageId: string; show: boolean }>({ messageId: '', show: false });
   const [showThread, setShowThread] = useState<{ messageId: string; show: boolean }>({ messageId: '', show: false });
   const [threadMessages, setThreadMessages] = useState<ChannelMessage[]>([]);
-  const [replyingTo, setReplyingTo] = useState<{ messageId: string; username: string; content: string } | null>(null);
-  const [quotingTo, setQuotingTo] = useState<{ messageId: string; username: string; content: string } | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{ messageId: string; handle: string; content: string } | null>(null);
+  const [quotingTo, setQuotingTo] = useState<{ messageId: string; handle: string; content: string } | null>(null);
   const [showCrossChainBridge, setShowCrossChainBridge] = useState(false);
   const [reactionTooltip, setReactionTooltip] = useState<{ messageId: string; emoji: string; show: boolean; position: { x: number; y: number } } | null>(null);
   const [showAttachmentModal, setShowAttachmentModal] = useState(false);
@@ -415,12 +415,12 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     // In a real app, call API here
   };
 
-  const replyToMessage = (messageId: string, username: string, content: string) => {
-    setReplyingTo({ messageId, username, content });
+  const replyToMessage = (messageId: string, handle: string, content: string) => {
+    setReplyingTo({ messageId, handle, content });
   };
 
   const quoteMessage = (content: string, author: string, messageId: string) => {
-    setQuotingTo({ messageId, username: author, content });
+    setQuotingTo({ messageId, handle: author, content });
     setReplyingTo(null);
   };
 

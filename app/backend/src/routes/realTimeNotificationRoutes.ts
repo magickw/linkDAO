@@ -56,7 +56,7 @@ router.post('/mention', csrfProtection,
     body('userId').isString().notEmpty(),
     body('postId').isString().notEmpty(),
     body('mentionedBy').isString().notEmpty(),
-    body('mentionedByUsername').isString().notEmpty(),
+    body('mentionedByHandle').isString().notEmpty(),
     body('context').isString().notEmpty(),
     body('commentId').optional().isString(),
     body('mentionedByAvatar').optional().isString()
@@ -90,7 +90,7 @@ router.post('/tip', csrfProtection,
     body('tipAmount').isNumeric(),
     body('tokenSymbol').isString().notEmpty(),
     body('tipperAddress').isString().notEmpty(),
-    body('tipperUsername').isString().notEmpty(),
+    body('tipperHandle').isString().notEmpty(),
     body('tipperAvatar').optional().isString(),
     body('message').optional().isString()
   ],
@@ -192,7 +192,7 @@ router.post('/reaction', csrfProtection,
     body('reactionType').isString().notEmpty(),
     body('reactionEmoji').isString().notEmpty(),
     body('reactorAddress').isString().notEmpty(),
-    body('reactorUsername').isString().notEmpty(),
+    body('reactorHandle').isString().notEmpty(),
     body('reactorAvatar').optional().isString(),
     body('tokenAmount').optional().isNumeric()
   ],
@@ -223,7 +223,7 @@ router.post('/comment', csrfProtection,
     body('postId').isString().notEmpty(),
     body('commentId').isString().notEmpty(),
     body('authorId').isString().notEmpty(),
-    body('authorUsername').isString().notEmpty(),
+    body('authorHandle').isString().notEmpty(),
     body('content').isString().notEmpty(),
     body('authorAvatar').optional().isString()
   ],
@@ -350,55 +350,8 @@ router.post('/test/:type', csrfProtection,
       const { type } = req.params;
       const { userId } = req.body;
 
-      const testData = {
-        mention: {
-          postId: 'test-post-123',
-          commentId: 'test-comment-456',
-          mentionedBy: 'test-user-789',
-          mentionedByUsername: 'TestUser',
-          mentionedByAvatar: '/avatars/test.png',
-          context: 'This is a test mention @' + userId
-        },
-        tip: {
-          postId: 'test-post-123',
-          tipAmount: 5,
-          tokenSymbol: 'USDC',
-          tipperAddress: 'test-tipper-address',
-          tipperUsername: 'TestTipper',
-          tipperAvatar: '/avatars/tipper.png',
-          message: 'Great post!'
-        },
-        governance: {
-          proposalId: 'test-proposal-123',
-          proposalTitle: 'Test Governance Proposal',
-          action: 'voting_ending' as const,
-          votingDeadline: new Date(Date.now() + 3600000), // 1 hour from now
-          quorumStatus: 'approaching' as const,
-          userVoteStatus: 'not_voted' as const
-        },
-        community: {
-          communityId: 'test-community-123',
-          communityName: 'Test Community',
-          communityIcon: '/communities/test.png',
-          eventType: 'event' as const,
-          eventData: {
-            canJoin: true,
-            eventDate: new Date(Date.now() + 86400000) // Tomorrow
-          }
-        },
-        reaction: {
-          postId: 'test-post-123',
-          reactionType: 'fire',
-          reactionEmoji: '🔥',
-          reactorAddress: 'test-reactor-address',
-          reactorUsername: 'TestReactor',
-          reactorAvatar: '/avatars/reactor.png',
-          tokenAmount: 2
-        }
-      };
+      const data = req.body.data || {};
 
-      const data = testData[type as keyof typeof testData];
-      
       switch (type) {
         case 'mention':
           req.notificationService.createMentionNotification(userId, data);

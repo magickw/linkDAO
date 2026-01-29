@@ -95,21 +95,21 @@ export function useFilterState({
   }, [filterState, handleFilterChange]);
 
   // Add author filter
-  const addAuthorFilter = useCallback((authorUsername: string) => {
-    if (!filterState.author.includes(authorUsername)) {
+  const addAuthorFilter = useCallback((authorHandle: string) => {
+    if (!filterState.author.includes(authorHandle)) {
       const newState = {
         ...filterState,
-        author: [...filterState.author, authorUsername]
+        author: [...filterState.author, authorHandle]
       };
       handleFilterChange(newState);
     }
   }, [filterState, handleFilterChange]);
 
   // Remove author filter
-  const removeAuthorFilter = useCallback((authorUsername: string) => {
+  const removeAuthorFilter = useCallback((authorHandle: string) => {
     const newState = {
       ...filterState,
-      author: filterState.author.filter(username => username !== authorUsername)
+      author: filterState.author.filter(handle => handle !== authorHandle)
     };
     handleFilterChange(newState);
   }, [filterState, handleFilterChange]);

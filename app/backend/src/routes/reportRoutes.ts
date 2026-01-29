@@ -11,7 +11,7 @@ const router = Router();
 const submitReportSchema = {
   body: {
     contentId: { type: 'string', required: true, minLength: 1, maxLength: 64 },
-    contentType: { type: 'string', required: true, enum: ['post', 'comment', 'listing', 'dm', 'username', 'nft', 'service'] },
+    contentType: { type: 'string', required: true, enum: ['post', 'comment', 'listing', 'dm', 'handle', 'nft', 'service'] },
     reason: { type: 'string', required: true, minLength: 1, maxLength: 48 },
     details: { type: 'string', optional: true },
     category: { type: 'string', optional: true, enum: ['spam', 'harassment', 'hate_speech', 'violence', 'nsfw', 'scam', 'copyright', 'other'] }

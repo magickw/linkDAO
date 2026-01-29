@@ -5,7 +5,7 @@ import { useProfile } from '@/hooks/useProfile';
 interface SuggestedUser {
   id: string;
   displayName: string;
-  username: string;
+  handle: string;
   avatar: string;
   isVerified: boolean;
   followerCount: number;

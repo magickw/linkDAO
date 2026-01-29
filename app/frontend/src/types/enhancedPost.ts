@@ -102,7 +102,7 @@ export interface HashtagSuggestion {
 
 export interface MentionSuggestion {
   address: string;
-  hanndle?: string;
+  handle?: string;
   displayName?: string;
   avatar?: string;
   reputation?: number;

@@ -75,25 +75,10 @@ export const PostComposer: React.FC<PostComposerProps> = ({
   }, []);
 
   // Mock user suggestions (in production, fetch from API)
-  const userSuggestions: UserSuggestion[] = [
-    { id: '1', username: 'alice', displayName: 'Alice Johnson' },
-    { id: '2', username: 'bob', displayName: 'Bob Smith' },
-    { id: '3', username: 'charlie', displayName: 'Charlie Brown' },
-    { id: '4', username: 'diana', displayName: 'Diana Prince' },
-    { id: '5', username: 'evan', displayName: 'Evan Wright' },
-  ];
+  const userSuggestions: UserSuggestion[] = [];
 
   // Mock hashtag suggestions (in production, fetch from API)
-  const hashtagSuggestions: HashtagSuggestion[] = [
-    { tag: 'blockchain', count: 1234 },
-    { tag: 'defi', count: 987 },
-    { tag: 'nft', count: 856 },
-    { tag: 'crypto', count: 2345 },
-    { tag: 'web3', count: 1567 },
-    { tag: 'dao', count: 654 },
-    { tag: 'trading', count: 432 },
-    { tag: 'investment', count: 321 },
-  ];
+  const hashtagSuggestions: HashtagSuggestion[] = [];
 
   const filteredUserSuggestions = userSuggestions.filter(user =>
     user.handle.toLowerCase().includes(mentionQuery.toLowerCase()) ||

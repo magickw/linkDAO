@@ -262,7 +262,7 @@ export interface TokenReaction {
 
 export interface ReactionUser {
   id: string;
-  username: string;
+  handle: string;
   avatar: string;
   reputation: number;
 }

@@ -115,13 +115,13 @@ export const SocialNotificationProvider: React.FC<{ children: React.ReactNode }>
           postTitle: meta.postTitle,
           postPreview: meta.postPreview,
           fromAddress: meta.voterAddress,
-          fromName: meta.voterUsername,
+          fromName: meta.voterHandle,
           fromAvatar: meta.voterAvatar,
           isAggregated: meta.isAggregated,
           aggregatedCount: meta.aggregatedCount,
           aggregatedUsers: meta.aggregatedUsers?.map(u => ({
             address: u.address,
-            name: u.username,
+            name: u.handle,
             avatar: u.avatar
           }))
         };
@@ -134,7 +134,7 @@ export const SocialNotificationProvider: React.FC<{ children: React.ReactNode }>
           postTitle: meta.postTitle,
           postPreview: meta.postPreview,
           fromAddress: meta.voterAddress,
-          fromName: meta.voterUsername,
+          fromName: meta.voterHandle,
           fromAvatar: meta.voterAvatar
         };
       }
@@ -146,7 +146,7 @@ export const SocialNotificationProvider: React.FC<{ children: React.ReactNode }>
           postTitle: meta.postTitle,
           postPreview: meta.postPreview,
           fromAddress: meta.reposterAddress,
-          fromName: meta.reposterUsername,
+          fromName: meta.reposterHandle,
           fromAvatar: meta.reposterAvatar
         };
       }
@@ -158,7 +158,7 @@ export const SocialNotificationProvider: React.FC<{ children: React.ReactNode }>
           postTitle: meta.postTitle,
           postPreview: meta.postPreview,
           fromAddress: meta.giverAddress,
-          fromName: meta.giverUsername,
+          fromName: meta.giverHandle,
           fromAvatar: meta.giverAvatar
         };
       }
@@ -170,7 +170,7 @@ export const SocialNotificationProvider: React.FC<{ children: React.ReactNode }>
           postTitle: meta.postTitle,
           postPreview: meta.postPreview,
           fromAddress: meta.bookmarkerAddress,
-          fromName: meta.bookmarkerUsername,
+          fromName: meta.bookmarkerHandle,
           fromAvatar: meta.bookmarkerAvatar
         };
       }
@@ -180,7 +180,7 @@ export const SocialNotificationProvider: React.FC<{ children: React.ReactNode }>
           ...baseNotification,
           postId: meta.postId,
           fromAddress: meta.tipperAddress,
-          fromName: meta.tipperUsername,
+          fromName: meta.tipperHandle,
           fromAvatar: meta.tipperAvatar
         };
       }
@@ -190,7 +190,7 @@ export const SocialNotificationProvider: React.FC<{ children: React.ReactNode }>
           ...baseNotification,
           postId: meta.postId,
           fromAddress: meta.reactorAddress,
-          fromName: meta.reactorUsername,
+          fromName: meta.reactorHandle,
           fromAvatar: meta.reactorAvatar
         };
       }
@@ -200,7 +200,7 @@ export const SocialNotificationProvider: React.FC<{ children: React.ReactNode }>
           ...baseNotification,
           postId: meta.postId,
           fromAddress: meta.mentionedBy,
-          fromName: meta.mentionedByUsername,
+          fromName: meta.mentionedByHandle,
           fromAvatar: meta.mentionedByAvatar
         };
       }

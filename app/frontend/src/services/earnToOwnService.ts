@@ -215,7 +215,7 @@ class EarnToOwnService {
     /**
      * Get leaderboard
      */
-    async getLeaderboard(limit = 100): Promise<Array<{ rank: number; userId: string; username: string; totalEarned: number }>> {
+    async getLeaderboard(limit = 100): Promise<Array<{ rank: number; userId: string; handle: string; totalEarned: number }>> {
         try {
             const response = await fetch(`${this.baseUrl}/leaderboard?limit=${limit}`, {
                 credentials: 'include'
