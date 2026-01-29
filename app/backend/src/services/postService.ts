@@ -632,7 +632,7 @@ export class PostService {
 
       if (dbPost.communityId) {
         try {
-          const communityResult = await db.select({
+          const communityResult = await this.db.select({
             name: schema.communities.name,
             slug: schema.communities.slug
           })
@@ -649,6 +649,17 @@ export class PostService {
         }
       }
 
+      // Safe JSON parsing helper
+      const safeParse = (data: any) => {
+        if (!data) return [];
+        if (Array.isArray(data)) return data;
+        try {
+          return JSON.parse(data);
+        } catch (e) {
+          return [];
+        }
+      };
+
       return {
         id: dbPost.id.toString(),
         author: author.walletAddress,
@@ -658,11 +669,11 @@ export class PostService {
         content: dbPost.content,
         contentCid: dbPost.contentCid,
         shareId: dbPost.shareId || '', // Include shareId for share URLs
-        mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
-        tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+        mediaCids: safeParse(dbPost.mediaCids),
+        tags: safeParse(dbPost.tags),
         createdAt: dbPost.createdAt || new Date(),
         onchainRef: '',
-        mediaUrls: dbPost.mediaUrls ? JSON.parse(dbPost.mediaUrls) : [],
+        mediaUrls: safeParse(dbPost.mediaUrls),
         location: dbPost.location || undefined,
         communityId: dbPost.communityId,
         communityName,
@@ -687,6 +698,17 @@ export class PostService {
     // Get posts from database
     const dbPosts = await databaseService.getPostsByAuthor(user.id);
 
+    // Safe JSON parsing helper
+    const safeParse = (data: any) => {
+      if (!data) return [];
+      if (Array.isArray(data)) return data;
+      try {
+        return JSON.parse(data);
+      } catch (e) {
+        return [];
+      }
+    };
+
     // Convert to Post model
     const posts: Post[] = dbPosts.map((dbPost: any) => {
       // Handle potential null dates by providing default values
@@ -699,8 +721,8 @@ export class PostService {
         title: dbPost.title || '', // Include title field
         content: dbPost.content,
         contentCid: dbPost.contentCid,
-        mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
-        tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+        mediaCids: safeParse(dbPost.mediaCids),
+        tags: safeParse(dbPost.tags),
         communityId: dbPost.communityId || null, // Include communityId for proper redirects
         createdAt,
         onchainRef: dbPost.onchainRef || '',
@@ -718,6 +740,17 @@ export class PostService {
       // Get posts by tag from database
       const dbPosts = await databaseService.getPostsByTag(tag.toLowerCase());
 
+      // Safe JSON parsing helper
+      const safeParse = (data: any) => {
+        if (!data) return [];
+        if (Array.isArray(data)) return data;
+        try {
+          return JSON.parse(data);
+        } catch (e) {
+          return [];
+        }
+      };
+
       // Convert to Post model with proper author information
       const posts: Post[] = await Promise.all(dbPosts.map(async (dbPost: any) => {
         const author = await userProfileService.getProfileById(dbPost.authorId);
@@ -729,8 +762,8 @@ export class PostService {
           parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
           content: dbPost.content,
           contentCid: dbPost.contentCid,
-          mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
-          tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+          mediaCids: safeParse(dbPost.mediaCids),
+          tags: safeParse(dbPost.tags),
           createdAt: dbPost.createdAt || new Date(),
           onchainRef: '',
           upvotes: dbPost.upvotes || 0,
@@ -750,6 +783,17 @@ export class PostService {
     try {
       // Get posts by community from database
       const dbPosts = await databaseService.getPostsByCommunity(communityId);
+
+      // Safe JSON parsing helper
+      const safeParse = (data: any) => {
+        if (!data) return [];
+        if (Array.isArray(data)) return data;
+        try {
+          return JSON.parse(data);
+        } catch (e) {
+          return [];
+        }
+      };
 
       // Convert to Post model with proper author information
       const posts: Post[] = await Promise.all(dbPosts.map(async (dbPost: any) => {
@@ -772,8 +816,8 @@ export class PostService {
           parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
           content: dbPost.content,
           contentCid: dbPost.contentCid,
-          mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
-          tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+          mediaCids: safeParse(dbPost.mediaCids),
+          tags: safeParse(dbPost.tags),
           upvotes: dbPost.upvotes || 0,
           downvotes: dbPost.downvotes || 0,
           views: dbPost.views || 0,
@@ -919,6 +963,17 @@ export class PostService {
       // Get all posts from database
       const dbPosts = await databaseService.getAllPosts();
 
+      // Safe JSON parsing helper
+      const safeParse = (data: any) => {
+        if (!data) return [];
+        if (Array.isArray(data)) return data;
+        try {
+          return JSON.parse(data);
+        } catch (e) {
+          return [];
+        }
+      };
+
       // Convert to Post model with proper author information
       const posts: Post[] = [];
       for (const dbPost of dbPosts) {
@@ -945,8 +1000,8 @@ export class PostService {
             content: dbPost.content,
             contentCid: dbPost.contentCid,
             shareId: dbPost.shareId || '', // Include shareId
-            mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
-            tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+            mediaCids: safeParse(dbPost.mediaCids),
+            tags: safeParse(dbPost.tags),
             createdAt,
             onchainRef: dbPost.onchainRef || '',
             upvotes: dbPost.upvotes || 0,
