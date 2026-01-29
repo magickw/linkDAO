@@ -76,6 +76,25 @@ if (typeof global.crypto.subtle === 'undefined') {
   global.crypto.subtle = {};
 }
 
+// Polyfill Node.js crypto module for ws package
+// This is required by @walletconnect packages that depend on ws
+if (typeof global.crypto.randomFillSync === 'undefined') {
+  global.crypto.randomFillSync = function(buffer, offset, size) {
+    offset = offset || 0;
+    size = size || buffer.length - offset;
+    const bytes = new Uint8Array(size);
+    if (global.crypto.getRandomValues) {
+      global.crypto.getRandomValues(bytes);
+    } else {
+      for (let i = 0; i < size; i++) {
+        bytes[i] = Math.floor(Math.random() * 256);
+      }
+    }
+    buffer.set(bytes, offset);
+    return buffer;
+  };
+}
+
 // Polyfill addEventListener
 if (typeof global.window.addEventListener !== 'function') {
   global.window.addEventListener = () => {};

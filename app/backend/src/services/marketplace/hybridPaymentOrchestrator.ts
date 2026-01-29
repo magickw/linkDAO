@@ -213,8 +213,9 @@ export class HybridPaymentOrchestrator {
       safeLogger.info('[processHybridCheckout] Payment method object:', method);
 
       // Calculate fees
-      // 1. Platform Listing/Sale Fee: 15% (Charged to SELLER)
-      const platformFeeRate = 0.15;
+      // 1. Platform Listing/Sale Fee (Charged to SELLER)
+      // Tiered by payment path: 10% fiat, 7% crypto (on item price only)
+      const platformFeeRate = selectedPath === 'fiat' ? 0.10 : 0.07;
       const platformFee = request.amount * platformFeeRate;
 
       // 2. Tax Calculation
@@ -226,14 +227,10 @@ export class HybridPaymentOrchestrator {
 
       if (selectedPath === 'crypto') {
         gasFee = 0.01; // Estimate gas for crypto transactions
-        // For crypto, we might charge a small additional processing fee or just gas
         processingFee = 0;
       } else {
         // Stripe fees: 2.9% + $0.30 
         // This is calculated on the TOTAL amount charged to the card (Price + Tax)
-        // Platform fee is NOT added to the buyer's total, so it doesn't affect Stripe fee base here directly,
-        // UNLESS the platform fee is added on top. User said "charged to seller", so it comes out of the request.amount.
-        // Therefore, Buyer pays: Price + Tax. Processing fee is on (Price + Tax).
         processingFee = ((request.amount + taxAmount) * 0.029) + 0.30;
       }
 
@@ -256,7 +253,7 @@ export class HybridPaymentOrchestrator {
       // Generate fallback options
       const fallbackOptions: PaymentPathDecision[] = [];
       if (selectedPath === 'crypto' && fiatMethods.availableMethods.length > 0) {
-        const fiatPlatformFee = request.amount * platformFeeRate;
+        const fiatPlatformFee = request.amount * 0.10; // Use 10% for fiat fallback
         const fiatProcessingFee = ((request.amount + taxAmount) * 0.029) + 0.30;
         const fiatTotalAmount = request.amount + taxAmount + fiatProcessingFee + shippingCost;
 

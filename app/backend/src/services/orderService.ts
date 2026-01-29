@@ -74,11 +74,12 @@ export class OrderService {
       // This is deducted from the seller's payout, NOT charged to buyer
       const paymentMethod = input.paymentMethod || 'crypto';
       const platformFeeRate = paymentMethod === 'fiat' ? 0.10 : 0.07; // 10% fiat, 7% crypto
-      const platformFee = itemPrice * platformFeeRate;
+      const platformFee = input.platformFee ? parseFloat(input.platformFee) : (itemPrice * platformFeeRate);
 
-      // IMPORTANT: Escrow should hold the FULL PAYMENT AMOUNT
-      // This includes shipping and tax (which must be released separately)
-      const fullEscrowAmount = itemPrice + shippingCost + taxAmount;
+      // IMPORTANT: Total the buyer pays (item + shipping + tax)
+      // Platform fee is NOT added here as it is deducted from itemPrice during payout
+      const calculatedTotalAmount = itemPrice + shippingCost + taxAmount;
+      const finalTotalAmount = input.totalAmount ? parseFloat(input.totalAmount) : calculatedTotalAmount;
 
       safeLogger.info('Creating order with tiered platform fee:', {
         paymentMethod,
@@ -87,21 +88,20 @@ export class OrderService {
         shippingCost,
         taxAmount,
         platformFee,
-        fullEscrowAmount,
+        finalTotalAmount,
       });
 
-      // Create escrow contract with FULL PAYMENT AMOUNT
-      // This is the total the buyer pays, which goes into escrow
+      // Create escrow contract with FULL PAYMENT AMOUNT (what buyer pays)
       const { escrowId } = await this.enhancedEscrowService.createEscrow(
         input.listingId,
         input.buyerAddress,
         input.sellerAddress,
         input.paymentToken,
-        fullEscrowAmount.toString(), // FIX: Use full amount, not just item price
+        finalTotalAmount.toString(), 
         11155111, // Default chainId
         7, // Default duration
         0, // Default resolution method
-        undefined // orderId will be updated later or we can pass temporary ID
+        undefined // orderId will be updated later
       );
 
       // Create order in database with CORRECT AMOUNTS
@@ -109,32 +109,30 @@ export class OrderService {
         input.listingId,
         buyerUser.id,
         sellerUser.id,
-        fullEscrowAmount.toString(), // FIX: Store full escrow amount, not just item price
+        itemPrice.toString(), // Base item price
         input.paymentToken,
         input.quantity ?? 1,
         escrowId,
         undefined, // variantId
         undefined, // orderId
-        taxAmount.toString(), // FIX: Store actual tax amount
-        shippingCost.toString(), // FIX: Store actual shipping cost
-        platformFee.toString(), // FIX: Store actual platform fee
-        input.taxBreakdown || [], // FIX: Store tax breakdown if provided
+        taxAmount.toString(),
+        shippingCost.toString(),
+        platformFee.toString(),
+        input.taxBreakdown || [],
         input.shippingAddress,
         input.billingAddress || input.shippingAddress,
         paymentMethod,
         {
           ...input.paymentDetails,
-          // Store breakdown for audit trail
           orderBreakdown: {
             itemPrice,
             shippingCost,
             taxAmount,
             platformFee,
-            platformFeeRate: `${(platformFeeRate * 100).toFixed(1)}%`,
-            paymentMethod,
-            totalAmount: fullEscrowAmount,
+            totalAmount: finalTotalAmount,
           }
-        }
+        },
+        finalTotalAmount.toString() // Final TOTAL buyer payment
       );
 
       if (!dbOrder) {

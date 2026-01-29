@@ -58,13 +58,35 @@ export class OrderService {
         this.ensureUserExists(input.sellerAddress)
       ]);
 
-      // Create escrow contract first
+      // Calculate order amounts correctly
+      const itemPrice = parseFloat(input.amount);
+      const shippingCost = input.shippingCost ? parseFloat(input.shippingCost) : 0;
+      const taxAmount = input.taxAmount ? parseFloat(input.taxAmount) : 0;
+
+      // Tiered platform fee (Deducted from SELLER)
+      const paymentMethod = input.paymentMethod || 'crypto';
+      const platformFeeRate = paymentMethod === 'fiat' ? 0.10 : 0.07;
+      const platformFee = input.platformFee ? parseFloat(input.platformFee) : (itemPrice * platformFeeRate);
+
+      // Total charged to BUYER
+      const calculatedTotalAmount = itemPrice + shippingCost + taxAmount;
+      const finalTotalAmount = input.totalAmount ? parseFloat(input.totalAmount) : calculatedTotalAmount;
+
+      safeLogger.info('[Marketplace Order] Creating order with amounts:', {
+        itemPrice,
+        taxAmount,
+        shippingCost,
+        platformFee,
+        finalTotalAmount
+      });
+
+      // Create escrow contract first with FULL payment
       const { escrowId } = await this.enhancedEscrowService.createEscrow(
         input.listingId,
         input.buyerAddress,
         input.sellerAddress,
         input.paymentToken,
-        input.amount,
+        finalTotalAmount.toString(),
         11155111, // Default chainId
         7, // Default duration
         0, // Default resolution method
@@ -76,20 +98,21 @@ export class OrderService {
         input.listingId,
         buyerUser.id,
         sellerUser.id,
-        input.amount,
+        itemPrice.toString(), // Base item price
         input.paymentToken,
         input.quantity ?? 1,
         escrowId,
         undefined, // variantId
         undefined, // orderId
-        '0', // taxAmount
-        '0', // shippingCost
-        '0', // platformFee
-        [], // taxBreakdown
+        taxAmount.toString(),
+        shippingCost.toString(),
+        platformFee.toString(),
+        input.taxBreakdown || [],
         input.shippingAddress,
         input.billingAddress || input.shippingAddress,
-        input.paymentMethod || 'crypto',
-        input.paymentDetails
+        paymentMethod,
+        input.paymentDetails,
+        finalTotalAmount.toString() // Final TOTAL buyer payment
       );
 
       if (!dbOrder) {

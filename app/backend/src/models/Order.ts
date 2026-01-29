@@ -16,6 +16,8 @@ export interface CreateOrderInput {
   shippingCost?: string;
   taxAmount?: string;
   taxBreakdown?: any;
+  totalAmount?: string;
+  platformFee?: string;
 }
 
 export interface UpdateOrderInput {
