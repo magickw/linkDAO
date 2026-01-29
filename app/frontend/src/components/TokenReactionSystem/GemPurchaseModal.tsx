@@ -861,6 +861,80 @@ const GemPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
                   </div>
                 )}
 
+                {/* Network and Stablecoin Selection Dropdowns */}
+                {selectedPaymentMethod?.method.type === PaymentMethodType.STABLECOIN_USDC && (
+                  <div className="mb-4 space-y-3">
+                    {/* Network Selection */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Select Network
+                      </label>
+                      <select
+                        value={selectedNetworkId}
+                        onChange={(e) => setSelectedNetworkId(e.target.value)}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                      >
+                        {Object.entries(NETWORK_CONFIGS).map(([id, config]) => {
+                          const usdcToken = USDC_TOKENS[config.chainId];
+                          const usdtToken = USDT_TOKENS[config.chainId];
+                          const hasUSDC = !!usdcToken;
+                          const hasUSDT = !!usdtToken;
+                          
+                          if (selectedStablecoin === 'USDC' && !hasUSDC) return null;
+                          if (selectedStablecoin === 'USDT' && !hasUSDT) return null;
+                          
+                          return (
+                            <option key={id} value={id}>
+                              {config.name} - {config.description}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+
+                    {/* Stablecoin Selection */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Select Stablecoin
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedStablecoin('USDC')}
+                          className={`
+                            p-3 rounded-lg border-2 transition-all
+                            ${selectedStablecoin === 'USDC'
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                            }
+                          `}
+                        >
+                          <div className="text-center">
+                            <div className="font-semibold text-gray-900">USDC</div>
+                            <div className="text-xs text-gray-500">USD Coin</div>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedStablecoin('USDT')}
+                          className={`
+                            p-3 rounded-lg border-2 transition-all
+                            ${selectedStablecoin === 'USDT'
+                              ? 'border-green-500 bg-green-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                            }
+                          `}
+                        >
+                          <div className="text-center">
+                            <div className="font-semibold text-gray-900">USDT</div>
+                            <div className="text-xs text-gray-500">Tether</div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {isLoadingMethods ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
@@ -936,8 +1010,8 @@ const GemPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
                 {selectedPaymentMethod?.method.type === PaymentMethodType.STABLECOIN_USDC && (
                   <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700">Your USDC Balance:</span>
-                      <span className="text-sm text-gray-900">{parseFloat(usdcBalance).toFixed(2)} USDC</span>
+                      <span className="text-sm font-medium text-gray-700">Your {selectedStablecoin} Balance:</span>
+                      <span className="text-sm text-gray-900">{parseFloat(usdcBalance).toFixed(2)} {selectedStablecoin}</span>
                     </div>
 
                     <div className="flex items-center justify-between">
@@ -969,7 +1043,7 @@ const GemPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
                       <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded flex items-center space-x-2">
                         <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
                         <span className="text-xs text-red-700">
-                          Insufficient USDC balance. You need ${selectedPackageData?.price.toFixed(2)} USDC.
+                          Insufficient {selectedStablecoin} balance. You need ${selectedPackageData?.price.toFixed(2)} {selectedStablecoin}.
                         </span>
                       </div>
                     )}

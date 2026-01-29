@@ -12,7 +12,7 @@ import type { SDKState } from '@metamask/sdk-react-native';
 
 const STORAGE_KEY = 'wallet_connection';
 
-export type WalletProvider = 'metamask' | 'walletconnect' | 'coinbase' | 'trust' | 'rainbow' | 'base';
+export type WalletProvider = 'metamask' | 'walletconnect' | 'coinbase' | 'trust' | 'rainbow' | 'base' | 'dev-mock';
 
 interface WalletConnection {
   provider: WalletProvider;
@@ -308,6 +308,13 @@ class WalletService {
       }
 
       console.log('🔐 Signing message with', this.currentProvider, ':', message);
+
+      if (this.currentProvider === 'dev-mock') {
+        // Development mock signer - return a valid-looking signature
+        const mockSignature = '0x' + 'a'.repeat(130); // 65 bytes in hex (130 chars)
+        console.log('✅ Mock signature generated for development');
+        return mockSignature;
+      }
 
       if (this.currentProvider === 'metamask') {
         if (!this.metaMaskSDKState?.provider) {
