@@ -999,9 +999,11 @@ export class DatabaseService {
   async createOrder(listingId: string, buyerId: string, sellerId: string, amount: string,
     paymentToken: string, quantity: number = 1, escrowId?: string, variantId?: string, orderId?: string,
     taxAmount: string = '0', shippingCost: string = '0', platformFee: string = '0', taxBreakdown: any[] = [],
-    shippingAddress: any = null, billingAddress: any = null, paymentMethod: string = 'crypto', paymentDetails: any = null) {
+    shippingAddress: any = null, billingAddress: any = null, paymentMethod: string = 'crypto', paymentDetails: any = null, totalAmount?: string) {
     try {
       return await this.db.transaction(async (tx: any) => {
+        // ... (existing inventory logic) ...
+
         // 1a. Handle variant inventory if variant is specified
         if (variantId) {
           const variantResult = await tx.execute(sql`
@@ -1158,6 +1160,7 @@ export class DatabaseService {
           buyerId,
           sellerId,
           amount,
+          totalAmount: totalAmount || amount, // Set totalAmount explicitly
           quantity,
           paymentToken,
           escrowId: escrowId || null,
@@ -1179,7 +1182,8 @@ export class DatabaseService {
           orderNumber: orderValues.orderNumber,
           taxAmount: orderValues.taxAmount,
           shippingCost: orderValues.shippingCost,
-          amount: orderValues.amount
+          amount: orderValues.amount,
+          totalAmount: orderValues.totalAmount
         });
 
         // Use provided orderId if available and is valid UUID, otherwise let DB generate it

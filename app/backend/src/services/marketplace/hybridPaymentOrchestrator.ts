@@ -242,6 +242,7 @@ export class HybridPaymentOrchestrator {
       const totalAmount = request.amount + taxAmount + processingFee + (gasFee || 0) + shippingCost;
 
       // Total Fees object (informational)
+      // NOTE: totalFees only includes what the BUYER pays. platformFee is a deduction from SELLER.
       const fees = {
         processingFee,
         platformFee, // Still tracked for seller deduction
@@ -249,7 +250,7 @@ export class HybridPaymentOrchestrator {
         taxAmount,
         shippingCost,
         currency: request.currency,
-        totalFees: platformFee + processingFee + (gasFee || 0) + taxAmount + shippingCost
+        totalFees: processingFee + (gasFee || 0) + taxAmount + shippingCost
       };
 
       // Generate fallback options
@@ -257,7 +258,7 @@ export class HybridPaymentOrchestrator {
       if (selectedPath === 'crypto' && fiatMethods.availableMethods.length > 0) {
         const fiatPlatformFee = request.amount * platformFeeRate;
         const fiatProcessingFee = ((request.amount + taxAmount) * 0.029) + 0.30;
-        const fiatTotalAmount = request.amount + taxAmount + fiatProcessingFee;
+        const fiatTotalAmount = request.amount + taxAmount + fiatProcessingFee + shippingCost;
 
         fallbackOptions.push({
           selectedPath: 'fiat',
@@ -268,6 +269,8 @@ export class HybridPaymentOrchestrator {
             platformFee: fiatPlatformFee,
             gasFee: 0,
             taxAmount,
+            shippingCost,
+            totalFees: fiatProcessingFee + taxAmount + shippingCost,
             currency: request.currency
           },
           totalAmount: fiatTotalAmount,
@@ -302,6 +305,7 @@ export class HybridPaymentOrchestrator {
           platformFee,
           gasFee: 0,
           taxAmount: 0,
+          shippingCost: 0,
           currency: request.currency,
           totalFees: processingFee // Legacy field support
         } as any,
@@ -814,11 +818,11 @@ export class HybridPaymentOrchestrator {
 
     try {
       const order = await this.databaseService.createOrder(
-        orderData.listingId,
-        orderData.buyerId,
-        orderData.sellerId,
-        orderData.amount, // Total amount paid by buyer
-        orderData.paymentToken,
+        request.listingId,
+        buyer.id,
+        seller.id,
+        request.amount.toString(), // Base item amount (item price)
+        pathDecision.method.tokenSymbol || request.currency,
         1, // quantity
         undefined, // escrowId
         undefined, // variantId
@@ -830,14 +834,20 @@ export class HybridPaymentOrchestrator {
         request.shippingAddress,
         null, // Billing address
         pathDecision.selectedPath,
-        JSON.stringify({ ...pathDecision.method, processingFee: pathDecision.fees.processingFee }) // Include processing fee in payment details
+        JSON.stringify({ 
+          ...pathDecision.method, 
+          processingFee: pathDecision.fees.processingFee,
+          platformFee: pathDecision.fees.platformFee 
+        }), // Include fees in payment details
+        pathDecision.totalAmount.toString() // TOTAL buyer payment
       );
 
       safeLogger.info(`Successfully created order ${request.orderId}`, {
         orderId: request.orderId,
-        buyerId: orderData.buyerId,
-        sellerId: orderData.sellerId,
-        amount: orderData.amount,
+        buyerId: buyer.id,
+        sellerId: seller.id,
+        itemAmount: request.amount,
+        totalAmount: pathDecision.totalAmount,
         fees: pathDecision.fees
       });
 

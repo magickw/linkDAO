@@ -305,6 +305,15 @@ class WalletService {
         return signature;
       }
 
+      if (this.currentProvider === 'walletconnect') {
+        // Use WalletConnect V2 provider to sign
+        const { walletConnectV2Service } = await import('./walletConnectV2Service');
+        const signature = await walletConnectV2Service.signMessage(message);
+
+        console.log('✅ Message signed via WalletConnect V2');
+        return signature;
+      }
+
       throw new Error('No signer available for current provider');
     } catch (error) {
       console.error('❌ Failed to sign message:', error);
