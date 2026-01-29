@@ -724,19 +724,38 @@ export class DatabaseService {
   // Follow operations
   async followUser(followerId: string, followingId: string) {
     try {
+      // Validate IDs before attempting database operation
+      if (!followerId || !followingId) {
+        safeLogger.warn("Invalid IDs for follow operation:", { followerId, followingId });
+        return null;
+      }
+
       const result = await this.db.insert(schema.follows).values({
         followerId,
         followingId
       }).returning();
-      return result[0];
-    } catch (error) {
-      safeLogger.error("Error following user:", error);
-      throw error;
+      return result[0] || null;
+    } catch (error: any) {
+      safeLogger.error("Error following user:", {
+        followerId,
+        followingId,
+        message: error?.message || 'Unknown error',
+        code: error?.code,
+        errorString: String(error)
+      });
+      // Return null instead of throwing to prevent crashes
+      return null;
     }
   }
 
   async unfollowUser(followerId: string, followingId: string) {
     try {
+      // Validate IDs before attempting database operation
+      if (!followerId || !followingId) {
+        safeLogger.warn("Invalid IDs for unfollow operation:", { followerId, followingId });
+        return false;
+      }
+
       const result = await this.db.delete(schema.follows)
         .where(and(
           eq(schema.follows.followerId, followerId),
@@ -744,9 +763,16 @@ export class DatabaseService {
         ))
         .returning();
       return result.length > 0;
-    } catch (error) {
-      safeLogger.error("Error unfollowing user:", error);
-      throw error;
+    } catch (error: any) {
+      safeLogger.error("Error unfollowing user:", {
+        followerId,
+        followingId,
+        message: error?.message || 'Unknown error',
+        code: error?.code,
+        errorString: String(error)
+      });
+      // Return false instead of throwing to prevent crashes
+      return false;
     }
   }
 

@@ -19,6 +19,12 @@ export class BlockService {
         return false;
       }
 
+      // Prevent self-blocking
+      if (blockerAddress.toLowerCase() === blockedAddress.toLowerCase()) {
+        console.warn('[BlockService] Cannot block yourself');
+        return false;
+      }
+
       // Check if already blocked
       const existing = await db
         .select()

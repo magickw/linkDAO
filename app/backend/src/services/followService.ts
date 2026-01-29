@@ -50,7 +50,11 @@ export class FollowService {
       }
 
       // Add follow relationship to database
-      await databaseService.followUser(followerUser.id, followingUser.id);
+      const followResult = await databaseService.followUser(followerUser.id, followingUser.id);
+      if (!followResult) {
+        console.warn('[FollowService] Failed to create follow relationship');
+        return false;
+      }
 
       return true;
     } catch (error: any) {
