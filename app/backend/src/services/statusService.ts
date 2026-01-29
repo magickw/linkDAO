@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { databaseService } from './databaseService';
 import { statuses, statusReactions, statusTips, users, statusTags, statusViews } from '../db/schema';
 import { eq, and, sql, desc, asc, isNull, aliasedTable, or } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
@@ -46,17 +46,21 @@ interface StatusTipInput {
 }
 
 export class StatusService {
+  private get db() {
+    return databaseService.getDatabase();
+  }
+
   async incrementView(statusId: string, userId?: string, ipAddress?: string) {
     try {
       // 1. Record the view in the status_views table for analytics/deduplication
-      await db.insert(statusViews).values({
+      await this.db.insert(statusViews).values({
         statusId,
         userId: userId || null,
         ipAddress: ipAddress || null
       });
 
       // 2. Increment the counter on the status itself
-      const [updatedStatus] = await db
+      const [updatedStatus] = await this.db
         .update(statuses)
         .set({
           views: sql`${statuses.views} + 1`
@@ -160,9 +164,13 @@ export class StatusService {
         safeLogger.warn('Location field not available, skipping');
       }
 
-      console.log('🔍 [DEBUG-CREATE-SERVICE] Inserting quick post data:', JSON.stringify(insertData));
+      console.log('🔍 [STATUS SERVICE] Inserting status data:', JSON.stringify(insertData));
 
-      const [newPost] = await db.insert(statuses).values(insertData).returning();
+      const [newPost] = await this.db.insert(statuses).values(insertData).returning();
+
+      if (!newPost) {
+        throw new Error('Failed to create status - no data returned from database');
+      }
 
       // Update cache with error handling
       try {
@@ -172,15 +180,15 @@ export class StatusService {
       }
 
       return newPost;
-    } catch (error) {
-      safeLogger.error('Error creating quick post:', error);
-      throw new Error('Failed to create quick post');
+    } catch (error: any) {
+      safeLogger.error('Error creating status:', error);
+      throw new Error(`Failed to create quick post: ${error.message}`);
     }
   }
 
   async getStatus(id: string) {
     try {
-      const posts = await db
+      const results = await this.db
         .select({
           id: statuses.id,
           shareId: statuses.shareId,
@@ -213,7 +221,7 @@ export class StatusService {
         .where(eq(statuses.id, id))
         .limit(1);
 
-      const rawPost = posts[0];
+      const rawPost = results[0];
       if (!rawPost) return null;
 
       // Transform to match frontend expectations
@@ -228,15 +236,15 @@ export class StatusService {
           avatarCid: (rawPost as any).avatarCid || undefined
         }
       };
-    } catch (error) {
-      safeLogger.error('Error getting quick post:', error);
-      throw new Error('Failed to retrieve quick post');
+    } catch (error: any) {
+      safeLogger.error('Error getting status:', error);
+      throw new Error(`Failed to retrieve quick post: ${error.message}`);
     }
   }
 
   async getStatusByShareId(shareId: string) {
     try {
-      const posts = await db
+      const results = await this.db
         .select({
           id: statuses.id,
           shareId: statuses.shareId,
@@ -266,7 +274,7 @@ export class StatusService {
         .where(eq(statuses.shareId, shareId))
         .limit(1);
 
-      const rawPost = posts[0];
+      const rawPost = results[0];
       if (!rawPost) return null;
 
       // Transform to match frontend expectations
@@ -281,9 +289,9 @@ export class StatusService {
           avatarCid: (rawPost as any).avatarCid || undefined
         }
       };
-    } catch (error) {
-      safeLogger.error('Error getting quick post by share ID:', error);
-      throw new Error('Failed to retrieve quick post by share ID');
+    } catch (error: any) {
+      safeLogger.error('Error getting status by share ID:', error);
+      throw new Error(`Failed to retrieve quick post by share ID: ${error.message}`);
     }
   }
 
@@ -301,23 +309,23 @@ export class StatusService {
       }
       updateFields.updatedAt = new Date();
 
-      const [updatedPost] = await db
+      const [updatedPost] = await this.db
         .update(statuses)
         .set(updateFields)
         .where(eq(statuses.id, id))
         .returning();
 
       return updatedPost || null;
-    } catch (error) {
-      safeLogger.error('Error updating quick post:', error);
-      throw new Error('Failed to update quick post');
+    } catch (error: any) {
+      safeLogger.error('Error updating status:', error);
+      throw new Error(`Failed to update quick post: ${error.message}`);
     }
   }
 
   async deleteStatus(id: string, userId?: string) {
     try {
       // First, check if the post exists and get its author
-      const [existingPost] = await db
+      const [existingPost] = await this.db
         .select({
           id: statuses.id,
           authorId: statuses.authorId
@@ -338,9 +346,10 @@ export class StatusService {
       }
 
       // Delete the post (CASCADE should handle related records)
-      const result = await db
+      const result = await this.db
         .delete(statuses)
-        .where(eq(statuses.id, id));
+        .where(eq(statuses.id, id))
+        .returning();
 
       if (result && result.length > 0) {
         safeLogger.info(`Quick post deleted successfully: ${id}`);
@@ -367,7 +376,7 @@ export class StatusService {
     try {
       const offset = (page - 1) * limit;
 
-      const posts = await db
+      const posts = await this.db
         .select({
           id: statuses.id,
           authorId: statuses.authorId,
@@ -396,13 +405,15 @@ export class StatusService {
         .offset(offset);
 
       // Get total count for pagination
-      const [{ count }] = await db
+      const countResult = await this.db
         .select({ count: sql<number>`COUNT(*)` })
         .from(statuses)
         .where(and(
           eq(statuses.authorId, authorId),
           sql`${statuses.moderationStatus} IS NULL OR ${statuses.moderationStatus} != 'blocked'`
         ));
+
+      const count = Number(countResult[0]?.count || 0);
 
       return {
         posts,
@@ -413,16 +424,16 @@ export class StatusService {
           totalPages: Math.ceil(count / limit)
         }
       };
-    } catch (error) {
-      safeLogger.error('Error getting quick posts by author:', error);
-      throw new Error('Failed to retrieve quick posts');
+    } catch (error: any) {
+      safeLogger.error('Error getting status by author:', error);
+      throw new Error(`Failed to retrieve quick posts: ${error.message}`);
     }
   }
 
   async addReaction(statusId: string, userId: string, type: string, amount: string) {
     try {
       // Check if reaction already exists
-      const existingReactions = await db
+      const existingReactions = await this.db
         .select()
         .from(statusReactions)
         .where(and(
@@ -437,7 +448,7 @@ export class StatusService {
 
         if (oldType === type) {
           // Toggle off (remove reaction)
-          await db
+          await this.db
             .delete(statusReactions)
             .where(and(
               eq(statusReactions.statusId, statusId),
@@ -446,15 +457,15 @@ export class StatusService {
 
           // Decrement count
           if (type === 'upvote') {
-            await db.update(statuses).set({ upvotes: sql`${statuses.upvotes} - 1` }).where(eq(statuses.id, statusId));
+            await this.db.update(statuses).set({ upvotes: sql`${statuses.upvotes} - 1` }).where(eq(statuses.id, statusId));
           } else if (type === 'downvote') {
-            await db.update(statuses).set({ downvotes: sql`${statuses.downvotes} - 1` }).where(eq(statuses.id, statusId));
+            await this.db.update(statuses).set({ downvotes: sql`${statuses.downvotes} - 1` }).where(eq(statuses.id, statusId));
           }
 
           reaction = null; // Reaction removed
         } else {
           // Update existing reaction (Change type)
-          [reaction] = await db
+          [reaction] = await this.db
             .update(statusReactions)
             .set({
               type,
@@ -479,12 +490,12 @@ export class StatusService {
           else if (type === 'downvote') updates.downvotes = updates.downvotes ? sql`${updates.downvotes} + 1` : sql`${statuses.downvotes} + 1`;
 
           if (Object.keys(updates).length > 0) {
-            await db.update(statuses).set(updates).where(eq(statuses.id, statusId));
+            await this.db.update(statuses).set(updates).where(eq(statuses.id, statusId));
           }
         }
       } else {
         // Create new reaction
-        [reaction] = await db
+        [reaction] = await this.db
           .insert(statusReactions)
           .values({
             statusId,
@@ -497,9 +508,9 @@ export class StatusService {
 
         // Increment count for new reaction
         if (type === 'upvote') {
-          await db.update(statuses).set({ upvotes: sql`${statuses.upvotes} + 1` }).where(eq(statuses.id, statusId));
+          await this.db.update(statuses).set({ upvotes: sql`${statuses.upvotes} + 1` }).where(eq(statuses.id, statusId));
         } else if (type === 'downvote') {
-          await db.update(statuses).set({ downvotes: sql`${statuses.downvotes} + 1` }).where(eq(statuses.id, statusId));
+          await this.db.update(statuses).set({ downvotes: sql`${statuses.downvotes} + 1` }).where(eq(statuses.id, statusId));
         }
       }
 
@@ -520,7 +531,7 @@ export class StatusService {
       // Trigger user notification
       try {
         if (userId) { // Ensure reactor is known
-          const status = await db
+          const status = await this.db
             .select({
               authorId: statuses.authorId,
               content: statuses.content,
@@ -531,7 +542,7 @@ export class StatusService {
             .limit(1);
 
           if (status[0] && status[0].authorId !== userId) {
-            const reactor = await db
+            const reactor = await this.db
               .select({
                 displayName: users.displayName,
                 handle: users.handle,
@@ -541,7 +552,7 @@ export class StatusService {
               .where(eq(users.id, userId))
               .limit(1);
 
-            const author = await db
+            const author = await this.db
               .select({ walletAddress: users.walletAddress })
               .from(users)
               .where(eq(users.id, status[0].authorId))
@@ -592,15 +603,15 @@ export class StatusService {
       }
 
       return reaction;
-    } catch (error) {
-      safeLogger.error('Error adding quick post reaction:', error);
-      throw new Error('Failed to add reaction');
+    } catch (error: any) {
+      safeLogger.error('Error adding reaction:', error);
+      throw new Error(`Failed to add reaction: ${error.message}`);
     }
   }
 
   async addTip(statusId: string, fromUserId: string, toUserId: string, token: string, amount: string, message?: string) {
     try {
-      const [tip] = await db
+      const [tip] = await this.db
         .insert(statusTips)
         .values({
           statusId,
@@ -630,7 +641,7 @@ export class StatusService {
       // Trigger user notification
       try {
         if (fromUserId !== toUserId) {
-          const tipper = await db
+          const tipper = await this.db
             .select({
               displayName: users.displayName,
               handle: users.handle,
@@ -640,14 +651,14 @@ export class StatusService {
             .where(eq(users.id, fromUserId))
             .limit(1);
 
-          const recipient = await db
+          const recipient = await this.db
             .select({ walletAddress: users.walletAddress })
             .from(users)
             .where(eq(users.id, toUserId))
             .limit(1);
 
           // Fetch status for preview
-          const status = await db
+          const status = await this.db
             .select({
               content: statuses.content,
               contentCid: statuses.contentCid
@@ -684,9 +695,9 @@ export class StatusService {
       }
 
       return tip;
-    } catch (error) {
-      safeLogger.error('Error adding quick post tip:', error);
-      throw new Error('Failed to add tip');
+    } catch (error: any) {
+      safeLogger.error('Error adding tip:', error);
+      throw new Error(`Failed to add tip: ${error.message}`);
     }
   }
 
@@ -738,7 +749,7 @@ export class StatusService {
       const originalPosts = aliasedTable(statuses, 'original_posts');
       const originalAuthors = aliasedTable(users, 'original_authors');
 
-      const rawPosts = await db
+      const rawPosts = await this.db
         .select({
           id: statuses.id,
           shareId: statuses.shareId,
@@ -830,7 +841,7 @@ export class StatusService {
       });
 
       // Get total count for pagination
-      const [{ count }] = await db
+      const countResult = await this.db
         .select({ count: sql<number>`COUNT(*)` })
         .from(statuses)
         .where(and(
@@ -839,6 +850,8 @@ export class StatusService {
           sql`${statuses.moderationStatus} IS NULL OR ${statuses.moderationStatus} != 'blocked'`,
           or(isNull(statuses.parentId), eq(statuses.isRepost, true))
         ));
+
+      const count = Number(countResult[0]?.count || 0);
 
       return {
         posts,
@@ -849,9 +862,9 @@ export class StatusService {
           totalPages: Math.ceil(count / limit)
         }
       };
-    } catch (error) {
-      safeLogger.error('Error getting quick post feed:', error);
-      throw new Error('Failed to retrieve quick post feed');
+    } catch (error: any) {
+      safeLogger.error('Error getting status feed:', error);
+      throw new Error(`Failed to retrieve quick post feed: ${error.message}`);
     }
   }
 
@@ -863,7 +876,7 @@ export class StatusService {
       // Build sort order
       const orderByClause = sort === 'new' ? desc(statuses.createdAt) : asc(statuses.createdAt);
 
-      const replies = await db
+      const replies = await this.db
         .select({
           id: statuses.id,
           authorId: statuses.authorId,
@@ -895,13 +908,15 @@ export class StatusService {
         .offset(offset);
 
       // Get total count for pagination
-      const [{ count }] = await db
+      const countResult = await this.db
         .select({ count: sql<number>`COUNT(*)` })
         .from(statuses)
         .where(and(
           eq(statuses.parentId, statusId),
           sql`${statuses.moderationStatus} IS NULL OR ${statuses.moderationStatus} != 'blocked'`
         ));
+
+      const count = Number(countResult[0]?.count || 0);
 
       return {
         replies,
@@ -912,15 +927,15 @@ export class StatusService {
           totalPages: Math.ceil(count / limit)
         }
       };
-    } catch (error) {
-      safeLogger.error('Error getting quick post replies:', error);
-      throw new Error('Failed to retrieve quick post replies');
+    } catch (error: any) {
+      safeLogger.error('Error getting status replies:', error);
+      throw new Error(`Failed to retrieve quick post replies: ${error.message}`);
     }
   }
 
   async getStatusReactions(statusId: string) {
     try {
-      const reactions = await db
+      const reactionsResult = await this.db
         .select({
           id: statusReactions.id,
           statusId: statusReactions.statusId,
@@ -936,16 +951,16 @@ export class StatusService {
         .where(eq(statusReactions.statusId, statusId))
         .orderBy(desc(statusReactions.createdAt));
 
-      return reactions;
-    } catch (error) {
-      safeLogger.error('Error getting quick post reactions:', error);
-      throw new Error('Failed to retrieve quick post reactions');
+      return reactionsResult;
+    } catch (error: any) {
+      safeLogger.error('Error getting status reactions:', error);
+      throw new Error(`Failed to retrieve quick post reactions: ${error.message}`);
     }
   }
 
   async getStatusTips(statusId: string) {
     try {
-      const tips = await db
+      const tipsResult = await this.db
         .select({
           id: statusTips.id,
           statusId: statusTips.statusId,
@@ -964,10 +979,10 @@ export class StatusService {
         .where(eq(statusTips.statusId, statusId))
         .orderBy(desc(statusTips.createdAt));
 
-      return tips;
-    } catch (error) {
-      safeLogger.error('Error getting quick post tips:', error);
-      throw new Error('Failed to retrieve quick post tips');
+      return tipsResult;
+    } catch (error: any) {
+      safeLogger.error('Error getting status tips:', error);
+      throw new Error(`Failed to retrieve quick post tips: ${error.message}`);
     }
   }
 

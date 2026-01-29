@@ -37,80 +37,125 @@ export class SellerErrorBoundary extends Component<
   }
 
   static getDerivedStateFromError(error: Error): Partial<SellerErrorBoundaryState> {
-    // Convert regular errors to SellerError if needed
+    // Safely handle any error, including ones that occur during error processing
     try {
-      const sellerError = error instanceof SellerError
-        ? error
-        : new SellerError(
-            SellerErrorType.API_ERROR,
-            error.message || 'An unexpected error occurred',
-            'COMPONENT_ERROR',
-            { originalError: error.name }
-          );
+      // Safely check if error is an instance of SellerError
+      let sellerError: SellerError;
+
+      if (error && typeof error === 'object' && error.constructor.name === 'SellerError') {
+        // It's a SellerError
+        sellerError = error as SellerError;
+      } else if (error instanceof SellerError) {
+        sellerError = error;
+      } else {
+        // Convert regular errors to SellerError if needed
+        const message = error?.message || 'An unexpected error occurred';
+        const errorName = error?.name || 'UnknownError';
+
+        sellerError = new SellerError(
+          SellerErrorType.API_ERROR,
+          message,
+          'COMPONENT_ERROR',
+          { originalError: errorName }
+        );
+      }
 
       return {
         hasError: true,
         error: sellerError,
       };
-    } catch (err) {
+    } catch (err: any) {
       // If even creating the error fails, return a basic error state
       console.error('Failed to process error in error boundary:', err);
-      return {
-        hasError: true,
-        error: new SellerError(
-          SellerErrorType.API_ERROR,
-          'An unexpected error occurred',
-          'ERROR_BOUNDARY_FAILURE'
-        ),
-      };
+
+      try {
+        return {
+          hasError: true,
+          error: new SellerError(
+            SellerErrorType.API_ERROR,
+            'An unexpected error occurred',
+            'ERROR_BOUNDARY_FAILURE',
+            { processingError: err?.message }
+          ),
+        };
+      } catch (fallbackErr) {
+        // Last resort: return just the state flag
+        console.error('Failed even in fallback error handling:', fallbackErr);
+        return {
+          hasError: true,
+        };
+      }
     }
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    const sellerError = this.state.error || new SellerError(
-      SellerErrorType.API_ERROR,
-      error.message,
-      'COMPONENT_ERROR'
-    );
+    try {
+      const sellerError = this.state.error ||
+        (error && error.constructor.name === 'SellerError' ? error :
+          new SellerError(
+            SellerErrorType.API_ERROR,
+            error?.message || 'An unknown error occurred',
+            'COMPONENT_ERROR'
+          ));
 
-    this.setState({ errorInfo });
+      this.setState({ errorInfo });
 
-    // Log error to console in development
-    if (process.env.NODE_ENV === 'development') {
-      console.group('🚨 Seller Error Boundary Caught Error');
-      console.error('Error:', error);
-      console.error('Error Info:', errorInfo);
-      console.error('Seller Error:', sellerError.toJSON());
-      console.groupEnd();
-    }
+      // Log error to console in development
+      if (process.env.NODE_ENV === 'development') {
+        console.group('🚨 Seller Error Boundary Caught Error');
+        console.error('Error:', error);
+        console.error('Error Info:', errorInfo);
+        if (sellerError && typeof sellerError.toJSON === 'function') {
+          console.error('Seller Error:', sellerError.toJSON());
+        }
+        console.groupEnd();
+      }
 
-    // Report error to monitoring service
-    this.reportError(sellerError, errorInfo);
+      // Report error to monitoring service
+      if (sellerError) {
+        this.reportError(sellerError, errorInfo);
+      }
 
-    // Call custom error handler if provided
-    if (this.props.onError) {
-      this.props.onError(sellerError, errorInfo);
+      // Call custom error handler if provided
+      if (this.props.onError && sellerError) {
+        this.props.onError(sellerError, errorInfo);
+      }
+    } catch (handlerError) {
+      // If error handling itself fails, just log it
+      console.error('Error in componentDidCatch handler:', handlerError);
     }
   }
 
   private reportError(error: SellerError, errorInfo: ErrorInfo) {
     try {
+      // Only proceed if we have a valid error object
+      if (!error) return;
+
       // Report to error tracking service if available
-      if (this.errorReportingService) {
-        this.errorReportingService.reportError(error, {
-          context: this.props.context || 'seller-component',
-          componentStack: errorInfo.componentStack,
-          errorBoundary: true,
-          retryCount: this.state.retryCount,
-        });
+      try {
+        if (this.errorReportingService && typeof this.errorReportingService.reportError === 'function') {
+          this.errorReportingService.reportError(error, {
+            context: this.props.context || 'seller-component',
+            componentStack: errorInfo?.componentStack || 'unknown',
+            errorBoundary: true,
+            retryCount: this.state?.retryCount || 0,
+          });
+        }
+      } catch (serviceError) {
+        console.warn('Failed to report to error service:', serviceError);
       }
 
       // Report to browser's error reporting if available
-      if ('reportError' in window) {
-        (window as any).reportError(error);
+      try {
+        if (typeof window !== 'undefined' && 'reportError' in window && typeof (window as any).reportError === 'function') {
+          (window as any).reportError(error);
+        }
+      } catch (reportingError) {
+        console.warn('Failed to report to browser error handler:', reportingError);
       }
-    } catch (reportingError) {
-      console.error('Failed to report error:', reportingError);
+    } catch (err) {
+      // Silently fail if error reporting itself breaks
+      console.warn('Error reporting service failed:', err);
     }
   }
 

@@ -1,6 +1,5 @@
 import { Post, CreatePostInput, UpdatePostInput } from '../models/Post';
 import { safeLogger } from '../utils/safeLogger';
-import { db } from '../db';
 import * as schema from '../db/schema';
 import { eq, sql } from 'drizzle-orm';
 import { MetadataService } from './metadataService';
@@ -18,6 +17,10 @@ const userProfileService = new UserProfileService();
 
 export class PostService {
   private metadataService: MetadataService;
+
+  private get db() {
+    return databaseService.getDatabase();
+  }
 
   constructor() {
     this.metadataService = new MetadataService();
@@ -447,7 +450,7 @@ export class PostService {
   async incrementView(postId: string, userId?: string, ipAddress?: string) {
     try {
       // 1. Record the view in the views table for analytics/deduplication
-      await db.insert(schema.views).values({
+      await this.db.insert(schema.views).values({
         postId,
         userId: userId || null,
         ipAddress: ipAddress || null,
@@ -455,7 +458,7 @@ export class PostService {
       });
 
       // 2. Increment the counter on the post itself
-      const [updatedPost] = await db
+      const [updatedPost] = await this.db
         .update(schema.posts)
         .set({
           views: sql`${schema.posts.views} + 1`
@@ -524,7 +527,7 @@ export class PostService {
 
       if (dbPost.communityId) {
         try {
-          const communityResult = await db.select({
+          const communityResult = await this.db.select({
             name: schema.communities.name,
             slug: schema.communities.slug
           })
@@ -541,6 +544,17 @@ export class PostService {
         }
       }
 
+      // Safe JSON parsing
+      const safeParse = (data: any) => {
+        if (!data) return [];
+        if (Array.isArray(data)) return data;
+        try {
+          return JSON.parse(data);
+        } catch (e) {
+          return [];
+        }
+      };
+
       return {
         id: dbPost.id.toString(),
         author: authorAddress,
@@ -550,11 +564,11 @@ export class PostService {
         content: dbPost.content,
         contentCid: dbPost.contentCid,
         shareId: dbPost.shareId || '', // Include shareId for share URLs
-        mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
-        tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+        mediaCids: safeParse(dbPost.mediaCids),
+        tags: safeParse(dbPost.tags),
         createdAt: dbPost.createdAt || new Date(),
         onchainRef: '',
-        mediaUrls: dbPost.mediaUrls ? JSON.parse(dbPost.mediaUrls) : [],
+        mediaUrls: safeParse(dbPost.mediaUrls),
         location: dbPost.location || undefined,
         shares,
         isRepostedByMe,

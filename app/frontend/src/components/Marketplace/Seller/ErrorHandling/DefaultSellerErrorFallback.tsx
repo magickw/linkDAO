@@ -25,11 +25,22 @@ export const DefaultSellerErrorFallback: React.FC<DefaultSellerErrorFallbackProp
   const [showErrorDetails, setShowErrorDetails] = useState(showDetails);
 
   useEffect(() => {
-    if (error) {
-      sellerErrorRecoveryService
-        .handleError(error, context)
-        .then(setRecoveryStrategy)
-        .catch(console.error);
+    try {
+      if (error && sellerErrorRecoveryService && typeof sellerErrorRecoveryService.handleError === 'function') {
+        sellerErrorRecoveryService
+          .handleError(error, context)
+          .then(strategy => {
+            if (strategy) {
+              setRecoveryStrategy(strategy);
+            }
+          })
+          .catch(err => {
+            console.warn('Failed to get recovery strategy:', err);
+            // Continue with null strategy instead of crashing
+          });
+      }
+    } catch (err) {
+      console.warn('Error in useEffect for recovery strategy:', err);
     }
   }, [error, context]);
 
@@ -59,25 +70,30 @@ export const DefaultSellerErrorFallback: React.FC<DefaultSellerErrorFallbackProp
   };
 
   const getErrorIcon = () => {
-    if (!error) return '⚠️';
-    
-    switch (error.type) {
-      case 'NETWORK_ERROR':
-        return '🌐';
-      case 'API_ERROR':
-        return '🔌';
-      case 'CACHE_ERROR':
-        return '💾';
-      case 'VALIDATION_ERROR':
-        return '✏️';
-      case 'PERMISSION_ERROR':
-        return '🔒';
-      case 'IMAGE_UPLOAD_ERROR':
-        return '🖼️';
-      case 'TIER_VALIDATION_ERROR':
-        return '⭐';
-      default:
-        return '⚠️';
+    if (!error || !error.type) return '⚠️';
+
+    try {
+      switch (error.type) {
+        case 'NETWORK_ERROR':
+          return '🌐';
+        case 'API_ERROR':
+          return '🔌';
+        case 'CACHE_ERROR':
+          return '💾';
+        case 'VALIDATION_ERROR':
+          return '✏️';
+        case 'PERMISSION_ERROR':
+          return '🔒';
+        case 'IMAGE_UPLOAD_ERROR':
+          return '🖼️';
+        case 'TIER_VALIDATION_ERROR':
+          return '⭐';
+        default:
+          return '⚠️';
+      }
+    } catch (err) {
+      console.warn('Error getting error icon:', err);
+      return '⚠️';
     }
   };
 
@@ -85,20 +101,20 @@ export const DefaultSellerErrorFallback: React.FC<DefaultSellerErrorFallbackProp
     <div className="seller-error-fallback bg-white border border-red-200 rounded-lg p-6 max-w-md mx-auto">
       <div className="text-center">
         <div className="text-4xl mb-4">{getErrorIcon()}</div>
-        
+
         <h3 className="text-lg font-semibold text-gray-900 mb-2">
           Something went wrong
         </h3>
-        
+
         <p className="text-gray-600 mb-4">
           {recoveryStrategy?.userMessage || 'We\'re having trouble loading your seller information.'}
         </p>
 
         {/* Recovery Actions */}
-        {recoveryStrategy?.canRecover && recoveryStrategy.recoveryActions.length > 0 && (
+        {recoveryStrategy?.canRecover && recoveryStrategy.recoveryActions && recoveryStrategy.recoveryActions.length > 0 && (
           <div className="space-y-2 mb-4">
             {recoveryStrategy.recoveryActions
-              .sort((a, b) => a.priority - b.priority)
+              .sort((a, b) => (a.priority || 0) - (b.priority || 0))
               .slice(0, 2) // Show max 2 primary actions
               .map((action, index) => (
                 <button
@@ -120,7 +136,7 @@ export const DefaultSellerErrorFallback: React.FC<DefaultSellerErrorFallbackProp
                       Working...
                     </span>
                   ) : (
-                    action.description
+                    action.description || 'Retry'
                   )}
                 </button>
               ))}
@@ -128,7 +144,7 @@ export const DefaultSellerErrorFallback: React.FC<DefaultSellerErrorFallbackProp
         )}
 
         {/* Default retry button if no recovery actions */}
-        {(!recoveryStrategy?.canRecover || recoveryStrategy.recoveryActions.length === 0) && (
+        {(!recoveryStrategy?.canRecover || !recoveryStrategy?.recoveryActions || recoveryStrategy.recoveryActions.length === 0) && (
           <button
             onClick={handleRetry}
             disabled={isRecovering}
@@ -147,17 +163,17 @@ export const DefaultSellerErrorFallback: React.FC<DefaultSellerErrorFallbackProp
             >
               {showErrorDetails ? 'Hide' : 'Show'} Error Details
             </button>
-            
+
             {showErrorDetails && (
               <details className="mt-2 text-left">
                 <summary className="text-sm font-medium text-gray-700 cursor-pointer">
                   Technical Details
                 </summary>
                 <div className="mt-2 p-3 bg-gray-50 rounded text-xs font-mono text-gray-600 overflow-auto max-h-32">
-                  <div><strong>Type:</strong> {error.type}</div>
+                  <div><strong>Type:</strong> {error.type || 'UNKNOWN'}</div>
                   <div><strong>Code:</strong> {error.code || 'N/A'}</div>
-                  <div><strong>Message:</strong> {error.message}</div>
-                  <div><strong>Timestamp:</strong> {error.timestamp}</div>
+                  <div><strong>Message:</strong> {error.message || 'No message'}</div>
+                  <div><strong>Timestamp:</strong> {error.timestamp || 'Unknown'}</div>
                   {error.details && (
                     <div><strong>Details:</strong> {JSON.stringify(error.details, null, 2)}</div>
                   )}
@@ -171,8 +187,8 @@ export const DefaultSellerErrorFallback: React.FC<DefaultSellerErrorFallbackProp
         <div className="mt-4 pt-4 border-t border-gray-200">
           <p className="text-xs text-gray-500">
             Need help?{' '}
-            <a 
-              href="/support" 
+            <a
+              href="/support"
               className="text-blue-600 hover:text-blue-800 underline"
               target="_blank"
               rel="noopener noreferrer"
