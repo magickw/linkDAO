@@ -184,19 +184,19 @@ export class DatabaseIndexOptimizer {
     try {
       const result = await client.query(`
         SELECT 
-          schemaname,
-          relname as tablename,
-          indexrelname as indexname,
-          pg_size_pretty(pg_relation_size(indexrelid)) as index_size,
-          idx_scan as index_scans,
-          idx_tup_read as tuples_read,
-          idx_tup_fetch as tuples_returned,
-          indisunique as is_unique,
-          pg_get_indexdef(indexrelid) as definition
+          pg_stat_user_indexes.schemaname,
+          pg_stat_user_indexes.relname as tablename,
+          pg_stat_user_indexes.indexrelname as indexname,
+          pg_size_pretty(pg_relation_size(pg_stat_user_indexes.indexrelid)) as index_size,
+          pg_stat_user_indexes.idx_scan as index_scans,
+          pg_stat_user_indexes.idx_tup_read as tuples_read,
+          pg_stat_user_indexes.idx_tup_fetch as tuples_returned,
+          pg_index.indisunique as is_unique,
+          pg_get_indexdef(pg_stat_user_indexes.indexrelid) as definition
         FROM pg_stat_user_indexes 
         JOIN pg_index ON pg_stat_user_indexes.indexrelid = pg_index.indexrelid
-        WHERE schemaname = 'public'
-        ORDER BY idx_scan DESC
+        WHERE pg_stat_user_indexes.schemaname = 'public'
+        ORDER BY pg_stat_user_indexes.idx_scan DESC
       `);
 
       const indexStats: IndexUsageStats[] = result.rows.map(row => ({

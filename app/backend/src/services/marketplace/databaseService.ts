@@ -1054,36 +1054,67 @@ export class DatabaseService {
           });
 
           if (listing.length === 0) {
-            // Debug: Check if it might be a status ID (common mistake)
-            try {
-              const statusCheck = await tx.select({ id: schema.statuses.id }).from(schema.statuses).where(eq(schema.statuses.id, listingId));
-              if (statusCheck.length > 0) {
-                safeLogger.error('[createOrder] listingId exists in statuses table but not products. Invalid checkout target.', { listingId });
-                throw new Error('Cannot checkout a Status post directly. Use tips or reactions.');
+            // Check if it's a product that just doesn't have a listing entry yet
+            const actualProduct = await tx.select().from(schema.products).where(eq(schema.products.id, listingId)).limit(1);
+            
+            if (actualProduct.length > 0) {
+              const p = actualProduct[0];
+              safeLogger.info(`[createOrder] Found product ${listingId} without listing entry. Creating compatibility listing.`);
+              
+              const [newListing] = await tx.insert(schema.listings).values({
+                id: p.id, // Use same ID
+                sellerId: p.sellerId,
+                productId: p.id,
+                tokenAddress: '0x0000000000000000000000000000000000000000',
+                price: p.priceAmount.toString(),
+                inventory: p.inventory,
+                itemType: 'PHYSICAL',
+                listingType: 'FIXED_PRICE',
+                metadataURI: p.metadataUri || '{}',
+                status: 'active'
+              }).returning();
+              
+              // Proceed with the new listing
+              if (newListing.inventory < quantity) {
+                throw new Error('Insufficient inventory');
               }
-            } catch (ignore) {
-              // Ignore UUID errors if listingId isn't a UUID
+              
+              await tx.update(schema.listings)
+                .set({ inventory: sql`${schema.listings.inventory} - ${quantity}` })
+                .where(eq(schema.listings.id, newListing.id));
+            } else {
+              // Debug: Check if it might be a status ID (common mistake)
+              try {
+                const statusCheck = await tx.select({ id: schema.statuses.id }).from(schema.statuses).where(eq(schema.statuses.id, listingId));
+                if (statusCheck.length > 0) {
+                  safeLogger.error('[createOrder] listingId exists in statuses table but not products. Invalid checkout target.', { listingId });
+                  throw new Error('Cannot checkout a Status post directly. Use tips or reactions.');
+                }
+              } catch (ignore) {
+                // Ignore UUID errors if listingId isn't a UUID
+              }
+
+              safeLogger.error('[createOrder] Product not found in either products or listings table:', {
+                listingId,
+                listingIdType: typeof listingId,
+                buyerId,
+                sellerId
+              });
+              throw new Error('Product not found');
+            }
+          } else {
+            // Existing listing found
+            if (listing[0].inventory < quantity) {
+              throw new Error('Insufficient inventory');
             }
 
-            safeLogger.error('[createOrder] Product not found in either products or listings table:', {
-              listingId,
-              listingIdType: typeof listingId,
-              buyerId,
-              sellerId
-            });
-            throw new Error('Product not found');
+            // Decrement legacy listing
+            await tx.update(schema.listings)
+              .set({
+                inventory: sql`${schema.listings.inventory} - ${quantity}`
+              })
+              .where(eq(schema.listings.id, listingId));
           }
-
-          if (listing[0].inventory < quantity) {
-            throw new Error('Insufficient inventory');
-          }
-
-          // Decrement legacy listing
-          await tx.update(schema.listings)
-            .set({
-              inventory: sql`${schema.listings.inventory} - ${quantity}`
-            })
-            .where(eq(schema.listings.id, listingId));
         } else {
           if (product[0].inventory < quantity) {
             throw new Error('Insufficient inventory');
