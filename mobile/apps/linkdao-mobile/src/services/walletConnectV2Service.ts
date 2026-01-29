@@ -1,11 +1,11 @@
 /**
- * WalletConnect V2 Service
+ * WalletConnect V2 Service (React Native)
  * Handles wallet connections via WalletConnect protocol
+ * Uses UniversalProvider for React Native compatibility
  */
 
-import { Web3Modal } from '@reown/appkit';
-import { EthersAdapter } from '@reown/appkit-adapter-ethers';
-import { BrowserProvider } from 'ethers';
+import UniversalProvider from '@walletconnect/universal-provider';
+import { Linking } from 'react-native';
 
 interface WalletConnectConfig {
   projectId: string;
@@ -16,9 +16,9 @@ interface WalletConnectConfig {
 }
 
 class WalletConnectV2Service {
-  private web3Modal: Web3Modal | null = null;
-  private provider: any = null;
+  private provider: UniversalProvider | null = null;
   private config: WalletConnectConfig | null = null;
+  private account: string | null = null;
 
   /**
    * Initialize WalletConnect V2
@@ -29,44 +29,34 @@ class WalletConnectV2Service {
 
       console.log('🔌 Initializing WalletConnect V2 with Project ID:', config.projectId);
 
-      // Create Ethers adapter
-      const ethersAdapter = new EthersAdapter({
-        signerType: 'viemv2',
-      });
-
-      // Initialize Web3Modal
-      this.web3Modal = new Web3Modal({
-        chains: [
-          {
-            chainId: 1,
-            name: 'Ethereum',
-            currency: 'ETH',
-            explorerUrl: 'https://etherscan.io',
-            rpcUrl: 'https://eth.llamarpc.com',
-          },
-          {
-            chainId: 8453,
-            name: 'Base',
-            currency: 'ETH',
-            explorerUrl: 'https://basescan.org',
-            rpcUrl: 'https://mainnet.base.org',
-          },
-          {
-            chainId: 137,
-            name: 'Polygon',
-            currency: 'MATIC',
-            explorerUrl: 'https://polygonscan.com',
-            rpcUrl: 'https://polygon-rpc.com',
-          },
-        ],
-        adapters: [ethersAdapter],
+      // Initialize UniversalProvider
+      this.provider = await UniversalProvider.init({
+        projectId: config.projectId,
         metadata: {
           name: config.appName,
           description: config.appDescription,
           url: config.appUrl || 'https://linkdao.io',
           icons: config.appIcon ? [config.appIcon] : [],
         },
-        projectId: config.projectId,
+      });
+
+      // Listen for account changes
+      this.provider.on('accountsChanged', (accounts: string[]) => {
+        if (accounts.length > 0) {
+          this.account = accounts[0];
+          console.log('👤 Account changed:', this.account);
+        }
+      });
+
+      // Listen for chain changes
+      this.provider.on('chainChanged', (chainId: number) => {
+        console.log('🔗 Chain changed:', chainId);
+      });
+
+      // Listen for disconnect
+      this.provider.on('disconnect', () => {
+        this.account = null;
+        console.log('👋 Wallet disconnected');
       });
 
       console.log('✅ WalletConnect V2 initialized successfully');
@@ -77,18 +67,46 @@ class WalletConnectV2Service {
   }
 
   /**
-   * Open the modal to connect a wallet
+   * Connect to a wallet via WalletConnect
    */
-  async open(): Promise<void> {
-    if (!this.web3Modal) {
+  async connect(): Promise<string> {
+    if (!this.provider) {
       throw new Error('WalletConnect V2 not initialized. Call initialize() first.');
     }
 
     try {
-      console.log('🔌 Opening WalletConnect modal');
-      await this.web3Modal.open();
+      console.log('🔌 Connecting to wallet via WalletConnect');
+
+      // Request connection
+      const namespaces = {
+        eip155: {
+          methods: ['eth_sendTransaction', 'eth_signTransaction', 'eth_sign', 'personal_sign', 'eth_signTypedData'],
+          chains: ['eip155:1', 'eip155:8453', 'eip155:137'],
+          events: ['chainChanged', 'accountsChanged'],
+        },
+      };
+
+      const { uri, approval } = await this.provider.client!.connect({ namespaces });
+
+      if (uri) {
+        console.log('📲 WalletConnect URI generated, opening wallet via deep link');
+        await Linking.openURL(uri);
+      }
+
+      // Wait for approval
+      const session = await approval();
+      console.log('✅ Session approved:', session);
+
+      // Get account from session
+      const accounts = session.namespaces.eip155.accounts;
+      if (accounts && accounts.length > 0) {
+        this.account = accounts[0].split(':').pop() || null;
+        console.log('✅ Connected account:', this.account);
+      }
+
+      return this.account || '';
     } catch (error) {
-      console.error('❌ Failed to open WalletConnect modal:', error);
+      console.error('❌ Failed to connect wallet:', error);
       throw error;
     }
   }
@@ -97,33 +115,14 @@ class WalletConnectV2Service {
    * Get the connected account
    */
   getAccount(): string | null {
-    if (!this.web3Modal) {
-      return null;
-    }
-
-    try {
-      const accountAddress = this.web3Modal.getAccount();
-      return accountAddress || null;
-    } catch (error) {
-      console.error('❌ Failed to get account:', error);
-      return null;
-    }
+    return this.account;
   }
 
   /**
-   * Get the provider for signing
+   * Get the provider
    */
-  getProvider(): any {
-    if (!this.web3Modal) {
-      return null;
-    }
-
-    try {
-      return this.web3Modal.getWalletProvider();
-    } catch (error) {
-      console.error('❌ Failed to get provider:', error);
-      return null;
-    }
+  getProvider(): UniversalProvider | null {
+    return this.provider;
   }
 
   /**
@@ -131,26 +130,24 @@ class WalletConnectV2Service {
    */
   async signMessage(message: string): Promise<string> {
     try {
-      const account = this.getAccount();
-      if (!account) {
+      if (!this.account) {
         throw new Error('No wallet connected');
       }
 
-      const provider = this.getProvider();
-      if (!provider) {
+      if (!this.provider) {
         throw new Error('Provider not available');
       }
 
       console.log('🔐 Signing message with WalletConnect provider');
 
       // Use personal_sign via the provider
-      const signature = await provider.request({
+      const signature = await this.provider.request({
         method: 'personal_sign',
-        params: [message, account],
-      });
+        params: [message, this.account],
+      }) as string;
 
       console.log('✅ Message signed successfully');
-      return signature as string;
+      return signature;
     } catch (error) {
       console.error('❌ Failed to sign message:', error);
       throw error;
@@ -162,11 +159,21 @@ class WalletConnectV2Service {
    */
   async disconnect(): Promise<void> {
     try {
-      if (this.web3Modal) {
+      if (this.provider) {
         console.log('🔌 Disconnecting wallet');
-        // AppKit v1+ handles disconnect automatically
-        // Just reset our provider
-        this.provider = null;
+
+        // Get all active sessions
+        const sessions = this.provider.client?.session.getAll();
+        if (sessions) {
+          for (const session of sessions) {
+            await this.provider.client?.disconnect({
+              topic: session.topic,
+              reason: { code: 6000, message: 'USER_DISCONNECTED' },
+            });
+          }
+        }
+
+        this.account = null;
         console.log('✅ Wallet disconnected');
       }
     } catch (error) {
@@ -178,7 +185,7 @@ class WalletConnectV2Service {
    * Check if a wallet is connected
    */
   isConnected(): boolean {
-    return !!this.getAccount();
+    return !!this.account && !!this.provider;
   }
 }
 

@@ -1002,7 +1002,6 @@ export class DatabaseService {
     shippingAddress: any = null, billingAddress: any = null, paymentMethod: string = 'crypto', paymentDetails: any = null, totalAmount?: string) {
     try {
       return await this.db.transaction(async (tx: any) => {
-        // ... (existing inventory logic) ...
 
         // 1a. Handle variant inventory if variant is specified
         if (variantId) {

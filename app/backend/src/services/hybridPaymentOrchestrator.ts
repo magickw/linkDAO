@@ -851,7 +851,6 @@ export class HybridPaymentOrchestrator {
         totalAmount: pathDecision.totalAmount,
         fees: pathDecision.fees
       });
-      });
 
       return order;
     } catch (error) {

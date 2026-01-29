@@ -51,11 +51,9 @@ export default function WalletConnectScreen() {
     setConnecting(true);
 
     try {
-      // Open WalletConnect modal
-      await walletConnectV2Service.open();
+      // Connect to wallet via WalletConnect
+      const account = await walletConnectV2Service.connect();
 
-      // Get the connected account
-      const account = walletConnectV2Service.getAccount();
       if (account) {
         setWalletAddress(account);
 
