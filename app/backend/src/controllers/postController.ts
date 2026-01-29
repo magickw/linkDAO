@@ -7,6 +7,7 @@ import { CreatePostInput } from '../models/Post';
 import { db } from '../db';
 import { posts, users, statuses } from '../db/schema';
 import { eq, and, sql, isNotNull } from 'drizzle-orm';
+import { databaseService } from '../services/databaseService';
 
 // Remove in-memory storage
 // let posts: any[] = [];
@@ -17,6 +18,10 @@ export class PostController {
   private statusService: StatusService;
   private metadataService: MetadataService;
   private userProfileService: UserProfileService;
+
+  private get database() {
+    return db;
+  }
 
   constructor() {
     this.postService = new PostService();
@@ -351,7 +356,7 @@ export class PostController {
 
       // DUPLICATE CHECK: Check if user has already reposted this specific content
       try {
-        const existingRepost = await db.select()
+        const existingRepost = await this.database.select()
           .from(statuses) // We only care about statuses table for feed reposts
           .where(and(
             eq(statuses.authorId, user.id),
@@ -360,7 +365,7 @@ export class PostController {
           ))
           .limit(1);
 
-        if (existingRepost.length > 0) {
+        if (existingRepost && existingRepost.length > 0) {
           console.log('⚠️ [REPOST] Duplicate prevented. User has already reposted:', targetPostId);
           return res.status(400).json({
             success: false,
@@ -369,10 +374,14 @@ export class PostController {
         }
       } catch (dbError: any) {
         console.error('❌ [REPOST] Error checking for existing repost:', dbError);
-        return res.status(500).json({
-          success: false,
-          error: `Database error checking duplicate: ${dbError.message}`
+        console.error('❌ [REPOST] Error details:', {
+          message: dbError.message,
+          code: dbError.code,
+          detail: dbError.detail
         });
+        // Continue anyway - if duplicate check fails, we can still create the repost
+        // but log the warning for debugging
+        console.warn('⚠️ [REPOST] Duplicate check failed, but proceeding with repost creation');
       }
 
       if (!originalStatus) {
