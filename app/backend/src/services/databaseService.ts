@@ -3771,6 +3771,354 @@ export class DatabaseService {
     }
   }
 
+  // ========================================
+  // Invoice Management Methods
+  // ========================================
+
+  /**
+   * Create a new invoice
+   */
+  async createInvoice(invoiceRecord: any): Promise<any> {
+    try {
+      const result = await this.db
+        .insert(schema.invoices)
+        .values({
+          id: invoiceRecord.id,
+          invoiceNumber: invoiceRecord.invoiceNumber,
+          invoiceType: invoiceRecord.invoiceType,
+          orderId: invoiceRecord.orderId,
+          buyerId: invoiceRecord.buyerId,
+          sellerId: invoiceRecord.sellerId,
+          issueDate: invoiceRecord.issueDate,
+          dueDate: invoiceRecord.dueDate,
+          currency: invoiceRecord.currency,
+          subtotal: invoiceRecord.subtotal,
+          taxAmount: invoiceRecord.taxAmount,
+          totalAmount: invoiceRecord.totalAmount,
+          buyerTaxId: invoiceRecord.buyerTaxId,
+          sellerTaxId: invoiceRecord.sellerTaxId,
+          taxRate: invoiceRecord.taxRate,
+          taxJurisdiction: invoiceRecord.taxJurisdiction,
+          items: invoiceRecord.items,
+          metadata: invoiceRecord.metadata,
+          pdfUrl: invoiceRecord.pdfUrl,
+          pdfS3Key: invoiceRecord.pdfS3Key,
+          status: invoiceRecord.status || 'draft',
+        })
+        .returning();
+
+      safeLogger.info(`Invoice created: ${invoiceRecord.invoiceNumber}`);
+      return result[0];
+    } catch (error) {
+      safeLogger.error('Error creating invoice:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update an invoice
+   */
+  async updateInvoice(invoiceNumber: string, updates: any): Promise<void> {
+    try {
+      await this.db
+        .update(schema.invoices)
+        .set(updates)
+        .where(eq(schema.invoices.invoiceNumber, invoiceNumber));
+
+      safeLogger.info(`Invoice updated: ${invoiceNumber}`);
+    } catch (error) {
+      safeLogger.error('Error updating invoice:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get invoice by number
+   */
+  async getInvoiceByNumber(invoiceNumber: string): Promise<any> {
+    try {
+      const result = await this.db
+        .select()
+        .from(schema.invoices)
+        .where(eq(schema.invoices.invoiceNumber, invoiceNumber));
+
+      return result.length > 0 ? result[0] : null;
+    } catch (error) {
+      safeLogger.error('Error fetching invoice:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get invoices by seller ID (paginated)
+   */
+  async getSellerInvoices(sellerId: string, limit: number = 50, offset: number = 0): Promise<any[]> {
+    try {
+      const result = await this.db
+        .select()
+        .from(schema.invoices)
+        .where(eq(schema.invoices.sellerId, sellerId))
+        .orderBy(schema.invoices.createdAt)
+        .limit(limit)
+        .offset(offset);
+
+      return result;
+    } catch (error) {
+      safeLogger.error('Error fetching seller invoices:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get invoices by order ID
+   */
+  async getOrderInvoices(orderId: string): Promise<any[]> {
+    try {
+      const result = await this.db
+        .select()
+        .from(schema.invoices)
+        .where(eq(schema.invoices.orderId, orderId));
+
+      return result;
+    } catch (error) {
+      safeLogger.error('Error fetching order invoices:', error);
+      return [];
+    }
+  }
+
+  // ========================================
+  // Notification Template Methods
+  // ========================================
+
+  /**
+   * Create a new notification template
+   */
+  async createNotificationTemplate(template: any): Promise<void> {
+    try {
+      await this.db
+        .insert(schema.notificationTemplates)
+        .values({
+          id: template.id,
+          name: template.name,
+          channel: template.channel,
+          subjectTemplate: template.subject,
+          bodyTemplate: template.bodyTemplate,
+          variables: JSON.stringify(template.variables),
+          isActive: template.isActive,
+          version: template.version,
+          description: template.description,
+        });
+
+      safeLogger.info(`Notification template created: ${template.name}`);
+    } catch (error) {
+      safeLogger.error('Error creating notification template:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get notification template by name
+   */
+  async getNotificationTemplate(name: string): Promise<any> {
+    try {
+      const result = await this.db
+        .select()
+        .from(schema.notificationTemplates)
+        .where(eq(schema.notificationTemplates.name, name));
+
+      if (result.length === 0) return null;
+
+      const template = result[0];
+      return {
+        id: template.id,
+        name: template.name,
+        channel: template.channel,
+        subject: template.subjectTemplate,
+        bodyTemplate: template.bodyTemplate,
+        variables: JSON.parse(template.variables || '[]'),
+        isActive: template.isActive,
+        version: template.version,
+        description: template.description,
+        createdAt: template.createdAt,
+        updatedAt: template.updatedAt,
+      };
+    } catch (error) {
+      safeLogger.error('Error fetching notification template:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update notification template
+   */
+  async updateNotificationTemplate(name: string, template: any): Promise<void> {
+    try {
+      await this.db
+        .update(schema.notificationTemplates)
+        .set({
+          bodyTemplate: template.bodyTemplate,
+          subjectTemplate: template.subject,
+          variables: JSON.stringify(template.variables),
+          description: template.description,
+          isActive: template.isActive,
+          version: template.version,
+        })
+        .where(eq(schema.notificationTemplates.name, name));
+
+      safeLogger.info(`Notification template updated: ${name}`);
+    } catch (error) {
+      safeLogger.error('Error updating notification template:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete notification template
+   */
+  async deleteNotificationTemplate(name: string): Promise<void> {
+    try {
+      await this.db
+        .delete(schema.notificationTemplates)
+        .where(eq(schema.notificationTemplates.name, name));
+
+      safeLogger.info(`Notification template deleted: ${name}`);
+    } catch (error) {
+      safeLogger.error('Error deleting notification template:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * List notification templates
+   */
+  async listNotificationTemplates(channel?: string): Promise<any[]> {
+    try {
+      let query = this.db.select().from(schema.notificationTemplates);
+
+      if (channel) {
+        query = query.where(eq(schema.notificationTemplates.channel, channel));
+      }
+
+      const results = await query;
+
+      return results.map((template: any) => ({
+        id: template.id,
+        name: template.name,
+        channel: template.channel,
+        subject: template.subjectTemplate,
+        bodyTemplate: template.bodyTemplate,
+        variables: JSON.parse(template.variables || '[]'),
+        isActive: template.isActive,
+        version: template.version,
+        description: template.description,
+        createdAt: template.createdAt,
+        updatedAt: template.updatedAt,
+      }));
+    } catch (error) {
+      safeLogger.error('Error listing notification templates:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get notification template version history
+   */
+  async getNotificationTemplateHistory(name: string): Promise<any[]> {
+    try {
+      const results = await this.db
+        .select()
+        .from(schema.notificationTemplateVersions)
+        .where(eq(schema.notificationTemplateVersions.templateName, name))
+        .orderBy(schema.notificationTemplateVersions.version);
+
+      return results.map((version: any) => ({
+        version: version.version,
+        subjectTemplate: version.subjectTemplate,
+        bodyTemplate: version.bodyTemplate,
+        variables: JSON.parse(version.variables || '[]'),
+        description: version.description,
+        createdAt: version.createdAt,
+      }));
+    } catch (error) {
+      safeLogger.error('Error fetching template history:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Create notification log
+   */
+  async createNotificationLog(log: any): Promise<void> {
+    try {
+      await this.db
+        .insert(schema.notificationLogs)
+        .values({
+          id: log.id || randomUUID(),
+          templateId: log.templateId,
+          templateName: log.templateName,
+          channel: log.channel,
+          recipient: log.recipient,
+          subject: log.subject,
+          body: log.body,
+          variables: JSON.stringify(log.variables || {}),
+          status: log.status || 'pending',
+          retryCount: log.retryCount || 0,
+        });
+
+      safeLogger.info(`Notification log created: ${log.templateName} -> ${log.recipient}`);
+    } catch (error) {
+      safeLogger.error('Error creating notification log:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update notification delivery status
+   */
+  async updateNotificationDeliveryStatus(id: string, status: string, errorMessage?: string): Promise<void> {
+    try {
+      const updates: any = { status };
+
+      if (status === 'sent') {
+        updates.sentAt = new Date();
+      } else if (status === 'failed' || status === 'bounced') {
+        updates.failedAt = new Date();
+        if (errorMessage) {
+          updates.errorMessage = errorMessage;
+        }
+      }
+
+      await this.db
+        .update(schema.notificationLogs)
+        .set(updates)
+        .where(eq(schema.notificationLogs.id, id));
+
+      safeLogger.info(`Notification status updated: ${id} -> ${status}`);
+    } catch (error) {
+      safeLogger.error('Error updating notification delivery status:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get notification deliveries by recipient
+   */
+  async getNotificationDeliveriesByRecipient(recipient: string, limit: number = 50): Promise<any[]> {
+    try {
+      const results = await this.db
+        .select()
+        .from(schema.notificationLogs)
+        .where(eq(schema.notificationLogs.recipient, recipient))
+        .orderBy(schema.notificationLogs.createdAt)
+        .limit(limit);
+
+      return results;
+    } catch (error) {
+      safeLogger.error('Error fetching notification deliveries:', error);
+      return [];
+    }
+  }
+
 }
 
 // Singleton instance

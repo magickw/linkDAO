@@ -529,6 +529,7 @@ import addressRoutes from './routes/addressRoutes';
 import paymentMethodRoutes from './routes/paymentMethodRoutes';
 import wishlistRoutes from './routes/wishlistRoutes';
 import buyerProfileRoutes from './routes/buyerProfileRoutes';
+import invoiceRoutes from './routes/invoiceRoutes';
 
 // Import data deletion routes (GDPR/Platform compliance for Facebook, LinkedIn)
 import dataDeletionRoutes from './routes/dataDeletionRoutes';
@@ -588,6 +589,8 @@ app.use('/api/user/addresses', addressRoutes);
 app.use('/api/user/payment-methods', paymentMethodRoutes);
 app.use('/api/user/wishlists', wishlistRoutes);
 app.use('/api/user/buyer-profile', buyerProfileRoutes);
+// Invoice management routes
+app.use('/api/invoices', invoiceRoutes);
 app.use('/api/communities', communityRoutes);
 app.use('/api', commentRoutes);
 app.use('/api/notifications', notificationRoutes);
