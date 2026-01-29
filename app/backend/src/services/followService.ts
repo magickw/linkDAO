@@ -12,46 +12,33 @@ const userProfileService = new UserProfileService();
 export class FollowService {
   async follow(followerAddress: string, followingAddress: string): Promise<boolean> {
     try {
-      // Set timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Follow operation timed out after 5 seconds')), 5000)
-      );
+      console.log('[FollowService] follow() called with:', { followerAddress, followingAddress });
 
       // Get user IDs from addresses
-      let followerUser = await Promise.race([
-        userProfileService.getProfileByAddress(followerAddress),
-        timeoutPromise as Promise<any>
-      ]);
+      let followerUser = await userProfileService.getProfileByAddress(followerAddress);
       if (!followerUser) {
+        console.log('[FollowService] Follower not found, creating profile');
         // Create user if they don't exist
-        followerUser = await Promise.race([
-          userProfileService.createProfile({
-            walletAddress: followerAddress,
-            handle: '',
-            ens: '',
-            avatarCid: '',
-            bioCid: ''
-          }),
-          timeoutPromise as Promise<any>
-        ]);
+        followerUser = await userProfileService.createProfile({
+          walletAddress: followerAddress,
+          handle: '',
+          ens: '',
+          avatarCid: '',
+          bioCid: ''
+        });
       }
 
-      let followingUser = await Promise.race([
-        userProfileService.getProfileByAddress(followingAddress),
-        timeoutPromise as Promise<any>
-      ]);
+      let followingUser = await userProfileService.getProfileByAddress(followingAddress);
       if (!followingUser) {
+        console.log('[FollowService] Following user not found, creating profile');
         // Create user if they don't exist
-        followingUser = await Promise.race([
-          userProfileService.createProfile({
-            walletAddress: followingAddress,
-            handle: '',
-            ens: '',
-            avatarCid: '',
-            bioCid: ''
-          }),
-          timeoutPromise as Promise<any>
-        ]);
+        followingUser = await userProfileService.createProfile({
+          walletAddress: followingAddress,
+          handle: '',
+          ens: '',
+          avatarCid: '',
+          bioCid: ''
+        });
       }
 
       // Validate user IDs
@@ -61,30 +48,28 @@ export class FollowService {
       }
 
       // Check if already following
-      const isAlreadyFollowing = await Promise.race([
-        this.isFollowing(followerAddress, followingAddress),
-        timeoutPromise as Promise<any>
-      ]);
+      const isAlreadyFollowing = await this.isFollowing(followerAddress, followingAddress);
       if (isAlreadyFollowing) {
+        console.log('[FollowService] Already following');
         return true; // Already following
       }
 
       // Add follow relationship to database
-      const followResult = await Promise.race([
-        databaseService.followUser(followerUser.id, followingUser.id),
-        timeoutPromise as Promise<any>
-      ]);
+      console.log('[FollowService] Adding follow relationship');
+      const followResult = await databaseService.followUser(followerUser.id, followingUser.id);
       if (!followResult) {
         console.warn('[FollowService] Failed to create follow relationship');
         return false;
       }
 
+      console.log('[FollowService] Follow succeeded');
       return true;
     } catch (error: any) {
       console.error('[FollowService] Error in follow:', {
         message: error?.message || 'Unknown error',
         code: error?.code,
-        errorString: String(error)
+        errorString: String(error),
+        stack: error?.stack
       });
       // Return false instead of throwing to prevent crashes
       return false;
@@ -95,26 +80,13 @@ export class FollowService {
     try {
       console.log(`[FollowService] Unfollow attempt: ${followerAddress} -> ${followingAddress}`);
 
-      // Set timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Unfollow operation timed out after 5 seconds')), 5000)
-      );
-
-      // Get user IDs from addresses with timeout
+      // Get user IDs from addresses
       console.log('[FollowService] Fetching follower profile...');
-      const followerUserPromise = userProfileService.getProfileByAddress(followerAddress);
-      const followerUser = await Promise.race([
-        followerUserPromise,
-        timeoutPromise as Promise<any>
-      ]);
+      const followerUser = await userProfileService.getProfileByAddress(followerAddress);
       console.log('[FollowService] Follower profile found:', !!followerUser);
 
       console.log('[FollowService] Fetching following profile...');
-      const followingUserPromise = userProfileService.getProfileByAddress(followingAddress);
-      const followingUser = await Promise.race([
-        followingUserPromise,
-        timeoutPromise as Promise<any>
-      ]);
+      const followingUser = await userProfileService.getProfileByAddress(followingAddress);
       console.log('[FollowService] Following profile found:', !!followingUser);
 
       if (!followerUser || !followingUser) {
@@ -129,11 +101,7 @@ export class FollowService {
 
       // Remove follow relationship from database
       console.log(`[FollowService] Removing follow record: ${followerUser.id} -> ${followingUser.id}`);
-      const resultPromise = databaseService.unfollowUser(followerUser.id, followingUser.id);
-      const result = await Promise.race([
-        resultPromise,
-        timeoutPromise as Promise<any>
-      ]);
+      const result = await databaseService.unfollowUser(followerUser.id, followingUser.id);
       console.log('[FollowService] databaseService.unfollowUser completed with result:', result);
 
       return result;
@@ -141,7 +109,8 @@ export class FollowService {
       console.error('[FollowService] Error in unfollow:', {
         message: error?.message || 'Unknown error',
         code: error?.code,
-        errorString: String(error)
+        errorString: String(error),
+        stack: error?.stack
       });
       // Return false instead of throwing to prevent crashes
       return false;
