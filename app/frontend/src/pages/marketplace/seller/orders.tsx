@@ -4,9 +4,10 @@ import { useSellerOrders, useSeller } from '@/hooks/useSeller';
 import { Button, GlassPanel, LoadingSkeleton } from '@/design-system';
 import Layout from '@/components/Layout';
 import { useOrderNotifications } from '@/hooks/useOrderNotifications';
-import { Bell, Package, Truck, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { Bell, Package, Truck, CheckCircle, XCircle, AlertTriangle, X, RefreshCw } from 'lucide-react';
 import OrderProgressBar from '@/components/Marketplace/OrderTracking/OrderProgressBar';
 import OrderStatusBadge from '@/components/Marketplace/OrderTracking/OrderStatusBadge';
+import { toast } from 'react-hot-toast';
 
 // Helper function to map order status to progress bar stage
 const mapStatusToStage = (status: string): 'created' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'cancelled' => {
@@ -44,6 +45,7 @@ export default function SellerOrdersPage() {
   const [newOrderCount, setNewOrderCount] = useState(0);
   const [recentNotifications, setRecentNotifications] = useState<any[]>([]);
   const [showNotificationPanel, setShowNotificationPanel] = useState(false);
+  const [truckingOrder, setTruckingOrder] = useState<any>(null);
 
   // Subscribe to order notifications for sellers
   const { notifications, unreadCount, markAsRead, clearNotifications } = useOrderNotifications({
@@ -332,13 +334,23 @@ export default function SellerOrdersPage() {
                             </div>
                           </td>
                           <td className="py-4">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => router.push(`/marketplace/orders/${order.id}`)}
-                            >
-                              Track Order
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                icon={<Truck size={16} />}
+                                onClick={() => setTruckingOrder(order)}
+                              >
+                                Book Trucking
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => router.push(`/marketplace/orders/${order.id}`)}
+                              >
+                                Track Order
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -350,6 +362,220 @@ export default function SellerOrdersPage() {
           )}
         </div>
       </div>
+
+      {/* Trucking Quote Modal - Seller only */}
+      {truckingOrder && (
+        <SellerTruckingQuoteModal
+          order={truckingOrder}
+          onClose={() => setTruckingOrder(null)}
+        />
+      )}
     </Layout>
+  );
+}
+
+// Seller Trucking Quote Modal Component
+function SellerTruckingQuoteModal({ order, onClose }: { order: any; onClose: () => void }) {
+  const [step, setStep] = useState<'details' | 'quotes' | 'success'>('details');
+  const [loading, setLoading] = useState(false);
+  const [rates, setRates] = useState<any[]>([]);
+  const [selectedRate, setSelectedRate] = useState<any>(null);
+  const [packageInfo, setPackageInfo] = useState({
+    weight: '10',
+    length: '12',
+    width: '12',
+    height: '12',
+    description: 'Order items'
+  });
+
+  const fetchRates = async () => {
+    try {
+      setLoading(true);
+      // Mock call - in real scenario, this would gather addresses from the order
+      const rateData = {
+        fromAddress: {
+          name: 'Your Business',
+          street: order.seller?.address?.street || '123 Seller St',
+          city: order.seller?.address?.city || 'San Francisco',
+          state: order.seller?.address?.state || 'CA',
+          postalCode: order.seller?.address?.postalCode || '94105',
+          country: order.seller?.address?.country || 'US',
+          phone: '555-0100'
+        },
+        toAddress: {
+          name: order.buyer?.displayName || 'Buyer',
+          street: order.shippingAddress?.addressLine1 || '123 Buyer St',
+          city: order.shippingAddress?.city || 'New York',
+          state: order.shippingAddress?.state || 'NY',
+          postalCode: order.shippingAddress?.postalCode || '10001',
+          country: order.shippingAddress?.country || 'US',
+          phone: order.shippingAddress?.phone || '555-0101'
+        },
+        packageInfo: {
+          weight: parseFloat(packageInfo.weight),
+          dimensions: {
+            length: parseFloat(packageInfo.length),
+            width: parseFloat(packageInfo.width),
+            height: parseFloat(packageInfo.height)
+          },
+          value: order.total?.toString() || '100',
+          description: packageInfo.description
+        }
+      };
+
+      // Simulating API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      setRates([
+        { carrier: 'FEDEX', service: 'Ground', price: 45.00, estimation: '3-5 days' },
+        { carrier: 'UPS', service: 'Standard', price: 48.50, estimation: '3-4 days' },
+        { carrier: 'DHL', service: 'Express', price: 85.00, estimation: '1-2 days' },
+        { carrier: 'USPS', service: 'Priority', price: 25.00, estimation: '2-3 days' }
+      ]);
+      setStep('quotes');
+    } catch (error) {
+      toast.error('Failed to fetch rates');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBook = async () => {
+    if (!selectedRate) return;
+    try {
+      setLoading(true);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      toast.success('Trucking booked successfully!');
+      setStep('success');
+    } catch (error) {
+      toast.error('Booking failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+      <GlassPanel variant="modal" className="max-w-lg w-full">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              <Truck className="text-purple-400" />
+              Book Trucking
+            </h3>
+            <button onClick={onClose} className="text-white/40 hover:text-white">
+              <X size={24} />
+            </button>
+          </div>
+
+          {step === 'details' && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Package Weight (lbs)</label>
+                <input
+                  type="number"
+                  value={packageInfo.weight}
+                  onChange={(e) => setPackageInfo({ ...packageInfo, weight: e.target.value })}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Length</label>
+                  <input
+                    type="number"
+                    value={packageInfo.length}
+                    onChange={(e) => setPackageInfo({ ...packageInfo, length: e.target.value })}
+                    className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Width</label>
+                  <input
+                    type="number"
+                    value={packageInfo.width}
+                    onChange={(e) => setPackageInfo({ ...packageInfo, width: e.target.value })}
+                    className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Height</label>
+                  <input
+                    type="number"
+                    value={packageInfo.height}
+                    onChange={(e) => setPackageInfo({ ...packageInfo, height: e.target.value })}
+                    className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Button variant="outline" fullWidth onClick={onClose}>Cancel</Button>
+                <Button
+                  variant="primary"
+                  fullWidth
+                  onClick={fetchRates}
+                  disabled={loading}
+                  icon={loading ? <RefreshCw size={16} className="animate-spin" /> : undefined}
+                >
+                  {loading ? 'Getting Quotes...' : 'Get Quotes'}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step === 'quotes' && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                {rates.map((rate) => (
+                  <div
+                    key={rate.carrier}
+                    className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                      selectedRate?.carrier === rate.carrier
+                        ? 'bg-blue-500/20 border-blue-500'
+                        : 'bg-white/5 border-white/10 hover:bg-white/10'
+                    }`}
+                    onClick={() => setSelectedRate(rate)}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="font-semibold text-white">{rate.carrier}</p>
+                        <p className="text-sm text-white/60">{rate.service}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-white">${rate.price.toFixed(2)}</p>
+                        <p className="text-sm text-white/60">{rate.estimation}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-3">
+                <Button variant="outline" fullWidth onClick={() => setStep('details')}>Back</Button>
+                <Button
+                  variant="primary"
+                  fullWidth
+                  onClick={handleBook}
+                  disabled={loading || !selectedRate}
+                  icon={loading ? <RefreshCw size={16} className="animate-spin" /> : undefined}
+                >
+                  {loading ? 'Booking...' : 'Book Selected'}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step === 'success' && (
+            <div className="text-center">
+              <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-6 h-6 text-green-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Booking Confirmed!</h3>
+              <p className="text-white/60 mb-6">Your trucking request has been submitted. You will receive updates shortly.</p>
+              <Button variant="primary" onClick={onClose}>Close</Button>
+            </div>
+          )}
+        </div>
+      </GlassPanel>
+    </div>
   );
 }
