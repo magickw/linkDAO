@@ -175,6 +175,16 @@ class NotificationService {
         }
 
         try {
+            // Only register if user is authenticated
+            // Check if there's a token in auth store
+            const { useAuthStore } = await import('../store');
+            const authState = useAuthStore.getState();
+
+            if (!authState.token) {
+                console.log('[Notifications] User not authenticated, deferring token registration');
+                return;
+            }
+
             await apiClient.post('/api/notifications/register', {
                 token: this.expoPushToken,
                 platform: Platform.OS,
@@ -187,7 +197,11 @@ class NotificationService {
 
             console.log('[Notifications] Token registered successfully');
         } catch (error) {
-            console.error('[Notifications] Error registering token:', error);
+            if (error instanceof Error && error.message.includes('401')) {
+                console.warn('[Notifications] User not authenticated for token registration, will retry after login');
+            } else {
+                console.error('[Notifications] Error registering token:', error);
+            }
         }
     }
 

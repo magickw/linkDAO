@@ -44,8 +44,22 @@ class WalletService {
    * Set the MetaMask SDK instance injected from the React Provider
    */
   setMetaMaskSDK(sdkState: SDKState) {
-    this.metaMaskSDKState = sdkState;
-    console.log('✅ MetaMask SDK injected into WalletService. Ready:', sdkState?.ready);
+    try {
+      if (!sdkState) {
+        console.warn('⚠️ Attempted to set null/undefined SDK state');
+        return;
+      }
+
+      if (!sdkState.sdk) {
+        console.warn('⚠️ SDK state does not contain sdk property yet, will retry');
+        return;
+      }
+
+      this.metaMaskSDKState = sdkState;
+      console.log('✅ MetaMask SDK injected into WalletService. Ready:', sdkState?.ready);
+    } catch (error) {
+      console.error('❌ Error setting MetaMask SDK:', error);
+    }
   }
 
   /**
@@ -107,6 +121,10 @@ class WalletService {
    */
   private async connectMetaMask(): Promise<string> {
     try {
+      if (!this.metaMaskSDKState) {
+        throw new Error('MetaMask SDK not yet injected. Please try again in a moment as the SDK is initializing.');
+      }
+
       if (!this.metaMaskSDKState?.sdk) {
         throw new Error('MetaMask SDK not initialized. Please ensure the app is wrapped in MetaMaskProvider and SDK is injected.');
       }

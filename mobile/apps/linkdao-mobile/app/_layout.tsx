@@ -3,7 +3,7 @@
  * Root layout with navigation and providers
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Stack, router, useSegments, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -31,8 +31,15 @@ function MetaMaskInjector() {
   const sdkState = useSDK();
 
   useEffect(() => {
-    if (sdkState) {
-      walletService.setMetaMaskSDK(sdkState);
+    try {
+      if (sdkState && sdkState.sdk) {
+        walletService.setMetaMaskSDK(sdkState);
+        console.log('✅ MetaMask SDK successfully injected');
+      } else {
+        console.warn('⚠️ MetaMask SDK not fully initialized yet');
+      }
+    } catch (error) {
+      console.error('❌ Failed to inject MetaMask SDK:', error);
     }
   }, [sdkState]);
 
@@ -42,6 +49,8 @@ function MetaMaskInjector() {
 export default function RootLayout() {
   const { isAuthenticated } = useAuthStore();
   const [isReady, setIsReady] = useState(false);
+  const navigationAttempted = useRef(false);
+  const previousAuthState = useRef(isAuthenticated);
   const segments = useSegments();
   const { walletAddress, signature, connector } = useLocalSearchParams();
 
@@ -135,17 +144,47 @@ export default function RootLayout() {
   useEffect(() => {
     if (!isReady) return;
 
+    // Check if authentication state has changed
+    const authStateChanged = previousAuthState.current !== isAuthenticated;
+    previousAuthState.current = isAuthenticated;
+
+    // Reset navigation flag when auth state changes
+    if (authStateChanged) {
+      navigationAttempted.current = false;
+    }
+
+    // Only attempt navigation once per auth state change
+    if (navigationAttempted.current) return;
+
+    // Ensure segments is valid before using it
+    if (!segments || segments.length === 0) {
+      console.log('⏳ Router not fully ready yet, segments:', segments);
+      return;
+    }
+
+    navigationAttempted.current = true;
+
     const inAuthGroup = segments[0] === 'auth';
     const inTabsGroup = segments[0] === '(tabs)';
 
-    // Navigate only after root layout is ready
-    // Redirect to auth if not authenticated and trying to access tabs
-    if (!isAuthenticated && inTabsGroup) {
-      router.replace('/auth');
-    }
-    // Redirect to tabs if authenticated and on auth screen
-    else if (isAuthenticated && inAuthGroup) {
-      router.replace('/(tabs)');
+    try {
+      // Navigate only after root layout is ready
+      // Redirect to auth if not authenticated and trying to access tabs
+      if (!isAuthenticated && inTabsGroup) {
+        console.log('🔄 Redirecting to auth screen (not authenticated)');
+        router.replace('/auth');
+      }
+      // Redirect to tabs if authenticated and on auth screen
+      else if (isAuthenticated && inAuthGroup) {
+        console.log('🔄 Redirecting to tabs (authenticated)');
+        router.replace('/(tabs)');
+      } else {
+        console.log('✅ User is in correct route group:', segments[0]);
+      }
+    } catch (error) {
+      console.error('❌ Navigation error:', error);
+      // Reset the flag to allow retrying on next state change
+      navigationAttempted.current = false;
     }
   }, [isAuthenticated, isReady, segments]);
 
