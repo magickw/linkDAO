@@ -112,8 +112,10 @@ class AuthService {
 
         // Step 2: Sign the message with wallet
         const signature = await this.signMessage(address, message);
+        console.log('✅ Got signature from wallet:', signature.slice(0, 20) + '...');
 
         // Step 3: Verify signature with backend
+        console.log('📤 Posting signature to backend...');
         const response = await apiClient.post<{ token: string; user: AuthUser; requires2FA?: boolean; userId?: string }>(
           '/api/auth/wallet-connect',
           {
@@ -122,6 +124,7 @@ class AuthService {
             message
           }
         );
+        console.log('📥 Backend signature verification response:', JSON.stringify(response).slice(0, 100));
 
         if (response.success && response.data) {
           // Check if 2FA is required
@@ -149,8 +152,10 @@ class AuthService {
       globalAuthInProgress.set(addressKey, authPromise);
 
       const result = await authPromise;
+      console.log('🔐 Auth flow completed with result:', { success: result.success, hasToken: !!result.token, hasUser: !!result.user });
       return result;
     } catch (error) {
+      console.error('💥 Auth flow threw error:', error);
       return { success: false, error: (error as Error).message || 'Authentication failed' };
     } finally {
       // Clear from in-progress map after completion

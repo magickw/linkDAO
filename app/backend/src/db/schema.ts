@@ -850,6 +850,23 @@ export const productTags = pgTable("product_tags", {
   })
 }));
 
+// Product Variants - for different versions of a product (e.g. size, color)
+export const productVariants = pgTable("product_variants", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  productId: uuid("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  sku: varchar("sku", { length: 100 }),
+  attributes: jsonb("attributes").notNull(), // JSON object of variant attributes { size: 'XL', color: 'blue' }
+  priceAmount: numeric("price_amount", { precision: 20, scale: 8 }),
+  inventory: integer("inventory").notNull().default(0),
+  reservedInventory: integer("reserved_inventory").notNull().default(0),
+  isAvailable: boolean("is_available").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  productIdIdx: index("idx_product_variants_product_id").on(t.productId),
+  skuIdx: index("idx_product_variants_sku").on(t.sku),
+}));
+
 // Promo Codes
 export const promoCodes = pgTable("promo_codes", {
   id: uuid("id").defaultRandom().primaryKey(),

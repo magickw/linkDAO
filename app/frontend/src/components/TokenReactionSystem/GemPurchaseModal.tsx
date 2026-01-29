@@ -98,18 +98,6 @@ const NETWORK_CONFIGS = {
   }
 };
 
-// Get token for selected network and stablecoin
-const getSelectedToken = useCallback(() => {
-  const networkConfig = NETWORK_CONFIGS[selectedNetworkId as keyof typeof NETWORK_CONFIGS];
-  if (!networkConfig) return null;
-  
-  if (selectedStablecoin === 'USDC') {
-    return USDC_TOKENS[networkConfig.chainId] || null;
-  } else {
-    return USDT_TOKENS[networkConfig.chainId] || null;
-  }
-}, [selectedNetworkId, selectedStablecoin]);
-
 interface PrioritizedPaymentMethod {
   method: {
     id: string;
@@ -215,6 +203,18 @@ const GemPurchaseModal: React.FC<AwardPurchaseModalProps> = ({
     }
     return null;
   }, [publicClient]);
+
+  // Get token for selected network and stablecoin
+  const getSelectedToken = useCallback(() => {
+    const networkConfig = NETWORK_CONFIGS[selectedNetworkId as keyof typeof NETWORK_CONFIGS];
+    if (!networkConfig) return null;
+
+    if (selectedStablecoin === 'USDC') {
+      return USDC_TOKENS[networkConfig.chainId] || null;
+    } else {
+      return USDT_TOKENS[networkConfig.chainId] || null;
+    }
+  }, [selectedNetworkId, selectedStablecoin]);
 
   // Get USDC token for current network selection
   const getSelectedUSDCToken = useCallback(() => {

@@ -44,7 +44,8 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       walletAddress: addressKey,
       isAuthenticated,
       connector: connector?.name,
-      authInProgress: authInProgressRef.current.get(addressKey) || false
+      authInProgress: authInProgressRef.current.get(addressKey) || false,
+      alreadyHandled: hasHandledAddressRef.current.has(addressKey),
     });
 
     // Skip authentication if:
