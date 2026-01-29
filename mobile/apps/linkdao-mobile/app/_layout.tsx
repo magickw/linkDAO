@@ -3,7 +3,7 @@
  * Root layout with navigation and providers
  */
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Stack, router, useSegments, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -226,6 +226,15 @@ export default function RootLayout() {
     return () => clearTimeout(navigationTimeout);
   }, [isAuthenticated, isReady, segments]);
 
+  // Memoize callbacks to prevent WalletLoginBridge from re-triggering on every render
+  const handleLoginSuccess = useCallback(({ user }: { user: any }) => {
+    console.log('✅ Auto-login successful for:', user.address);
+  }, []);
+
+  const handleLoginError = useCallback((error: string) => {
+    console.error('❌ Auto-login failed:', error);
+  }, []);
+
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
@@ -241,12 +250,8 @@ export default function RootLayout() {
               autoLogin={true}
               walletAddress={walletAddress as string}
               connector={connector as any}
-              onLoginSuccess={({ user }) => {
-                console.log('✅ Auto-login successful for:', user.address);
-              }}
-              onLoginError={(error) => {
-                console.error('❌ Auto-login failed:', error);
-              }}
+              onLoginSuccess={handleLoginSuccess}
+              onLoginError={handleLoginError}
             />
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
