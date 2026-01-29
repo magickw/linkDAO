@@ -133,8 +133,8 @@ export default function WalletConnectScreen() {
         ]
       );
     } catch (error) {
-      console.error('Connection error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unable to connect to wallet. Please try again.';
+      console.log('ℹ️ Wallet connection attempt:', providerId, '-', errorMessage);
       Alert.alert('Connection Failed', errorMessage);
     } finally {
       setConnecting(false);

@@ -111,7 +111,13 @@ class WalletService {
 
       return address;
     } catch (error) {
-      console.error(`❌ Failed to connect to ${provider}:`, error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      // Only show serious errors, suppress wallet-not-found errors
+      if (!errorMsg.includes('not installed') && !errorMsg.includes('not found') && !errorMsg.includes('Redirecting')) {
+        console.error(`❌ Failed to connect to ${provider}:`, error);
+      } else {
+        console.log(`ℹ️ ${provider} not available:`, errorMsg);
+      }
       throw error;
     }
   }
@@ -158,7 +164,7 @@ class WalletService {
       const wcScheme = 'wc:';
       const dappName = 'LinkDAO Mobile';
 
-      // Using a basic V1-style link for compatibility fallback, 
+      // Using a basic V1-style link for compatibility fallback,
       // but ideally this should be upgraded to V2 with a proper Project ID
       const wcUri = `${wcScheme}${encodeURIComponent(dappName)}@1?bridge=https://bridge.walletconnect.org&key=${Date.now()}`;
 
@@ -172,7 +178,7 @@ class WalletService {
         throw new Error('No WalletConnect-compatible wallet found.');
       }
     } catch (error) {
-      console.error('❌ WalletConnect connection failed:', error);
+      console.log('ℹ️ WalletConnect unavailable:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -193,7 +199,7 @@ class WalletService {
 
         // Open store
         await Linking.openURL(appStoreUrl);
-        throw new Error('Redirecting to install Coinbase Wallet...');
+        throw new Error('Coinbase Wallet not installed. Redirecting to App Store...');
       }
 
       const dappName = 'LinkDAO Mobile';
@@ -206,7 +212,7 @@ class WalletService {
       throw new Error('Opened Coinbase Wallet. Please confirm connection. (Full integration pending)');
 
     } catch (error) {
-      console.error('❌ Failed to connect to Coinbase Wallet:', error);
+      console.log('ℹ️ Coinbase Wallet unavailable:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -236,7 +242,7 @@ class WalletService {
       throw new Error('Opened Trust Wallet. Please confirm connection. (Full integration pending)');
 
     } catch (error) {
-      console.error('❌ Failed to connect to Trust Wallet:', error);
+      console.log('ℹ️ Trust Wallet unavailable:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -255,6 +261,7 @@ class WalletService {
       }
       throw new Error('Rainbow Wallet not installed.');
     } catch (e) {
+      console.log('ℹ️ Rainbow Wallet unavailable:', e instanceof Error ? e.message : String(e));
       throw e;
     }
   }
@@ -263,7 +270,7 @@ class WalletService {
    * Connect to Base Wallet
    */
   private async connectBase(): Promise<string> {
-    throw new Error('Base Wallet integration not yet implemented. Please use MetaMask for now.');
+    throw new Error('Base Wallet integration not yet implemented. Please try another wallet option.');
   }
 
   /**
