@@ -7,6 +7,7 @@
 import { useEffect, useRef } from 'react';
 import { useAuthStore } from '../store';
 import { authService } from '@linkdao/shared';
+import { walletService } from '../services/walletConnectService';
 
 interface WalletLoginBridgeProps {
   autoLogin?: boolean;
@@ -84,6 +85,11 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     const scheduleLogin = () => {
       // Mark auth as in progress
       authInProgressRef.current.set(addressKey, true);
+
+      // Initialize wallet service with connection state
+      const connectorType = connector === 'walletconnect' ? 'walletconnect' : connector?.name || 'walletconnect';
+      console.log(`⚙️ Initializing wallet service with provider: ${connectorType}`);
+      walletService.setConnectionState(connectorType as any, walletAddress, 1);
 
       Promise.resolve().then(() => {
         return authService.authenticateWallet(walletAddress, connector, 'connected');

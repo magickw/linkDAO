@@ -155,28 +155,24 @@ class WalletService {
 
   /**
    * Connect via WalletConnect
-   * Uses deep linking to connect to WalletConnect-compatible wallets
+   * Uses WalletConnect V2 service for wallet connections
    */
   private async connectWalletConnect(): Promise<string> {
     try {
       console.log('🔗 Connecting via WalletConnect...');
 
-      const wcScheme = 'wc:';
-      const dappName = 'LinkDAO Mobile';
+      // Import and use the WalletConnect V2 service
+      const { walletConnectV2Service } = await import('./walletConnectV2Service');
 
-      // Using a basic V1-style link for compatibility fallback,
-      // but ideally this should be upgraded to V2 with a proper Project ID
-      const wcUri = `${wcScheme}${encodeURIComponent(dappName)}@1?bridge=https://bridge.walletconnect.org&key=${Date.now()}`;
+      // Get the account from WalletConnect V2 service
+      const account = walletConnectV2Service.getAccount();
 
-      const canOpen = await Linking.canOpenURL(wcUri);
-      if (canOpen) {
-        await Linking.openURL(wcUri);
-        // Note: This flow is incomplete without a socket listener
-        // We return a placeholder to indicate the action was taken
-        throw new Error('Please authorize in your wallet app. (Note: Full WalletConnect V2 support is pending update)');
-      } else {
-        throw new Error('No WalletConnect-compatible wallet found.');
+      if (!account) {
+        throw new Error('WalletConnect: No account connected. Please ensure wallet is properly initialized.');
       }
+
+      console.log('✅ Connected via WalletConnect:', account);
+      return account;
     } catch (error) {
       console.log('ℹ️ WalletConnect unavailable:', error instanceof Error ? error.message : String(error));
       throw error;
@@ -404,6 +400,34 @@ class WalletService {
     } catch (error) {
       console.error('❌ Failed to disconnect wallet:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Set up wallet connection state directly (used by auth flow)
+   * Initializes connection without doing the actual connection flow
+   */
+  setConnectionState(provider: WalletProvider, address: string, chainId: number = 1): void {
+    try {
+      console.log(`⚙️ Setting wallet connection state: ${provider} - ${address}`);
+
+      this._isConnected = true;
+      this.currentProvider = provider;
+      this.activeConnection = {
+        provider,
+        address,
+        chainId,
+        timestamp: Date.now(),
+      };
+
+      // Save to storage
+      this.saveConnection(this.activeConnection).catch(e => {
+        console.warn('Failed to save connection:', e);
+      });
+
+      console.log('✅ Connection state set');
+    } catch (error) {
+      console.error('❌ Failed to set connection state:', error);
     }
   }
 
