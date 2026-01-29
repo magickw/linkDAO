@@ -18,15 +18,6 @@ const WALLET_PROVIDERS: Array<{
   color: string;
   description: string;
 }> = [
-  ...(process.env.EXPO_PUBLIC_DEV_MODE === 'true' || process.env.EXPO_PUBLIC_MOCK_WALLET === 'true' ? [
-    {
-      id: 'dev-mock' as WalletProvider,
-      name: 'Dev Mock (Testing)',
-      icon: 'bug-outline',
-      color: '#a78bfa',
-      description: 'Mock wallet for development/testing',
-    },
-  ] : []),
   {
     id: 'metamask',
     name: 'MetaMask',

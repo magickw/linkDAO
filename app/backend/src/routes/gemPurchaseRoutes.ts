@@ -68,9 +68,10 @@ router.post('/payment-intent', authenticateToken, csrfProtection, async (req, re
 });
 
 // Complete gem purchase (called by Stripe webhook or client after successful payment)
-router.post('/complete', async (req, res) => {
+router.post('/complete', authenticateToken, csrfProtection, async (req, res) => {
   try {
-    const { paymentIntentId, userId, packageId, gemAmount, paymentMethod = 'stripe', network, transactionHash } = req.body;
+    const { paymentIntentId, packageId, gemAmount, paymentMethod = 'stripe', network, transactionHash } = req.body;
+    const userId = req.user?.walletAddress || req.body.userId;
 
     // Verify payment intent (with simulation bypass for dev/test)
     // If it's a simulated ID (starts with stripe-timestamp) and we are not in production, allow it

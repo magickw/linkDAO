@@ -169,97 +169,204 @@ export async function getProvider() {
       const network = new ethers.Network(chainId === 1 ? 'mainnet' : 'sepolia', chainId);
 
       if (envRpc) {
-        try {
-          const proxiedRpc = (typeof window !== 'undefined')
-            ? `${window.location.origin}/api/proxy/rpc?target=${encodeURIComponent(envRpc)}`
-            : envRpc;
 
-          const provider = new ethers.JsonRpcProvider(proxiedRpc, network, {
-            staticNetwork: true,
-            polling: false,
-            batchMaxCount: 1
-          });
+              try {
 
-          await provider.getBlockNumber();
-          cachedProvider = provider;
-          providerCreationAttempts = 0;
-          return provider;
-        } catch (e) {
-          console.warn('Env RPC failed, trying fallback...');
-        }
-      }
+                const proxiedRpc = (typeof window !== 'undefined')
 
-      // Fallback to configured chain RPC
-      let rpcUrl = getChainRpcUrl(chainId);
-      if (rpcUrl) {
-        try {
-          // Try with proxy first
-          const proxiedRpcUrl = (typeof window !== 'undefined')
-            ? `${window.location.origin}/api/proxy/rpc?target=${encodeURIComponent(rpcUrl)}`
-            : rpcUrl;
+                  ? `${window.location.origin}/api/proxy/rpc?target=${encodeURIComponent(envRpc)}`
 
-          const provider = new ethers.JsonRpcProvider(proxiedRpcUrl, network, {
-            staticNetwork: true,
-            polling: false,
-            batchMaxCount: 1
-          });
+                  : envRpc;
 
-          await provider.getBlockNumber();
-          cachedProvider = provider;
-          providerCreationAttempts = 0;
-          return provider;
-        } catch (err) {
-          // If proxy fails (e.g. 403), try direct if not in browser or if browser allows (public RPC)
-          // Note: Browser calls to external RPCs might fail CORS if not proxied, but some are CORS-open.
-          try {
-             console.warn('Proxy RPC failed, trying direct RPC connection...');
-             const directProvider = new ethers.JsonRpcProvider(rpcUrl, network, {
-                staticNetwork: true,
-                polling: false,
-                batchMaxCount: 1
-             });
-             await directProvider.getBlockNumber();
-             cachedProvider = directProvider;
-             providerCreationAttempts = 0;
-             return directProvider;
-          } catch(directErr) {
-             console.warn('Direct RPC also failed:', directErr);
+      
+
+                const provider = new ethers.JsonRpcProvider(proxiedRpc, undefined, {
+
+                  staticNetwork: true,
+
+                  polling: false,
+
+                  batchMaxCount: 1
+
+                });
+
+      
+
+                // Test connection with a simple method call
+
+                await provider._networkPromise;
+
+                await provider.getBlockNumber();
+
+                cachedProvider = provider;
+
+                providerCreationAttempts = 0;
+
+                return provider;
+
+              } catch (e) {
+
+                console.warn('Env RPC failed, trying fallback...', e);
+
+              }
+
+            }
+
+      
+
+            // Fallback to configured chain RPC
+
+            let rpcUrl = getChainRpcUrl(chainId);
+
+            if (rpcUrl) {
+
+              try {
+
+                // Try with proxy first
+
+                const proxiedRpcUrl = (typeof window !== 'undefined')
+
+                  ? `${window.location.origin}/api/proxy/rpc?target=${encodeURIComponent(rpcUrl)}`
+
+                  : rpcUrl;
+
+      
+
+                const provider = new ethers.JsonRpcProvider(proxiedRpcUrl, undefined, {
+
+                  staticNetwork: true,
+
+                  polling: false,
+
+                  batchMaxCount: 1
+
+                });
+
+      
+
+                // Test connection
+
+                await provider._networkPromise;
+
+                await provider.getBlockNumber();
+
+                cachedProvider = provider;
+
+                providerCreationAttempts = 0;
+
+                return provider;
+
+              } catch (err) {
+
+                // If proxy fails (e.g. 403), try direct if not in browser or if browser allows (public RPC)
+
+                // Note: Browser calls to external RPCs might fail CORS if not proxied, but some are CORS-open.
+
+                try {
+
+                   console.warn('Proxy RPC failed, trying direct RPC connection...');
+
+                   const directProvider = new ethers.JsonRpcProvider(rpcUrl, undefined, {
+
+                      staticNetwork: true,
+
+                      polling: false,
+
+                      batchMaxCount: 1
+
+                   });
+
+      
+
+                   // Test connection
+
+                   await directProvider._networkPromise;
+
+                   await directProvider.getBlockNumber();
+
+                   cachedProvider = directProvider;
+
+                   providerCreationAttempts = 0;
+
+                   return directProvider;
+
+                } catch(directErr) {
+
+                   console.warn('Direct RPC also failed:', directErr);
+
+                }
+
+              }
+
+            }
+
+          } catch (e) {
+
+            console.warn('Error getting provider:', e);
+
           }
-        }
-      }
-    } catch (e) {
-      console.warn('Error getting provider:', e);
-    }
 
-    // Hardcoded Fallbacks
-    console.log('Using hardcoded fallback provider');
-    const fallbackRpcs = [
-      'https://ethereum-sepolia-rpc.publicnode.com',
-      'https://rpc.sepolia.org',
-      'https://1rpc.io/sepolia'
-    ];
+      
 
-    const network = new ethers.Network('sepolia', 11155111);
-    
-    for (const rpc of fallbackRpcs) {
-      try {
-        // Try direct first for hardcoded fallbacks to avoid proxy issues if proxy is broken
-        const provider = new ethers.JsonRpcProvider(rpc, network, {
-          staticNetwork: true,
-          polling: false,
-          batchMaxCount: 1
-        });
-        
-        await provider.getBlockNumber();
-        cachedProvider = provider;
-        providerCreationAttempts = 0;
-        return provider;
-      } catch (err) {
-        continue;
-      }
-    }
-    
-    return null;
+          // Hardcoded Fallbacks
+
+          console.log('Using hardcoded fallback provider');
+
+          const fallbackRpcs = [
+
+            'https://ethereum-sepolia-rpc.publicnode.com',
+
+            'https://rpc.sepolia.org',
+
+            'https://1rpc.io/sepolia'
+
+          ];
+
+          
+
+          for (const rpc of fallbackRpcs) {
+
+            try {
+
+              // Try direct first for hardcoded fallbacks to avoid proxy issues if proxy is broken
+
+              const provider = new ethers.JsonRpcProvider(rpc, undefined, {
+
+                staticNetwork: true,
+
+                polling: false,
+
+                batchMaxCount: 1
+
+              });
+
+              
+
+              // Test connection
+
+              await provider._networkPromise;
+
+              await provider.getBlockNumber();
+
+              cachedProvider = provider;
+
+              providerCreationAttempts = 0;
+
+              return provider;
+
+            } catch (err) {
+
+              continue;
+
+            }
+
+          }
+
+          
+
+          console.error('All RPC providers failed. Returning null provider.');
+
+          return null;
   })().finally(() => {
     providerPromise = null;
   });

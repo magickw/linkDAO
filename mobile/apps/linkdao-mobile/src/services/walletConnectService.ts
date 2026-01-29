@@ -11,9 +11,8 @@ import { ethers } from 'ethers';
 import type { SDKState } from '@metamask/sdk-react-native';
 
 const STORAGE_KEY = 'wallet_connection';
-const DEV_MODE = process.env.EXPO_PUBLIC_DEV_MODE === 'true' || process.env.EXPO_PUBLIC_MOCK_WALLET === 'true';
 
-export type WalletProvider = 'metamask' | 'walletconnect' | 'coinbase' | 'trust' | 'rainbow' | 'base' | 'dev-mock';
+export type WalletProvider = 'metamask' | 'walletconnect' | 'coinbase' | 'trust' | 'rainbow' | 'base';
 
 interface WalletConnection {
   provider: WalletProvider;
@@ -90,9 +89,6 @@ class WalletService {
           break;
         case 'base':
           address = await this.connectBase();
-          break;
-        case 'dev-mock':
-          address = await this.connectDevMock();
           break;
         default:
           throw new Error(`Unsupported wallet provider: ${provider}`);
@@ -278,23 +274,6 @@ class WalletService {
   }
 
   /**
-   * Connect with mock wallet for development/testing
-   */
-  private async connectDevMock(): Promise<string> {
-    if (!DEV_MODE) {
-      throw new Error('Dev mode disabled. Set EXPO_PUBLIC_DEV_MODE=true or EXPO_PUBLIC_MOCK_WALLET=true to enable.');
-    }
-
-    console.log('🧪 Connecting with dev mock wallet...');
-
-    // Generate a deterministic test address (same each time for consistency)
-    const mockAddress = '0x742d35Cc6634C0532925a3b844Bc5e8f5a7a3f9D';
-
-    console.log('✅ Mock wallet connected:', mockAddress);
-    return mockAddress;
-  }
-
-  /**
    * Sign a message with the connected wallet
    */
   async signMessage(message: string, address: string): Promise<string> {
@@ -324,18 +303,6 @@ class WalletService {
 
         console.log('✅ Message signed via MetaMask SDK');
         return signature;
-      }
-
-      if (this.currentProvider === 'dev-mock') {
-        // Generate mock signature for development
-        const mockSignature = '0x' + Array(130).fill(0).map((_, i) => {
-          // Create a deterministic but unique signature based on the message
-          const charCode = (message.charCodeAt(i % message.length) + i) % 16;
-          return charCode.toString(16);
-        }).join('');
-
-        console.log('✅ Mock signature generated for development');
-        return mockSignature;
       }
 
       throw new Error('No signer available for current provider');
