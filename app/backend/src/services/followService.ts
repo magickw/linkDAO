@@ -12,29 +12,46 @@ const userProfileService = new UserProfileService();
 export class FollowService {
   async follow(followerAddress: string, followingAddress: string): Promise<boolean> {
     try {
+      // Set timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Follow operation timed out after 5 seconds')), 5000)
+      );
+
       // Get user IDs from addresses
-      let followerUser = await userProfileService.getProfileByAddress(followerAddress);
+      let followerUser = await Promise.race([
+        userProfileService.getProfileByAddress(followerAddress),
+        timeoutPromise as Promise<any>
+      ]);
       if (!followerUser) {
         // Create user if they don't exist
-        followerUser = await userProfileService.createProfile({
-          walletAddress: followerAddress,
-          handle: '',
-          ens: '',
-          avatarCid: '',
-          bioCid: ''
-        });
+        followerUser = await Promise.race([
+          userProfileService.createProfile({
+            walletAddress: followerAddress,
+            handle: '',
+            ens: '',
+            avatarCid: '',
+            bioCid: ''
+          }),
+          timeoutPromise as Promise<any>
+        ]);
       }
 
-      let followingUser = await userProfileService.getProfileByAddress(followingAddress);
+      let followingUser = await Promise.race([
+        userProfileService.getProfileByAddress(followingAddress),
+        timeoutPromise as Promise<any>
+      ]);
       if (!followingUser) {
         // Create user if they don't exist
-        followingUser = await userProfileService.createProfile({
-          walletAddress: followingAddress,
-          handle: '',
-          ens: '',
-          avatarCid: '',
-          bioCid: ''
-        });
+        followingUser = await Promise.race([
+          userProfileService.createProfile({
+            walletAddress: followingAddress,
+            handle: '',
+            ens: '',
+            avatarCid: '',
+            bioCid: ''
+          }),
+          timeoutPromise as Promise<any>
+        ]);
       }
 
       // Validate user IDs
@@ -44,13 +61,19 @@ export class FollowService {
       }
 
       // Check if already following
-      const isAlreadyFollowing = await this.isFollowing(followerAddress, followingAddress);
+      const isAlreadyFollowing = await Promise.race([
+        this.isFollowing(followerAddress, followingAddress),
+        timeoutPromise as Promise<any>
+      ]);
       if (isAlreadyFollowing) {
         return true; // Already following
       }
 
       // Add follow relationship to database
-      const followResult = await databaseService.followUser(followerUser.id, followingUser.id);
+      const followResult = await Promise.race([
+        databaseService.followUser(followerUser.id, followingUser.id),
+        timeoutPromise as Promise<any>
+      ]);
       if (!followResult) {
         console.warn('[FollowService] Failed to create follow relationship');
         return false;
@@ -72,13 +95,26 @@ export class FollowService {
     try {
       console.log(`[FollowService] Unfollow attempt: ${followerAddress} -> ${followingAddress}`);
 
-      // Get user IDs from addresses
+      // Set timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Unfollow operation timed out after 5 seconds')), 5000)
+      );
+
+      // Get user IDs from addresses with timeout
       console.log('[FollowService] Fetching follower profile...');
-      const followerUser = await userProfileService.getProfileByAddress(followerAddress);
+      const followerUserPromise = userProfileService.getProfileByAddress(followerAddress);
+      const followerUser = await Promise.race([
+        followerUserPromise,
+        timeoutPromise as Promise<any>
+      ]);
       console.log('[FollowService] Follower profile found:', !!followerUser);
 
       console.log('[FollowService] Fetching following profile...');
-      const followingUser = await userProfileService.getProfileByAddress(followingAddress);
+      const followingUserPromise = userProfileService.getProfileByAddress(followingAddress);
+      const followingUser = await Promise.race([
+        followingUserPromise,
+        timeoutPromise as Promise<any>
+      ]);
       console.log('[FollowService] Following profile found:', !!followingUser);
 
       if (!followerUser || !followingUser) {
@@ -93,7 +129,11 @@ export class FollowService {
 
       // Remove follow relationship from database
       console.log(`[FollowService] Removing follow record: ${followerUser.id} -> ${followingUser.id}`);
-      const result = await databaseService.unfollowUser(followerUser.id, followingUser.id);
+      const resultPromise = databaseService.unfollowUser(followerUser.id, followingUser.id);
+      const result = await Promise.race([
+        resultPromise,
+        timeoutPromise as Promise<any>
+      ]);
       console.log('[FollowService] databaseService.unfollowUser completed with result:', result);
 
       return result;
