@@ -31,22 +31,34 @@ const STRIPE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_PL
 
 // Component to inject SDK state into the singleton service
 function MetaMaskInjector() {
-  const sdkState = useSDK();
+  const [sdkError, setSdkError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    try {
-      if (sdkState && sdkState.sdk) {
-        walletService.setMetaMaskSDK(sdkState);
-        console.log('✅ MetaMask SDK successfully injected');
-      } else {
-        console.warn('⚠️ MetaMask SDK not fully initialized yet');
+  try {
+    const sdkState = useSDK();
+
+    useEffect(() => {
+      try {
+        if (sdkState && sdkState.sdk) {
+          walletService.setMetaMaskSDK(sdkState);
+          console.log('✅ MetaMask SDK successfully injected');
+        } else if (sdkState) {
+          console.warn('⚠️ MetaMask SDK not fully initialized yet');
+        }
+      } catch (error) {
+        console.error('❌ Failed to inject MetaMask SDK:', error);
+        setSdkError(error as Error);
       }
-    } catch (error) {
-      console.error('❌ Failed to inject MetaMask SDK:', error);
-    }
-  }, [sdkState]);
+    }, [sdkState]);
 
-  return null;
+    if (sdkError) {
+      console.warn('⚠️ MetaMask SDK injection encountered an error, wallet features may be limited');
+    }
+
+    return null;
+  } catch (error) {
+    console.error('❌ MetaMaskInjector initialization failed:', error);
+    return null;
+  }
 }
 
 export default function RootLayout() {

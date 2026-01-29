@@ -47,6 +47,64 @@ export default function OrderDetailsScreen() {
         }
     };
 
+    const getOrderTimeline = (order: Order) => {
+        const timeline = [
+            {
+                title: 'Order Placed',
+                description: 'Your order has been received',
+                date: new Date(order.createdAt).toLocaleString(),
+                icon: 'cart-outline',
+                completed: true,
+                current: order.status === 'pending'
+            },
+            {
+                title: 'Order Confirmed',
+                description: 'Seller has confirmed your order',
+                date: order.updatedAt ? new Date(order.updatedAt).toLocaleString() : 'Pending',
+                icon: 'checkmark-circle-outline',
+                completed: ['processing', 'shipped', 'delivered'].includes(order.status),
+                current: order.status === 'processing'
+            },
+            {
+                title: 'Processing',
+                description: 'Your order is being prepared',
+                date: order.updatedAt && order.status === 'processing' ? new Date(order.updatedAt).toLocaleString() : 'Pending',
+                icon: 'construct-outline',
+                completed: ['shipped', 'delivered'].includes(order.status),
+                current: order.status === 'processing'
+            },
+            {
+                title: 'Shipped',
+                description: order.trackingNumber ? `Tracking: ${order.trackingNumber}` : 'Awaiting shipment',
+                date: order.updatedAt && order.status === 'shipped' ? new Date(order.updatedAt).toLocaleString() : 'Pending',
+                icon: 'cube-outline',
+                completed: order.status === 'delivered',
+                current: order.status === 'shipped'
+            },
+            {
+                title: 'Delivered',
+                description: 'Your order has been delivered',
+                date: order.updatedAt && order.status === 'delivered' ? new Date(order.updatedAt).toLocaleString() : 'Pending',
+                icon: 'home-outline',
+                completed: order.status === 'delivered',
+                current: order.status === 'delivered'
+            }
+        ];
+
+        if (order.status === 'cancelled') {
+            timeline.push({
+                title: 'Order Cancelled',
+                description: 'This order has been cancelled',
+                date: order.updatedAt ? new Date(order.updatedAt).toLocaleString() : '',
+                icon: 'close-circle-outline',
+                completed: true,
+                current: false
+            });
+        }
+
+        return timeline;
+    };
+
     if (loading) {
         return (
             <SafeAreaView style={styles.container}>
@@ -348,5 +406,67 @@ const styles = StyleSheet.create({
     backButtonText: {
         color: '#374151',
         fontWeight: '600',
+    },
+    timeline: {
+        backgroundColor: '#ffffff',
+        borderRadius: 12,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+    },
+    timelineItem: {
+        flexDirection: 'row',
+        marginBottom: 24,
+    },
+    timelineLine: {
+        alignItems: 'flex-start',
+        marginRight: 12,
+    },
+    timelineDot: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#f3f4f6',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1,
+    },
+    timelineDotCompleted: {
+        backgroundColor: '#10b981',
+    },
+    timelineDotCurrent: {
+        backgroundColor: '#3b82f6',
+    },
+    timelineConnector: {
+        width: 2,
+        height: 40,
+        backgroundColor: '#f3f4f6',
+        marginTop: 4,
+        marginLeft: 14,
+    },
+    timelineConnectorCompleted: {
+        backgroundColor: '#10b981',
+    },
+    timelineContent: {
+        flex: 1,
+        paddingTop: 4,
+    },
+    timelineTitle: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#9ca3af',
+        marginBottom: 2,
+    },
+    timelineTitleCompleted: {
+        color: '#1f2937',
+    },
+    timelineDescription: {
+        fontSize: 13,
+        color: '#6b7280',
+        marginBottom: 4,
+    },
+    timelineDate: {
+        fontSize: 12,
+        color: '#9ca3af',
     },
 });
