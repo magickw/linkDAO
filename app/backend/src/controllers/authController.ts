@@ -54,7 +54,15 @@ class AuthController {
       const devMockAddresses = ['0x742d35Cc6634C0532925a3b844Bc5e8f5a7a3f9D'];
       const isDevMockAddress = devMockAddresses.some(addr => addr.toLowerCase() === walletAddress.toLowerCase());
 
+      console.log('🔍 Checking dev address:', {
+        walletAddress,
+        isDevMockAddress,
+        devMockAddresses,
+        comparison: walletAddress?.toLowerCase()
+      });
+
       if (!isDevMockAddress) {
+        console.log('⚠️ Not a dev address, verifying signature');
         // Verify signature
         try {
           const recoveredAddress = ethers.verifyMessage(message, signature);
@@ -69,6 +77,7 @@ class AuthController {
         }
       } else {
         // Dev mode: skip verification
+        console.log('✅ DEV MODE: Skipping signature verification for', walletAddress);
         safeLogger.info('Dev mode: skipping signature verification for', { walletAddress });
       }
 

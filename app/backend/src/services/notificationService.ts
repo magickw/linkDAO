@@ -208,24 +208,28 @@ export class NotificationService {
     }
   }
 
-  async enqueueNotification(userId: string, notification: any): Promise<void> {
+  async enqueueNotification(userIdOrData: any, notificationData?: any): Promise<void> {
     try {
-      safeLogger.info(`Notification enqueued for user ${userId}:`, notification);
+      if (notificationData === undefined) {
+        safeLogger.info(`Notification enqueued:`, userIdOrData);
+      } else {
+        safeLogger.info(`Notification enqueued for user ${userIdOrData}:`, notificationData);
+      }
     } catch (error) {
-      safeLogger.error(`Error enqueuing notification for ${userId}:`, error);
+      safeLogger.error(`Error enqueuing notification:`, error);
     }
   }
 
-  async sendOrderNotification(orderId: string, userId: string, type: string, message: string): Promise<void> {
+  async sendOrderNotification(recipient: string, type: string, orderId: string, metadataOrMessage?: any): Promise<void> {
     try {
-      safeLogger.info(`Order notification sent:`, {
-        orderId,
-        userId,
+      safeLogger.info(`Order notification:`, {
+        recipient,
         type,
-        message
+        orderId,
+        details: metadataOrMessage
       });
     } catch (error) {
-      safeLogger.error('Error sending order notification:', error);
+      safeLogger.error('Error handling order notification:', error);
     }
   }
 
@@ -281,11 +285,15 @@ export class NotificationService {
     }
   }
 
-  async markAsRead(userId: string, notificationId: string): Promise<void> {
+  async markAsRead(userIdOrNotificationId: string, notificationId?: string): Promise<void> {
     try {
-      safeLogger.info(`Marked notification ${notificationId} as read for user ${userId}`);
+      if (notificationId === undefined) {
+        safeLogger.info(`Marked notification as read: ${userIdOrNotificationId}`);
+      } else {
+        safeLogger.info(`Marked notification ${notificationId} as read for user ${userIdOrNotificationId}`);
+      }
     } catch (error) {
-      safeLogger.error(`Error marking notification as read for ${userId}:`, error);
+      safeLogger.error(`Error marking notification as read:`, error);
     }
   }
 

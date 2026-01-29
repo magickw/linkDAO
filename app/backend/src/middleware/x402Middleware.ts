@@ -1,5 +1,7 @@
 import { paymentMiddleware, x402ResourceServer } from '@x402/express';
+// @ts-ignore
 import { HTTPFacilitatorClient } from '@x402/core/server';
+// @ts-ignore
 import { ExactEvmScheme } from '@x402/evm/exact/server';
 
 // Initialize Facilitator Client (using testnet/public facilitator for now)

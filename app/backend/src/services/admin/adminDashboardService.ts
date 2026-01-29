@@ -1,10 +1,11 @@
 
-import { Order as MarketplaceOrder } from '../../models/Order';
+import { MarketplaceOrder } from '../../models/Order';
 import { db } from '../../db';
 import { orders, orderEvents } from '../../db/schema';
 import { sql, eq, count, sum, avg, desc } from 'drizzle-orm';
 import { safeLogger } from '../../utils/safeLogger';
-// import { cacheService } from './cacheService';
+import { cacheService } from '../cacheService';
+import { FinancialMonitoringService } from '../financialMonitoringService';
 
 // --- Existing Dashboard Interfaces ---
 
@@ -123,9 +124,9 @@ export interface AdminOrderDetails extends MarketplaceOrder {
 export interface IAdminDashboardService {
   // Order Management Methods
   getOrderMetrics(): Promise<AdminOrderMetrics>;
-  getOrders(filters: AdminOrderFilters, page: number, limit: number): Promise<{ orders: Order[], total: number }>;
+  getOrders(filters: AdminOrderFilters, page: number, limit: number): Promise<{ orders: MarketplaceOrder[], total: number }>;
   getOrderDetails(orderId: string): Promise<AdminOrderDetails | null>;
-  getDelayedOrders(page: number, limit: number): Promise<{ orders: Order[], total: number }>;
+  getDelayedOrders(page: number, limit: number): Promise<{ orders: MarketplaceOrder[], total: number }>;
   performAdminAction(orderId: string, action: string, adminId: string, reason: string, metadata?: any): Promise<void>;
 
   // Existing Dashboard Methods (Implicitly part of the service, added here for completeness if needed)
@@ -144,7 +145,7 @@ export class AdminDashboardService implements IAdminDashboardService {
   private userPreferences: Map<string, UserPreferences> = new Map();
   private alerts: Map<string, AdminAlert> = new Map();
   private usageAnalytics: Map<string, any> = new Map();
-  // private financialService: FinancialMonitoringService; // New property
+  private financialService: FinancialMonitoringService; // New property
 
   // OPTIMIZED: Cleanup intervals and size limits
   private maxMapSize = 1000;
@@ -152,7 +153,7 @@ export class AdminDashboardService implements IAdminDashboardService {
   private actionHistoryLimit = 100;
 
   constructor() {
-    // this.financialService = new FinancialMonitoringService(); // Initialize
+    this.financialService = new FinancialMonitoringService(); // Initialize
     this.initializeDefaultData();
     this.setupPeriodicCleanup();
   }
@@ -320,7 +321,7 @@ export class AdminDashboardService implements IAdminDashboardService {
     }
   }
 
-  async getOrders(filters: AdminOrderFilters, page: number, limit: number): Promise<{ orders: Order[], total: number }> {
+  async getOrders(filters: AdminOrderFilters, page: number, limit: number): Promise<{ orders: MarketplaceOrder[], total: number }> {
     try {
       const offset = (page - 1) * limit;
       const conditions: any[] = [];
@@ -411,7 +412,7 @@ export class AdminDashboardService implements IAdminDashboardService {
     }
   }
 
-  async getDelayedOrders(page: number, limit: number): Promise<{ orders: Order[], total: number }> {
+  async getDelayedOrders(page: number, limit: number): Promise<{ orders: MarketplaceOrder[], total: number }> {
     try {
       const offset = (page - 1) * limit;
       const now = new Date();

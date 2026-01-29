@@ -47,6 +47,7 @@ export interface PaymentPathDecision {
     platformFee: number;
     gasFee?: number;
     taxAmount: number;
+    shippingCost?: number;
     totalFees: number; // Includes tax + fees
     currency: string;
   };
