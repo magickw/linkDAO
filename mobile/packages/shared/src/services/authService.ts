@@ -7,6 +7,9 @@ import { apiClient } from './apiClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { signMessageWithWallet } from './walletAdapter';
 
+// Global tracking to prevent concurrent auth attempts for the same address
+const globalAuthInProgress = new Map<string, Promise<any>>();
+
 export interface AuthUser {
   id: string;
   address: string;
@@ -93,47 +96,65 @@ class AuthService {
     options: { retries?: number; timeout?: number } = {}
   ): Promise<AuthResponse> {
     const { retries = 3, timeout = 30000 } = options;
+    const addressKey = address.toLowerCase();
+
+    // Check if auth is already in progress for this address
+    if (globalAuthInProgress.has(addressKey)) {
+      console.log('ℹ️ Auth already in progress for this address, returning existing promise');
+      return globalAuthInProgress.get(addressKey)!;
+    }
 
     try {
-      // Step 1: Get authentication message and nonce from backend
-      const { nonce, message } = await this.getNonce(address);
+      // Create and store the auth promise
+      const authPromise = (async () => {
+        // Step 1: Get authentication message and nonce from backend
+        const { nonce, message } = await this.getNonce(address);
 
-      // Step 2: Sign the message with wallet
-      const signature = await this.signMessage(address, message);
+        // Step 2: Sign the message with wallet
+        const signature = await this.signMessage(address, message);
 
-      // Step 3: Verify signature with backend
-      const response = await apiClient.post<{ token: string; user: AuthUser; requires2FA?: boolean; userId?: string }>(
-        '/api/auth/wallet-connect',
-        {
-          walletAddress: address,
-          signature,
-          message
+        // Step 3: Verify signature with backend
+        const response = await apiClient.post<{ token: string; user: AuthUser; requires2FA?: boolean; userId?: string }>(
+          '/api/auth/wallet-connect',
+          {
+            walletAddress: address,
+            signature,
+            message
+          }
+        );
+
+        if (response.success && response.data) {
+          // Check if 2FA is required
+          if (response.data.requires2FA) {
+            return {
+              success: true,
+              requires2FA: true,
+              userId: response.data.userId,
+              walletAddress: address
+            } as any;
+          }
+
+          this.token = response.data.token;
+          this.currentUser = this.createUserData(address, response.data.user);
+          apiClient.setToken(this.token);
+
+          await this.persistSession(this.token, this.currentUser);
+
+          return { success: true, token: this.token, user: this.currentUser };
         }
-      );
 
-      if (response.success && response.data) {
-        // Check if 2FA is required
-        if (response.data.requires2FA) {
-          return {
-            success: true,
-            requires2FA: true,
-            userId: response.data.userId,
-            walletAddress: address
-          } as any;
-        }
+        return { success: false, error: response.error || 'Authentication failed' };
+      })();
 
-        this.token = response.data.token;
-        this.currentUser = this.createUserData(address, response.data.user);
-        apiClient.setToken(this.token);
+      globalAuthInProgress.set(addressKey, authPromise);
 
-        await this.persistSession(this.token, this.currentUser);
-
-        return { success: true, token: this.token, user: this.currentUser };
-      }
-
-      return { success: false, error: response.error || 'Authentication failed' };
+      const result = await authPromise;
+      return result;
     } catch (error) {
       return { success: false, error: (error as Error).message || 'Authentication failed' };
+    } finally {
+      // Clear from in-progress map after completion
+      globalAuthInProgress.delete(addressKey);
     }
   }
 
