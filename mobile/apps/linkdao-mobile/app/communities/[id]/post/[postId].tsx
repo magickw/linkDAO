@@ -29,7 +29,7 @@ interface Post {
     content: string;
     author: {
         id: string;
-        username: string;
+        handle: string;
         displayName?: string;
         avatar?: string;
     };
@@ -64,7 +64,7 @@ export default function CommunityPostDetailScreen() {
                 content: 'This is a sample post with reactions and comments. Long press the reaction button to see all available reactions!',
                 author: {
                     id: 'user-1',
-                    username: 'johndoe',
+                    handle: 'johndoe',
                     displayName: 'John Doe',
                 },
                 createdAt: new Date().toISOString(),
@@ -146,7 +146,7 @@ export default function CommunityPostDetailScreen() {
             author: {
                 id: 'user-2',
                 displayName: 'Jane Smith',
-                username: 'janesmith',
+                handle: 'janesmith',
             },
             content: 'Great post! Really insightful.',
             createdAt: new Date().toISOString(),
@@ -158,7 +158,7 @@ export default function CommunityPostDetailScreen() {
                     author: {
                         id: 'user-1',
                         displayName: 'John Doe',
-                        username: 'johndoe',
+                        handle: 'johndoe',
                     },
                     content: 'Thanks! Glad you found it helpful.',
                     createdAt: new Date().toISOString(),
@@ -219,15 +219,15 @@ export default function CommunityPostDetailScreen() {
                                 <Image source={{ uri: post.author.avatar }} style={styles.avatarImage} />
                             ) : (
                                 <Text style={styles.avatarText}>
-                                    {post.author.displayName?.charAt(0) || post.author.username.charAt(0).toUpperCase()}
+                                    {post.author.displayName?.charAt(0) || post.author.handle.charAt(0).toUpperCase()}
                                 </Text>
                             )}
                         </View>
                         <View style={styles.authorInfo}>
                             <Text style={styles.authorName}>
-                                {post.author.displayName || post.author.username}
+                                {post.author.displayName || post.author.handle}
                             </Text>
-                            <Text style={styles.authorUsername}>@{post.author.username}</Text>
+                            <Text style={styles.authorUsername}>@{post.author.handle}</Text>
                         </View>
                     </View>
 

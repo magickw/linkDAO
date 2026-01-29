@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seller Invoice <%= invoiceNumber %></title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #333;
+      background: white;
+    }
+
+    body {
+      padding: 40px;
+      line-height: 1.6;
+    }
+
+    .invoice-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+    }
+
+    .invoice-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 40px;
+      border-bottom: 3px solid #2e7d32;
+      padding-bottom: 20px;
+    }
+
+    .company-info h1 {
+      margin: 0 0 5px 0;
+      color: #2e7d32;
+      font-size: 32px;
+      font-weight: 700;
+    }
+
+    .company-info p {
+      margin: 2px 0;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .invoice-meta {
+      text-align: right;
+      font-size: 13px;
+    }
+
+    .invoice-meta-item {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 8px;
+    }
+
+    .invoice-meta-label {
+      font-weight: 600;
+      color: #333;
+      width: 120px;
+      text-align: right;
+      margin-right: 10px;
+    }
+
+    .invoice-meta-value {
+      color: #666;
+    }
+
+    .section {
+      margin-bottom: 30px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #2e7d32;
+      text-transform: uppercase;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    .info-section {
+      display: flex;
+      gap: 40px;
+      margin-bottom: 30px;
+    }
+
+    .info-block {
+      flex: 1;
+      font-size: 12px;
+    }
+
+    .info-block p {
+      margin: 5px 0;
+      color: #555;
+    }
+
+    .info-block strong {
+      color: #333;
+      display: block;
+      margin-top: 8px;
+      margin-bottom: 5px;
+      font-size: 13px;
+    }
+
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      font-size: 12px;
+    }
+
+    .items-table thead {
+      background: #f8f9fa;
+      border-top: 2px solid #2e7d32;
+      border-bottom: 2px solid #2e7d32;
+    }
+
+    .items-table th {
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+      color: #333;
+      border: none;
+    }
+
+    .items-table td {
+      padding: 12px;
+      border-bottom: 1px solid #e0e0e0;
+      color: #555;
+    }
+
+    .items-table tr:last-child td {
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    .items-table .text-right {
+      text-align: right;
+    }
+
+    .items-table .text-center {
+      text-align: center;
+    }
+
+    .summary-section {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 30px;
+    }
+
+    .summary-table {
+      width: 420px;
+      font-size: 12px;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .summary-row.highlight {
+      background: #f0f7f0;
+      padding: 10px;
+      border-left: 3px solid #2e7d32;
+      margin: 5px 0;
+    }
+
+    .summary-row.total {
+      border-top: 2px solid #2e7d32;
+      border-bottom: 2px solid #2e7d32;
+      padding: 12px 0;
+      font-weight: 700;
+      font-size: 15px;
+      color: #2e7d32;
+    }
+
+    .summary-label {
+      color: #555;
+    }
+
+    .summary-value {
+      color: #333;
+      font-weight: 500;
+      text-align: right;
+    }
+
+    .fee-breakdown {
+      padding: 15px;
+      background: #f0f7f0;
+      border-left: 4px solid #2e7d32;
+      margin-bottom: 20px;
+      font-size: 12px;
+    }
+
+    .fee-breakdown p {
+      margin: 8px 0;
+      color: #555;
+    }
+
+    .fee-breakdown strong {
+      color: #2e7d32;
+    }
+
+    .payment-info {
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 5px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .payment-info p {
+      margin: 8px 0;
+    }
+
+    .invoice-footer {
+      margin-top: 50px;
+      padding-top: 20px;
+      border-top: 2px solid #e0e0e0;
+      text-align: center;
+      font-size: 11px;
+      color: #999;
+    }
+
+    .footer-text {
+      margin: 8px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="invoice-container">
+    <!-- Header -->
+    <div class="invoice-header">
+      <div class="company-info">
+        <h1>LinkDAO</h1>
+        <p>Seller Commission Statement</p>
+      </div>
+      <div class="invoice-meta">
+        <div class="invoice-meta-item">
+          <span class="invoice-meta-label">Invoice #:</span>
+          <span class="invoice-meta-value"><strong><%= invoiceNumber %></strong></span>
+        </div>
+        <div class="invoice-meta-item">
+          <span class="invoice-meta-label">Issue Date:</span>
+          <span class="invoice-meta-value"><%= new Date(issueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span>
+        </div>
+        <div class="invoice-meta-item">
+          <span class="invoice-meta-label">Period:</span>
+          <span class="invoice-meta-value"><%= new Date(issueDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) %></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Seller Info -->
+    <div class="section">
+      <div class="info-section">
+        <div class="info-block">
+          <strong>SELLER ACCOUNT</strong>
+          <% if (sellerId) { %>
+            <p>Seller ID: <%= sellerId %></p>
+          <% } %>
+          <% if (sellerTaxId) { %>
+            <p>Tax ID: <%= sellerTaxId %></p>
+          <% } %>
+        </div>
+        <div class="info-block">
+          <strong>INVOICE DETAILS</strong>
+          <p>Type: Commission Statement</p>
+          <p>Currency: <%= currency %></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Orders Summary Table -->
+    <% if (items && items.length > 0) { %>
+      <div class="section">
+        <div class="section-title">Order Summary</div>
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th class="text-right">Gross Sales</th>
+              <th class="text-right">Commission %</th>
+              <th class="text-right">Commission Fee</th>
+              <th class="text-right">Net Payout</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% items.forEach(item => { %>
+              <tr>
+                <td><%= item.orderId || item.description %></td>
+                <td class="text-right"><%= typeof item.grossSales === 'number' ? item.grossSales.toFixed(8) : item.grossSales %></td>
+                <td class="text-right"><%= item.commissionRate || '0' %>%</td>
+                <td class="text-right"><%= typeof item.commissionAmount === 'number' ? item.commissionAmount.toFixed(8) : item.commissionAmount %></td>
+                <td class="text-right"><strong><%= typeof item.netAmount === 'number' ? item.netAmount.toFixed(8) : item.netAmount %></strong></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+
+    <!-- Fee Breakdown -->
+    <div class="section">
+      <div class="fee-breakdown">
+        <p><strong>Fee Structure Breakdown</strong></p>
+        <p style="margin-top: 10px;">This invoice details the platform fees and commissions deducted from your gross sales:</p>
+        <% if (items && items[0]) { %>
+          <p style="margin-top: 10px;">
+            • <strong>Gross Sales:</strong> Total value of all orders in this period<br>
+            • <strong>Commission Fee:</strong> Platform commission (typically 2-10% depending on category)<br>
+            • <strong>Net Payout:</strong> Amount available for withdrawal after all fees
+          </p>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Pricing Summary -->
+    <div class="summary-section">
+      <div class="summary-table">
+        <div class="summary-row">
+          <span class="summary-label">Total Gross Sales</span>
+          <span class="summary-value"><%= typeof subtotal === 'number' ? subtotal.toFixed(8) : subtotal %></span>
+        </div>
+        <div class="summary-row highlight">
+          <span class="summary-label">Total Commission Fees</span>
+          <span class="summary-value">-<%= typeof taxAmount === 'number' ? taxAmount.toFixed(8) : taxAmount %></span>
+        </div>
+        <div class="summary-row total">
+          <span class="summary-label">NET AMOUNT DUE</span>
+          <span class="summary-value"><%= typeof totalAmount === 'number' ? totalAmount.toFixed(8) : totalAmount %> <%= currency %></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Information -->
+    <div class="section">
+      <div class="section-title">Payment Information</div>
+      <div class="payment-info">
+        <p><strong>Payment Status:</strong> Available for withdrawal</p>
+        <p><strong>Withdrawal Method:</strong> Crypto wallet or bank transfer (if configured)</p>
+        <p><strong>Processing Time:</strong> Withdrawals are processed within 3-5 business days</p>
+        <p style="margin-top: 10px; font-size: 11px; color: #999;">
+          Please ensure your payment method is configured in your account settings.
+          Contact support@linkdao.io if you have any questions about this invoice.
+        </p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="invoice-footer">
+      <div class="footer-text"><strong>LinkDAO © 2026 | Seller Commission Statement</strong></div>
+      <div class="footer-text">This statement is for your records and tax purposes.</div>
+      <div class="footer-text">Please review carefully and contact support if you have any discrepancies.</div>
+      <div class="footer-text" style="margin-top: 15px; font-size: 10px; color: #bbb;">
+        Generated on <%= new Date().toLocaleString('en-US') %>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -16,7 +16,7 @@ interface PostComposerProps {
 
 interface UserSuggestion {
   id: string;
-  username: string;
+  handle: string;
   displayName: string;
   avatar?: string;
 }
@@ -96,7 +96,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({
   ];
 
   const filteredUserSuggestions = userSuggestions.filter(user =>
-    user.username.toLowerCase().includes(mentionQuery.toLowerCase()) ||
+    user.handle.toLowerCase().includes(mentionQuery.toLowerCase()) ||
     user.displayName.toLowerCase().includes(mentionQuery.toLowerCase())
   );
 
@@ -150,17 +150,17 @@ export const PostComposer: React.FC<PostComposerProps> = ({
   const handleSelectMention = useCallback((user: UserSuggestion) => {
     const beforeMention = content.substring(0, mentionStartIndex);
     const afterMention = content.substring(cursorPosition);
-    const newContent = beforeMention + `@${user.username} ` + afterMention;
-    
+    const newContent = beforeMention + `@${user.handle} ` + afterMention;
+
     setContent(newContent);
-    setMentions([...mentions, user.username]);
+    setMentions([...mentions, user.handle]);
     setShowMentionSuggestions(false);
     setMentionQuery('');
     
     // Focus back on textarea
     setTimeout(() => {
       if (textareaRef.current) {
-        const newCursorPos = mentionStartIndex + user.username.length + 2;
+        const newCursorPos = mentionStartIndex + user.handle.length + 2;
         textareaRef.current.focus();
         textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
       }
@@ -371,7 +371,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({
                       {user.displayName}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                      @{user.username}
+                      @{user.handle}
                     </div>
                   </div>
                 </button>

@@ -2,12 +2,19 @@ import { Resend } from 'resend';
 import { getPrimaryFrontendUrl } from '../utils/urlUtils';
 import { safeLogger } from '../utils/safeLogger';
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer | string;
+  type?: string;
+}
+
 export interface EmailOptions {
   to: string | string[];
   subject: string;
   html: string;
   text?: string;
   from?: string;
+  attachments?: EmailAttachment[];
 }
 
 export interface CommunityNotificationEmailData {
@@ -58,13 +65,25 @@ export class EmailService {
     try {
       const from = options.from || this.fromEmail;
 
-      const result = await this.resend.emails.send({
+      // Prepare Resend email data
+      const emailData: any = {
         from,
         to: options.to,
         subject: options.subject,
         html: options.html,
         text: options.text,
-      });
+      };
+
+      // Handle attachments if provided
+      if (options.attachments && options.attachments.length > 0) {
+        emailData.attachments = options.attachments.map(attachment => ({
+          filename: attachment.filename,
+          content: attachment.content,
+          ...(attachment.type && { type: attachment.type }),
+        }));
+      }
+
+      const result = await this.resend.emails.send(emailData);
 
       if (result.error) {
         safeLogger.error('[EmailService] Failed to send email:', result.error);
@@ -934,6 +953,62 @@ export class EmailService {
       subject: `Receipt: Marketplace Order #${data.orderId}`,
       html,
     });
+  }
+
+  /**
+   * Send marketplace receipt email with PDF attachment
+   */
+  async sendMarketplaceReceiptEmailWithPDF(
+    email: string,
+    receiptId: string,
+    pdfBuffer: Buffer,
+    data: {
+      orderId: string;
+      transactionId: string;
+      items: Array<{
+        name: string;
+        quantity: number;
+        unitPrice: string;
+        totalPrice: string;
+      }>;
+      subtotal: number;
+      shipping: number;
+      tax: number;
+      platformFee: number;
+      total: number;
+      paymentMethod: string;
+      network?: string;
+      transactionHash?: string;
+      sellerName: string;
+      shippingAddress?: {
+        name: string;
+        street: string;
+        city: string;
+        state: string;
+        postalCode: string;
+        country: string;
+      };
+      timestamp: Date;
+    }
+  ): Promise<boolean> {
+    try {
+      const html = this.getMarketplaceReceiptTemplate(data);
+      return this.sendEmail({
+        to: email,
+        subject: `Receipt: Marketplace Order #${data.orderId}`,
+        html,
+        attachments: [
+          {
+            filename: `Receipt-${data.orderId}.pdf`,
+            content: pdfBuffer,
+            type: 'application/pdf',
+          },
+        ],
+      });
+    } catch (error) {
+      safeLogger.error('[EmailService] Error sending receipt with PDF:', error);
+      return false;
+    }
   }
 
   private getMarketplaceReceiptTemplate(data: {

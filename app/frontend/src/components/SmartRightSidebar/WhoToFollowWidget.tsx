@@ -129,7 +129,7 @@ export default function WhoToFollowWidget({ className = '' }: WhoToFollowWidgetP
                     )}
                   </div>
                   <span className="text-xs text-gray-500 dark:text-gray-400 block truncate">
-                    @{user.username}
+                    @{user.handle}
                   </span>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-xs text-gray-400 dark:text-gray-500">

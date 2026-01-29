@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 
 export interface SocialConnection {
   userId: string;
-  username: string;
+  handle: string;
   avatar?: string;
   ensName?: string;
   connectionType: 'mutual_follow' | 'shared_community' | 'frequent_interaction' | 'recent_interaction';

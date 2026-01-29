@@ -319,11 +319,11 @@ Recommendations List */}
                               onConnectionClick?.(connection);
                             }}
                             className="w-6 h-6 rounded-full border-2 border-white bg-gray-200 hover:scale-110 transition-transform"
-                            title={connection.ensName || connection.username}
+                            title={connection.ensName || connection.handle}
                           >
-                            <img 
-                              src={connection.avatar} 
-                              alt={connection.username}
+                            <img
+                              src={connection.avatar}
+                              alt={connection.handle}
                               className="w-full h-full rounded-full object-cover"
                             />
                           </button>

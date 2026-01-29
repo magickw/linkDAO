@@ -1,0 +1,51 @@
+<header class="pdf-header">
+  <div class="header-container">
+    <div class="logo-section">
+      <h1>LinkDAO</h1>
+      <p class="tagline">Web3 Marketplace</p>
+    </div>
+    <div class="header-info">
+      <p><strong>Receipt #</strong> <%= receiptNumber %></p>
+      <p><strong>Date:</strong> <%= new Date(createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></p>
+    </div>
+  </div>
+</header>
+
+<style>
+  .pdf-header {
+    margin-bottom: 30px;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 20px;
+  }
+
+  .header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .logo-section h1 {
+    margin: 0;
+    color: #007bff;
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  .tagline {
+    margin: 5px 0 0 0;
+    color: #666;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .header-info {
+    text-align: right;
+    font-size: 12px;
+    color: #555;
+  }
+
+  .header-info p {
+    margin: 5px 0;
+  }
+</style>

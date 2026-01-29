@@ -21,7 +21,7 @@ export interface CommunityRule {
 
 export interface Moderator {
   id: string;
-  username: string;
+  handle: string;
   displayName: string;
   avatar?: string;
   role: 'owner' | 'admin' | 'moderator';

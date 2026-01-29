@@ -270,7 +270,7 @@ export const OptimizedPostCard = memo<PostCardProps>(({
         <OptimizedUserAvatar user={post.author} size="sm" />
         <div className="flex-1">
           <div className="flex items-center space-x-2">
-            <span className="font-medium text-sm">{post.author.username}</span>
+            <span className="font-medium text-sm">{post.author.handle}</span>
             {post.author.ensName && (
               <span className="text-xs text-blue-600">@{post.author.ensName}</span>
             )}
@@ -382,7 +382,7 @@ export const OptimizedUserAvatar = memo<UserAvatarProps>(({
     <div className={`relative ${sizeClasses} ${className}`}>
       <img
         src={user.avatar}
-        alt={user.username}
+        alt={user.handle}
         className="w-full h-full rounded-full object-cover"
         loading="lazy"
       />

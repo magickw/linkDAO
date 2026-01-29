@@ -100,7 +100,7 @@ export interface PostFlair {
 // User Profile for Enhanced Features
 export interface UserProfile {
   id: string;
-  username: string;
+  handle: string;
   ensName?: string;
   avatar: string;
   reputation: number;

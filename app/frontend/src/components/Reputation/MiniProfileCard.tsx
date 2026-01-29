@@ -131,7 +131,7 @@ const MiniProfileCard: React.FC<MiniProfileCardProps> = ({
                     {currentLevel.icon}
                   </span>
                 </div>
-                <p className="text-sm text-gray-600">@{user.username}</p>
+                <p className="text-sm text-gray-600">@{user.handle}</p>
                 <p className="text-xs text-gray-500">
                   {user.ensName || formatAddress(user.walletAddress)}
                 </p>

@@ -121,7 +121,7 @@ export interface Reaction {
 
 export interface ReactionUser {
   address: string;
-  username: string;
+  handle: string;
   avatar: string;
   amount: number;
   timestamp: Date;
@@ -149,7 +149,7 @@ export interface SocialProof {
 export interface User {
   id: string;
   address: string;
-  username: string;
+  handle: string;
   displayName: string;
   avatar: string;
   verified: boolean;
@@ -159,7 +159,7 @@ export interface User {
 export interface UserProfile {
   id: string;
   address: string;
-  username?: string;
+  handle?: string;
   displayName?: string;
   avatar?: string;
   verified?: boolean;
@@ -208,7 +208,7 @@ export interface LikedByData {
 export interface TipActivity {
   from: string;
   address: string;
-  username?: string;
+  handle?: string;
   avatar?: string;
   amount: number;
   tokenType: string;

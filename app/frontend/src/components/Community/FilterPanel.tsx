@@ -109,10 +109,10 @@ export default function FilterPanel({
 
   // Handle author filter addition
   const handleAuthorAdd = useCallback((author: AuthorSuggestion) => {
-    if (!activeFilters.author.includes(author.username)) {
+    if (!activeFilters.author.includes(author.handle)) {
       onFilterChange({
         ...activeFilters,
-        author: [...activeFilters.author, author.username]
+        author: [...activeFilters.author, author.handle]
       });
     }
     setAuthorSearch('');
@@ -120,10 +120,10 @@ export default function FilterPanel({
   }, [activeFilters, onFilterChange]);
 
   // Handle author filter removal
-  const handleAuthorRemove = useCallback((authorUsername: string) => {
+  const handleAuthorRemove = useCallback((authorHandle: string) => {
     onFilterChange({
       ...activeFilters,
-      author: activeFilters.author.filter(username => username !== authorUsername)
+      author: activeFilters.author.filter(handle => handle !== authorHandle)
     });
   }, [activeFilters, onFilterChange]);
 
@@ -368,14 +368,14 @@ export default function FilterPanel({
           {/* Selected Authors */}
           {activeFilters.author.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-3">
-              {activeFilters.author.map((authorUsername) => (
+              {activeFilters.author.map((authorHandle) => (
                 <div
-                  key={authorUsername}
+                  key={authorHandle}
                   className="inline-flex items-center bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full text-xs"
                 >
-                  <span>@{authorUsername}</span>
+                  <span>@{authorHandle}</span>
                   <button
-                    onClick={() => handleAuthorRemove(authorUsername)}
+                    onClick={() => handleAuthorRemove(authorHandle)}
                     className="ml-2 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-200"
                   >
                     ×
@@ -427,7 +427,7 @@ export default function FilterPanel({
                     role="option"
                     aria-selected={index === activeSuggestionIndex}
                     tabIndex={-1}
-                    aria-label={`Add author @${author.username}${author.displayName ? ` (${author.displayName})` : ''}`}
+                    aria-label={`Add author @${author.handle}${author.displayName ? ` (${author.displayName})` : ''}`}
                     onMouseEnter={() => setActiveSuggestionIndex(index)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -444,7 +444,7 @@ export default function FilterPanel({
                   >
                     <div>
                       <div className="font-medium text-gray-900 dark:text-gray-100">
-                        @{author.username}
+                        @{author.handle}
                       </div>
                       {author.displayName && (
                         <div className="text-sm text-gray-500 dark:text-gray-400">

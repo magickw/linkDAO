@@ -175,7 +175,7 @@ function UserAvatar({ user, size = 'sm' }: UserAvatarProps) {
     md: 'w-10 h-10'
   };
 
-  const displayName = user.displayName || user.username || 'Anonymous';
+  const displayName = user.displayName || user.handle || 'Anonymous';
 
   return (
     <div className={`relative ${sizeClasses[size]} rounded-full overflow-hidden border-2 border-white dark:border-gray-800 shadow-sm`}>
@@ -351,7 +351,7 @@ interface EngagementUserItemProps {
 }
 
 function EngagementUserItem({ user, type }: EngagementUserItemProps) {
-  const displayName = user.displayName || user.username || 'Anonymous';
+  const displayName = user.displayName || user.handle || 'Anonymous';
   
   const getInteractionIcon = (interactionType: string) => {
     switch (interactionType) {

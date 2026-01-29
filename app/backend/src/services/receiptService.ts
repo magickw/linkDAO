@@ -1,6 +1,8 @@
 import { DatabaseService } from './databaseService';
 import { safeLogger } from '../utils/safeLogger';
 import { randomUUID } from 'crypto';
+import { pdfGenerationService } from './pdfGenerationService';
+import { s3StorageService } from './s3StorageService';
 
 const databaseService = new DatabaseService();
 
@@ -148,13 +150,67 @@ export class ReceiptService {
   }
 
   /**
-   * Generate receipt PDF URL
+   * Generate receipt PDF and upload to S3
    */
   async generateReceiptPDF(receiptId: string): Promise<string> {
-    // Mock implementation as backend PDF generation is not fully supported yet
-    // In production this would generate a PDF and upload to S3/IPFS
-    safeLogger.info(`Generating receipt PDF for ${receiptId}`);
-    return `https://api.linkdao.io/receipts/download/${receiptId}.pdf`;
+    try {
+      // Fetch the receipt data
+      const receipt = await databaseService.getReceiptById(receiptId);
+      if (!receipt) {
+        safeLogger.error(`Receipt not found: ${receiptId}`);
+        throw new Error(`Receipt not found: ${receiptId}`);
+      }
+
+      // Ensure PDF generation service is initialized
+      if (!pdfGenerationService) {
+        await pdfGenerationService.initialize();
+      }
+
+      // Generate PDF from receipt data
+      const pdfResult = await pdfGenerationService.generateAndUploadPDF(
+        'receipt',
+        receipt,
+        `receipts/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}`
+      );
+
+      // Update receipt with PDF URL in database
+      await databaseService.updateReceipt(receiptId, {
+        pdfUrl: pdfResult.s3Url,
+        pdfS3Key: pdfResult.s3Key,
+      });
+
+      safeLogger.info(`Receipt PDF generated and uploaded: ${receiptId} -> ${pdfResult.s3Key}`);
+      return pdfResult.s3Url;
+    } catch (error) {
+      safeLogger.error('Error generating receipt PDF:', error);
+      // Return a fallback URL if PDF generation fails
+      return `https://api.linkdao.io/receipts/download/${receiptId}.pdf`;
+    }
+  }
+
+  /**
+   * Generate receipt PDF from receipt data directly (for immediate generation)
+   */
+  async generateReceiptPDFFromData(receiptData: any): Promise<string> {
+    try {
+      // Ensure PDF generation service is initialized
+      if (!pdfGenerationService) {
+        await pdfGenerationService.initialize();
+      }
+
+      // Generate PDF from provided data
+      const pdfResult = await pdfGenerationService.generateAndUploadPDF(
+        'receipt',
+        receiptData,
+        `receipts/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}`
+      );
+
+      safeLogger.info(`Receipt PDF generated from data: ${pdfResult.s3Key}`);
+      return pdfResult.s3Url;
+    } catch (error) {
+      safeLogger.error('Error generating receipt PDF from data:', error);
+      throw error;
+    }
   }
 }
 

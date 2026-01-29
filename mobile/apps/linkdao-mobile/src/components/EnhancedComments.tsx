@@ -140,7 +140,7 @@ export default function EnhancedComments({
                     {/* Author & Time */}
                     <View style={styles.commentHeader}>
                         <Text style={styles.authorName}>{item.author.displayName}</Text>
-                        <Text style={styles.username}>@{item.author.username}</Text>
+                        <Text style={styles.username}>@{item.author.handle}</Text>
                         <Text style={styles.timestamp}>
                             {new Date(item.createdAt).toLocaleDateString()}
                         </Text>
@@ -257,7 +257,7 @@ export default function EnhancedComments({
             {replyingTo && (
                 <View style={styles.replyIndicator}>
                     <Text style={styles.replyingText}>
-                        Replying to @{replyingTo.author.username}
+                        Replying to @{replyingTo.author.handle}
                     </Text>
                     <TouchableOpacity onPress={() => setReplyingTo(null)}>
                         <Ionicons name="close" size={20} color="#8E8E93" />
@@ -305,7 +305,7 @@ export default function EnhancedComments({
                         </View>
 
                         <Text style={styles.modalSubtitle}>
-                            Tip @{showTipModal?.author.username} for their comment
+                            Tip @{showTipModal?.author.handle} for their comment
                         </Text>
 
                         <TextInput

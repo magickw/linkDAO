@@ -48,7 +48,7 @@ export interface FilterOption {
 
 export interface AuthorSuggestion {
   id: string;
-  username: string;
+  handle: string;
   displayName?: string;
   avatar?: string;
   postCount: number;

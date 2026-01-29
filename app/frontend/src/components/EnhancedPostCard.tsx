@@ -230,7 +230,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
                   {getVisibilityIcon()}
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-                  <span>@{post.author.username}</span>
+                  <span>@{post.author.handle}</span>
                   {post.community && (
                     <>
                       <span>•</span>

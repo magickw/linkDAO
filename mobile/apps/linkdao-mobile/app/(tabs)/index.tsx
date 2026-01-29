@@ -358,7 +358,7 @@ export default function FeedScreen() {
             <View style={styles.composerContainer}>
               <PostComposer
                 onSubmit={handleCreatePost}
-                userName={user?.displayName || `${user?.address?.slice(0, 6)}...${user?.address?.slice(-4)}`}
+                userName={user?.displayName || user?.handle || `${user?.address?.slice(0, 6)}...${user?.address?.slice(-4)}`}
                 placeholder="What's on your mind?"
               />
             </View>

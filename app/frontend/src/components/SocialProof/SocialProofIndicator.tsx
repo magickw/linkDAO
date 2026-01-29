@@ -86,13 +86,13 @@ export default function SocialProofIndicator({
         {user.avatar ? (
           <img
             src={user.avatar}
-            alt={user.displayName || user.username || 'User'}
+            alt={user.displayName || user.handle || 'User'}
             className="w-full h-full object-cover"
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary-400 to-secondary-500 flex items-center justify-center">
             <span className="text-white font-bold text-xs">
-              {(user.displayName || user.username || user.address).charAt(0).toUpperCase()}
+              {(user.displayName || user.handle || user.address).charAt(0).toUpperCase()}
             </span>
           </div>
         )}
@@ -196,7 +196,7 @@ export default function SocialProofIndicator({
                         <UserAvatar user={user} size="md" />
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-gray-900 dark:text-white truncate">
-                            {user.displayName || user.username || 'Anonymous'}
+                            {user.displayName || user.handle || 'Anonymous'}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400 font-mono truncate">
                             {user.address.substring(0, 6)}...{user.address.substring(38)}
@@ -221,7 +221,7 @@ export default function SocialProofIndicator({
                         <UserAvatar user={user} size="md" />
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-gray-900 dark:text-white truncate">
-                            {user.displayName || user.username || 'Anonymous'}
+                            {user.displayName || user.handle || 'Anonymous'}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400 font-mono truncate">
                             {user.address.substring(0, 6)}...{user.address.substring(38)}
@@ -248,7 +248,7 @@ export default function SocialProofIndicator({
                         <UserAvatar user={user} size="md" />
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-gray-900 dark:text-white truncate">
-                            {user.displayName || user.username || 'Anonymous'}
+                            {user.displayName || user.handle || 'Anonymous'}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400 font-mono truncate">
                             {user.address.substring(0, 6)}...{user.address.substring(38)}

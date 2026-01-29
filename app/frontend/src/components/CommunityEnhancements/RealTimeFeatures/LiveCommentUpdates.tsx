@@ -92,7 +92,7 @@ export const LiveCommentUpdates: React.FC<LiveCommentUpdatesProps> = ({
   const handleCommentAdded = useCallback((comment: any) => {
     const newComment: RecentComment = {
       id: comment.id,
-      author: comment.author.username,
+      author: comment.author.handle,
       authorAvatar: comment.author.avatar,
       content: comment.content,
       timestamp: new Date(comment.timestamp),
@@ -129,7 +129,7 @@ export const LiveCommentUpdates: React.FC<LiveCommentUpdatesProps> = ({
       id: reaction.id,
       type: reaction.type,
       emoji: reaction.emoji,
-      author: reaction.author.username,
+      author: reaction.author.handle,
       authorAvatar: reaction.author.avatar,
       timestamp: new Date(reaction.timestamp),
       amount: reaction.amount,

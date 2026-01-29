@@ -176,7 +176,7 @@ export function useFilterState({
 
       // Author filter
       if (filterState.author.length > 0) {
-        if (!filterState.author.includes(post.author.username)) {
+        if (!filterState.author.includes(post.author.handle)) {
           return false;
         }
       }

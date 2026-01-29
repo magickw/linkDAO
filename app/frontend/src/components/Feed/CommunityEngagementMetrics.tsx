@@ -362,12 +362,12 @@ function LeaderboardEntry({ entry }: LeaderboardEntryProps) {
         {entry.user.avatar ? (
           <img
             src={entry.user.avatar}
-            alt={entry.user.displayName || entry.user.username}
+            alt={entry.user.displayName || entry.user.handle}
             className="w-10 h-10 rounded-full object-cover"
           />
         ) : (
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-medium">
-            {(entry.user.displayName || entry.user.username || entry.user.address).charAt(0).toUpperCase()}
+            {(entry.user.displayName || entry.user.handle || entry.user.address).charAt(0).toUpperCase()}
           </div>
         )}
       </div>
@@ -376,7 +376,7 @@ function LeaderboardEntry({ entry }: LeaderboardEntryProps) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center space-x-2">
           <span className="font-medium text-gray-900 dark:text-white truncate">
-            {entry.user.displayName || entry.user.username || 
+            {entry.user.displayName || entry.user.handle || 
              `${entry.user.address.slice(0, 6)}...${entry.user.address.slice(-4)}`}
           </span>
           {entry.user.verified && (
