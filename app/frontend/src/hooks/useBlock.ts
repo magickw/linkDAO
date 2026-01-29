@@ -92,7 +92,7 @@ export function useBlockStatus(blocker: string, blocked: string) {
     queryKey: ['blockStatus', blocker, blocked],
     queryFn: () => BlockService.isBlocked(blocker, blocked),
     enabled: !!blocker && !!blocked,
-    staleTime: 60000, // 1 minute
+    staleTime: 0, // Always refetch when invalidated for immediate UI updates
   });
 }
 
