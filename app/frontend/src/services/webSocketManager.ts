@@ -473,7 +473,7 @@ class WebSocketManager {
   }
 
   // Shutdown cleanup - clear intervals
-  override shutdown(): void {
+  shutdown(): void {
     this.isShuttingDown = true;
     console.log('Shutting down WebSocketManager...');
 
@@ -495,8 +495,23 @@ class WebSocketManager {
     });
     this.connectionPool.clear();
 
-    // Call parent shutdown
-    super.shutdown();
+    // Clear metrics and health
+    this.metrics.clear();
+    this.health.clear();
+
+    // Shutdown primary connection
+    if (this.primaryConnection) {
+      shutdownWebSocketClient();
+      this.primaryConnection = null;
+    }
+
+    // Shutdown live chat connection
+    if (this.liveChatConnection) {
+      this.liveChatConnection.disconnect();
+      this.liveChatConnection = null;
+    }
+
+    console.log('WebSocketManager shutdown completed');
   }
 }
 
