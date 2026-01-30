@@ -74,9 +74,28 @@ export const requestSizeLimits = (req: Request, res: Response, next: NextFunctio
 export const validateContentType = (req: Request, res: Response, next: NextFunction) => {
   if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
     const contentType = req.headers['content-type'];
+
+    // Log for debugging repost requests
+    if (req.path.includes('repost')) {
+      console.log(`[CONTENT-TYPE-DEBUG] Repost request content-type: "${contentType}"`);
+    }
+
     // Allow JSON, form-data, and urlencoded
-    const validTypes = ['application/json', 'multipart/form-data', 'application/x-www-form-urlencoded'];
-    if (contentType && !validTypes.some(type => contentType.includes(type))) {
+    // Also allow anything with 'json' in it (e.g., application/json;charset=utf-8)
+    const validTypes = ['application/json', 'multipart/form-data', 'application/x-www-form-urlencoded', 'json'];
+
+    // If there's no Content-Type header, allow it (modern clients usually send it, but be lenient)
+    if (!contentType) {
+      if (req.path.includes('repost')) {
+        console.log(`[CONTENT-TYPE-DEBUG] No Content-Type header - allowing`);
+      }
+      return next();
+    }
+
+    // Check if content-type matches any valid type
+    if (!validTypes.some(type => contentType.toLowerCase().includes(type))) {
+      console.log(`[CONTENT-TYPE-VALIDATION] BLOCKED: Invalid Content-Type "${contentType}" for ${req.method} ${req.path}`);
+      console.log(`[CONTENT-TYPE-VALIDATION] Valid types are: ${validTypes.join(', ')}`);
       return ApiResponse.serverError(res, 'Invalid Content-Type');
     }
   }

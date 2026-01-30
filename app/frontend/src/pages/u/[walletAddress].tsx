@@ -194,8 +194,15 @@ export default function PublicProfile() {
       await block({ blocker: currentUserAddress, blocked: walletAddress });
       addToast(`Successfully blocked ${profile?.handle || walletAddress}`, 'success');
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('Error blocking user:', error);
-      addToast(`Failed to block user: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+
+      // Handle "already blocked" as informational, not an error
+      if (errorMessage.includes('already blocked')) {
+        addToast(`${profile?.handle || walletAddress} is already blocked`, 'info');
+      } else {
+        addToast(`Failed to block user: ${errorMessage}`, 'error');
+      }
     }
   };
 

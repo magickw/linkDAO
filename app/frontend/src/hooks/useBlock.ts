@@ -28,7 +28,17 @@ export function useBlock() {
       return { previousBlockStatus };
     },
     onError: (err, variables, context) => {
-      // Rollback to previous value on error
+      // If user is already blocked, treat as success (keep optimistic update)
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      if (errorMessage.includes('already blocked')) {
+        // Keep the optimistic true state since user IS blocked
+        queryClient.setQueryData(['blockStatus', variables.blocker, variables.blocked], true);
+        // Invalidate to refetch and confirm
+        queryClient.invalidateQueries({ queryKey: ['blockStatus', variables.blocker, variables.blocked] });
+        return;
+      }
+
+      // Rollback to previous value on other errors
       if (context?.previousBlockStatus !== undefined) {
         queryClient.setQueryData(['blockStatus', variables.blocker, variables.blocked], context.previousBlockStatus);
       }
