@@ -41,8 +41,7 @@ export default function Settings() {
 
   const validateEmail = (email: string): boolean => {
     if (!email) return true; // Email is optional
-    const emailRegex = /^[^
-\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 

@@ -31,8 +31,6 @@ import autoTable from 'jspdf-autotable';
 import { ENV_CONFIG } from '@/config/environment';
 import { enhancedAuthService } from '@/services/enhancedAuthService';
 import OrderProgressBar from '@/components/Marketplace/OrderTracking/OrderProgressBar';
-import { ENV_CONFIG } from '../../../config/environment';
-import { enhancedAuthService } from '../../../services/enhancedAuthService';
 
 interface Order {
     id: string;
