@@ -6,6 +6,8 @@ import { trendingCacheService } from './trendingCacheService';
 import { getWebSocketService } from './webSocketService';
 import { generateShareId } from '../utils/shareIdGenerator';
 import communityNotificationService from './communityNotificationService';
+import { enhancedNotificationService } from './enhancedNotificationService';
+import { mentionService } from './mentionService';
 
 // Define interfaces for input data
 interface StatusInput {
@@ -177,6 +179,38 @@ export class StatusService {
         trendingCacheService.updatePost(newPost.id);
       } catch (cacheError) {
         safeLogger.warn('Cache update failed, but post was created:', cacheError);
+      }
+
+      // Process @mentions
+      try {
+        // Fetch author information for mention notifications
+        const author = await this.db
+          .select({
+            walletAddress: users.walletAddress,
+            handle: users.handle,
+            displayName: users.displayName
+          })
+          .from(users)
+          .where(eq(users.id, input.authorId))
+          .limit(1);
+
+        if (author && author.length > 0) {
+          const mentionCount = await mentionService.processMentions({
+            statusId: newPost.id,
+            authorId: input.authorId,
+            authorWalletAddress: author[0].walletAddress,
+            authorHandle: author[0].displayName || author[0].handle || author[0].walletAddress.substring(0, 10),
+            content: input.content || '',
+            contentUrl: `/status/${newPost.id}`
+          });
+
+          if (mentionCount > 0) {
+            safeLogger.info(`[StatusService] Processed ${mentionCount} mentions in status ${newPost.id}`);
+          }
+        }
+      } catch (mentionError) {
+        safeLogger.error('[StatusService] Failed to process mentions:', mentionError);
+        // Don't fail status creation if mention processing fails
       }
 
       return newPost;
@@ -593,6 +627,25 @@ export class StatusService {
                   reactionType: type,
                   amount,
                   statusId
+                }
+              });
+
+              // Also send via enhanced notification service for email
+              await enhancedNotificationService.createSocialNotification({
+                userId: author[0].walletAddress,
+                type: 'reaction',
+                priority: 'low', // Reactions are low priority
+                title,
+                message,
+                actionUrl: `/status/${statusId}`,
+                actorId: reactor[0].walletAddress,
+                actorHandle: reactorName,
+                actorAvatar: undefined, // TODO: fetch avatar from reactor
+                postId: statusId,
+                metadata: {
+                  reactionType: type,
+                  reactionEmoji: type !== 'upvote' && type !== 'downvote' ? type : undefined,
+                  amount
                 }
               });
             }

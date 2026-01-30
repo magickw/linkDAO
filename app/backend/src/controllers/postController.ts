@@ -8,6 +8,7 @@ import { db } from '../db';
 import { posts, users, statuses } from '../db/schema';
 import { eq, and, sql, isNotNull } from 'drizzle-orm';
 import { databaseService } from '../services/databaseService';
+import { enhancedNotificationService } from '../services/enhancedNotificationService';
 
 // Remove in-memory storage
 // let posts: any[] = [];
@@ -494,6 +495,41 @@ export class PostController {
 
         console.log(`⏱️ [REPOST] createStatus took ${Date.now() - createStart}ms, repost ID:`, newRepost.id);
         console.log('✅ [REPOST] Repost created successfully:', newRepost.id);
+
+        // Send notification to the original post author
+        try {
+          if (originalStatus.authorId !== user.id) { // Don't notify if reposting own content
+            const originalAuthor = await db
+              .select({ walletAddress: users.walletAddress })
+              .from(users)
+              .where(eq(users.id, originalStatus.authorId))
+              .limit(1);
+
+            if (originalAuthor[0]) {
+              await enhancedNotificationService.createSocialNotification({
+                userId: originalAuthor[0].walletAddress,
+                type: 'repost',
+                priority: 'normal',
+                title: 'Your post was reposted',
+                message: `${user.displayName || user.handle || 'Someone'} reposted your content${message ? `: ${message.substring(0, 100)}` : ''}`,
+                actionUrl: `/status/${newRepost.id}`,
+                actorId: author,
+                actorHandle: user.displayName || user.handle || author.substring(0, 10),
+                actorAvatar: user.avatarUrl || undefined,
+                postId: targetPostId,
+                metadata: {
+                  repostId: newRepost.id,
+                  originalPostId: targetPostId
+                }
+              });
+              console.log('[REPOST] Notification sent to original author');
+            }
+          }
+        } catch (notifyError) {
+          console.error('[REPOST] Failed to send notification:', notifyError);
+          // Don't fail the repost if notification fails
+        }
+
         console.log(`⏱️ [REPOST] === TOTAL TIME: ${Date.now() - repostStartTime}ms ===`);
 
         return res.status(201).json({

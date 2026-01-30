@@ -3,6 +3,7 @@ import { comments, users, posts, statuses } from '../db/schema';
 import { eq, and, desc, asc, isNull, sql } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import communityNotificationService from './communityNotificationService';
+import { enhancedNotificationService } from './enhancedNotificationService';
 
 interface CreateCommentInput {
   postId?: string;
@@ -100,32 +101,66 @@ export class CommentService {
                   statusId: input.statusId
                 }
               });
+
+              // Also send via enhanced notification service for email
+              await enhancedNotificationService.createSocialNotification({
+                userId: recipientAddress,
+                type: 'comment',
+                priority: 'normal',
+                title: 'New Reply',
+                message: `${commentWithAuthor.author.displayName || commentWithAuthor.author.handle || 'Someone'} replied to your comment: ${input.content.substring(0, 100)}`,
+                actionUrl: input.postId ? `/post/${input.postId}#comment-${newComment.id}` : `/status/${input.statusId}#comment-${newComment.id}`,
+                actorId: input.authorAddress,
+                actorHandle: commentWithAuthor.author.displayName || commentWithAuthor.author.handle || input.authorAddress.substring(0, 10),
+                actorAvatar: commentWithAuthor.author.avatarCid || undefined,
+                postId: input.postId || input.statusId,
+                commentId: newComment.id
+              });
             }
           }
         } else {
           // It's a comment on a post or status
           let contentAuthorId: string | undefined;
-          let contentPreview: string | undefined;
-          let contentType: 'post' | 'status' = 'post';
 
           if (input.postId) {
-            const post = await db.select({ authorId: posts.authorId, contentCid: posts.contentCid }).from(posts).where(eq(posts.id, input.postId)).limit(1);
+            const post = await db.select({ authorId: posts.authorId }).from(posts).where(eq(posts.id, input.postId)).limit(1);
             if (post[0]) {
               contentAuthorId = post[0].authorId;
-              contentPreview = post[0].contentCid; // Use CID as preview or fetch logic?
-              contentType = 'post';
             }
           } else if (input.statusId) {
-            // Need to import statuses table dynamically or assume checked earlier?
-            // CommentService doesn't import statuses table at top. Need to add valid import or raw query
-            // But better to add import.
-            // For now, skipping explicit status check if table missing, OR using db.query if possible.
-            // Assuming I'll fix imports.
+            const status = await db.select({ authorId: statuses.authorId }).from(statuses).where(eq(statuses.id, input.statusId)).limit(1);
+            if (status[0]) {
+              contentAuthorId = status[0].authorId;
+            }
           }
 
-          // If I can't easily access statuses table here without adding import (which I can do), 
-          // I will assume the user has imported it or I will add it.
-          // I'll assume I update imports too.
+          // Send notification to content author if it's not a self-comment
+          if (contentAuthorId && contentAuthorId !== authorId) {
+            const contentAuthor = await db
+              .select({ walletAddress: users.walletAddress })
+              .from(users)
+              .where(eq(users.id, contentAuthorId))
+              .limit(1);
+
+            const recipientAddress = contentAuthor[0]?.walletAddress;
+
+            if (recipientAddress) {
+              // Send via enhanced notification service for email
+              await enhancedNotificationService.createSocialNotification({
+                userId: recipientAddress,
+                type: 'comment',
+                priority: 'normal',
+                title: 'New Comment',
+                message: `${commentWithAuthor.author.displayName || commentWithAuthor.author.handle || 'Someone'} commented on your ${input.postId ? 'post' : 'status'}: ${input.content.substring(0, 100)}`,
+                actionUrl: input.postId ? `/post/${input.postId}#comment-${newComment.id}` : `/status/${input.statusId}#comment-${newComment.id}`,
+                actorId: input.authorAddress,
+                actorHandle: commentWithAuthor.author.displayName || commentWithAuthor.author.handle || input.authorAddress.substring(0, 10),
+                actorAvatar: commentWithAuthor.author.avatarCid || undefined,
+                postId: input.postId || input.statusId,
+                commentId: newComment.id
+              });
+            }
+          }
         }
       } catch (notifyError) {
         safeLogger.error('Error sending comment notification:', notifyError);

@@ -1,6 +1,7 @@
 import { DatabaseService } from './databaseService';
 import { databaseService } from './databaseService'; // Import the singleton instance
 import { UserProfileService } from './userProfileService';
+import { enhancedNotificationService } from './enhancedNotificationService';
 import { eq, and } from "drizzle-orm";
 import { follows } from '../db/schema';
 import { db } from '../db';
@@ -60,6 +61,25 @@ export class FollowService {
       if (!followResult) {
         console.warn('[FollowService] Failed to create follow relationship');
         return false;
+      }
+
+      // Send notification to the user being followed
+      try {
+        await enhancedNotificationService.createSocialNotification({
+          userId: followingAddress, // The person being followed receives the notification
+          type: 'follow',
+          priority: 'normal',
+          title: 'New Follower',
+          message: `${followerUser.handle || followerUser.ens || 'Someone'} started following you`,
+          actionUrl: `/profile/${followerAddress}`,
+          actorId: followerAddress,
+          actorHandle: followerUser.handle || followerUser.ens || followerAddress.substring(0, 10),
+          actorAvatar: followerUser.avatarUrl || undefined
+        });
+        console.log('[FollowService] Follow notification sent');
+      } catch (notifError) {
+        console.error('[FollowService] Failed to send follow notification:', notifError);
+        // Don't fail the follow operation if notification fails
       }
 
       console.log('[FollowService] Follow succeeded');
