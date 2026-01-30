@@ -11,10 +11,33 @@ import { ethers } from 'ethers';
 import type { SDKState } from '@metamask/sdk-react-native';
 import { setWalletAdapter, IWalletAdapter } from '@linkdao/shared';
 import { hapticFeedback } from '../utils/haptics';
+import { ErrorHandler, handleWalletError } from '../utils/errorHandler';
 
 const STORAGE_KEY = 'wallet_connection';
 
 export type WalletProvider = 'metamask' | 'walletconnect' | 'coinbase' | 'trust' | 'rainbow' | 'base' | 'dev-mock';
+
+export interface WalletProviderInfo {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  installed: boolean;
+  canInstall: boolean;
+  installUrl?: string;
+  version?: string;
+  lastConnected?: Date;
+  connectionStatus: 'available' | 'connecting' | 'connected' | 'disconnected' | 'unavailable';
+}
+
+export interface WalletConnectionProgress {
+  providerId: string;
+  status: 'initializing' | 'connecting' | 'connected' | 'failed' | 'cancelled';
+  progress: number; // 0-100
+  message: string;
+  timestamp: Date;
+  error?: string;
+}
 
 interface WalletConnection {
   provider: WalletProvider;
@@ -31,6 +54,15 @@ class WalletService implements IWalletAdapter {
   private metaMaskSDKState: SDKState | null = null;
   public initialized: Promise<void>;
   private resolveInitialized!: () => void;
+  
+  // Connection progress tracking
+  private connectionProgressMap: Map<string, WalletConnectionProgress> = new Map();
+  private progressListeners: Array<(progress: WalletConnectionProgress) => void> = [];
+  
+  // Wallet provider cache
+  private walletProvidersCache: WalletProviderInfo[] | null = null;
+  private lastProviderCheck: number = 0;
+  private readonly PROVIDER_CACHE_DURATION = 30000; // 30 seconds
 
   constructor() {
     this.initialized = new Promise((resolve) => {
@@ -65,7 +97,7 @@ class WalletService implements IWalletAdapter {
    * Check if wallet is connected (IWalletAdapter interface)
    */
   isConnected(): boolean {
-    return this._isConnected;
+    return this._isConnected && this.activeConnection !== null;
   }
 
   /**
@@ -89,18 +121,227 @@ class WalletService implements IWalletAdapter {
       console.error('❌ Error setting MetaMask SDK:', error);
     }
   }
-
+    
   /**
-   * Connect to a specific wallet provider
+   * Get available wallet providers with installation status
+   */
+  async getWalletProviders(): Promise<WalletProviderInfo[]> {
+    const now = Date.now();
+      
+    // Return cached results if still valid
+    if (this.walletProvidersCache && (now - this.lastProviderCheck) < this.PROVIDER_CACHE_DURATION) {
+      return this.walletProvidersCache;
+    }
+      
+    const providers: WalletProviderInfo[] = [
+      {
+        id: 'metamask',
+        name: 'MetaMask',
+        icon: '🦊',
+        color: '#f6851b',
+        installed: false,
+        canInstall: true,
+        installUrl: Platform.OS === 'ios' 
+          ? 'https://apps.apple.com/us/app/metamask/id1438144202'
+          : 'https://play.google.com/store/apps/details?id=io.metamask',
+        connectionStatus: 'available'
+      },
+      {
+        id: 'walletconnect',
+        name: 'WalletConnect',
+        icon: '🔗',
+        color: '#3b99fc',
+        installed: true,
+        canInstall: false,
+        connectionStatus: 'available'
+      },
+      {
+        id: 'coinbase',
+        name: 'Coinbase Wallet',
+        icon: '🪙',
+        color: '#1652f0',
+        installed: false,
+        canInstall: true,
+        installUrl: Platform.OS === 'ios'
+          ? 'https://apps.apple.com/us/app/coinbase-wallet-nfts-crypto/id1278383455'
+          : 'https://play.google.com/store/apps/details?id=org.toshi',
+        connectionStatus: 'available'
+      },
+      {
+        id: 'trust',
+        name: 'Trust Wallet',
+        icon: '🛡️',
+        color: '#3375bb',
+        installed: false,
+        canInstall: true,
+        installUrl: Platform.OS === 'ios'
+          ? 'https://apps.apple.com/us/app/trust-crypto-bitcoin-wallet/id1288339409'
+          : 'https://play.google.com/store/apps/details?id=com.wallet.crypto.trustapp',
+        connectionStatus: 'available'
+      },
+      {
+        id: 'rainbow',
+        name: 'Rainbow',
+        icon: '🌈',
+        color: '#000000',
+        installed: false,
+        canInstall: true,
+        installUrl: Platform.OS === 'ios'
+          ? 'https://apps.apple.com/us/app/rainbow-ethereum-wallet/id1457119021'
+          : 'https://play.google.com/store/apps/details?id=me.rainbow',
+        connectionStatus: 'available'
+      },
+      {
+        id: 'base',
+        name: 'Base Wallet',
+        icon: '🔵',
+        color: '#0052ff',
+        installed: false,
+        canInstall: true,
+        installUrl: Platform.OS === 'ios'
+          ? 'https://apps.apple.com/us/app/base-wallet/id6444535125'
+          : 'https://play.google.com/store/apps/details?id=io.hellobase.wallet',
+        connectionStatus: 'available'
+      }
+    ];
+      
+    // Check installation status for each provider
+    for (const provider of providers) {
+      if (provider.id === 'walletconnect') {
+        provider.installed = true;
+        continue;
+      }
+        
+      try {
+        const isInstalled = await this.checkWalletInstallation(provider.id as WalletProvider);
+        provider.installed = isInstalled;
+        provider.connectionStatus = isInstalled ? 'available' : 'unavailable';
+      } catch (error) {
+        console.warn(`Failed to check installation status for ${provider.name}:`, error);
+        provider.installed = false;
+        provider.connectionStatus = 'unavailable';
+      }
+    }
+      
+    // Cache the results
+    this.walletProvidersCache = providers;
+    this.lastProviderCheck = now;
+      
+    return providers;
+  }
+    
+  /**
+   * Check if a specific wallet is installed
+   */
+  private async checkWalletInstallation(provider: WalletProvider): Promise<boolean> {
+    try {
+      switch (provider) {
+        case 'metamask':
+          // Check for MetaMask deep link
+          const mmUrl = Platform.OS === 'ios' ? 'metamask://' : 'metamask://';
+          return await Linking.canOpenURL(mmUrl);
+            
+        case 'coinbase':
+          const cbUrl = Platform.OS === 'ios' ? 'cbwallet://' : 'cbwallet://';
+          return await Linking.canOpenURL(cbUrl);
+            
+        case 'trust':
+          const trustUrl = Platform.OS === 'ios' ? 'trust://' : 'trust://';
+          return await Linking.canOpenURL(trustUrl);
+            
+        case 'rainbow':
+          const rainbowUrl = Platform.OS === 'ios' ? 'rainbow://' : 'rainbow://';
+          return await Linking.canOpenURL(rainbowUrl);
+            
+        case 'base':
+          const baseUrl = Platform.OS === 'ios' ? 'base://' : 'base://';
+          return await Linking.canOpenURL(baseUrl);
+            
+        default:
+          return false;
+      }
+    } catch (error) {
+      console.warn(`Error checking wallet installation for ${provider}:`, error);
+      return false;
+    }
+  }
+    
+  /**
+   * Subscribe to connection progress updates
+   */
+  subscribeToProgress(callback: (progress: WalletConnectionProgress) => void): () => void {
+    this.progressListeners.push(callback);
+      
+    // Return unsubscribe function
+    return () => {
+      const index = this.progressListeners.indexOf(callback);
+      if (index > -1) {
+        this.progressListeners.splice(index, 1);
+      }
+    };
+  }
+    
+  /**
+   * Update connection progress
+   */
+  private updateConnectionProgress(providerId: string, status: WalletConnectionProgress['status'], progress: number, message: string, error?: string) {
+    const progressUpdate: WalletConnectionProgress = {
+      providerId,
+      status,
+      progress,
+      message,
+      timestamp: new Date(),
+      error
+    };
+      
+    this.connectionProgressMap.set(providerId, progressUpdate);
+      
+    // Notify all listeners
+    this.progressListeners.forEach(listener => {
+      try {
+        listener(progressUpdate);
+      } catch (err) {
+        console.error('Error in progress listener:', err);
+      }
+    });
+  }
+    
+  /**
+   * Get current connection progress for a provider
+   */
+  getConnectionProgress(providerId: string): WalletConnectionProgress | undefined {
+    return this.connectionProgressMap.get(providerId);
+  }
+    
+  /**
+   * Clear connection progress
+   */
+  clearConnectionProgress(providerId: string) {
+    this.connectionProgressMap.delete(providerId);
+  }
+    
+  /**
+   * Clear all connection progress
+   */
+  clearAllConnectionProgress() {
+    this.connectionProgressMap.clear();
+  }
+  
+  /**
+   * Connect to a specific wallet provider with standardized error handling
    */
   async connect(provider: WalletProvider): Promise<string> {
     try {
       console.log(`🔗 Connecting to ${provider}...`);
-
+      
+      // Initialize progress tracking
+      this.updateConnectionProgress(provider, 'initializing', 0, `Initializing ${provider} connection...`);
+        
       let address: string;
-
+  
       switch (provider) {
         case 'metamask':
+          this.updateConnectionProgress(provider, 'connecting', 20, 'Opening MetaMask...');
           address = await this.connectMetaMask();
           break;
         case 'walletconnect':
@@ -119,9 +360,9 @@ class WalletService implements IWalletAdapter {
           address = await this.connectBase();
           break;
         default:
-          throw new Error(`Unsupported wallet provider: ${provider}`);
+          throw ErrorHandler.createError('WALLET_NOT_CONNECTED', `Unsupported wallet provider: ${provider}`);
       }
-
+  
       // If we got an address (synchronously), set up the connection
       if (address) {
         this._isConnected = true;
@@ -132,54 +373,122 @@ class WalletService implements IWalletAdapter {
           chainId: 1, // Default to Ethereum mainnet
           timestamp: Date.now(),
         };
-
+  
         await this.saveConnection(this.activeConnection);
         hapticFeedback.success();
+        
+        // Update progress to connected
+        this.updateConnectionProgress(provider, 'connected', 100, `Successfully connected to ${provider}`, undefined);
+        
+        // Update provider status
+        if (this.walletProvidersCache) {
+          const providerInfo = this.walletProvidersCache.find(p => p.id === provider);
+          if (providerInfo) {
+            providerInfo.connectionStatus = 'connected';
+            providerInfo.lastConnected = new Date();
+          }
+        }
+        
         console.log(`✅ Connected to ${provider}:`, address);
       }
-
+  
       return address;
     } catch (error) {
       hapticFeedback.error();
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      // Only show serious errors, suppress wallet-not-found errors and SDK initialization
-      if (!errorMsg.includes('not installed') && !errorMsg.includes('found') && !errorMsg.includes('Redirecting') && !errorMsg.includes('SDK not yet injected') && !errorMsg.includes('not yet implemented')) {
-        console.error(`❌ Failed to connect to ${provider}:`, error);
-      } else {
-        console.log(`ℹ️ ${provider} not available:`, errorMsg);
+      const handledError = handleWalletError(error);
+      
+      // Update progress to failed
+      const errorMessage = handledError.message || 'Unknown error occurred';
+      this.updateConnectionProgress(provider, 'failed', 0, `Failed to connect to ${provider}`, errorMessage);
+      
+      // Update provider status
+      if (this.walletProvidersCache) {
+        const providerInfo = this.walletProvidersCache.find(p => p.id === provider);
+        if (providerInfo) {
+          providerInfo.connectionStatus = 'disconnected';
+        }
       }
+        
+      // Only show serious errors, suppress wallet-not-found errors and SDK initialization
+      const shouldSuppressError = handledError.message.includes('not installed') || 
+                                handledError.message.includes('found') || 
+                                handledError.message.includes('Redirecting') || 
+                                handledError.message.includes('SDK not yet injected') || 
+                                handledError.message.includes('not yet implemented') ||
+                                handledError.category === 'wallet' && handledError.code === 'WALLET_REJECTED';
+        
+      if (!shouldSuppressError) {
+        console.error(`❌ Failed to connect to ${provider}:`, handledError);
+      } else {
+        console.log(`ℹ️ ${provider} not available:`, handledError.message);
+      }
+        
       throw error;
     }
   }
 
   /**
-   * Connect to MetaMask Mobile via injected SDK
+   * Connect to MetaMask Mobile via injected SDK with enhanced error handling
    */
   private async connectMetaMask(): Promise<string> {
     try {
+      // Enhanced SDK state validation
       if (!this.metaMaskSDKState) {
-        throw new Error('MetaMask SDK not yet injected. Please try again in a moment as the SDK is initializing.');
+        throw new Error('MetaMask SDK not yet injected. The app is still initializing. Please try again in a few seconds.');
       }
 
-      if (!this.metaMaskSDKState?.sdk) {
-        throw new Error('MetaMask SDK not initialized. Please ensure the app is wrapped in MetaMaskProvider and SDK is injected.');
+      if (!this.metaMaskSDKState.sdk) {
+        throw new Error('MetaMask SDK not fully initialized. Please ensure the app wrapper includes MetaMaskProvider and try again.');
+      }
+
+      // Check SDK readiness
+      if (!this.metaMaskSDKState.ready) {
+        throw new Error('MetaMask SDK is initializing. Please wait a moment and try again.');
       }
 
       console.log('🦊 Connecting to MetaMask via injected SDK...');
+      
+      // Enhanced connection with timeout
+      const connectionPromise = this.metaMaskSDKState.sdk.connect();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('MetaMask connection timed out')), 15000)
+      );
 
-      const accounts = await this.metaMaskSDKState.sdk.connect();
+      const accounts = await Promise.race([connectionPromise, timeoutPromise]) as string[];
 
       if (!accounts || accounts.length === 0) {
-        throw new Error('No accounts returned from MetaMask');
+        throw new Error('No accounts returned from MetaMask. Please ensure your wallet is unlocked and try again.');
       }
 
       const address = accounts[0];
-      console.log('📱 MetaMask connected via SDK:', address);
+      
+      // Validate Ethereum address format
+      if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
+        throw new Error('Invalid wallet address format returned from MetaMask');
+      }
 
+      console.log('📱 MetaMask connected successfully:', address);
       return address;
     } catch (error) {
-      console.log('ℹ️ MetaMask unavailable:', error instanceof Error ? error.message : String(error));
-      throw error;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Enhanced error categorization and user guidance
+      if (errorMessage.includes('timed out')) {
+        console.log('⏰ MetaMask connection timeout - likely wallet app not responding');
+        throw new Error('MetaMask app is not responding. Please open the MetaMask app and try again.');
+      } else if (errorMessage.includes('not installed') || errorMessage.includes('not found')) {
+        console.log('📱 MetaMask not installed');
+        throw new Error('MetaMask is not installed on your device. Please install MetaMask from the App Store/Play Store.');
+      } else if (errorMessage.includes('locked') || errorMessage.includes('unlocked')) {
+        console.log('🔒 MetaMask locked');
+        throw new Error('MetaMask is locked. Please unlock your wallet and try again.');
+      } else if (errorMessage.includes('rejected') || errorMessage.includes('denied')) {
+        console.log('❌ MetaMask connection rejected');
+        throw new Error('MetaMask connection was cancelled. Please try again and confirm the connection request.');
+      } else {
+        console.log('ℹ️ MetaMask connection error:', errorMessage);
+        throw new Error(`MetaMask connection failed: ${errorMessage}`);
+      }
     }
   }
 
@@ -528,13 +837,6 @@ class WalletService implements IWalletAdapter {
   }
 
   /**
-   * Get all connected accounts
-   */
-  getAccounts(): string[] {
-    return this.activeConnection ? [this.activeConnection.address] : [];
-  }
-
-  /**
    * Get current chain ID
    */
   getChainId(): number {
@@ -546,13 +848,6 @@ class WalletService implements IWalletAdapter {
    */
   getProvider(): WalletProvider | null {
     return this.currentProvider;
-  }
-
-  /**
-   * Check if wallet is connected
-   */
-  isConnected(): boolean {
-    return this._isConnected && this.activeConnection !== null;
   }
 
   /**

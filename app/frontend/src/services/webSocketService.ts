@@ -1,3 +1,11 @@
+/**
+ * WebSocket Service (LEGACY)
+ * This service is deprecated in favor of the consolidated WebSocket hook
+ * Keeping for backward compatibility and specific use cases
+ * 
+ * For new development, use `useConsolidatedWebSocket` hook instead
+ */
+
 import { io, Socket } from 'socket.io-client';
 import ENV_CONFIG from '@/config/environment';
 

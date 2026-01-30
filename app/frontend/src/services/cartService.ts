@@ -461,75 +461,75 @@ class CartService {
 
     this.pendingAdds.add(product.id);
 
-    // Throttle rapid requests for the same item (300ms minimum between requests)
-    const now = Date.now();
-    const lastRequest = this.requestThrottle.get(product.id) || 0;
-    if (now - lastRequest < 300) {
-      console.warn(`Request throttled for item ${product.id}, too soon since last request`);
-      this.pendingAdds.delete(product.id); // Remove from pending since we're throttling
-      return;
-    }
-    this.requestThrottle.set(product.id, now);
-
-    // Ensure the item is removed from pending deletions if it was previously deleted
-    if (this.pendingDeletions.has(product.id)) {
-      this.pendingDeletions.delete(product.id);
-      this.savePendingDeletions();
-    }
-
-    const currentState = await this.getCartState();
-    const existingItemIndex = currentState.items.findIndex(item => item.id === product.id);
-
-    let newItems: CartItem[];
-
-    if (existingItemIndex >= 0) {
-      // Update quantity of existing item and refresh product details
-      newItems = [...currentState.items];
-      const existingItem = newItems[existingItemIndex];
-      const existingQty = typeof existingItem.quantity === 'string' ? parseInt(existingItem.quantity, 10) : existingItem.quantity;
-      const addQty = typeof quantity === 'string' ? parseInt(quantity as any, 10) : quantity;
-
-      const newQuantity = Math.min(existingQty + addQty, product.inventory);
-      newItems[existingItemIndex] = {
-        ...existingItem,
-        ...product, // Refresh product details (price, etc.)
-        quantity: newQuantity
-      };
-    } else {
-      // Add new item
-      const newItem: CartItem = {
-        ...product,
-        quantity: Math.min(typeof quantity === 'string' ? parseInt(quantity as any, 10) : quantity, product.inventory),
-        addedAt: new Date()
-      };
-      newItems = [...currentState.items, newItem];
-    }
-
-    const newState: CartState = {
-      items: newItems,
-      totals: this.calculateTotals(newItems),
-      lastUpdated: new Date()
-    };
-
-    await this.saveCartState(newState);
-    this.notifyListeners(newState);
-
-    // If authenticated, also call backend API
-    if (this.isAuthenticated) {
-      try {
-        await this.addItemToBackend(product.id, quantity);
-
-        // Refresh cart from backend to get the new cartItemId
-        // This is crucial for subsequent operations like remove or update quantity
-        const updatedCart = await this.getCartFromBackend();
-        if (updatedCart) {
-          await this.saveCartState(updatedCart);
-          this.notifyListeners(updatedCart);
-        }
-      } catch (error) {
-        console.warn('Failed to add item to backend cart:', error);
+    try {
+      // Throttle rapid requests for the same item (300ms minimum between requests)
+      const now = Date.now();
+      const lastRequest = this.requestThrottle.get(product.id) || 0;
+      if (now - lastRequest < 300) {
+        console.warn(`Request throttled for item ${product.id}, too soon since last request`);
+        return;
       }
-    }
+      this.requestThrottle.set(product.id, now);
+
+      // Ensure the item is removed from pending deletions if it was previously deleted
+      if (this.pendingDeletions.has(product.id)) {
+        this.pendingDeletions.delete(product.id);
+        this.savePendingDeletions();
+      }
+
+      const currentState = await this.getCartState();
+      const existingItemIndex = currentState.items.findIndex(item => item.id === product.id);
+
+      let newItems: CartItem[];
+
+      if (existingItemIndex >= 0) {
+        // Update quantity of existing item and refresh product details
+        newItems = [...currentState.items];
+        const existingItem = newItems[existingItemIndex];
+        const existingQty = typeof existingItem.quantity === 'string' ? parseInt(existingItem.quantity, 10) : existingItem.quantity;
+        const addQty = typeof quantity === 'string' ? parseInt(quantity as any, 10) : quantity;
+
+        const newQuantity = Math.min(existingQty + addQty, product.inventory);
+        newItems[existingItemIndex] = {
+          ...existingItem,
+          ...product, // Refresh product details (price, etc.)
+          quantity: newQuantity
+        };
+      } else {
+        // Add new item
+        const newItem: CartItem = {
+          ...product,
+          quantity: Math.min(typeof quantity === 'string' ? parseInt(quantity as any, 10) : quantity, product.inventory),
+          addedAt: new Date()
+        };
+        newItems = [...currentState.items, newItem];
+      }
+
+      const newState: CartState = {
+        items: newItems,
+        totals: this.calculateTotals(newItems),
+        lastUpdated: new Date()
+      };
+
+      await this.saveCartState(newState);
+      this.notifyListeners(newState);
+
+      // If authenticated, also call backend API
+      if (this.isAuthenticated) {
+        try {
+          await this.addItemToBackend(product.id, quantity);
+
+          // Refresh cart from backend to get the new cartItemId
+          // This is crucial for subsequent operations like remove or update quantity
+          const updatedCart = await this.getCartFromBackend();
+          if (updatedCart) {
+            await this.saveCartState(updatedCart);
+            this.notifyListeners(updatedCart);
+          }
+        } catch (error) {
+          console.warn('Failed to add item to backend cart:', error);
+        }
+      }
     } finally {
       // Always remove from pendingAdds, even if an error occurred
       this.pendingAdds.delete(product.id);

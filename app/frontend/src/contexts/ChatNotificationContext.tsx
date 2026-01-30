@@ -1,16 +1,16 @@
 /**
- * Chat Notification Context
- * Provides global chat notification management across the app
- * Listens to WebSocket events for new messages and mentions
+ * Chat Notification Context (LEGACY)
+ * This context is deprecated and should be replaced with the unified notification system
+ * Keeping for backward compatibility during migration
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { io, Socket } from 'socket.io-client';
-import { ENV_CONFIG } from '@/config/environment';
+import { notificationManager, useNotifications } from '@/services/unifiedNotificationManager';
 
+// Legacy interface for backward compatibility
 export interface ChatNotification {
   id: string;
   type: 'new_message' | 'mention' | 'channel_message';
@@ -36,338 +36,85 @@ interface ChatNotificationContextType {
 
 const ChatNotificationContext = createContext<ChatNotificationContextType | undefined>(undefined);
 
-// WebSocket connection states
-type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'failed';
-
-// Reconnection configuration
-const MAX_RECONNECT_ATTEMPTS = 5;
-const INITIAL_RECONNECT_DELAY = 1000;
-const MAX_RECONNECT_DELAY = 30000;
-const CONNECTION_LOCK_TIMEOUT = 5000; // Prevent rapid reconnections
-
 export const ChatNotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { address, isConnected } = useAccount();
+  const { address } = useAccount();
   const { isAuthenticated } = useAuth();
   const router = useRouter();
-  const [notifications, setNotifications] = useState<ChatNotification[]>([]);
-  const socketRef = useRef<Socket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const reconnectAttemptsRef = useRef<number>(0);
-  const connectionStateRef = useRef<ConnectionState>('disconnected');
-  const connectionLockRef = useRef<boolean>(false);
-  const lastConnectionAttemptRef = useRef<number>(0);
-  const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
+  
+  // Use the unified notification system
+  const {
+    notifications: unifiedNotifications,
+    unreadCount: unifiedUnreadCount,
+    markAsRead: unifiedMarkAsRead,
+    markAllAsRead: unifiedMarkAllAsRead,
+    clearAllNotifications: unifiedClearAll,
+    addNotification: unifiedAddNotification
+  } = useNotifications();
 
-  // Calculate unread count
-  const unreadCount = notifications.filter(n => !n.read).length;
+  // Filter to only chat notifications for backward compatibility
+  const chatNotifications = unifiedNotifications.filter(n => 
+    n.source === 'chat' && 
+    (n.type === 'chat_message' || n.type === 'chat_mention' || n.type === 'chat_channel')
+  ).map(n => ({
+    id: n.id,
+    type: n.type as 'new_message' | 'mention' | 'channel_message',
+    title: n.title,
+    message: n.message,
+    fromAddress: (n as any).senderAddress || '',
+    fromName: (n as any).senderName,
+    conversationId: (n as any).conversationId || '',
+    timestamp: n.timestamp,
+    read: n.read,
+    avatarUrl: (n as any).avatarUrl
+  }));
 
-  // Add a new notification
+  // Convert unified notifications to legacy format
+  const notifications = chatNotifications;
+  const unreadCount = unifiedUnreadCount;
+
+  // Legacy methods mapped to unified system
   const addNotification = useCallback((notification: Omit<ChatNotification, 'id' | 'read'>) => {
-    const newNotification: ChatNotification = {
-      ...notification,
-      id: `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      read: false,
-    };
-
-    setNotifications(prev => {
-      // Limit to 50 most recent notifications
-      const updated = [newNotification, ...prev].slice(0, 50);
-      return updated;
+    // Convert to unified format and add
+    unifiedAddNotification({
+      type: notification.type === 'new_message' ? 'chat_message' : 
+            notification.type === 'mention' ? 'chat_mention' : 'chat_channel',
+      title: notification.title,
+      message: notification.message,
+      priority: 'normal',
+      source: 'chat',
+      conversationId: notification.conversationId,
+      senderAddress: notification.fromAddress,
+      senderName: notification.fromName,
+      avatarUrl: notification.avatarUrl
     });
+  }, [unifiedAddNotification]);
 
-    // Show browser notification if permission granted and document is hidden
-    if (typeof window !== 'undefined' && document.hidden && Notification.permission === 'granted') {
-      try {
-        const browserNotification = new Notification(notification.title, {
-          body: notification.message,
-          icon: notification.avatarUrl || '/icons/message-icon.png',
-          tag: `chat-${notification.conversationId}`,
-        });
-
-        browserNotification.onclick = () => {
-          window.focus();
-          router.push(`/chat/dm/${notification.conversationId}`);
-          browserNotification.close();
-        };
-
-        // Auto-close after 5 seconds
-        setTimeout(() => browserNotification.close(), 5000);
-      } catch (error) {
-        console.error('Error showing browser notification:', error);
-      }
-    }
-
-    // Play notification sound if enabled
-    try {
-      const soundEnabled = localStorage.getItem('notification_sound') !== 'false';
-      if (soundEnabled && typeof window !== 'undefined') {
-        const audio = new Audio('/sounds/notification.mp3');
-        audio.volume = 0.3;
-        audio.play().catch(() => { }); // Ignore errors if audio can't play
-      }
-    } catch (error) {
-      // Ignore audio errors
-    }
-  }, [router]);
-
-  // Mark a notification as read
   const markAsRead = useCallback((notificationId: string) => {
-    setNotifications(prev =>
-      prev.map(n => (n.id === notificationId ? { ...n, read: true } : n))
-    );
-  }, []);
+    unifiedMarkAsRead(notificationId);
+  }, [unifiedMarkAsRead]);
 
-  // Mark all notifications as read
   const markAllAsRead = useCallback(() => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  }, []);
+    unifiedMarkAllAsRead();
+  }, [unifiedMarkAllAsRead]);
 
-  // Clear all notifications
   const clearNotifications = useCallback(() => {
-    setNotifications([]);
-  }, []);
+    unifiedClearAll();
+  }, [unifiedClearAll]);
 
-  // Navigate to chat
   const navigateToChat = useCallback((conversationId: string) => {
-    // Mark notification as read
-    setNotifications(prev =>
-      prev.map(n => (n.conversationId === conversationId ? { ...n, read: true } : n))
-    );
+    // Mark all notifications for this conversation as read
+    unifiedNotifications
+      .filter(n => (n as any).conversationId === conversationId)
+      .forEach(n => unifiedMarkAsRead(n.id));
+    
     router.push(`/chat/dm/${conversationId}`);
-  }, [router]);
-
-  // Helper to update connection state consistently
-  const updateConnectionState = useCallback((state: ConnectionState) => {
-    connectionStateRef.current = state;
-    setConnectionState(state);
-  }, []);
-
-  // Connect to WebSocket for real-time notifications
-  const connectWebSocket = useCallback(() => {
-    if (!address || !isAuthenticated) return;
-
-    // Prevent rapid reconnection attempts using a lock and time check
-    const now = Date.now();
-    if (connectionLockRef.current) {
-      return; // Another connection attempt is in progress
-    }
-
-    // Enforce minimum time between connection attempts
-    if (now - lastConnectionAttemptRef.current < CONNECTION_LOCK_TIMEOUT) {
-      return;
-    }
-
-    // Don't reconnect if already connected or connecting
-    if (socketRef.current?.connected) {
-      return;
-    }
-
-    // Check if we've exceeded max reconnection attempts
-    if (connectionStateRef.current === 'failed') {
-      return; // Already gave up, don't retry
-    }
-
-    // Acquire connection lock
-    connectionLockRef.current = true;
-    lastConnectionAttemptRef.current = now;
-    updateConnectionState('connecting');
-
-    try {
-      const socket = io(ENV_CONFIG.WS_URL, {
-        path: '/socket.io/',
-        transports: ['websocket', 'polling'],
-        auth: {
-          address,
-          type: 'notifications'
-        },
-        reconnection: true,
-        reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
-        reconnectionDelay: INITIAL_RECONNECT_DELAY,
-        reconnectionDelayMax: MAX_RECONNECT_DELAY,
-        timeout: 30000
-      });
-
-      socket.on('connect', () => {
-        console.log('[ChatNotifications] Socket.IO connected:', socket.id);
-        updateConnectionState('connected');
-        reconnectAttemptsRef.current = 0; // Reset attempts on successful connection
-        connectionLockRef.current = false;
-
-        // Subscribe to notification events
-        socket.emit('subscribe', {
-          channel: 'notifications',
-          address: address,
-        });
-      });
-
-      socket.on('connect_error', (error) => {
-        console.error('[ChatNotifications] Socket.IO connection error:', error.message);
-        connectionLockRef.current = false;
-
-        reconnectAttemptsRef.current++;
-        if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
-          updateConnectionState('failed');
-        } else {
-          updateConnectionState('reconnecting');
-        }
-      });
-
-      socket.on('disconnect', (reason) => {
-        console.log('[ChatNotifications] Socket.IO disconnected:', reason);
-        updateConnectionState('disconnected');
-        connectionLockRef.current = false;
-      });
-
-      socket.on('reconnect', (attemptNumber) => {
-        console.log('[ChatNotifications] Socket.IO reconnected after', attemptNumber, 'attempts');
-        updateConnectionState('connected');
-        reconnectAttemptsRef.current = 0;
-      });
-
-      socket.on('reconnect_attempt', (attemptNumber) => {
-        console.log('[ChatNotifications] Socket.IO reconnect attempt:', attemptNumber);
-        updateConnectionState('reconnecting');
-      });
-
-      socket.on('reconnect_failed', () => {
-        console.error('[ChatNotifications] Socket.IO reconnection failed');
-        updateConnectionState('failed');
-        connectionLockRef.current = false;
-      });
-
-      // Listen for chat notifications
-      socket.on('new_message', (data) => {
-        // Handle potentially nested message structure from backend
-        const messageData = data.message || data;
-        const senderAddress = data.senderAddress || data.fromAddress || messageData.senderAddress || messageData.fromAddress;
-
-        addNotification({
-          type: 'new_message',
-          title: 'New Message',
-          message: messageData.content || 'You have a new message',
-          fromAddress: senderAddress,
-          fromName: messageData.fromName,
-          conversationId: data.conversationId || messageData.conversationId,
-          timestamp: new Date(messageData.timestamp || messageData.sentAt || data.timestamp || Date.now()),
-          avatarUrl: messageData.avatarUrl
-        });
-      });
-
-      socket.on('mention', (data) => {
-        addNotification({
-          type: 'mention',
-          title: 'Mention',
-          message: data.content || 'You were mentioned',
-          fromAddress: data.fromAddress,
-          fromName: data.fromName,
-          conversationId: data.conversationId,
-          timestamp: new Date(data.timestamp),
-          avatarUrl: data.avatarUrl
-        });
-      });
-
-      socket.on('channel_message', (data) => {
-        addNotification({
-          type: 'channel_message',
-          title: 'Channel Message',
-          message: data.content || 'New message in channel',
-          fromAddress: data.fromAddress,
-          fromName: data.fromName,
-          conversationId: data.conversationId,
-          timestamp: new Date(data.timestamp),
-          avatarUrl: data.avatarUrl
-        });
-      });
-
-      socketRef.current = socket;
-    } catch (error) {
-      console.error('[ChatNotifications] Failed to create Socket.IO connection:', error);
-      updateConnectionState('disconnected');
-      connectionLockRef.current = false;
-    }
-  }, [address, isAuthenticated, updateConnectionState, addNotification, router]);
-
-  // Disconnect WebSocket
-  const disconnectWebSocket = useCallback(() => {
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-
-    if (socketRef.current) {
-      socketRef.current.disconnect();
-      socketRef.current = null;
-    }
-
-    reconnectAttemptsRef.current = 0; // Reset attempts on manual disconnect
-    connectionLockRef.current = false; // Release lock
-    updateConnectionState('disconnected');
-  }, [updateConnectionState]);
-
-  // Connect/disconnect based on auth state - only run once per auth state change
-  useEffect(() => {
-    let mounted = true;
-
-    if (isConnected && isAuthenticated && address) {
-      // Small delay to prevent race conditions during initial load
-      const connectTimeout = setTimeout(() => {
-        if (mounted) {
-          connectWebSocket();
-        }
-      }, 100);
-
-      return () => {
-        mounted = false;
-        clearTimeout(connectTimeout);
-        disconnectWebSocket();
-      };
-    } else {
-      disconnectWebSocket();
-    }
-
-    return () => {
-      mounted = false;
-    };
-    // Note: connectWebSocket and disconnectWebSocket are stable refs, no need to include them
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConnected, isAuthenticated, address]);
-
-  // Load notifications from localStorage on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined' && address) {
-      try {
-        const stored = localStorage.getItem(`chat_notifications_${address}`);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          // Convert timestamp strings back to Date objects
-          const notifications = parsed.map((n: any) => ({
-            ...n,
-            timestamp: new Date(n.timestamp),
-          }));
-          setNotifications(notifications);
-        }
-      } catch (error) {
-        console.error('Error loading stored chat notifications:', error);
-      }
-    }
-  }, [address]);
-
-  // Save notifications to localStorage when they change
-  useEffect(() => {
-    if (typeof window !== 'undefined' && address && notifications.length > 0) {
-      try {
-        localStorage.setItem(`chat_notifications_${address}`, JSON.stringify(notifications));
-      } catch (error) {
-        console.error('Error saving chat notifications:', error);
-      }
-    }
-  }, [notifications, address]);
+  }, [unifiedNotifications, unifiedMarkAsRead, router]);
 
   // Request notification permission on mount
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission === 'default') {
-        Notification.requestPermission();
+        notificationManager.requestPermission();
       }
     }
   }, []);

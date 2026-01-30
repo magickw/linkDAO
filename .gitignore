@@ -36,3 +36,22 @@ yarn-error.log*
 .idea/
 *.code-workspace
 .vercel
+# SSH and private keys
+*.pem
+*.key
+*.priv
+*.private
+id_rsa
+id_rsa.pub
+id_dsa
+id_dsa.pub
+id_ecdsa
+id_ecdsa.pub
+id_ed25519
+id_ed25519.pub
+ssh_host_*_key
+ssh_host_*_key.pub
+*_rsa
+*_rsa.pub
+PRIVATE KEY
+BEGIN.*PRIVATE

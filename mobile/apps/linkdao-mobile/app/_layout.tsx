@@ -118,6 +118,29 @@ export default function RootLayout() {
     };
     initStorage();
 
+    // Auto-restore authentication session
+    const restoreAuthSession = async () => {
+      try {
+        console.log('🔄 Starting authentication session restoration...');
+        const authServiceModule = await import('@linkdao/shared');
+        const { authService } = authServiceModule;
+        
+        const restoreResult = await authService.autoRestoreSession();
+        if (restoreResult.success) {
+          console.log('✅ Authentication session restored successfully');
+          // Update auth store with restored session
+          const { setUser, setToken } = useAuthStore.getState();
+          setUser(restoreResult.user!);
+          setToken(restoreResult.token!);
+        } else {
+          console.log('ℹ️ No valid authentication session found');
+        }
+      } catch (error) {
+        console.error('❌ Failed to restore authentication session:', error);
+      }
+    };
+    restoreAuthSession();
+
     // Initialize offline manager
     offlineManager.initialize();
 

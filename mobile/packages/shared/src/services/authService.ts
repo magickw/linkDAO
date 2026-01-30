@@ -107,14 +107,20 @@ class AuthService {
     try {
       // Create and store the auth promise
       const authPromise = (async () => {
-        // Step 1: Get authentication message and nonce from backend
+        // Step 1: Check security lockout status
+        const isLockedOut = await this.checkSecurityLockout();
+        if (isLockedOut) {
+          throw new Error('Account temporarily locked due to security concerns. Please try again later.');
+        }
+
+        // Step 2: Get authentication message and nonce from backend
         const { nonce, message } = await this.getNonce(address);
 
-        // Step 2: Sign the message with wallet
+        // Step 3: Sign the message with wallet
         const signature = await this.signMessage(address, message);
         console.log('✅ Got signature from wallet:', signature.slice(0, 20) + '...');
 
-        // Step 3: Verify signature with backend
+        // Step 4: Verify signature with backend
         console.log('📤 Posting signature to backend...');
         const response = await apiClient.post<{ token: string; user: AuthUser; requires2FA?: boolean; userId?: string }>(
           '/api/auth/wallet-connect',
@@ -142,10 +148,15 @@ class AuthService {
           apiClient.setToken(this.token);
 
           await this.persistSession(this.token, this.currentUser);
+          
+          // Record successful authentication
+          await this.recordSuccessfulAuth(address);
 
           return { success: true, token: this.token, user: this.currentUser };
         }
 
+        // Record failed authentication
+        await this.recordFailedAuth(address);
         return { success: false, error: response.error || 'Authentication failed' };
       })();
 
@@ -156,6 +167,7 @@ class AuthService {
       return result;
     } catch (error) {
       console.error('💥 Auth flow threw error:', error);
+      await this.recordFailedAuth(address);
       return { success: false, error: (error as Error).message || 'Authentication failed' };
     } finally {
       // Clear from in-progress map after completion
@@ -164,8 +176,49 @@ class AuthService {
   }
 
   /**
-   * Get authentication nonce and message from backend
+   * Check security lockout status
    */
+  private async checkSecurityLockout(): Promise<boolean> {
+    try {
+      // Dynamically import security service to avoid circular dependencies
+      const { securityService } = await import('../../../apps/linkdao-mobile/src/services/securityService');
+      return await securityService.isLockedOut();
+    } catch (error) {
+      console.warn('Security service not available, skipping lockout check:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Record successful authentication
+   */
+  private async recordSuccessfulAuth(address: string): Promise<void> {
+    try {
+      const { securityService } = await import('../../../apps/linkdao-mobile/src/services/securityService');
+      await securityService.recordAuthAttempt(true);
+      await securityService.startSession();
+      await securityService.logAuditEvent('AUTH_SUCCESS', 'LOW', {
+        address: address.substring(0, 6) + '...' + address.substring(address.length - 4)
+      });
+    } catch (error) {
+      console.warn('Failed to record successful auth:', error);
+    }
+  }
+
+  /**
+   * Record failed authentication
+   */
+  private async recordFailedAuth(address: string): Promise<void> {
+    try {
+      const { securityService } = await import('../../../apps/linkdao-mobile/src/services/securityService');
+      await securityService.recordAuthAttempt(false);
+      await securityService.logAuditEvent('AUTH_FAILED', 'MEDIUM', {
+        address: address.substring(0, 6) + '...' + address.substring(address.length - 4)
+      });
+    } catch (error) {
+      console.warn('Failed to record failed auth:', error);
+    }
+  }
   private async getNonce(address: string): Promise<{ nonce: string; message: string }> {
     try {
       console.log('📡 Requesting nonce from backend for address:', address);
@@ -373,7 +426,7 @@ class AuthService {
   }
 
   /**
-   * Restore session from storage (platform-specific)
+   * Restore session from storage (platform-specific) with enhanced validation
    */
   async restoreSession(): Promise<AuthResponse> {
     try {
@@ -386,20 +439,92 @@ class AuthService {
         this.currentUser = user;
         apiClient.setToken(token);
 
-        // Verify session is still valid
-        const verifyResponse = await apiClient.get<{ valid: boolean }>('/api/auth/verify');
-        if (verifyResponse.success && verifyResponse.data?.valid) {
+        // Verify session is still valid with timeout
+        console.log('🔍 Validating stored session...');
+        const verifyResponse = await Promise.race([
+          apiClient.get<{ valid: boolean }>('/api/auth/verify'),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Session validation timeout')), 10000)
+          )
+        ]);
+
+        if (verifyResponse && (verifyResponse as any).success && (verifyResponse as any).data?.valid) {
+          console.log('✅ Session validation successful');
           return { success: true, token, user };
         } else {
+          console.log('⚠️ Stored session invalid, clearing authentication');
           // Session invalid, clear it
           await this.logout();
         }
       }
     } catch (error) {
-      console.error('Failed to restore session:', error);
+      console.error('❌ Failed to restore session:', error);
+      // Clear potentially corrupted session data
+      await this.clearSession();
     }
 
-    return { success: false, error: 'No valid session' };
+    return { success: false, error: 'No valid session found' };
+  }
+
+  /**
+   * Auto-restore session on app initialization
+   */
+  async autoRestoreSession(): Promise<AuthResponse> {
+    console.log('🔄 Attempting automatic session restoration...');
+    
+    try {
+      // Check network connectivity first
+      const networkState = await this.checkNetworkConnectivity();
+      if (!networkState.isOnline) {
+        console.log('使用網路离线，跳过会话验证');
+        // Try to restore from local storage without backend validation
+        const token = await AsyncStorage.getItem(this.TOKEN_KEY);
+        const userStr = await AsyncStorage.getItem(this.USER_KEY);
+        
+        if (token && userStr) {
+          const user = JSON.parse(userStr) as AuthUser;
+          this.token = token;
+          this.currentUser = user;
+          apiClient.setToken(token);
+          console.log('✅ 离线模式下恢复本地会话');
+          return { success: true, token, user };
+        }
+        return { success: false, error: 'No local session available' };
+      }
+
+      // Online mode - full validation
+      const result = await this.restoreSession();
+      if (result.success) {
+        console.log('✅ 自动会话恢复成功');
+      } else {
+        console.log('⚠️ 自动会话恢复失败:', result.error);
+      }
+      return result;
+    } catch (error) {
+      console.error('💥 自动会话恢复异常:', error);
+      return { success: false, error: 'Session restoration failed' };
+    }
+  }
+
+  /**
+   * Check network connectivity
+   */
+  private async checkNetworkConnectivity(): Promise<{ isOnline: boolean; type?: string }> {
+    try {
+      // For React Native, we can check using NetInfo or simple fetch
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      
+      const response = await fetch('https://api.linkdao.io/health', {
+        method: 'GET',
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      return { isOnline: response.ok, type: 'online' };
+    } catch (error) {
+      return { isOnline: false, type: 'offline' };
+    }
   }
 }
 

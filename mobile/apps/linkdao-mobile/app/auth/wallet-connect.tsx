@@ -5,16 +5,26 @@
  */
 
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { walletConnectV2Service } from '../../src/services/walletConnectV2Service';
+import { useWalletConnectionProgress } from '../../src/hooks/useWalletConnectionProgress';
+import WalletConnectionProgressIndicator from '../../src/components/WalletConnectionProgressIndicator';
 
 export default function WalletConnectScreen() {
   const [connecting, setConnecting] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  
+  // Use wallet connection progress hook
+  const { 
+    currentProgress, 
+    providers, 
+    loadingProviders,
+    refreshProviders 
+  } = useWalletConnectionProgress();
 
   const { mode = 'login' } = useLocalSearchParams<{ mode?: 'login' | 'register' }>();
 
@@ -177,6 +187,14 @@ export default function WalletConnectScreen() {
           </View>
         ) : (
           <View style={styles.connectContainer}>
+            {/* Progress indicator */}
+            {currentProgress && (
+              <WalletConnectionProgressIndicator 
+                progress={currentProgress} 
+                style={styles.progressIndicator}
+              />
+            )}
+            
             <TouchableOpacity
               style={[styles.connectButton, connecting && styles.connectButtonDisabled]}
               onPress={handleConnect}
@@ -197,11 +215,31 @@ export default function WalletConnectScreen() {
 
             <Text style={styles.walletListTitle}>Supported Wallets</Text>
             <View style={styles.walletList}>
-              <Text style={styles.walletItem}>🦊 MetaMask</Text>
-              <Text style={styles.walletItem}>🛡️ Trust Wallet</Text>
-              <Text style={styles.walletItem}>🪙 Coinbase Wallet</Text>
-              <Text style={styles.walletItem}>🌈 Rainbow</Text>
-              <Text style={styles.walletItem}>+ 50+ more wallets</Text>
+              {loadingProviders ? (
+                <View style={styles.loadingProviders}>
+                  <ActivityIndicator size="small" color="#6b7280" />
+                  <Text style={styles.loadingText}>Loading wallets...</Text>
+                </View>
+              ) : (
+                providers.map((provider) => (
+                  <View key={provider.id} style={styles.walletItemContainer}>
+                    <Text style={styles.walletItem}>
+                      {provider.icon} {provider.name}
+                      {provider.installed && (
+                        <Ionicons name="checkmark" size={14} color="#10b981" style={{ marginLeft: 4 }} />
+                      )}
+                    </Text>
+                    {!provider.installed && provider.canInstall && (
+                      <TouchableOpacity 
+                        onPress={() => provider.installUrl && Linking.openURL(provider.installUrl)}
+                        style={styles.installButton}
+                      >
+                        <Text style={styles.installButtonText}>Install</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ))
+              )}
             </View>
           </View>
         )}
@@ -390,5 +428,31 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginLeft: 12,
     lineHeight: 20,
+  },
+  progressIndicator: {
+    marginBottom: 16,
+  },
+  loadingProviders: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  walletItemContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  installButton: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  installButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });
