@@ -464,7 +464,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       console.error('Error adding to cart:', error);
       addToast('Failed to add item to cart. Please try again.', 'error');
     } finally {
-      setIsAddingToCart(false);
+      // Add a small delay to prevent rapid clicks (500ms)
+      setTimeout(() => setIsAddingToCart(false), 500);
     }
   };
 

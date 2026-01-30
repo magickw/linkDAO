@@ -95,6 +95,8 @@ class CartService {
   private lastSyncTime = 0;
   private syncCooldown = 5000; // 5 seconds cooldown between syncs
   private pendingDeletions: Set<string> = new Set(); // Track items pending deletion to preventing ghosting
+  private pendingAdds: Set<string> = new Set(); // Track items pending addition to prevent duplicates from rapid clicks
+  private requestThrottle: Map<string, number> = new Map(); // Track last request time for throttling
   private cartClearedAt: number | null = null; // Track when cart was intentionally cleared
 
   private constructor() {
@@ -451,6 +453,24 @@ class CartService {
 
   // Add item to cart
   async addItem(product: Omit<CartItem, 'quantity' | 'addedAt'>, quantity: number = 1): Promise<void> {
+    // Check if item is already being added (prevents duplicates from rapid clicks)
+    if (this.pendingAdds.has(product.id)) {
+      console.warn(`Item ${product.id} is already being added, skipping duplicate request`);
+      return;
+    }
+
+    this.pendingAdds.add(product.id);
+
+    // Throttle rapid requests for the same item (300ms minimum between requests)
+    const now = Date.now();
+    const lastRequest = this.requestThrottle.get(product.id) || 0;
+    if (now - lastRequest < 300) {
+      console.warn(`Request throttled for item ${product.id}, too soon since last request`);
+      this.pendingAdds.delete(product.id); // Remove from pending since we're throttling
+      return;
+    }
+    this.requestThrottle.set(product.id, now);
+
     // Ensure the item is removed from pending deletions if it was previously deleted
     if (this.pendingDeletions.has(product.id)) {
       this.pendingDeletions.delete(product.id);
@@ -509,6 +529,10 @@ class CartService {
       } catch (error) {
         console.warn('Failed to add item to backend cart:', error);
       }
+    }
+    } finally {
+      // Always remove from pendingAdds, even if an error occurred
+      this.pendingAdds.delete(product.id);
     }
   }
 
