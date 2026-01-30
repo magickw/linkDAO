@@ -15,6 +15,8 @@ import { WalletLoginBridge } from '../src/components/WalletLoginBridge';
 import { walletService } from '../src/services/walletConnectService';
 import { socialMediaService } from '../src/services/socialMediaService';
 import { notificationService } from '../src/services/notificationService';
+import { offlineManager } from '../src/services/offlineManager';
+import { performanceMonitoringService } from '../src/services/performanceMonitoringService';
 import { setWalletAdapter, setStorageProvider } from '@linkdao/shared';
 import { enhancedAuthService } from '@linkdao/shared/services/enhancedAuthService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -115,6 +117,12 @@ export default function RootLayout() {
       }
     };
     initStorage();
+
+    // Initialize offline manager
+    offlineManager.initialize();
+
+    // Record startup performance
+    const startAppTime = Date.now();
 
     // Initialize wallet service
     const initWalletService = async () => {

@@ -4,6 +4,7 @@
  */
 
 import { apiClient } from '@linkdao/shared';
+import { offlineManager } from './offlineManager';
 
 export interface Product {
     id: string;
@@ -72,6 +73,21 @@ class MarketplaceService {
      * Get all products
      */
     async getProducts(page: number = 1, limit: number = 20, category?: string): Promise<Product[]> {
+        const cacheKey = `products_p${page}_l${limit}_c${category || 'all'}`;
+
+        if (page === 1) {
+            const cached = await offlineManager.getCachedData<Product[]>(cacheKey);
+            if (cached) {
+                console.log('[MarketplaceService] Returning cached products');
+                this.getProductsFromApi(page, limit, category, cacheKey).catch(console.error);
+                return cached;
+            }
+        }
+
+        return this.getProductsFromApi(page, limit, category, cacheKey);
+    }
+
+    private async getProductsFromApi(page: number, limit: number, category: string | undefined, cacheKey: string): Promise<Product[]> {
         const params = new URLSearchParams({
             page: page.toString(),
             limit: limit.toString(),
@@ -83,7 +99,11 @@ class MarketplaceService {
         );
 
         if (response.success && response.data) {
-            return response.data.products || response.data;
+            const products = response.data.products || response.data;
+            if (page === 1) {
+                await offlineManager.cacheData(cacheKey, products, 300000); // 5 minutes
+            }
+            return products;
         }
 
         return [];
@@ -93,9 +113,22 @@ class MarketplaceService {
      * Get product by ID
      */
     async getProduct(id: string): Promise<Product | null> {
+        const cacheKey = `product_${id}`;
+        const cached = await offlineManager.getCachedData<Product>(cacheKey);
+        
+        if (cached) {
+            this.getProductFromApi(id, cacheKey).catch(console.error);
+            return cached;
+        }
+
+        return this.getProductFromApi(id, cacheKey);
+    }
+
+    private async getProductFromApi(id: string, cacheKey: string): Promise<Product | null> {
         const response = await apiClient.get<Product>(`/api/marketplace/products/${id}`);
 
         if (response.success && response.data) {
+            await offlineManager.cacheData(cacheKey, response.data, 600000); // 10 minutes
             return response.data;
         }
 
@@ -175,12 +208,30 @@ class MarketplaceService {
      * Get user orders
      */
     async getOrders(page: number = 1, limit: number = 20): Promise<Order[]> {
+        const cacheKey = `orders_p${page}_l${limit}`;
+
+        if (page === 1) {
+            const cached = await offlineManager.getCachedData<Order[]>(cacheKey);
+            if (cached) {
+                this.getOrdersFromApi(page, limit, cacheKey).catch(console.error);
+                return cached;
+            }
+        }
+
+        return this.getOrdersFromApi(page, limit, cacheKey);
+    }
+
+    private async getOrdersFromApi(page: number, limit: number, cacheKey: string): Promise<Order[]> {
         const response = await apiClient.get<any>(
             `/api/marketplace/orders?page=${page}&limit=${limit}`
         );
 
         if (response.success && response.data) {
-            return response.data.orders || response.data;
+            const orders = response.data.orders || response.data;
+            if (page === 1) {
+                await offlineManager.cacheData(cacheKey, orders, 300000); // 5 minutes
+            }
+            return orders;
         }
 
         return [];

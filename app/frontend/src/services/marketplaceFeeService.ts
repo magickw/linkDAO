@@ -36,18 +36,7 @@ export interface FeeStructure {
       volumeThreshold: string;
     };
   };
-  saleFee: {
-    enabled: boolean;
-    buyerFee: number;
-    sellerFee: number;
-    totalFee: number;
-    distribution: {
-      daoTreasury: number;
-      communityPool: number;
-      subDAO: number;
-      insurance: number;
-    };
-  };
+  // Sale fee removed - consolidated into transaction fee
   auctionFee: {
     enabled: boolean;
     listingFee: string;
@@ -178,18 +167,7 @@ export class MarketplaceFeeService {
           volumeThreshold: '10000'
         }
       },
-      saleFee: {
-        enabled: true,
-        buyerFee: 1,
-        sellerFee: 2.5,
-        totalFee: 3.5,
-        distribution: {
-          daoTreasury: 40,
-          communityPool: 30,
-          subDAO: 20,
-          insurance: 10
-        }
-      },
+      // Sale fee removed - consolidated into transaction fee
       auctionFee: {
         enabled: true,
         listingFee: '10',
@@ -256,71 +234,7 @@ export class MarketplaceFeeService {
     return { fee, discounts, waivers };
   }
 
-  /**
-   * Calculate sale fee
-   */
-  static async calculateSaleFee(
-    salePrice: string,
-    currency: 'LDAO' | 'USDC' | 'ETH',
-    buyerAddress: string,
-    sellerAddress: string
-  ): Promise<{
-    buyerFee: string;
-    sellerFee: string;
-    totalFee: string;
-    distributions: Record<string, string>;
-  }> {
-    if (!MarketplaceFeeService.feeStructure) {
-      await MarketplaceFeeService.loadFeeStructure();
-    }
-
-    const structure = MarketplaceFeeService.feeStructure!;
-    const price = parseFloat(salePrice);
-
-    let buyerFeeAmount = (price * structure.saleFee.buyerFee / 100).toString();
-    let sellerFeeAmount = (price * structure.saleFee.sellerFee / 100).toString();
-    const totalFeeAmount = (price * structure.saleFee.totalFee / 100).toString();
-
-    // Apply buyer discounts
-    const buyerDiscounts = await MarketplaceFeeService.getUserDiscounts(buyerAddress);
-    for (const discount of buyerDiscounts) {
-      if (discount.applicableFees.includes('sale_buyer')) {
-        if (discount.type === 'percentage') {
-          buyerFeeAmount = (parseFloat(buyerFeeAmount) * (1 - Number(discount.value) / 100)).toString();
-        } else if (discount.type === 'fixed') {
-          buyerFeeAmount = Math.max(0, parseFloat(buyerFeeAmount) - parseFloat(String(discount.value))).toString();
-        }
-      }
-    }
-
-    // Apply seller discounts
-    const sellerDiscounts = await MarketplaceFeeService.getUserDiscounts(sellerAddress);
-    for (const discount of sellerDiscounts) {
-      if (discount.applicableFees.includes('sale_seller')) {
-        if (discount.type === 'percentage') {
-          sellerFeeAmount = (parseFloat(sellerFeeAmount) * (1 - Number(discount.value) / 100)).toString();
-        } else if (discount.type === 'fixed') {
-          sellerFeeAmount = Math.max(0, parseFloat(sellerFeeAmount) - parseFloat(String(discount.value))).toString();
-        }
-      }
-    }
-
-    // Calculate distributions
-    const distributions: Record<string, string> = {};
-    const actualTotalFee = parseFloat(buyerFeeAmount) + parseFloat(sellerFeeAmount);
-
-    distributions.daoTreasury = (actualTotalFee * structure.saleFee.distribution.daoTreasury / 100).toString();
-    distributions.communityPool = (actualTotalFee * structure.saleFee.distribution.communityPool / 100).toString();
-    distributions.subDAO = (actualTotalFee * structure.saleFee.distribution.subDAO / 100).toString();
-    distributions.insurance = (actualTotalFee * structure.saleFee.distribution.insurance / 100).toString();
-
-    return {
-      buyerFee: buyerFeeAmount,
-      sellerFee: sellerFeeAmount,
-      totalFee: actualTotalFee.toString(),
-      distributions
-    };
-  }
+  // Sale fee calculation removed - consolidated into transaction fee
 
   /**
    * Collect and distribute fees

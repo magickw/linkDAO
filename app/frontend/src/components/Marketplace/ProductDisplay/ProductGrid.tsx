@@ -10,6 +10,7 @@ import { LoadingSkeleton, ProductCardSkeleton } from '@/design-system/components
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
 import { designTokens } from '@/design-system/tokens';
+import { VirtualGrid } from '@/components/VirtualScrolling';
 
 interface Product {
   id: string;
@@ -167,6 +168,8 @@ interface ProductGridProps {
   showPagination?: boolean;
   // New optional infinite scroll support
   infiniteScroll?: boolean;
+  enableVirtualization?: boolean;
+  virtualContainerHeight?: number;
   hasMore?: boolean;
   onLoadMore?: () => void;
   onProductClick?: (productId: string) => void;
@@ -615,6 +618,8 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   showSorting = true,
   showPagination = true,
   infiniteScroll = false,
+  enableVirtualization = false,
+  virtualContainerHeight = 800,
   hasMore = false,
   onLoadMore,
   onProductClick,
@@ -628,6 +633,23 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [layout, setLayout] = useState(initialLayout);
   const loadMoreRef = React.useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  // Track container width for virtualization
+  useEffect(() => {
+    if (!enableVirtualization || !containerRef.current) return;
+
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
+    };
+
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, [enableVirtualization]);
 
   // Stabilize default empty filters object across renders to avoid unintended resets
   const defaultFiltersRef = React.useRef<FilterOptions>({});
@@ -836,6 +858,36 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
     onSortChange?.(newSort);
   };
 
+  const renderProduct = useCallback((product: Product, index: number) => (
+    <ProductCard
+      key={product.id}
+      product={product}
+      variant={layout}
+      onProductClick={onProductClick}
+      onSellerClick={onSellerClick}
+      onAddToCart={onAddToCart}
+      onAddToWishlist={onAddToWishlist}
+    />
+  ), [layout, onProductClick, onSellerClick, onAddToCart, onAddToWishlist]);
+
+  // Determine item dimensions for virtualization
+  const itemDimensions = useMemo(() => {
+    if (layout === 'list') {
+      return { width: containerWidth, height: 180 };
+    }
+    
+    // Grid item widths based on responsive columns
+    let cols = 1;
+    if (containerWidth >= 1536) cols = 5;
+    else if (containerWidth >= 1280) cols = 4;
+    else if (containerWidth >= 1024) cols = 3;
+    else if (containerWidth >= 640) cols = 2;
+    
+    const gap = 24; // 6 * 4px (gap-6)
+    const itemWidth = (containerWidth - (cols - 1) * gap) / cols;
+    return { width: itemWidth, height: 480, cols };
+  }, [layout, containerWidth]);
+
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
@@ -856,7 +908,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   }
 
   return (
-    <div className={`product-grid ${className}`}>
+    <div className={`product-grid ${className}`} ref={containerRef}>
       <div className="flex gap-6">
         {/* Filters Sidebar */}
         {showFilters && (
@@ -906,6 +958,19 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
               <div className="text-white/60 mb-4">🔍 No products found</div>
               <p className="text-white/70">Try adjusting your filters or search terms</p>
             </GlassPanel>
+          ) : enableVirtualization && filteredAndSortedProducts.length > itemsPerPage ? (
+            <VirtualGrid
+              items={filteredAndSortedProducts}
+              itemWidth={itemDimensions.width}
+              itemHeight={itemDimensions.height}
+              containerWidth={containerWidth}
+              containerHeight={virtualContainerHeight}
+              renderItem={renderProduct}
+              gap={24}
+              onLoadMore={onLoadMore}
+              hasNextPage={hasMore}
+              isLoading={loading}
+            />
           ) : (
             <motion.div
               variants={containerVariants}

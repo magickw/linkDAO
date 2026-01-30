@@ -3,12 +3,17 @@
  * Browse products and listings with filters, sorting, and real API integration
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Modal, ActivityIndicator, RefreshControl } from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Modal, ActivityIndicator, RefreshControl, Dimensions, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { comparisonService } from '../../src/services/comparisonService';
+import { marketplaceService } from '../../src/services';
+import { OptimizedFlatList } from '../../src/components/OptimizedFlatList';
+
+const { width } = Dimensions.get('window');
+const COLUMN_WIDTH = (width - 48) / 2;
 
 type SortOption = 'recent' | 'price-low' | 'price-high' | 'popular';
 type Category = 'All' | string;
@@ -85,49 +90,35 @@ export default function MarketplaceScreen() {
     setComparisonCount(count);
   };
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/marketplace/categories`);
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && result.data) {
-          setCategories(['All', ...result.data.map((cat: any) => cat.name)]);
-        }
+      const categoriesData = await marketplaceService.getCategories();
+      if (categoriesData) {
+        setCategories(['All', ...categoriesData.map((cat: any) => cat.name)]);
       }
     } catch (err) {
       console.error('Failed to fetch categories:', err);
     }
-  };
+  }, []);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async (page: number = 1, append: boolean = false) => {
     try {
-      setLoading(true);
+      if (!append) setLoading(true);
       setError(null);
 
-      const params = new URLSearchParams();
-      params.append('status', 'active');
-      params.append('limit', '50');
+      const productList = await marketplaceService.getProducts(page, 20, selectedCategory === 'All' ? undefined : selectedCategory);
 
-      if (selectedCategory !== 'All') {
-        params.append('category', selectedCategory);
-      }
-
-      if (searchQuery) {
-        params.append('search', searchQuery);
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/marketplace/listings?${params.toString()}`);
-      const result = await response.json();
-
-      if (result.success && result.data) {
-        let productList = result.data.products || result.data || [];
-
+      if (productList) {
         // Apply client-side sorting
-        productList = sortProducts(productList);
+        const sortedList = sortProducts(productList);
 
-        setProducts(productList);
+        if (append) {
+          setProducts(prev => [...prev, ...sortedList]);
+        } else {
+          setProducts(sortedList);
+        }
       } else {
-        setError(result.message || 'Failed to fetch products');
+        setError('Failed to fetch products');
       }
     } catch (err) {
       console.error('Failed to fetch products:', err);
@@ -135,7 +126,7 @@ export default function MarketplaceScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedCategory, sortBy]);
 
   const sortProducts = (productList: Product[]) => {
     return [...productList].sort((a, b) => {
@@ -208,6 +199,146 @@ export default function MarketplaceScreen() {
     );
   }
 
+  const ListHeader = useMemo(() => (
+    <>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search products..."
+          placeholderTextColor="#9ca3af"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          onSubmitEditing={() => fetchProducts(1, false)}
+        />
+        <TouchableOpacity
+          style={styles.filterButton}
+          onPress={() => setShowFilters(true)}
+        >
+          <Ionicons name="options-outline" size={20} color="#3b82f6" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Categories */}
+      <View style={styles.categoriesScroll}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoriesContent}
+        >
+          {categories.map((category) => (
+            <TouchableOpacity
+              key={category}
+              style={[
+                styles.categoryButton,
+                selectedCategory === category && styles.categoryButtonActive,
+              ]}
+              onPress={() => setSelectedCategory(category)}
+            >
+              <Text
+                style={[
+                  styles.categoryText,
+                  selectedCategory === category && styles.categoryTextActive,
+                ]}
+              >
+                {category}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Sort Options */}
+      <View style={styles.sortScroll}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.sortContent}
+        >
+          {sortOptions.map((option) => (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.sortButton,
+                sortBy === option.value && styles.sortButtonActive,
+              ]}
+              onPress={() => setSortBy(option.value)}
+            >
+              <Text
+                style={[
+                  styles.sortText,
+                  sortBy === option.value && styles.sortTextActive,
+                ]}
+              >
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Results Count */}
+      <View style={styles.resultsContainer}>
+        <Text style={styles.resultsText}>{filteredProducts.length} products found</Text>
+      </View>
+    </>
+  ), [searchQuery, categories, selectedCategory, sortBy, filteredProducts.length]);
+
+  const renderProduct = useCallback((product: Product) => (
+    <TouchableOpacity
+      key={product.id}
+      style={styles.productCard}
+      onPress={() => router.push(`/marketplace/product/${product.id}`)}
+    >
+      <View style={[styles.productImage, { backgroundColor: getProductImage(product) }]}>
+        {product.seller?.verified && (
+          <View style={styles.verifiedBadge}>
+            <Ionicons name="checkmark-circle" size={16} color="#ffffff" />
+          </View>
+        )}
+      </View>
+      <View style={styles.productInfo}>
+        <Text style={styles.productName} numberOfLines={2}>{product.title}</Text>
+        <View style={styles.sellerRow}>
+          <Text style={styles.productSeller}>
+            {product.seller?.displayName || product.seller?.storeName || 'Unknown Seller'}
+          </Text>
+          {product.seller?.verified && (
+            <Ionicons name="checkmark-circle" size={12} color="#3b82f6" />
+          )}
+        </View>
+        <View style={styles.ratingRow}>
+          <Ionicons name="star" size={12} color="#f59e0b" />
+          <Text style={styles.ratingText}>{product.seller?.rating || 0}</Text>
+          <Text style={styles.reviewsText}>({product.views || 0})</Text>
+        </View>
+        <View style={styles.productPriceContainer}>
+          <Text style={styles.productPrice}>
+            ${product.priceAmount || 0}
+          </Text>
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={styles.compareButton}
+              onPress={() => {
+                comparisonService.addItem(product);
+                loadComparisonCount();
+              }}
+            >
+              <Ionicons name="bar-chart-outline" size={16} color="#6b7280" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => addToCart(product)}
+            >
+              <Ionicons name="add" size={16} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  ), [router]);
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.header}>
@@ -245,168 +376,22 @@ export default function MarketplaceScreen() {
         </View>
       </View>
 
-      <ScrollView
-        style={styles.content}
+      <OptimizedFlatList
+        data={filteredProducts}
+        renderItem={renderProduct}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        ListHeaderComponent={ListHeader}
+        loading={loading}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-      >
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search products..."
-            placeholderTextColor="#9ca3af"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onSubmitEditing={fetchProducts}
-          />
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={() => setShowFilters(true)}
-          >
-            <Ionicons name="options-outline" size={20} color="#3b82f6" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Categories */}
-        <View style={styles.categoriesScroll}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesContent}
-          >
-            {categories.map((category) => (
-              <TouchableOpacity
-                key={category}
-                style={[
-                  styles.categoryButton,
-                  selectedCategory === category && styles.categoryButtonActive,
-                ]}
-                onPress={() => setSelectedCategory(category)}
-              >
-                <Text
-                  style={[
-                    styles.categoryText,
-                    selectedCategory === category && styles.categoryTextActive,
-                  ]}
-                >
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Sort Options */}
-        <View style={styles.sortScroll}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.sortContent}
-          >
-            {sortOptions.map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                style={[
-                  styles.sortButton,
-                  sortBy === option.value && styles.sortButtonActive,
-                ]}
-                onPress={() => setSortBy(option.value)}
-              >
-                <Text
-                  style={[
-                    styles.sortText,
-                    sortBy === option.value && styles.sortTextActive,
-                  ]}
-                >
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Results Count */}
-        <View style={styles.resultsContainer}>
-          <Text style={styles.resultsText}>{filteredProducts.length} products found</Text>
-        </View>
-        {error && (
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle" size={24} color="#ef4444" />
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={fetchProducts}>
-              <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Products Grid */}
-        <View style={styles.productsGrid}>
-          {filteredProducts.map((product) => (
-            <TouchableOpacity
-              key={product.id}
-              style={styles.productCard}
-              onPress={() => router.push(`/marketplace/product/${product.id}`)}
-            >
-              <View style={[styles.productImage, { backgroundColor: getProductImage(product) }]}>
-                {product.seller?.verified && (
-                  <View style={styles.verifiedBadge}>
-                    <Ionicons name="checkmark-circle" size={16} color="#ffffff" />
-                  </View>
-                )}
-              </View>
-              <View style={styles.productInfo}>
-                <Text style={styles.productName} numberOfLines={2}>{product.title}</Text>
-                <View style={styles.sellerRow}>
-                  <Text style={styles.productSeller}>
-                    {product.seller?.displayName || product.seller?.storeName || 'Unknown Seller'}
-                  </Text>
-                  {product.seller?.verified && (
-                    <Ionicons name="checkmark-circle" size={12} color="#3b82f6" />
-                  )}
-                </View>
-                <View style={styles.ratingRow}>
-                  <Ionicons name="star" size={12} color="#f59e0b" />
-                  <Text style={styles.ratingText}>{product.seller?.rating || 0}</Text>
-                  <Text style={styles.reviewsText}>({product.views || 0})</Text>
-                </View>
-                <View style={styles.productPriceContainer}>
-                  <Text style={styles.productPrice}>
-                    ${product.priceAmount || 0}
-                  </Text>
-                  <View style={styles.actionButtons}>
-                    <TouchableOpacity
-                      style={styles.compareButton}
-                      onPress={() => {
-                        comparisonService.addItem(product);
-                        loadComparisonCount();
-                      }}
-                    >
-                      <Ionicons name="bar-chart-outline" size={16} color="#6b7280" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.addButton}
-                      onPress={() => addToCart(product)}
-                    >
-                      <Ionicons name="add" size={16} color="#ffffff" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {filteredProducts.length === 0 && !loading && (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="document-text-outline" size={64} color="#9ca3af" />
-            <Text style={styles.emptyText}>No products found</Text>
-            <Text style={styles.emptySubtext}>Try adjusting your filters</Text>
-          </View>
-        )}
-      </ScrollView>
+        onEndReached={() => fetchProducts(Math.floor(products.length / 20) + 1, true)}
+        onEndReachedThreshold={0.5}
+        contentContainerStyle={styles.listContent}
+        columnWrapperStyle={styles.columnWrapper}
+        estimatedItemSize={250}
+      />
 
       {/* Filter Modal */}
       <Modal
@@ -873,9 +858,21 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
   },
-  applyButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-});
+    applyButtonText: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: '#ffffff',
+    },
+    listContent: {
+      paddingBottom: 24,
+    },
+    columnWrapper: {
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+    },
+    loadingMoreContainer: {
+      paddingVertical: 20,
+      alignItems: 'center',
+    },
+  });
+  

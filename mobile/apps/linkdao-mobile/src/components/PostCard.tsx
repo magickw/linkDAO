@@ -3,13 +3,14 @@
  * Enhanced post display with iOS 26 Liquid Glass styling
  */
 
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '../constants/theme';
 import { LiquidGlassTheme, createGlassStyle } from '../constants/liquidGlassTheme';
 import { Post } from '../store/postsStore';
 import TipButton from './TipButton';
+import { OptimizedImage } from './OptimizedFlatList';
 
 interface PostCardProps {
   post: Post;
@@ -19,7 +20,7 @@ interface PostCardProps {
   onPress?: (id: string) => void;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({
+export const PostCard: React.FC<PostCardProps> = memo(({
   post,
   onLike,
   onComment,
@@ -65,7 +66,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           <View style={styles.authorInfo}>
             <View style={styles.avatarContainer}>
               {post.authorAvatar ? (
-                <Image source={{ uri: post.authorAvatar }} style={styles.avatar} />
+                <OptimizedImage source={{ uri: post.authorAvatar }} style={styles.avatar} />
               ) : (
                 <View style={[styles.avatar, styles.avatarPlaceholder]}>
                   <Text style={styles.avatarText}>{post.authorName.charAt(0)}</Text>
@@ -88,7 +89,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         {/* Media / Bento Element (Placeholder for Bento Grid style) */}
         {post.attachments && post.attachments.length > 0 && (
           <View style={styles.mediaContainer}>
-            <Image 
+            <OptimizedImage 
               source={{ uri: post.attachments[0].url }} 
               style={styles.mediaImage}
               resizeMode="cover"

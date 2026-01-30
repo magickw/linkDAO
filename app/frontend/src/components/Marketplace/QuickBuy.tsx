@@ -34,6 +34,8 @@ import { getNetworkName } from '@/config/escrowConfig';
 import { USDC_MAINNET, USDC_POLYGON, USDC_ARBITRUM, USDC_SEPOLIA, USDC_BASE, USDC_BASE_SEPOLIA } from '@/config/payment';
 import { PaymentError as PaymentErrorType } from '@/services/paymentErrorHandler';
 import { taxService, TaxCalculationResult } from '@/services/taxService';
+import { useFeeCalculation } from '@/hooks/useFeeCalculation';
+import { FeeBreakdown } from './shared/FeeBreakdown';
 
 interface QuickBuyProps {
   listing: MarketplaceListing;
@@ -67,7 +69,20 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
   const [useEscrow, setUseEscrow] = useState(true);
   const [deliveryInfo, setDeliveryInfo] = useState('');
   const [orderId, setOrderId] = useState<string | null>(null);
-  const [taxCalculation, setTaxCalculation] = useState<TaxCalculationResult | null>(null);
+  const [selectedPaymentMethodType, setSelectedPaymentMethodType] = useState<'fiat' | 'crypto'>('crypto');
+  
+  // Use fee calculation hook instead of separate tax calculation
+  const itemPrice = parseFloat(listing.price);
+  const { fees } = useFeeCalculation({
+    itemPrice,
+    currency: 'ETH',
+    paymentMethod: selectedPaymentMethodType,
+    shippingCost: 0, // QuickBuy typically for digital items
+    buyerAddress: address || '',
+    sellerAddress: listing.sellerWalletAddress || '',
+    countryCode: 'US', // Default for QuickBuy
+    stateCode: 'CA' // Default for QuickBuy
+  });
 
   // New State for Unified Checkout
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PrioritizedPaymentMethod | null>(null);
@@ -100,8 +115,6 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
       setOrderId(null);
       // Trigger prioritization load
       loadPaymentPrioritization();
-      // Trigger tax calculation
-      calculateTax();
     }
   }, [isOpen]);
 
@@ -496,19 +509,19 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
                 </div>
               </div>
 
-              {/* Price & Payment Selection */}
-              <div className="bg-gray-800/50 rounded-lg p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-gray-400">Item Price</span>
-                  <span className="text-2xl font-bold text-white">{listing.price} ETH</span>
-                </div>
-
-                {taxCalculation && (
-                  <div className="flex justify-between items-center mb-4 text-sm">
-                    <span className="text-gray-400">Est. Tax ({taxCalculation.taxRate * 100}%)</span>
-                    <span className="text-white">${taxCalculation.taxAmount.toFixed(2)}</span>
-                  </div>
-                )}
+              {/* Fee Breakdown */}
+              <FeeBreakdown
+                itemPrice={itemPrice}
+                platformFee={fees.platformFee}
+                platformFeeRate={fees.platformFeeRate}
+                processingFee={fees.processingFee}
+                taxAmount={fees.taxAmount}
+                taxRate={fees.taxRate}
+                shippingCost={0}
+                totalAmount={fees.totalAmount}
+                paymentMethod={selectedPaymentMethodType}
+                currency="ETH"
+              />
 
                 {prioritizationResult ? (
                   <div className="mt-4">

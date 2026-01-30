@@ -16,6 +16,8 @@ import { useProfile } from '../../../hooks/useProfile';
 import { countries } from '../../../utils/countries';
 import { marketplaceService } from '../../../services/marketplaceService';
 import { paymentProcessor, PaymentRequest, EscrowSetupRequest } from '../../../services/paymentProcessor';
+import { useFeeCalculation } from '../../../hooks/useFeeCalculation';
+import { FeeBreakdown } from '../shared/FeeBreakdown';
 
 interface CartItem {
   id: string;
@@ -53,6 +55,7 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [escrowSetup, setEscrowSetup] = useState(false);
   const [showSavedAddresses, setShowSavedAddresses] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'fiat' | 'crypto'>('crypto');
 
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
@@ -67,12 +70,21 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
     .filter(item => !item.isDigital)
     .reduce((sum, item) => sum + parseFloat(item.shippingCost || '0'), 0);
   
-  // Fee Calculation: Buyer pays Subtotal + Shipping + Tax + Processing. Platform fee is charged to seller.
-  // Note: Backend calculates precise tax based on address, here we estimate
-  const estimatedTax = (subtotal + shippingCost) * 0.08; // 8% Estimated Tax
-  const processingFee = (subtotal + shippingCost + estimatedTax) * 0.029 + 0.001; // Estimate 2.9% + small flat fee
-  const total = subtotal + shippingCost + estimatedTax + processingFee;
+  // Use fee calculation hook for dynamic fee calculation
+  const { fees } = useFeeCalculation({
+    itemPrice: subtotal,
+    currency: 'ETH',
+    paymentMethod: selectedPaymentMethod,
+    shippingCost,
+    buyerAddress: address || '',
+    sellerAddress: cartItems[0]?.seller.id || '',
+    countryCode: shippingAddress.country,
+    stateCode: shippingAddress.state
+  });
 
+  const total = fees.totalAmount;
+  const estimatedTax = fees.taxAmount;
+  const processingFee = fees.processingFee;
   const hasPhysicalItems = cartItems.some(item => !item.isDigital);
 
   const steps = [
@@ -191,7 +203,12 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
         id: paymentResult.orderId,
         items: cartItems,
         shippingAddress: hasPhysicalItems ? shippingAddress : null,
-        totals: { subtotal, shippingCost, escrowFee, total },
+        totals: { 
+          subtotal, 
+          shippingCost, 
+          escrowFee: fees.platformFee, // Platform fee serves as escrow fee conceptually
+          total 
+        },
         timestamp: new Date(),
         paymentResult: {
           orderId: paymentResult.orderId,
@@ -545,34 +562,19 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
 
   const ReviewStep = () => (
     <div className="space-y-6">
-      {/* Order Summary */}
-      <div>
-        <h3 className="font-medium text-white mb-4">Order Summary</h3>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-white/70">Subtotal:</span>
-            <span className="text-white">{subtotal.toFixed(4)} ETH</span>
-          </div>
-          {shippingCost > 0 && (
-            <div className="flex justify-between">
-              <span className="text-white/70">Shipping:</span>
-              <span className="text-white">{shippingCost.toFixed(4)} ETH</span>
-            </div>
-          )}
-          <div className="flex justify-between">
-            <span className="text-white/70">Processing Fee:</span>
-            <span className="text-white">{processingFee.toFixed(4)} ETH</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-white/70">Est. Tax (8%):</span>
-            <span className="text-white">{estimatedTax.toFixed(4)} ETH</span>
-          </div>
-          <div className="border-t border-white/20 pt-2 flex justify-between font-medium">
-            <span className="text-white">Total:</span>
-            <span className="text-white">{total.toFixed(4)} ETH</span>
-          </div>
-        </div>
-      </div>
+      {/* Fee Breakdown */}
+      <FeeBreakdown
+        itemPrice={subtotal}
+        platformFee={fees.platformFee}
+        platformFeeRate={fees.platformFeeRate}
+        processingFee={processingFee}
+        taxAmount={estimatedTax}
+        taxRate={fees.taxRate}
+        shippingCost={shippingCost}
+        totalAmount={total}
+        paymentMethod={selectedPaymentMethod}
+        currency="ETH"
+      />
 
       {/* Shipping Address */}
       {hasPhysicalItems && (

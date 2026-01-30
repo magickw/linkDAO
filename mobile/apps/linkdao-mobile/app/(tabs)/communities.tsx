@@ -3,8 +3,8 @@
  * Browse and manage communities with enhanced social features
  */
 
-import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, RefreshControl, ActivityIndicator, Modal } from 'react-native';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, RefreshControl, ActivityIndicator, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -13,6 +13,7 @@ import { communitiesService } from '../../src/services/communitiesService';
 import { notificationService } from '../../src/services/notificationService';
 import CreateCommunityModal from '../../src/components/CreateCommunityModal';
 import { CrossChainBridge } from '../../src/components/CrossChainBridge';
+import { OptimizedFlatList } from '../../src/components/OptimizedFlatList';
 
 interface Community {
   id: string;
@@ -63,15 +64,15 @@ export default function CommunitiesScreen() {
     loadNotifications();
   }, []);
 
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     try {
       await fetchNotifications();
     } catch (error) {
       console.error('Failed to load notifications:', error);
     }
-  };
+  }, [fetchNotifications]);
 
-  const loadCommunities = async () => {
+  const loadCommunities = useCallback(async () => {
     setLoading(true);
     try {
       const [allCommunities, featured] = await Promise.all([
@@ -85,15 +86,15 @@ export default function CommunitiesScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setCommunities, setFeaturedCommunities, setLoading]);
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.all([loadCommunities(), loadNotifications()]);
     setRefreshing(false);
-  };
+  }, [loadCommunities, loadNotifications]);
 
-  const handleSearch = async (query: string) => {
+  const handleSearch = useCallback(async (query: string) => {
     setSearchQuery(query);
     if (query.length > 2) {
       try {
@@ -105,7 +106,7 @@ export default function CommunitiesScreen() {
     } else if (query.length === 0) {
       await loadCommunities();
     }
-  };
+  }, [loadCommunities, setCommunities]);
 
   const handleJoinToggle = async (communityId: string, isJoined: boolean) => {
     try {
@@ -125,6 +126,156 @@ export default function CommunitiesScreen() {
   const discoverCommunities = communities.filter(c => !c.isJoined);
 
   const displayedCommunities = selectedTab === 'my-communities' ? myCommunities : discoverCommunities;
+
+  const ListHeader = useMemo(() => (
+    <>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search communities..."
+          placeholderTextColor="#9ca3af"
+          value={searchQuery}
+          onChangeText={handleSearch}
+        />
+      </View>
+
+      {/* Tabs */}
+      <View style={styles.tabsContainer}>
+        <TouchableOpacity
+          style={[styles.tab, selectedTab === 'discover' && styles.tabActive]}
+          onPress={() => setSelectedTab('discover')}
+        >
+          <Text style={[styles.tabText, selectedTab === 'discover' && styles.tabTextActive]}>
+            Discover
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, selectedTab === 'my-communities' && styles.tabActive]}
+          onPress={() => setSelectedTab('my-communities')}
+        >
+          <Text style={[styles.tabText, selectedTab === 'my-communities' && styles.tabTextActive]}>
+            My Communities
+          </Text>
+          {myCommunities.length > 0 && (
+            <View style={styles.tabBadge}>
+              <Text style={styles.tabBadgeText}>{myCommunities.length}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Featured Communities (only in Discover tab) */}
+      {!loading && selectedTab === 'discover' && featuredCommunities.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Featured</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.featuredScroll}>
+            {featuredCommunities.map((community: Community) => (
+              <TouchableOpacity
+                key={community.id}
+                style={styles.featuredCard}
+                onPress={() => router.push(`/community/${community.id}`)}
+              >
+                <View style={[styles.featuredAvatar, community.avatar ? { backgroundColor: community.avatar } : { backgroundColor: '#e5e7eb' }]} />
+                <Text style={styles.featuredName}>{community.name}</Text>
+                <Text style={styles.featuredMembers}>{community.members.toLocaleString()} members</Text>
+                {!community.isPublic && (
+                  <View style={styles.privateBadge}>
+                    <Ionicons name="lock-closed" size={12} color="#ffffff" />
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Loading State for List */}
+      {loading && communities.length === 0 && (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#3b82f6" />
+          <Text style={styles.loadingText}>Loading communities...</Text>
+        </View>
+      )}
+
+      {/* Section Title for Main List */}
+      {displayedCommunities.length > 0 && (
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            {selectedTab === 'my-communities' ? 'Your Communities' : 'All Communities'}
+          </Text>
+        </View>
+      )}
+    </>
+  ), [searchQuery, selectedTab, myCommunities.length, loading, featuredCommunities, displayedCommunities.length, handleSearch]);
+
+  // Render empty component
+  const renderEmpty = useCallback(() => {
+    if (loading) return null;
+
+    return (
+      <View style={styles.centerContainer}>
+        <Ionicons
+          name={selectedTab === 'my-communities' ? 'people-outline' : 'search-outline'}
+          size={64}
+          color="#9ca3af"
+        />
+        <Text style={styles.emptyText}>
+          {selectedTab === 'my-communities' ? 'No communities yet' : 'No communities found'}
+        </Text>
+        <Text style={styles.emptySubtext}>
+          {selectedTab === 'my-communities'
+            ? 'Join communities to see them here'
+            : 'Try a different search term'}
+        </Text>
+        {selectedTab === 'my-communities' && (
+          <TouchableOpacity
+            style={styles.discoverButton}
+            onPress={() => setSelectedTab('discover')}
+          >
+            <Text style={styles.discoverButtonText}>Discover Communities</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  }, [loading, selectedTab]);
+
+  const renderCommunity = useCallback((community: Community) => (
+    <TouchableOpacity
+      key={community.id}
+      style={styles.communityCard}
+      onPress={() => router.push(`/community/${community.id}`)}
+    >
+      <View style={[styles.avatar, community.avatar ? { backgroundColor: community.avatar } : { backgroundColor: '#e5e7eb' }]} />
+      <View style={styles.communityInfo}>
+        <View style={styles.communityHeader}>
+          <Text style={styles.communityName}>{community.name}</Text>
+          {!community.isPublic && (
+            <Ionicons name="lock-closed" size={14} color="#6b7280" />
+          )}
+        </View>
+        {community.description && (
+          <Text style={styles.communityDescription} numberOfLines={1}>
+            {community.description}
+          </Text>
+        )}
+        <View style={styles.communityStats}>
+          <Text style={styles.statText}>{community.members.toLocaleString()} members</Text>
+          <Text style={styles.statSeparator}>•</Text>
+          <Text style={styles.statText}>{community.posts} posts</Text>
+        </View>
+      </View>
+      <TouchableOpacity
+        style={[styles.joinButton, community.isJoined && styles.joinButtonJoined]}
+        onPress={() => handleJoinToggle(community.id, community.isJoined)}
+      >
+        <Text style={[styles.joinButtonText, community.isJoined && styles.joinButtonTextJoined]}>
+          {community.isJoined ? 'Joined' : 'Join'}
+        </Text>
+      </TouchableOpacity>
+    </TouchableOpacity>
+  ), [router, handleJoinToggle]);
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -153,167 +304,22 @@ export default function CommunitiesScreen() {
         </View>
       </View>
 
-      <ScrollView
-        style={styles.content}
+      <OptimizedFlatList
+        data={displayedCommunities}
+        renderItem={renderCommunity}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={ListHeader}
+        emptyComponent={renderEmpty()}
+        loading={loading}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />
         }
-      >
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search communities..."
-            placeholderTextColor="#9ca3af"
-            value={searchQuery}
-            onChangeText={handleSearch}
-          />
-        </View>
-
-        {/* Tabs */}
-        <View style={styles.tabsContainer}>
-          <TouchableOpacity
-            style={[styles.tab, selectedTab === 'discover' && styles.tabActive]}
-            onPress={() => setSelectedTab('discover')}
-          >
-            <Text style={[styles.tabText, selectedTab === 'discover' && styles.tabTextActive]}>
-              Discover
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, selectedTab === 'my-communities' && styles.tabActive]}
-            onPress={() => setSelectedTab('my-communities')}
-          >
-            <Text style={[styles.tabText, selectedTab === 'my-communities' && styles.tabTextActive]}>
-              My Communities
-            </Text>
-            {myCommunities.length > 0 && (
-              <View style={styles.tabBadge}>
-                <Text style={styles.tabBadgeText}>{myCommunities.length}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-        {/* Loading State */}
-        {loading && communities.length === 0 && (
-          <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color="#3b82f6" />
-            <Text style={styles.loadingText}>Loading communities...</Text>
-          </View>
-        )}
-
-        {/* Featured Communities (only in Discover tab) */}
-        {!loading && selectedTab === 'discover' && featuredCommunities.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Featured</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.featuredScroll}>
-              {featuredCommunities.map((community: Community) => (
-                <TouchableOpacity
-                  key={community.id}
-                  style={styles.featuredCard}
-                  onPress={() => router.push(`/community/${community.id}`)}
-                >
-                  <View style={[styles.featuredAvatar, community.avatar ? { backgroundColor: community.avatar } : { backgroundColor: '#e5e7eb' }]} />
-                  <Text style={styles.featuredName}>{community.name}</Text>
-                  <Text style={styles.featuredMembers}>{community.members.toLocaleString()} members</Text>
-                  {!community.isPublic && (
-                    <View style={styles.privateBadge}>
-                      <Ionicons name="lock-closed" size={12} color="#ffffff" />
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Communities List */}
-        {!loading && displayedCommunities.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {selectedTab === 'my-communities' ? 'Your Communities' : 'All Communities'}
-            </Text>
-            {displayedCommunities.map((community: Community) => (
-              <TouchableOpacity
-                key={community.id}
-                style={styles.communityCard}
-                onPress={() => router.push(`/community/${community.id}`)}
-              >
-                <View style={[styles.avatar, community.avatar ? { backgroundColor: community.avatar } : { backgroundColor: '#e5e7eb' }]} />
-                <View style={styles.communityInfo}>
-                  <View style={styles.communityHeader}>
-                    <Text style={styles.communityName}>{community.name}</Text>
-                    {!community.isPublic && (
-                      <Ionicons name="lock-closed" size={14} color="#6b7280" />
-                    )}
-                  </View>
-                  {community.description && (
-                    <Text style={styles.communityDescription} numberOfLines={1}>
-                      {community.description}
-                    </Text>
-                  )}
-                  <View style={styles.communityStats}>
-                    <Text style={styles.statText}>{community.members.toLocaleString()} members</Text>
-                    <Text style={styles.statSeparator}>•</Text>
-                    <Text style={styles.statText}>{community.posts} posts</Text>
-                    {community.lastActivity && (
-                      <>
-                        <Text style={styles.statSeparator}>•</Text>
-                        <Text style={styles.statText}>{community.lastActivity}</Text>
-                      </>
-                    )}
-                  </View>
-                  {community.tags && community.tags.length > 0 && (
-                    <View style={styles.tagsContainer}>
-                      {community.tags.slice(0, 3).map((tag, index) => (
-                        <View key={index} style={styles.tag}>
-                          <Text style={styles.tagText}>#{tag}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
-                <TouchableOpacity
-                  style={[styles.joinButton, community.isJoined && styles.joinButtonJoined]}
-                  onPress={() => handleJoinToggle(community.id, community.isJoined)}
-                >
-                  <Text style={[styles.joinButtonText, community.isJoined && styles.joinButtonTextJoined]}>
-                    {community.isJoined ? 'Joined' : 'Join'}
-                  </Text>
-                </TouchableOpacity>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        {/* Empty State */}
-        {!loading && displayedCommunities.length === 0 && (
-          <View style={styles.centerContainer}>
-            <Ionicons
-              name={selectedTab === 'my-communities' ? 'people-outline' : 'search-outline'}
-              size={64}
-              color="#9ca3af"
-            />
-            <Text style={styles.emptyText}>
-              {selectedTab === 'my-communities' ? 'No communities yet' : 'No communities found'}
-            </Text>
-            <Text style={styles.emptySubtext}>
-              {selectedTab === 'my-communities'
-                ? 'Join communities to see them here'
-                : 'Try a different search term'}
-            </Text>
-            {selectedTab === 'my-communities' && (
-              <TouchableOpacity
-                style={styles.discoverButton}
-                onPress={() => setSelectedTab('discover')}
-              >
-                <Text style={styles.discoverButtonText}>Discover Communities</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-      </ScrollView>
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        initialNumToRender={8}
+        estimatedItemSize={100}
+      />
 
       {/* Create Community Modal */}
       <CreateCommunityModal
@@ -534,6 +540,10 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     paddingHorizontal: 16,
     marginBottom: 12,
+  },
+  sectionHeader: {
+    paddingTop: 8,
+    paddingBottom: 4,
   },
   featuredScroll: {
     paddingHorizontal: 16,

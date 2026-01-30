@@ -3,8 +3,7 @@
  * Main feed showing posts from communities and users
  */
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, TextInput as RNTextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, TextInput as RNTextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -16,6 +15,7 @@ import { PostComposer } from '../../src/components/PostComposer';
 import { FeedSkeleton } from '../../src/components/FeedSkeleton';
 import { useWebSocket } from '../../src/hooks/useWebSocket';
 import { THEME } from '../../src/constants/theme';
+import { OptimizedFlatList } from '../../src/components/OptimizedFlatList';
 
 export default function FeedScreen() {
   // Store state
@@ -80,7 +80,7 @@ export default function FeedScreen() {
   }, [sortBy, searchQuery]);
 
   // Load statuses from API with retry logic
-  const loadPosts = async (page: number = 1, sort = sortBy, isRetry = false, query = searchQuery) => {
+  const loadPosts = useCallback(async (page: number = 1, sort = sortBy, isRetry = false, query = searchQuery) => {
     try {
       setLoading(true);
 
@@ -124,7 +124,7 @@ export default function FeedScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [sortBy, searchQuery, retryCount, setPosts, setLoading, setError]);
 
   // Pull to refresh
   const onRefresh = useCallback(async () => {
@@ -132,7 +132,7 @@ export default function FeedScreen() {
     setHasNewPosts(false); // Clear new posts banner
     await loadPosts(1);
     setRefreshing(false);
-  }, []);
+  }, [loadPosts]);
 
   // Subscribe to WebSocket feed updates
   useEffect(() => {
@@ -254,7 +254,7 @@ export default function FeedScreen() {
   const showLoading = loading && (!posts || posts.length === 0);
 
   // Load more posts for pagination
-  const loadMorePosts = async () => {
+  const loadMorePosts = useCallback(async () => {
     if (loadingMore || !hasMore || loading) return;
 
     setLoadingMore(true);
@@ -277,7 +277,7 @@ export default function FeedScreen() {
     } finally {
       setLoadingMore(false);
     }
-  };
+  }, [loadingMore, hasMore, loading, currentPage, posts, setPosts]);
 
   // Handle scroll to show/hide back to top button
   const handleScroll = (event: any) => {
@@ -320,7 +320,7 @@ export default function FeedScreen() {
   };
 
   // Render post item
-  const renderPost = useCallback(({ item }: { item: any }) => (
+  const renderPost = useCallback((item: any, index: number) => (
     <InteractivePostCard
       post={item}
       onLike={handleLike}
@@ -331,6 +331,63 @@ export default function FeedScreen() {
 
   // Key extractor for FlatList
   const keyExtractor = useCallback((item: any) => item.id, []);
+
+  // Header component memoized
+  const ListHeader = useMemo(() => (
+    <>
+      {/* Post Composer */}
+      <View style={styles.composerContainer}>
+        <PostComposer
+          onSubmit={handleCreatePost}
+          userName={user?.displayName || user?.handle || `${user?.address?.slice(0, 6)}...${user?.address?.slice(-4)}`}
+          placeholder="What's on your mind?"
+        />
+      </View>
+
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
+        <RNTextInput
+          style={styles.searchInput}
+          placeholder="Search posts..."
+          placeholderTextColor="#9ca3af"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <Ionicons name="close-circle" size={20} color="#9ca3af" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Sort Button */}
+      <View style={styles.sortContainer}>
+        <TouchableOpacity
+          style={styles.sortButton}
+          onPress={() => {
+            // Toggle between recent and most liked
+            setSortBy(sortBy === 'recent' ? 'likes' : 'recent');
+          }}
+        >
+          <Ionicons name="funnel-outline" size={16} color="#6b7280" />
+          <Text style={styles.sortButtonText}>
+            {sortBy === 'recent' ? 'Recent' : 'Most Liked'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Loading State */}
+      {showLoading && <FeedSkeleton />}
+
+      {/* Section Title */}
+      {hasPosts && (
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Your Feed</Text>
+        </View>
+      )}
+    </>
+  ), [user, sortBy, searchQuery, showLoading, hasPosts, handleCreatePost]);
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -347,80 +404,26 @@ export default function FeedScreen() {
         </View>
       )}
 
-      <FlatList
-        ref={flatListRef}
+      <OptimizedFlatList
         data={posts || []}
         renderItem={renderPost}
         keyExtractor={keyExtractor}
-        ListHeaderComponent={() => (
-          <>
-            {/* Post Composer */}
-            <View style={styles.composerContainer}>
-              <PostComposer
-                onSubmit={handleCreatePost}
-                userName={user?.displayName || user?.handle || `${user?.address?.slice(0, 6)}...${user?.address?.slice(-4)}`}
-                placeholder="What's on your mind?"
-              />
-            </View>
-
-            {/* Search Bar */}
-            <View style={styles.searchContainer}>
-              <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
-              <RNTextInput
-                style={styles.searchInput}
-                placeholder="Search posts..."
-                placeholderTextColor="#9ca3af"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Ionicons name="close-circle" size={20} color="#9ca3af" />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Sort Button */}
-            <View style={styles.sortContainer}>
-              <TouchableOpacity
-                style={styles.sortButton}
-                onPress={() => {
-                  // Toggle between recent and most liked
-                  setSortBy(sortBy === 'recent' ? 'likes' : 'recent');
-                }}
-              >
-                <Ionicons name="funnel-outline" size={16} color="#6b7280" />
-                <Text style={styles.sortButtonText}>
-                  {sortBy === 'recent' ? 'Recent' : 'Most Liked'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Loading State */}
-            {showLoading && <FeedSkeleton />}
-
-            {/* Section Title */}
-            {hasPosts && (
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Your Feed</Text>
-              </View>
-            )}
-          </>
-        )}
+        ListHeaderComponent={ListHeader}
         ListFooterComponent={renderFooter}
-        ListEmptyComponent={renderEmpty}
+        emptyComponent={renderEmpty()}
+        loading={loading}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         onEndReached={loadMorePosts}
         onEndReachedThreshold={0.5}
         onScroll={handleScroll}
-        scrollEventThrottle={400}
-        contentContainerStyle={hasPosts ? undefined : styles.emptyListContent}
+        scrollEventThrottle={16}
         removeClippedSubviews={true}
         maxToRenderPerBatch={10}
         windowSize={10}
         initialNumToRender={5}
+        estimatedItemSize={250}
       />
 
       {/* Back to Top Button */}

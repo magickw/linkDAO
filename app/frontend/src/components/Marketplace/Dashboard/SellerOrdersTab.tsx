@@ -704,7 +704,7 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
                         No orders in this status.
                     </GlassPanel>
                 ) : (
-                    <>
+                    <React.Fragment>
                         {/* Select All Checkbox */}
                         {orders.length > 0 && (
                             <div className="mb-2">
@@ -1177,7 +1177,7 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
                             </div>
                         </GlassPanel>
                         ))
-                    </>
+                    </React.Fragment>
                 )}
             </div>
 

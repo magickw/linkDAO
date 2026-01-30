@@ -5,6 +5,7 @@
 
 import { apiClient } from '@linkdao/shared';
 import { Post } from '../store';
+import { offlineManager } from './offlineManager';
 
 export interface CreatePostData {
   content: string;
@@ -40,9 +41,26 @@ class PostsService {
    * Get feed posts
    */
   async getFeed(page: number = 1, limit: number = 20): Promise<PostsResponse> {
-    // The apiClient returns { success: boolean, data: T }, where T is the Axios response body.
-    // The backend returns { success: boolean, data: { posts: ..., pagination: ... } }.
-    // So we need to access response.data.data to get the actual content.
+    const cacheKey = `feed_p${page}_l${limit}`;
+
+    // Try to get from cache first
+    if (page === 1) {
+      const cached = await offlineManager.getCachedData<PostsResponse>(cacheKey);
+      if (cached) {
+        console.log('[PostsService] Returning cached feed');
+        // Fetch fresh data in background to update cache
+        this.getFeedFromApi(page, limit, cacheKey).catch(console.error);
+        return cached;
+      }
+    }
+
+    return this.getFeedFromApi(page, limit, cacheKey);
+  }
+
+  /**
+   * Internal helper to fetch feed from API and update cache
+   */
+  private async getFeedFromApi(page: number, limit: number, cacheKey: string): Promise<PostsResponse> {
     const response = await apiClient.get<any>(
       `/api/feed?page=${page}&limit=${limit}`
     );
@@ -50,16 +68,22 @@ class PostsService {
     if (response.success && response.data && response.data.data) {
       const feedData = response.data.data;
       
-      // Calculate hasMore from pagination if available
       const hasMore = feedData.pagination 
         ? feedData.pagination.page < feedData.pagination.totalPages
         : (feedData.hasMore || false);
 
-      return {
+      const result = {
         posts: feedData.posts || [],
         hasMore: hasMore,
         nextCursor: feedData.nextCursor,
       };
+
+      // Cache the first page
+      if (page === 1) {
+        await offlineManager.cacheData(cacheKey, result, 600000); // 10 minutes
+      }
+
+      return result;
     }
 
     return { posts: [], hasMore: false };
