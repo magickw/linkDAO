@@ -6,6 +6,17 @@
 
 ---
 
+## Terminology Clarification
+
+⚠️ **Important:** This document uses **"reposts"** (not "shares") to refer to in-app reposting activity:
+
+- **Reposts**: When users repost content within the LinkDAO app (trackable)
+- **Shares**: When users copy/paste a URL and share it externally (untraceable)
+
+We track **reposts only** because external URL shares cannot be tracked. The shift from "shareCount" to "repostCount" reflects this distinction.
+
+---
+
 ## Executive Summary
 
 Conducted comprehensive assessment of repost functionality implementation. Identified **3 critical gaps** and **1 performance consideration**. Applied fixes for parameter handling and documented schema extension requirements.
@@ -164,7 +175,7 @@ Repost counts are calculated on every feed fetch via SQL GROUP BY:
 
 ```typescript
 // feedService.ts line 613-638
-const statusShareCounts = await db
+const statusRepostCounts = await db
   .select({
     parentId: statuses.parentId,
     count: sql<number>`COUNT(*)`.mapWith(Number)
