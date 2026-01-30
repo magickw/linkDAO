@@ -27,9 +27,6 @@ const NavigationSidebar = dynamic(() => import('@/components/NavigationSidebar')
 const MobileNavigation = dynamic(() => import('@/components/MobileNavigation'), {
   ssr: false
 });
-const CustomCursor = dynamic(() => import('@/components/VisualPolish/CustomCursor'), {
-  ssr: false
-});
 
 
 interface LayoutProps {
@@ -181,7 +178,6 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
 
   return (
     <>
-      <CustomCursor />
       <SEOHead
         title={title}
         description="Join the future of social networking. Own your data, earn from your content, and shape the platform through decentralized governance."
