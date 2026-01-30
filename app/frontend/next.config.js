@@ -320,11 +320,8 @@ const nextConfig = {
         destination: '/chat',
         permanent: true,
       },
-      {
-        source: '/marketplace/:path((?!seller/store/|listing/).*)+',
-        destination: '/marketplace',
-        permanent: false,
-      },
+      // Removed problematic marketplace redirect that was catching nested routes
+      // The marketplace pages handle their own routing correctly
       {
         source: '/governance/:path+',
         destination: '/governance',
