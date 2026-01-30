@@ -27,7 +27,7 @@ interface PostInteractionBarProps {
       handle?: string;
     };
     stakedValue?: number;
-    shareCount?: number;
+    reposts?: number;
     views?: number;
     upvotes?: number;
     downvotes?: number;
@@ -80,10 +80,10 @@ export default function PostInteractionBar({
       upvotes: post.upvotes,
       downvotes: post.downvotes,
       commentCount: post.commentCount,
-      shareCount: post.shareCount,
+      reposts: post.reposts,
       postType
     });
-  }, [post.id, post.views, post.upvotes, post.downvotes, post.commentCount, post.shareCount, postType]);
+  }, [post.id, post.views, post.upvotes, post.downvotes, post.commentCount, post.reposts, postType]);
 
   // Sync with prop changes
   useEffect(() => {
@@ -281,15 +281,15 @@ export default function PostInteractionBar({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
                 <span className="hidden sm:inline">
-                  {post.shareCount && post.shareCount > 0 ? (
+                  {post.reposts && post.reposts > 0 ? (
                     <>
-                      {post.shareCount} Repost{post.shareCount !== 1 ? 's' : ''}
+                      {post.reposts} Repost{post.reposts !== 1 ? 's' : ''}
                     </>
                   ) : (
                     'Repost'
                   )}
                 </span>
-                <span className="sm:hidden">{post.shareCount || 0}</span>
+                <span className="sm:hidden">{post.reposts || 0}</span>
               </button>
 
               {/* Dropdown Menu */}

@@ -917,7 +917,7 @@ const EnhancedPostCard = React.memo(({
                     commentCount: post.comments,
                     shareId: (post as any).shareId,
                     isRepostedByMe: isRepostedByMe,
-                    shareCount: repostCount,
+                    reposts: repostCount,
                     authorProfile: post.authorProfile,
                     media: post.media,
                     views: post.views,
