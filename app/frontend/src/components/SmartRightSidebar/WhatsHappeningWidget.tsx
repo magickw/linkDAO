@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { TrendingUp, Hash } from 'lucide-react';
 import { FeedService } from '@/services/feedService';
 import { FeedSortType } from '@/types/feed';
@@ -15,6 +16,7 @@ interface WhatsHappeningWidgetProps {
 }
 
 export default function WhatsHappeningWidget({ className = '' }: WhatsHappeningWidgetProps) {
+  const router = useRouter();
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -107,11 +109,9 @@ export default function WhatsHappeningWidget({ className = '' }: WhatsHappeningW
     fetchTrendingTopics();
   }, []);
 
-  const formatNumber = (num: number): string => {
-    if (num >= 1000) {
-      return `${(num / 1000).toFixed(1)}K`;
-    }
-    return num.toString();
+  const handleHashtagClick = (hashtagName: string) => {
+    // Navigate to the hashtag page
+    router.push(`/hashtags/${hashtagName.toLowerCase()}`);
   };
 
   return (
@@ -137,6 +137,7 @@ export default function WhatsHappeningWidget({ className = '' }: WhatsHappeningW
           trendingTopics.map((topic, index) => (
             <div
               key={topic.id}
+              onClick={() => handleHashtagClick(topic.name)}
               className="group relative py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors cursor-pointer"
             >
               <div className="flex items-start justify-between">
@@ -167,7 +168,10 @@ export default function WhatsHappeningWidget({ className = '' }: WhatsHappeningW
           </div>
         )}
 
-        <button className="w-full mt-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors">
+        <button 
+          onClick={() => router.push('/hashtags')}
+          className="w-full mt-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
+        >
           Show more
         </button>
       </div>
