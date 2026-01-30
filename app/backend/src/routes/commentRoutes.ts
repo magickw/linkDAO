@@ -16,7 +16,7 @@ router.post('/community-posts/:postId/comments', csrfProtection, authMiddleware,
     const { content, parentCommentId } = req.body;
 
     // Extract user address from authenticated request
-    const userAddress = (req as any).user?.address || (req as any).user?.walletAddress;
+    const userAddress = (req as any).user?.walletAddress;
 
     if (!userAddress) {
       return res.status(401).json({
@@ -153,7 +153,7 @@ router.put('/comments/:commentId', csrfProtection, authMiddleware, async (req: R
     const { content } = req.body;
 
     // Extract user address from authenticated request
-    const userAddress = (req as any).user?.address || (req as any).user?.walletAddress;
+    const userAddress = (req as any).user?.walletAddress;
 
     if (!userAddress) {
       return res.status(401).json({
@@ -197,7 +197,7 @@ router.delete('/comments/:commentId', csrfProtection, authMiddleware, async (req
     const { commentId } = req.params;
 
     // Extract user address from authenticated request
-    const userAddress = (req as any).user?.address || (req as any).user?.walletAddress;
+    const userAddress = (req as any).user?.walletAddress;
 
     if (!userAddress) {
       return res.status(401).json({

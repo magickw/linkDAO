@@ -137,7 +137,7 @@ export class CommunitySubscriptionController {
       const { tierId, paymentTxHash, metadata } = req.body;
 
       // Get user address from authenticated request
-      const userAddress = (req as any).user?.address;
+      const userAddress = (req as any).user?.walletAddress;
       if (!userAddress) {
         return res.status(401).json({
           success: false,

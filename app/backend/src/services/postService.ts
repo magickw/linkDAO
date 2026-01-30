@@ -415,14 +415,13 @@ export class PostService {
         throw new Error('Original post not found');
       }
 
-      // 2. Verify ownership - REMOVED to allow sharing/reposting others' content
-      // Users should be able to share interesting content to communities
-      // if (originalPost.author.toLowerCase() !== authorAddress.toLowerCase()) {
-      //   safeLogger.warn(`Unauthorized cross-post attempt: User ${authorAddress} tried to share post ${originalPostId} owned by ${originalPost.author}`);
-      //   throw new Error('You can only share your own posts to other communities');
-      // }
+      // 2. Verify ownership - RESTORED to prevent unauthorized crossposting
+      if (originalPost.author.toLowerCase() !== authorAddress.toLowerCase()) {
+        safeLogger.warn(`Unauthorized cross-post attempt: User ${authorAddress} tried to share post ${originalPostId} owned by ${originalPost.author}`);
+        throw new Error('You can only share your own posts to other communities');
+      }
 
-      safeLogger.info(`[sharePostToCommunity] Creating repost for original post ${originalPostId} by ${originalPost.author}`);
+      safeLogger.info(`[sharePostToCommunity] Creating community share for original post ${originalPostId} by ${originalPost.author}`);
 
       // 3. Prepare new post input as a clone
       const input: CreatePostInput = {

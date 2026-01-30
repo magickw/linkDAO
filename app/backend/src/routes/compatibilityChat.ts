@@ -147,7 +147,7 @@ router.post('/api/messaging/conversations', csrfProtection, authMiddleware, asyn
   }
 
   // Get the authenticated user's address from the request
-  const userAddress = (req as any).user?.address || (req as any).userId;
+  const userAddress = (req as any).user?.walletAddress || (req as any).userId;
 
   if (!userAddress) {
     return res.status(401).json({ error: 'User not authenticated' });
@@ -364,7 +364,7 @@ router.post('/api/messaging/conversations/:conversationId/messages', csrfProtect
 
   // Use provided senderAddress/fromAddress or fallback to authenticated user
   // Prefer senderAddress to match DB schema
-  const userAddress = (req as any).user?.address || (req as any).userId;
+  const userAddress = (req as any).user?.walletAddress || (req as any).userId;
   let fromAddress = req.body?.senderAddress || req.body?.fromAddress || userAddress;
 
   // Debug logging for authentication

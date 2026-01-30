@@ -80,9 +80,9 @@ export const validateContentType = (req: Request, res: Response, next: NextFunct
       console.log(`[CONTENT-TYPE-DEBUG] Repost request content-type: "${contentType}"`);
     }
 
-    // Allow JSON, form-data, and urlencoded
+    // Allow JSON, form-data, urlencoded, and text/plain (for repost with text/plain body)
     // Also allow anything with 'json' in it (e.g., application/json;charset=utf-8)
-    const validTypes = ['application/json', 'multipart/form-data', 'application/x-www-form-urlencoded', 'json'];
+    const validTypes = ['application/json', 'multipart/form-data', 'application/x-www-form-urlencoded', 'json', 'text/plain'];
 
     // If there's no Content-Type header, allow it (modern clients usually send it, but be lenient)
     if (!contentType) {

@@ -284,8 +284,16 @@ export class PostController {
     try {
       console.log('📋 [REPOST] POST /api/posts/repost - Creating repost - v3 fix (enhanced logging)');
 
-      const { originalPostId, message, author, media } = req.body;
-      console.log('📥 [REPOST] Request body received:', { originalPostId, author, hasMessage: !!message });
+      const { originalPostId, message, author, media, location, gifUrl, replyRestriction } = req.body;
+      console.log('📥 [REPOST] Request body received:', {
+        originalPostId,
+        author,
+        hasMessage: !!message,
+        hasMedia: media?.length > 0,
+        hasLocation: !!location,
+        hasGif: !!gifUrl,
+        replyRestriction
+      });
 
       if (!originalPostId) {
         console.log('⚠️ [REPOST] Missing originalPostId');
@@ -479,7 +487,9 @@ export class PostController {
           contentCid: contentCid,
           parentId: targetPostId, // Use the flattened target ID
           tags: originalStatus.tags || undefined,
-          isRepost: true
+          isRepost: true,
+          mediaUrls: media && media.length > 0 ? media : undefined,
+          location: location || undefined
         });
 
         console.log(`⏱️ [REPOST] createStatus took ${Date.now() - createStart}ms, repost ID:`, newRepost.id);

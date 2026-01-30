@@ -195,6 +195,31 @@ function CommunityPostCardEnhanced({
               className="mb-4"
             />
 
+            {/* Web3 Embeds */}
+            {post.onchainRef && (
+              <div className="mt-4 mb-4">
+                {(() => {
+                  if (post.onchainRef.startsWith('nft:')) {
+                    const [, contractAddress, tokenId] = post.onchainRef.split(':');
+                    if (contractAddress && tokenId) {
+                      return <CommunityNFTEmbed contractAddress={contractAddress} tokenId={tokenId} />;
+                    }
+                  } else if (post.onchainRef.startsWith('defi:')) {
+                    const [, protocolName] = post.onchainRef.split(':');
+                    if (protocolName) {
+                      return <CommunityDeFiEmbed protocolName={protocolName} />;
+                    }
+                  } else if (post.onchainRef.startsWith('wallet:')) {
+                    const [, walletAddress] = post.onchainRef.split(':');
+                    if (walletAddress) {
+                      return <WalletSnapshotEmbed walletAddress={walletAddress} />;
+                    }
+                  }
+                  return null;
+                })()}
+              </div>
+            )}
+
             {/* Media */}
             {post.mediaCids && post.mediaCids.length > 0 && (
               <div className="mt-3 grid grid-cols-1 gap-2">

@@ -194,7 +194,7 @@ router.post('/payment-intent',
             const user = (req as AuthenticatedRequest).user;
 
             safeLogger.info('[Mobile Payment Sheet] Creating payment intent:', {
-                userId: user?.address,
+                userId: user?.walletAddress,
                 amount,
                 currency,
             });
@@ -216,7 +216,7 @@ router.post('/payment-intent',
             }
 
             // Get or create Stripe customer
-            const customerName = user.address || 'LinkDAO User';
+            const customerName = user.walletAddress || 'LinkDAO User';
 
             const customerId = await stripePaymentService.getOrCreateCustomer(
                 user.email || 'unknown@linkdao.io',
@@ -229,7 +229,7 @@ router.post('/payment-intent',
             // Create PaymentIntent
             const paymentIntentResult = await stripePaymentService.processPayment({
                 amount: amount, // Amount is already in cents from mobile
-                userAddress: user.address,
+                userAddress: user.walletAddress,
                 paymentMethod: 'fiat',
             });
 

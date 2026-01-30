@@ -16,16 +16,10 @@ import {
 import EnhancedCommentSystem from '../EnhancedCommentSystem';
 import Link from 'next/link';
 import { useToast } from '@/context/ToastContext';
+import SharePostModal from '../SharePostModal';
 
 interface PostDetailProps {
-  post: EnhancedPost;
-  community: Community;
-  userMembership: CommunityMembership | null;
-  onVote: (postId: string, voteType: 'upvote' | 'downvote', stakeAmount?: string) => void;
-  onReaction?: (postId: string, reactionType: string, amount?: number) => Promise<void>;
-  onTip?: (postId: string, amount: string, token: string) => Promise<void>;
-  isStandalone?: boolean;
-  className?: string;
+// ... (keeping props)
 }
 
 export default function PostDetail({
@@ -40,15 +34,13 @@ export default function PostDetail({
 }: PostDetailProps) {
   const router = useRouter();
   const { addToast } = useToast();
+  const [showShareModal, setShowShareModal] = useState(false);
   const [commentCount, setCommentCount] = useState(
-    typeof post.comments === 'number' ? post.comments : (Array.isArray(post.comments) ? post.comments.length : 0)
+// ... (keeping state)
   );
 
   const handleCopyShareLink = () => {
-    const shareId = post.shareId || post.id;
-    const url = `${window.location.origin}/cp/${shareId}`;
-    navigator.clipboard.writeText(url);
-    addToast('Share link copied to clipboard!', 'success');
+    setShowShareModal(true);
   };
 
   const communitySlug = community.slug || community.id || 'community';
@@ -220,5 +212,17 @@ export default function PostDetail({
         </div>
       </div>
     </div>
+
+    {/* Share Modal */}
+    <SharePostModal
+      isOpen={showShareModal}
+      onClose={() => setShowShareModal(false)}
+      post={{
+        ...post,
+        communityId: community.id,
+        communityName: community.displayName || community.name
+      }}
+      postType="community"
+    />
   );
 }

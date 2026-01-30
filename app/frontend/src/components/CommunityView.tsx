@@ -34,6 +34,8 @@ import { EnhancedProposalCard } from './Governance/EnhancedProposalCard';
 import { useVotingPower } from '@/hooks/useGovernanceContract';
 import { Proposal } from '@/types/governance';
 import PinnedPostsSection from './Community/PinnedPostsSection';
+import CommunityActivityPulse from './Community/CommunityActivityPulse';
+import { communityWeb3Service, CommunityGovernanceProposal } from '@/services/communityWeb3Service';
 
 interface CommunityViewProps {
   communitySlug: string;
@@ -47,28 +49,32 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
   const { address, isConnected } = useWeb3();
   const [communityData, setCommunityData] = useState<Community | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
+  const [proposals, setProposals] = useState<CommunityGovernanceProposal[]>([]);
   const [sortBy, setSortBy] = useState<'hot' | 'new' | 'top' | 'rising'>('hot');
-  const [timeFilter, setTimeFilter] = useState<'hour' | 'day' | 'week' | 'month' | 'year' | 'all'>('day');
-  const [isJoined, setIsJoined] = useState(false);
+  const [timeFilter, setTimeFilter] = useState<'hour' | 'day' | 'week' | 'month' | 'year' | 'all'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isJoined, setIsJoined] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showPostCreator, setShowPostCreator] = useState(false);
   const [moderatorProfiles, setModeratorProfiles] = useState<Record<string, { handle?: string }>>({});
+  const [showBackToTop, setShowBackToTop] = useState(false);
 
-  // Determine member role - creators are always admins
-  const isCreatorCheck = isConnected && address && communityData?.creatorAddress?.toLowerCase() === address.toLowerCase();
-  const isModeratorCheck = isConnected && address && (communityData?.moderators || []).some(
-    mod => mod.toLowerCase() === address.toLowerCase()
+  // Derived community state
+  const isCommunityCreator = communityData?.creatorAddress?.toLowerCase() === address?.toLowerCase();
+  const isModerator = (communityData?.moderators || []).some(
+    mod => mod.toLowerCase() === address?.toLowerCase()
   );
+  const canEditCommunity = isCommunityCreator || isModerator;
+  const memberRole = isCommunityCreator ? 'admin' : (isModerator ? 'moderator' : 'member');
 
-  // Priority: creator > backend memberRole > moderator check > default member
-  const memberRole = isCreatorCheck
-    ? 'admin'
-    : communityData?.memberRole || (isModeratorCheck ? 'admin' : 'member');
-
-  const canEditCommunity = isConnected && address && (isCreatorCheck || memberRole === 'admin');
-  const isCommunityCreator = isCreatorCheck;
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 500);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     const fetchCommunityData = async () => {
@@ -147,6 +153,15 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
         // Fetch real posts for the community
         const communityPosts = await PostService.getPostsByCommunity(data.id);
         setPosts(communityPosts || []); // Ensure posts is always an array
+
+        // Fetch real governance proposals
+        try {
+          const communityProposals = await communityWeb3Service.getCommunityProposals(data.id);
+          setProposals(communityProposals);
+        } catch (govErr) {
+          console.warn('Could not fetch real proposals, using mocks/empty');
+        }
+
       } catch (err) {
         console.error('Error fetching community data:', err);
         // Provide a more user-friendly error message that accounts for network issues
@@ -635,7 +650,6 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
           </div>
 
           {/* Live Governance Proposals */}
-          {/* Live Governance Proposals */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-semibold text-gray-900 dark:text-white text-sm flex items-center space-x-1 uppercase tracking-wide">
@@ -649,46 +663,30 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
               )}
             </div>
             <div className="space-y-3">
-              {/* Mock Proposal 1 */}
-              <EnhancedProposalCard
-                proposal={{
-                  id: '42',
-                  title: 'Treasury Allocation',
-                  description: 'Allocate 50k LDAO for community grants',
-                  type: 'treasury',
-                  proposer: '0x123...',
-                  status: 'active',
-                  forVotes: '78000',
-                  againstVotes: '22000',
-                  abstainVotes: '0',
-                  quorum: '100000',
-                  participationRate: 15,
-                  startTime: new Date(),
-                  endTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days left
-                }}
-                userVote="For"
-                onClick={() => console.log('Clicked proposal 42')}
-              />
-
-              {/* Mock Proposal 2 */}
-              <EnhancedProposalCard
-                proposal={{
-                  id: '43',
-                  title: 'Protocol Upgrade v2.1',
-                  description: 'Implement new staking mechanics',
-                  type: 'upgrade',
-                  proposer: '0x456...',
-                  status: 'active',
-                  forVotes: '65000',
-                  againstVotes: '35000',
-                  abstainVotes: '5000',
-                  quorum: '100000',
-                  participationRate: 12,
-                  startTime: new Date(),
-                  endTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days left
-                }}
-                onClick={() => console.log('Clicked proposal 43')}
-              />
+              {proposals.length > 0 ? (
+                proposals.slice(0, 3).map(proposal => (
+                  <EnhancedProposalCard
+                    key={proposal.id}
+                    proposal={{
+                      id: proposal.id,
+                      title: proposal.title,
+                      description: proposal.description,
+                      status: proposal.status,
+                      votingDeadline: proposal.endTime,
+                      forVotes: parseInt(proposal.forVotes),
+                      againstVotes: parseInt(proposal.againstVotes),
+                      abstainVotes: 0,
+                      quorumRequired: parseInt(proposal.quorum),
+                      proposer: proposal.proposer
+                    }}
+                    onClick={() => router.push(`/governance/proposal/${proposal.id}`)}
+                  />
+                ))
+              ) : (
+                <div className="text-center py-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">No active proposals</p>
+                </div>
+              )}
             </div>
             <div className="mt-3 text-center">
               <button
@@ -699,6 +697,9 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
               </button>
             </div>
           </div>
+
+          {/* Community Activity Pulse */}
+          <CommunityActivityPulse communityId={communityData.id} />
 
           {/* Live Token Price */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
@@ -770,15 +771,21 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
             <div className="space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-400">Reputation</span>
-                <span className="font-medium text-gray-900 dark:text-white">1,247</span>
+                <span className="font-medium text-gray-900 dark:text-white">
+                  {isJoined ? (communityData.memberReputation || 1247) : 0}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-400">Posts Created</span>
-                <span className="font-medium text-gray-900 dark:text-white">23</span>
+                <span className="font-medium text-gray-900 dark:text-white">
+                  {isJoined ? (communityData.memberContributions || 23) : 0}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-400">Comments</span>
-                <span className="font-medium text-gray-900 dark:text-white">156</span>
+                <span className="font-medium text-gray-900 dark:text-white">
+                  {isJoined ? 156 : 0}
+                </span>
               </div>
             </div>
           </div>
@@ -786,6 +793,17 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
           </div>
         </div>
       </div>
+
+      {/* Back to Top Button */}
+      {showBackToTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-8 right-8 p-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all transform hover:scale-110 z-40"
+          aria-label="Back to top"
+        >
+          <ArrowUp className="w-6 h-6" />
+        </button>
+      )}
 
       {/* Community Settings Modal */}
       {showSettingsModal && communityData && (
