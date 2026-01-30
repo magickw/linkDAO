@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { TrendingUp, Hash } from 'lucide-react';
 import { FeedService } from '@/services/feedService';
 import { FeedSortType } from '@/types/feed';
+import { formatNumber } from '@/utils/formatters';
 
 interface TrendingTopic {
   id: string;
