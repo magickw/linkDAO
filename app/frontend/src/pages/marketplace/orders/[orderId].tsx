@@ -387,6 +387,96 @@ const OrderDetailPage: React.FC = () => {
                 onClick={async () => {
                   try {
                     if (!walletAddress) {
+                      addToast('Connect your wallet to download receipt.', 'info');
+                      return;
+                    }
+
+                    addToast('Generating PDF receipt...', 'info');
+
+                    // Fetch receipts for this order
+                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io'}/api/receipts/order/${order.id}`);
+                    const data = await response.json();
+
+                    if (!response.ok || !data.receipts || data.receipts.length === 0) {
+                      addToast('No receipt found for this order.', 'error');
+                      return;
+                    }
+
+                    // Get the first receipt
+                    const receipt = data.receipts[0];
+
+                    // Generate PDF by calling the backend
+                    const pdfResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io'}/api/receipts/${receipt.id}/pdf`);
+                    
+                    if (!pdfResponse.ok) {
+                      addToast('Failed to generate PDF receipt.', 'error');
+                      return;
+                    }
+
+                    // Download the PDF
+                    const blob = await pdfResponse.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `linkdao-receipt-${order.id}-${new Date().toISOString().split('T')[0]}.pdf`;
+                    link.click();
+                    window.URL.revokeObjectURL(url);
+
+                    addToast('Receipt downloaded successfully!', 'success');
+                  } catch (err) {
+                    console.error('Error downloading PDF receipt:', err);
+                    addToast('Unable to download receipt right now.', 'error');
+                  }
+                }}
+              >
+                Download receipt (PDF)
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={async () => {
+                  try {
+                    if (!walletAddress) {
+                      addToast('Connect your wallet to download purchase order.', 'info');
+                      return;
+                    }
+
+                    addToast('Generating purchase order...', 'info');
+
+                    // Generate or fetch purchase order
+                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io'}/api/orders/${order.id}/purchase-order`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' }
+                    });
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                      throw new Error(data.message || 'Failed to generate purchase order');
+                    }
+                
+                    if (data.pdfUrl) {
+                      window.open(data.pdfUrl, '_blank');
+                      addToast('Purchase order downloaded successfully!', 'success');
+                    } else if (data.purchaseOrder && data.purchaseOrder.pdfUrl) {
+                      window.open(data.purchaseOrder.pdfUrl, '_blank');
+                      addToast('Purchase order downloaded successfully!', 'success');
+                    } else {
+                      addToast('Purchase order generated but PDF not available yet.', 'info');
+                    }
+                  } catch (error) {
+                    console.error('Error generating purchase order:', error);
+                    addToast('Unable to generate purchase order right now.', 'error');
+                  }
+                }}
+              >
+                Download purchase order (PDF)
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={async () => {
+                  try {
+                    if (!walletAddress) {
                       addToast('Connect your wallet to export receipts.', 'info');
                       return;
                     }

@@ -826,6 +826,55 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
                                     </Button>
                                 )}
 
+                                {/* Invoice generation for completed orders */}
+                                {activeStatus === 'completed' && (
+                                    <Button 
+                                        size="sm" 
+                                        variant="secondary" 
+                                        onClick={async () => {
+                                            try {
+                                                // Generate tax invoice for completed order
+                                                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io'}/api/invoices/generate-tax`, {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({
+                                                        orderId: order.id,
+                                                        buyerId: order.buyerId,
+                                                        sellerId: order.sellerId,
+                                                        items: order.items.map((item: any) => ({
+                                                            description: item.title || item.description || item.productName,
+                                                            quantity: item.quantity || 1,
+                                                            unitPrice: parseFloat(item.price || item.unitPrice || 0),
+                                                            total: parseFloat(item.totalPrice || item.total || 0)
+                                                        })),
+                                                        subtotal: parseFloat(order.subtotal || order.totalAmount || 0),
+                                                        taxAmount: parseFloat(order.taxAmount || 0),
+                                                        totalAmount: parseFloat(order.totalAmount || 0),
+                                                        currency: order.currency || 'USD',
+                                                        issueDate: new Date().toISOString(),
+                                                        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now
+                                                    })
+                                                });
+                                                const data = await response.json();
+                                                
+                                                if (!response.ok) {
+                                                    throw new Error(data.message || 'Failed to generate invoice');
+                                                }
+                                                
+                                                if (data.pdfUrl) {
+                                                    window.open(data.pdfUrl, '_blank');
+                                                    alert(`Invoice ${data.invoiceNumber} generated successfully!`);
+                                                }
+                                            } catch (error) {
+                                                console.error('Error generating invoice:', error);
+                                                alert('Failed to generate invoice. Please try again.');
+                                            }
+                                        }}
+                                    >
+                                        Generate Invoice
+                                    </Button>
+                                )}
+
                                 {activeStatus === 'new' && !isServiceOrder(order) && (
                                     requiresShipping(order) ? (
                                         <Button size="sm" variant="primary" onClick={() => handleProcess(order.id)}>

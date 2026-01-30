@@ -1410,6 +1410,32 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         <Button variant="primary" onClick={() => router.push('/marketplace/orders')}>
           View Orders
         </Button>
+        {orderData?.orderId && (
+          <Button 
+            variant="outline" 
+            onClick={async () => {
+              try {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io'}/api/orders/${orderData.orderId}/purchase-order`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                
+                if (!response.ok) {
+                  throw new Error(data.message || 'Failed to generate purchase order');
+                }
+                
+                if (data.pdfUrl) {
+                  window.open(data.pdfUrl, '_blank');
+                }
+              } catch (error) {
+                console.error('Error generating purchase order:', error);
+              }
+            }}
+          >
+            Download PO
+          </Button>
+        )}
       </div>
     </div>
   );
