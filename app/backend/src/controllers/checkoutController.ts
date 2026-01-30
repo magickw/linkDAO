@@ -8,6 +8,7 @@ import { OrderService } from '../services/orderService';
 import { StripePaymentService } from '../services/stripePaymentService';
 import { taxCalculationService, TaxableItem, Address } from '../services/taxCalculationService';
 import { highValueTransactionService } from '../services/highValueTransactionService';
+import { redisService } from '../services/marketplace/redisService';
 import { db } from '../db';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -155,9 +156,14 @@ export class CheckoutController {
                 expiresAt
             };
 
-            // Store session (in-memory for now, should use Redis in production)
-            // For now, we'll just return it and let frontend manage it
-            safeLogger.info(`Checkout session created: ${sessionId} for user: ${buyerAddress || 'guest'}`);
+            // Store session in Redis for persistence and cross-instance access
+            try {
+                await redisService.setSession(sessionId, session, 1800); // 30 minutes TTL
+                safeLogger.info(`Checkout session created and stored in Redis: ${sessionId} for user: ${buyerAddress || 'guest'}`);
+            } catch (redisError) {
+                safeLogger.error(`Failed to store checkout session in Redis: ${sessionId}`, redisError);
+                // Fallback: session still returned to client, but cross-instance consistency might be lost
+            }
 
             res.status(201).json(apiResponse.success({
                 ...session,
@@ -177,14 +183,17 @@ export class CheckoutController {
         try {
             const { sessionId } = req.params;
 
-            // In production, retrieve from Redis/database
-            // For now, return a mock response indicating session would be retrieved
-            safeLogger.info(`Retrieving checkout session: ${sessionId}`);
+            // Retrieve from Redis
+            const session = await redisService.getSession(sessionId);
 
-            res.status(200).json(apiResponse.success(
-                { message: 'Session retrieval not yet implemented - sessions are managed client-side' },
-                'Session endpoint ready'
-            ));
+            if (!session) {
+                res.status(404).json(apiResponse.error('Checkout session not found or expired', 404));
+                return;
+            }
+
+            safeLogger.info(`Retrieving checkout session from Redis: ${sessionId}`);
+
+            res.status(200).json(apiResponse.success(session, 'Checkout session retrieved successfully'));
         } catch (error) {
             safeLogger.error('Error getting checkout session:', error);
             res.status(500).json(apiResponse.error('Failed to retrieve checkout session'));
@@ -210,11 +219,14 @@ export class CheckoutController {
                 return;
             }
 
-            // Validate payment method
-            if (!['crypto', 'fiat'].includes(paymentMethod)) {
-                res.status(400).json(apiResponse.error('Invalid payment method', 400));
+            // Validate session exists in Redis
+            const session = await redisService.getSession(sessionId);
+            if (!session) {
+                res.status(400).json(apiResponse.error('Invalid or expired checkout session. Please restart checkout.', 400));
                 return;
             }
+
+            // Validate payment method
 
             // Get cart items
             const cart = await cartService.getOrCreateCart(req.user);
@@ -304,6 +316,9 @@ export class CheckoutController {
 
             // Clear cart after successful order creation
             await cartService.clearCart(req.user);
+
+            // Clear session from Redis after successful order creation
+            await redisService.deleteSession(sessionId);
 
             safeLogger.info(`Order created successfully: ${order.id}`);
 

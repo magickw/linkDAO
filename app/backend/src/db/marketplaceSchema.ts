@@ -1,5 +1,4 @@
-import { pgTable, serial, varchar, text, timestamp, integer, uuid, primaryKey, index, boolean, numeric, foreignKey, jsonb, check } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
+import { pgTable, varchar, text, timestamp, integer, uuid, index, boolean, numeric, jsonb } from "drizzle-orm/pg-core";
 import { users } from "./schema";
 
 export const marketplaceUsers = pgTable("marketplace_users", {
@@ -16,90 +15,6 @@ export const marketplaceUsers = pgTable("marketplace_users", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
-
-// Products (for marketplace listings)
-/**
- * @deprecated Use `products` table in `schema.ts` instead.
- * This table is being consolidated into the main products table.
- */
-// export const marketplaceProducts = pgTable("marketplace_products", {
-//   id: uuid("id").defaultRandom().primaryKey(),
-//   sellerId: uuid("seller_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-//   title: varchar("title", { length: 500 }).notNull(),
-//   description: text("description"),
-//   // Enhanced category system
-//   mainCategory: varchar("main_category", { length: 50 }).notNull(), // 'physical' | 'digital' | 'nft' | 'service' | 'defi'
-//   subCategory: varchar("sub_category", { length: 100 }),
-//   tags: jsonb("tags"), // Array of tags
-//   priceCrypto: numeric("price_crypto", { precision: 20, scale: 8 }).notNull(),
-//   priceFiat: numeric("price_fiat", { precision: 20, scale: 2 }), // optional display price
-//   currency: varchar("currency", { length: 10 }).default("USDC"),
-//   metadataUri: text("metadata_uri"), // e.g. IPFS hash for digital goods
-//   isPhysical: boolean("is_physical").default(false),
-//   stock: integer("stock").default(1),
-//   // DeFi specific fields
-//   defiProtocol: varchar("defi_protocol", { length: 100 }), // Protocol name
-//   defiAssetType: varchar("defi_asset_type", { length: 50 }), // 'LP_POSITION' | 'YIELD_TOKEN' | 'VAULT_SHARE' | 'GOVERNANCE_POSITION'
-//   underlyingAssets: jsonb("underlying_assets"), // Array of { address, symbol, weight }
-//   currentApy: numeric("current_apy", { precision: 5, scale: 2 }), // Current yield percentage
-//   lockPeriod: integer("lock_period"), // Lock period in days
-//   maturityDate: timestamp("maturity_date"), // For time-locked positions
-//   riskLevel: varchar("risk_level", { length: 20 }).default("medium"), // 'low' | 'medium' | 'high'
-//   // Physical goods specific fields
-//   weight: numeric("weight", { precision: 10, scale: 3 }), // Weight in kg
-//   dimensions: jsonb("dimensions"), // { length, width, height } in cm
-//   condition: varchar("condition", { length: 20 }).default("new"), // 'new' | 'used' | 'refurbished'
-//   // Service specific fields
-//   serviceDuration: integer("service_duration"), // Duration in hours
-//   deliveryMethod: varchar("delivery_method", { length: 20 }), // 'online' | 'in-person' | 'hybrid'
-//   status: varchar("status", { length: 20 }).default("active"), // 'active' | 'inactive' | 'sold_out' | 'suspended' | 'draft'
-//   createdAt: timestamp("created_at").defaultNow(),
-//   updatedAt: timestamp("updated_at").defaultNow(),
-// }, (table) => {
-//   return {
-//     mainCategoryIdx: index("marketplace_products_main_category_idx").on(table.mainCategory),
-//     subCategoryIdx: index("marketplace_products_sub_category_idx").on(table.subCategory),
-//     defiProtocolIdx: index("marketplace_products_defi_protocol_idx").on(table.defiProtocol),
-//     defiAssetTypeIdx: index("marketplace_products_defi_asset_type_idx").on(table.defiAssetType),
-//     riskLevelIdx: index("marketplace_products_risk_level_idx").on(table.riskLevel),
-//   };
-// });
-
-// // Orders (escrow-based transactions)
-// export const marketplaceOrders = pgTable("marketplace_orders", {
-//   id: uuid("id").defaultRandom().primaryKey(),
-//   buyerId: uuid("buyer_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-//   sellerId: uuid("seller_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-//   productId: uuid("product_id").references(() => marketplaceProducts.id, { onDelete: "cascade" }).notNull(),
-//   escrowContractAddress: varchar("escrow_contract_address", { length: 66 }).notNull(),
-//   status: varchar("status", { length: 20 }).default("pending"), // 'pending' | 'shipped' | 'delivered' | 'disputed' | 'completed' | 'cancelled'
-//   amount: numeric("amount", { precision: 20, scale: 8 }).notNull(),
-//   currency: varchar("currency", { length: 10 }).default("USDC"),
-//   createdAt: timestamp("created_at").defaultNow(),
-//   updatedAt: timestamp("updated_at").defaultNow(),
-// });
-
-// Dispute resolution
-// export const marketplaceDisputes = pgTable("marketplace_disputes", {
-//   id: uuid("id").defaultRandom().primaryKey(),
-//   orderId: uuid("order_id").references(() => marketplaceOrders.id, { onDelete: "cascade" }).notNull(),
-//   raisedBy: uuid("raised_by").references(() => users.id, { onDelete: "cascade" }),
-//   status: varchar("status", { length: 20 }).default("open"), // 'open' | 'resolved_buyer' | 'resolved_seller' | 'cancelled'
-//   evidence: jsonb("evidence"), // IPFS links, screenshots, etc.
-//   createdAt: timestamp("created_at").defaultNow(),
-//   resolvedAt: timestamp("resolved_at"),
-// });
-
-// // Community judges staking on disputes
-// export const disputeJudges = pgTable("dispute_judges", {
-//   id: uuid("id").defaultRandom().primaryKey(),
-//   disputeId: uuid("dispute_id").references(() => marketplaceDisputes.id, { onDelete: "cascade" }).notNull(),
-//   judgeId: uuid("judge_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-//   decision: varchar("decision", { length: 10 }), // 'buyer' | 'seller'
-//   stakedAmount: numeric("staked_amount", { precision: 20, scale: 8 }).notNull(),
-//   rewarded: boolean("rewarded").default(false),
-//   createdAt: timestamp("created_at").defaultNow(),
-// });
 
 // Marketplace verification records
 export const marketplaceVerifications = pgTable("marketplace_verifications", {
@@ -171,53 +86,6 @@ export const sellerVerifications = pgTable("seller_verifications", {
     einIdx: index("seller_verifications_ein_idx").on(table.ein),
   };
 });
-
-// Reviews for marketplace transactions
-// export const marketplaceReviews = pgTable("marketplace_reviews", {
-//   id: uuid("id").defaultRandom().primaryKey(),
-//   reviewerId: uuid("reviewer_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-//   revieweeId: uuid("reviewee_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-//   orderId: uuid("order_id").references(() => marketplaceOrders.id, { onDelete: "cascade" }).notNull(),
-//   rating: integer("rating").notNull(), // 1-5 stars
-//   title: varchar("title", { length: 255 }),
-//   comment: text("comment"),
-//   isVerified: boolean("is_verified").default(false),
-//   helpfulCount: integer("helpful_count").default(0),
-//   reportCount: integer("report_count").default(0),
-//   status: varchar("status", { length: 20 }).default("active"), // 'active' | 'hidden' | 'removed'
-//   createdAt: timestamp("created_at").defaultNow(),
-//   updatedAt: timestamp("updated_at").defaultNow(),
-// });
-
-// Review helpfulness tracking
-// export const reviewHelpfulness = pgTable("review_helpfulness", {
-//   id: uuid("id").defaultRandom().primaryKey(),
-//   reviewId: uuid("review_id").references(() => marketplaceReviews.id, { onDelete: "cascade" }).notNull(),
-//   userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-//   isHelpful: boolean("is_helpful").notNull(),
-//   createdAt: timestamp("created_at").defaultNow(),
-// });
-
-// // Review reports
-// export const reviewReports = pgTable("review_reports", {
-//   id: uuid("id").defaultRandom().primaryKey(),
-//   reviewId: uuid("review_id").references(() => marketplaceReviews.id, { onDelete: "cascade" }).notNull(),
-//   reporterId: uuid("reporter_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-//   reason: varchar("reason", { length: 100 }).notNull(),
-//   description: text("description"),
-//   status: varchar("status", { length: 20 }).default("pending"), // 'pending' | 'resolved' | 'dismissed'
-//   createdAt: timestamp("created_at").defaultNow(),
-// });
-
-// // Marketplace analytics
-// export const marketplaceAnalytics = pgTable("marketplace_analytics", {
-//   id: uuid("id").defaultRandom().primaryKey(),
-//   userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
-//   productId: uuid("product_id").references(() => marketplaceProducts.id, { onDelete: "cascade" }),
-//   eventType: varchar("event_type", { length: 50 }).notNull(), // 'view' | 'click' | 'purchase' | 'favorite'
-//   metadata: jsonb("metadata"),
-//   createdAt: timestamp("created_at").defaultNow(),
-// });
 
 // Marketplace configuration
 export const marketplaceConfig = pgTable("marketplace_config", {
@@ -296,5 +164,3 @@ export const userChallengeProgress = pgTable("user_challenge_progress", {
   isCompletedIdx: index("user_challenge_progress_is_completed_idx").on(table.isCompleted),
   rewardClaimedIdx: index("user_challenge_progress_reward_claimed_idx").on(table.rewardClaimed),
 }));
-
-

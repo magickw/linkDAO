@@ -6,24 +6,25 @@ export interface EngagementAnalytics {
   totalReach: number;
   engagementRate: number;
   totalTipsReceived: number;
-  
+
   // Breakdown by type
   reactions: number;
   comments: number;
   reposts: number;
+  shares: number;
   tips: number;
-  
+
   // Change metrics (percentage)
   engagementChange: number;
   reachChange: number;
   engagementRateChange: number;
   tipsChange: number;
-  
+
   // Social proof metrics
   verifiedUserEngagement: number;
   communityLeaderEngagement: number;
   followerEngagement: number;
-  
+
   // Time period
   timeRange: string;
   startDate: Date;
@@ -36,6 +37,7 @@ export interface EngagementTrend {
   reactions: number;
   comments: number;
   reposts: number;
+  shares: number;
   tips: number;
   reach: number;
   engagementRate: number;
@@ -45,20 +47,21 @@ export interface PostEngagementMetrics {
   postId: string;
   content: string;
   createdAt: Date;
-  
+
   // Engagement metrics
   reactions: number;
   comments: number;
   reposts: number;
+  shares: number;
   tips: number;
   views: number;
   engagementScore: number;
-  
+
   // Social proof metrics
   verifiedUserInteractions: number;
   communityLeaderInteractions: number;
   followerInteractions: number;
-  
+
   // Performance indicators
   isTopPerforming: boolean;
   trendingStatus?: 'viral' | 'hot' | 'rising';
@@ -105,22 +108,22 @@ export interface EngagementInteraction {
   id?: string;
   postId: string;
   userId: string;
-  type: 'reaction' | 'comment' | 'share' | 'tip' | 'view';
-  
+  type: 'reaction' | 'comment' | 'repost' | 'share' | 'tip' | 'view';
+
   // User context
   userType: 'verified' | 'community_leader' | 'follower' | 'regular';
   userReputation?: number;
   userBadges?: string[];
-  
+
   // Interaction details
   value?: number; // For tips and weighted reactions
   tokenType?: string;
   message?: string;
-  
+
   // Social proof context
   socialProofWeight: number;
   influenceScore: number;
-  
+
   // Metadata
   timestamp: Date;
   source: 'web' | 'mobile' | 'api';
@@ -131,29 +134,30 @@ export interface EngagementInteraction {
 export interface EngagementAggregate {
   postId: string;
   timeWindow: string;
-  
+
   // Raw counts
   totalInteractions: number;
   uniqueUsers: number;
-  
+
   // Weighted metrics
   socialProofScore: number;
   influenceScore: number;
   engagementVelocity: number;
-  
+
   // User type breakdown
   verifiedUserInteractions: number;
   communityLeaderInteractions: number;
   followerInteractions: number;
   regularUserInteractions: number;
-  
+
   // Interaction type breakdown
   reactions: number;
   comments: number;
   reposts: number;
+  shares: number;
   tips: number;
   views: number;
-  
+
   // Timestamps
   windowStart: Date;
   windowEnd: Date;
@@ -194,12 +198,12 @@ export interface FollowerEngagement {
   username?: string;
   displayName?: string;
   avatar?: string;
-  
+
   // Engagement details
-  interactionType: 'reaction' | 'comment' | 'share' | 'tip';
+  interactionType: 'reaction' | 'comment' | 'repost' | 'share' | 'tip';
   interactionValue?: number;
   timestamp: Date;
-  
+
   // Relationship context
   followingSince: Date;
   mutualFollowers: number;
@@ -211,17 +215,17 @@ export interface VerifiedUserEngagement {
   username?: string;
   displayName?: string;
   avatar?: string;
-  
+
   // Verification details
   verificationType: 'platform' | 'community' | 'expert' | 'celebrity';
   verificationBadge: string;
   followerCount?: number;
-  
+
   // Engagement details
-  interactionType: 'reaction' | 'comment' | 'share' | 'tip';
+  interactionType: 'reaction' | 'comment' | 'repost' | 'share' | 'tip';
   interactionValue?: number;
   timestamp: Date;
-  
+
   // Impact metrics
   influenceScore: number;
   socialProofWeight: number;
@@ -232,22 +236,22 @@ export interface CommunityLeaderEngagement {
   username?: string;
   displayName?: string;
   avatar?: string;
-  
+
   // Leadership details
   communityId: string;
   communityName: string;
   leadershipRole: 'moderator' | 'admin' | 'founder' | 'top_contributor';
   leadershipBadge: string;
-  
+
   // Community metrics
   communityReputation: number;
   communityContributions: number;
-  
+
   // Engagement details
-  interactionType: 'reaction' | 'comment' | 'share' | 'tip';
+  interactionType: 'reaction' | 'comment' | 'repost' | 'share' | 'tip';
   interactionValue?: number;
   timestamp: Date;
-  
+
   // Impact metrics
   communityInfluence: number;
   socialProofWeight: number;

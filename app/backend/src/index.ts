@@ -1213,6 +1213,10 @@ app.use('/api/reactions', tokenReactionRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/search/enhanced', enhancedSearchRoutes);
 
+// User recommendation routes
+import userRecommendationRoutes from './routes/userRecommendationRoutes';
+app.use('/api/recommendations', userRecommendationRoutes);
+
 // Content preview routes
 app.use('/api/preview', contentPreviewRoutes);
 

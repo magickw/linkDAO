@@ -502,13 +502,13 @@ export class PostService {
       const authorHandle = author ? (author.handle || author.walletAddress?.slice(0, 8) || 'anonymous') : 'anonymous';
       const authorName = author ? author.displayName : undefined;
 
-      // Fetch enrichment data (shares, repost status)
-      let shares = 0;
+      // Fetch enrichment data (repostCount, repost status)
+      let repostCount = 0;
       let isRepostedByMe = false;
 
       try {
         const counts = await databaseService.getrepostsCounts([postId]);
-        shares = counts.get(postId) || 0;
+        repostCount = counts.get(postId) || 0;
 
         if (viewerId) {
           const userReposts = await databaseService.getUserRepostIds(viewerId);
@@ -569,7 +569,7 @@ export class PostService {
         onchainRef: '',
         mediaUrls: safeParse(dbPost.mediaUrls),
         location: dbPost.location || undefined,
-        shares,
+        repostCount,
         isRepostedByMe,
         isStatus,
         isRepost: dbPost.isRepost,

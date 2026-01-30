@@ -170,8 +170,8 @@ export class UserRecommendationService {
   ): Promise<RecommendationScore[]> {
     try {
       // Get recommendations from both algorithms
-      const collaborativeRecs = await this.collaborativeFiltering(context, limit * 2);
-      const contentRecs = await this.contentBasedFiltering(context, limit * 2);
+      const collaborativeRecs = await this.collaborativeFiltering(context, limit * 3);
+      const contentRecs = await this.contentBasedFiltering(context, limit * 3);
 
       // Combine and weight the recommendations
       const combinedRecs = new Map<string, RecommendationScore>();
@@ -213,13 +213,72 @@ export class UserRecommendationService {
         finalRecs.push(rec);
       }
 
+      // Apply diversity boosting to ensure variety in recommendations
+      const diversifiedRecs = this.applyDiversityBoosting(finalRecs);
+
       // Sort by final score
-      finalRecs.sort((a, b) => b.score - a.score);
-      return finalRecs.slice(0, limit);
+      diversifiedRecs.sort((a, b) => b.score - a.score);
+      return diversifiedRecs.slice(0, limit);
     } catch (error) {
       safeLogger.error('Error in hybrid recommendation:', error);
       return [];
     }
+  }
+
+  /**
+   * Apply diversity boosting to prevent similar users from dominating
+   */
+  private applyDiversityBoosting(recommendations: RecommendationScore[]): RecommendationScore[] {
+    if (recommendations.length <= 1) return recommendations;
+
+    const diversified: RecommendationScore[] = [];
+    const selectedIds = new Set<string>();
+
+    // Sort by score first
+    const sorted = [...recommendations].sort((a, b) => b.score - a.score);
+
+    for (const rec of sorted) {
+      if (selectedIds.has(rec.userId)) continue;
+
+      // Check if this user is too similar to already selected users
+      let isTooSimilar = false;
+      for (const selected of diversified) {
+        if (this.calculateUserSimilarity(rec, selected) > 0.8) {
+          isTooSimilar = true;
+          break;
+        }
+      }
+
+      if (!isTooSimilar) {
+        diversified.push(rec);
+        selectedIds.add(rec.userId);
+      }
+
+      // Stop if we have enough recommendations
+      if (diversified.length >= recommendations.length) break;
+    }
+
+    return diversified;
+  }
+
+  /**
+   * Calculate similarity between two recommendation scores
+   */
+  private calculateUserSimilarity(user1: RecommendationScore, user2: RecommendationScore): number {
+    // Calculate Jaccard similarity of reasons
+    const reasons1 = new Set(user1.reasons.map(r => r.toLowerCase()));
+    const reasons2 = new Set(user2.reasons.map(r => r.toLowerCase()));
+    
+    const intersection = new Set([...reasons1].filter(x => reasons2.has(x)));
+    const union = new Set([...reasons1, ...reasons2]);
+    
+    const reasonSimilarity = union.size > 0 ? intersection.size / union.size : 0;
+
+    // Calculate community overlap similarity
+    const communitySimilarity = Math.abs(user1.communityOverlap - user2.communityOverlap) < 0.2 ? 1 : 0;
+
+    // Combine similarities
+    return (reasonSimilarity * 0.7) + (communitySimilarity * 0.3);
   }
 
   /**
@@ -419,7 +478,68 @@ export class UserRecommendationService {
     const activityScore = await this.getUserActivityScore(candidateUserId);
     score += activityScore * 0.05;
 
+    // Freshness factor - prioritize recently active users
+    const freshnessScore = await this.getFreshnessScore(candidateUserId);
+    score += freshnessScore * 0.1;
+
     return score;
+  }
+
+  /**
+   * Calculate freshness score based on recent activity
+   */
+  private async getFreshnessScore(userId: string): Promise<number> {
+    const db = this.databaseService.getDatabase();
+
+    try {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+      // Get recent posts count (last 30 days)
+      const [recentPosts] = await db
+        .select({ count: count() })
+        .from(posts)
+        .where(
+          and(
+            eq(posts.authorId, userId),
+            sql`${posts.createdAt} >= ${thirtyDaysAgo}`
+          )
+        );
+
+      // Decay factor based on recency
+      const daysSinceActivity = await this.getDaysSinceLastActivity(userId);
+      const decay = Math.max(0, 1 - daysSinceActivity / 90); // Decay over 90 days
+
+      return (recentPosts.count || 0) * decay * 10;
+    } catch (error) {
+      safeLogger.error('Error calculating freshness score:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get days since user's last activity
+   */
+  private async getDaysSinceLastActivity(userId: string): Promise<number> {
+    const db = this.databaseService.getDatabase();
+
+    try {
+      const [latestPost] = await db
+        .select({ createdAt: posts.createdAt })
+        .from(posts)
+        .where(eq(posts.authorId, userId))
+        .orderBy(desc(posts.createdAt))
+        .limit(1);
+
+      if (!latestPost?.createdAt) {
+        return 90; // Assume inactive if no posts
+      }
+
+      const daysSince = (Date.now() - latestPost.createdAt.getTime()) / (1000 * 60 * 60 * 24);
+      return daysSince;
+    } catch (error) {
+      safeLogger.error('Error calculating days since last activity:', error);
+      return 90;
+    }
   }
 
   /**
