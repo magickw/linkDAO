@@ -34,6 +34,11 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({ classNam
   const [isOnline, setIsOnline] = useState(true);
   const [pendingNotifications, setPendingNotifications] = useState(0);
 
+  // Notification deduplication tracking
+  const notificationDeduperRef = useRef<Map<string, number>>(new Map()); // notificationId -> timestamp
+  const aggregationBufferRef = useRef<Map<string, AppNotification[]>>(new Map()); // aggregationKey -> notifications
+  const aggregationTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
   // WebSocket connection for real-time notifications
   const { isConnected, on, off } = useWebSocket({
     walletAddress: address || '',
@@ -170,6 +175,86 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({ classNam
   };
 
   const handleNewNotification = useCallback((notification: AppNotification) => {
+    // Deduplication: Check if we've seen this notification recently (within 5 seconds)
+    const now = Date.now();
+    const lastSeen = notificationDeduperRef.current.get(notification.id);
+    
+    if (lastSeen && now - lastSeen < 5000) {
+      console.log('[NotificationSystem] Duplicate notification ignored:', notification.id);
+      return;
+    }
+    
+    // Mark as seen
+    notificationDeduperRef.current.set(notification.id, now);
+    
+    // Clean up old deduplication entries (older than 1 minute)
+    notificationDeduperRef.current.forEach((timestamp, id) => {
+      if (now - timestamp > 60000) {
+        notificationDeduperRef.current.delete(id);
+      }
+    });
+
+    // Check for aggregation opportunity
+    const shouldAggregate = notification.category === 'post_reaction' || 
+                            notification.category === 'comment_mention';
+    
+    if (shouldAggregate) {
+      const aggregateKey = `${notification.category}_${notification.data?.postId || notification.fromAddress}`;
+      
+      // Clear previous aggregation timeout
+      const existingTimeout = aggregationTimeoutRef.current.get(aggregateKey);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+      }
+      
+      // Add to aggregation buffer
+      aggregationBufferRef.current.set(aggregateKey, [
+        ...(aggregationBufferRef.current.get(aggregateKey) || []),
+        notification
+      ]);
+      
+      // Set new timeout to process aggregated notifications
+      const timeout = setTimeout(() => {
+        const aggregatedNotifications = aggregationBufferRef.current.get(aggregateKey) || [];
+        if (aggregatedNotifications.length > 1) {
+          // Create aggregated notification
+          const aggregatedNotification: AppNotification = {
+            ...notification,
+            id: `agg_${aggregateKey}_${Date.now()}`,
+            title: `${aggregatedNotifications.length} new ${notification.category.replace('_', ' ')}`,
+            message: `You have ${aggregatedNotifications.length} new activities`,
+            data: {
+              ...notification.data,
+              aggregatedCount: aggregatedNotifications.length,
+              originalIds: aggregatedNotifications.map(n => n.id)
+            },
+            aggregated: true
+          };
+          
+          // Add aggregated notification
+          setNotifications(prev => [aggregatedNotification, ...prev]);
+          setUnreadCount(prev => prev + 1);
+          
+          if (preferences && shouldShowNotification(aggregatedNotification, preferences)) {
+            showToastNotification(aggregatedNotification);
+          }
+        } else {
+          // Single notification, add normally
+          addSingleNotification(aggregatedNotifications[0]);
+        }
+        
+        aggregationBufferRef.current.delete(aggregateKey);
+        aggregationTimeoutRef.current.delete(aggregateKey);
+      }, 3000); // Aggregate notifications within 3 seconds
+      
+      aggregationTimeoutRef.current.set(aggregateKey, timeout);
+    } else {
+      // Not aggregatable, add immediately
+      addSingleNotification(notification);
+    }
+  }, [preferences]);
+
+  const addSingleNotification = useCallback((notification: AppNotification) => {
     // Add to notifications list
     setNotifications(prev => [notification, ...prev]);
     setUnreadCount(prev => prev + 1);
@@ -206,26 +291,9 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({ classNam
       createdAt: new Date(data.timestamp || Date.now())
     };
 
-    // Add to notifications list
-    setNotifications(prev => [notification, ...prev]);
-    setUnreadCount(prev => prev + 1);
-
-    // Check if notification should be shown based on preferences
-    if (preferences && shouldShowNotification(notification, preferences)) {
-      // Show toast notification
-      showToastNotification(notification);
-
-      // Show desktop notification if enabled and permitted
-      if (preferences.enableDesktop && Notification.permission === 'granted') {
-        showDesktopNotification(notification);
-      }
-
-      // Play sound if enabled
-      if (preferences.enableSound && shouldPlaySound(notification, preferences)) {
-        playNotificationSound(notification.priority);
-      }
-    }
-  }, [preferences]);
+    // Use the same deduplication and aggregation logic
+    handleNewNotification(notification);
+  }, [handleNewNotification]);
 
   const handleNotificationRead = useCallback((notificationId: string) => {
     setNotifications(prev => 

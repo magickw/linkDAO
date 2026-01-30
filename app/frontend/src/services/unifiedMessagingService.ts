@@ -69,6 +69,9 @@ const CACHE_CONFIG = {
   MAX_CACHED_MESSAGES_PER_CONVERSATION: 100,
   CACHE_TTL_MS: 5 * 60 * 1000, // 5 minutes
   STALE_WHILE_REVALIDATE_MS: 30 * 1000, // 30 seconds
+  MAX_CONVERSATIONS_CACHE_SIZE: 100,
+  MAX_MESSAGES_CACHE_SIZE: 500,
+  LRU_EVICT_PERCENTAGE: 0.2 // Evict 20% when limit reached
 };
 
 // Sync status for a conversation
@@ -106,6 +109,11 @@ class UnifiedMessagingService {
   private typingIndicators: Map<string, Set<string>> = new Map();
   private onlineUsers: Set<string> = new Set();
   private pendingMessages: Map<string, PendingMessage> = new Map();
+
+  // LRU tracking for cache eviction
+  private conversationsLRU: Map<string, number> = new Map();
+  private messagesLRU: Map<string, number> = new Map();
+  private accessCounter: number = 0;
 
   // Event listeners
   private eventListeners: Map<MessagingEvent, Set<Function>> = new Map();
@@ -284,6 +292,12 @@ class UnifiedMessagingService {
     const cacheValid = !forceRefresh && this.isCacheValid();
 
     if (cacheValid && this.conversationsCache.size > 0) {
+      // Update LRU for all cached conversations
+      this.accessCounter++;
+      this.conversationsCache.forEach((_, id) => {
+        this.conversationsLRU.set(id, this.accessCounter);
+      });
+
       // Return cached data immediately, but revalidate in background
       const cached = Array.from(this.conversationsCache.values())
         .sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime())
@@ -299,25 +313,107 @@ class UnifiedMessagingService {
       // Fetch from backend
       const conversations = await this.fetchConversationsFromBackend(limit, offset);
 
-      // Update cache
+      // Update cache with LRU tracking
       conversations.forEach(conv => {
         this.conversationsCache.set(conv.id, conv);
+        this.accessCounter++;
+        this.conversationsLRU.set(conv.id, this.accessCounter);
       });
-      await this.persistConversationsToCache();
+
+      // Evict old conversations if cache is too large
+      this.evictOldConversations();
 
       return conversations;
     } catch (error) {
-      console.error('[UnifiedMessaging] Error fetching conversations:', error);
+      console.error('[UnifiedMessaging] Failed to fetch conversations:', error);
 
-      // Fall back to cache if backend is unavailable
+      // Fall back to cache on error
       if (this.conversationsCache.size > 0) {
-        console.warn('[UnifiedMessaging] Using cached conversations due to backend error');
+        console.log('[UnifiedMessaging] Using cached conversations due to error');
         return Array.from(this.conversationsCache.values())
           .sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime())
           .slice(offset, offset + limit);
       }
 
       throw error;
+    }
+  }
+
+  /**
+   * Evict old conversations from cache using LRU
+   */
+  private evictOldConversations(): void {
+    if (this.conversationsCache.size <= CACHE_CONFIG.MAX_CONVERSATIONS_CACHE_SIZE) {
+      return;
+    }
+
+    // Sort by LRU timestamp (oldest first)
+    const sortedConversations = Array.from(this.conversationsLRU.entries())
+      .sort((a, b) => a[1] - b[1]);
+
+    // Calculate how many to evict
+    const evictCount = Math.floor(
+      (this.conversationsCache.size - CACHE_CONFIG.MAX_CONVERSATIONS_CACHE_SIZE) * 
+      (1 + CACHE_CONFIG.LRU_EVICT_PERCENTAGE)
+    );
+
+    // Evict the oldest conversations
+    for (let i = 0; i < evictCount; i++) {
+      const [convId] = sortedConversations[i];
+      this.conversationsCache.delete(convId);
+      this.conversationsLRU.delete(convId);
+    }
+
+    console.log(`[UnifiedMessaging] Evicted ${evictCount} old conversations from cache`);
+  }
+
+  /**
+   * Evict old messages from cache using LRU
+   */
+  private evictOldMessages(conversationId?: string): void {
+    if (conversationId) {
+      // Evict messages for specific conversation
+      const messages = this.messagesCache.get(conversationId);
+      if (messages && messages.length > CACHE_CONFIG.MAX_CACHED_MESSAGES_PER_CONVERSATION) {
+        // Keep only the most recent messages
+        const recentMessages = messages.slice(-CACHE_CONFIG.MAX_CACHED_MESSAGES_PER_CONVERSATION);
+        this.messagesCache.set(conversationId, recentMessages);
+      }
+    } else {
+      // Evict from overall message cache
+      let totalMessages = 0;
+      this.messagesCache.forEach((msgs, convId) => {
+        totalMessages += msgs.length;
+      });
+
+      if (totalMessages <= CACHE_CONFIG.MAX_MESSAGES_CACHE_SIZE) {
+        return;
+      }
+
+      // Sort conversations by LRU
+      const sortedConversations = Array.from(this.messagesLRU.entries())
+        .sort((a, b) => a[1] - b[1]);
+
+      let evictedCount = 0;
+      const targetEviction = Math.floor(
+        (totalMessages - CACHE_CONFIG.MAX_MESSAGES_CACHE_SIZE) * 
+        (1 + CACHE_CONFIG.LRU_EVICT_PERCENTAGE)
+      );
+
+      for (const [convId, _] of sortedConversations) {
+        if (evictedCount >= targetEviction) break;
+
+        const messages = this.messagesCache.get(convId);
+        if (messages) {
+          // Reduce messages in this conversation
+          const keepCount = Math.max(10, Math.floor(messages.length * 0.5));
+          const removedCount = messages.length - keepCount;
+          this.messagesCache.set(convId, messages.slice(-keepCount));
+          evictedCount += removedCount;
+        }
+      }
+
+      console.log(`[UnifiedMessaging] Evicted ${evictedCount} messages from cache`);
     }
   }
 
