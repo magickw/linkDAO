@@ -13,6 +13,7 @@ import { twoFactorAuth } from '../db/schema/securitySchema';
 import { successResponse, errorResponse, validationErrorResponse } from '../utils/apiResponse';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { referralService } from '../services/referralService';
+import { securityMonitoringService } from '../services/securityMonitoringService';
 
 // Initialize database connection
 import { db } from '../db'; // Use the shared database connection instead of creating a new one
@@ -69,10 +70,32 @@ class AuthController {
 
           if (recoveredAddress.toLowerCase() !== walletAddress.toLowerCase()) {
             safeLogger.warn('Signature verification failed: address mismatch', { recovered: recoveredAddress, expected: walletAddress });
+            
+            // Log failed login attempt
+            await securityMonitoringService.logEvent({
+              type: 'login_failure',
+              walletAddress: walletAddress,
+              ipAddress: (req as any).ip || (req as any).socket?.remoteAddress,
+              userAgent: req.headers['user-agent'],
+              details: { reason: 'signature_mismatch' },
+              timestamp: new Date()
+            });
+            
             return errorResponse(res, 'INVALID_SIGNATURE', 'Signature verification failed', 401);
           }
         } catch (error) {
           safeLogger.error('Signature verification error:', error);
+          
+          // Log failed login attempt
+          await securityMonitoringService.logEvent({
+            type: 'login_failure',
+            walletAddress: walletAddress,
+            ipAddress: (req as any).ip || (req as any).socket?.remoteAddress,
+            userAgent: req.headers['user-agent'],
+            details: { reason: 'signature_error', error: error.message },
+            timestamp: new Date()
+          });
+          
           return errorResponse(res, 'SIGNATURE_ERROR', 'Invalid signature format', 400);
         }
       } else {
@@ -290,9 +313,27 @@ class AuthController {
             createdAt: new Date()
           });
           safeLogger.info('Session created in auth_sessions table', { walletAddress: userData.walletAddress });
+
+          // Log security event
+          await securityMonitoringService.logEvent({
+            type: 'session_created',
+            walletAddress: userData.walletAddress,
+            ipAddress: (req as any).ip || (req as any).socket?.remoteAddress,
+            userAgent: req.headers['user-agent'],
+            timestamp: new Date()
+          });
         } catch (sessionError) {
           safeLogger.error('Failed to create session record:', sessionError);
         }
+
+        // Log successful login security event
+        await securityMonitoringService.logEvent({
+          type: 'login_success',
+          walletAddress: userData.walletAddress,
+          ipAddress: (req as any).ip || (req as any).socket?.remoteAddress,
+          userAgent: req.headers['user-agent'],
+          timestamp: new Date()
+        });
 
         // Return success response
         successResponse(res, {
@@ -761,6 +802,15 @@ class AuthController {
           .where(eq(authSessions.sessionToken, sessionToken));
 
         safeLogger.info(`Session revoked for user: ${req.user.walletAddress}`);
+
+        // Log session revocation security event
+        await securityMonitoringService.logEvent({
+          type: 'session_revoked',
+          walletAddress: req.user.walletAddress,
+          ipAddress: (req as any).ip || (req as any).socket?.remoteAddress,
+          userAgent: req.headers['user-agent'],
+          timestamp: new Date()
+        });
       }
 
       successResponse(res, {
@@ -770,6 +820,27 @@ class AuthController {
     } catch (error) {
       safeLogger.error('Logout error:', error);
       errorResponse(res, 'LOGOUT_ERROR', 'Failed to logout', 500);
+    }
+  }
+
+  /**
+   * Get security summary for authenticated user
+   * GET /api/auth/security/summary
+   */
+  async getSecuritySummary(req: AuthenticatedRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return errorResponse(res, 'UNAUTHORIZED', 'Authentication required', 401);
+      }
+
+      const securitySummary = await securityMonitoringService.getSecuritySummary(
+        req.user.walletAddress
+      );
+
+      successResponse(res, securitySummary);
+    } catch (error) {
+      safeLogger.error('Get security summary error:', error);
+      errorResponse(res, 'SECURITY_SUMMARY_ERROR', 'Failed to get security summary', 500);
     }
   }
 }

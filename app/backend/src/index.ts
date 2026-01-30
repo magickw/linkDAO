@@ -1233,6 +1233,10 @@ app.use('/api/governance', governanceRoutes);
 // Engagement analytics routes
 app.use('/api/analytics', engagementAnalyticsRoutes);
 
+// Profile analytics routes
+import profileAnalyticsRoutes from './routes/profileAnalyticsRoutes';
+app.use('/api/profile-analytics', profileAnalyticsRoutes);
+
 // Poll routes
 app.use('/api/polls', pollRoutes);
 
@@ -1481,6 +1485,15 @@ httpServer.listen(PORT, () => {
       console.log('✅ Escrow scheduler service started (auto-refunds and seller releases)');
     } catch (err) {
       console.warn('⚠️ Escrow scheduler service failed to start:', err);
+    }
+
+    // Initialize job scheduler for periodic cleanup tasks
+    try {
+      const { jobScheduler } = await import('./jobs/scheduler');
+      jobScheduler.initialize();
+      console.log('✅ Job scheduler initialized (session cleanup)');
+    } catch (err) {
+      console.warn('⚠️ Job scheduler failed to initialize:', err);
     }
 
     initializeServices().then(async ({ cacheService, cacheWarmingService }) => {

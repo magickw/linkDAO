@@ -352,10 +352,31 @@ router.post('/admin/login', csrfProtection,  adminLoginValidation, adminAuthCont
 router.post('/admin/logout', csrfProtection,  authMiddleware, adminAuthController.adminLogout);
 
 /**
+
  * @route GET /api/auth/admin/session
+
  * @desc Get admin session info
+
  * @access Private (Admin)
+
  */
+
 router.get('/admin/session', authMiddleware, adminAuthController.getSessionInfo);
+
+
+
+/**
+
+ * @route GET /api/auth/security/summary
+
+ * @desc Get security summary for authenticated user
+
+ * @access Private
+
+ */
+
+router.get('/security/summary', authMiddleware, authController.getSecuritySummary);
+
+
 
 export default router;
