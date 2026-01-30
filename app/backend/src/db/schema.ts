@@ -1620,6 +1620,32 @@ export const images = pgTable("images", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Mentions - Track @mentions in posts, statuses, and comments
+export const mentions = pgTable("mentions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  postId: uuid("post_id").references(() => posts.id, { onDelete: "cascade" }),
+  statusId: uuid("status_id").references(() => statuses.id, { onDelete: "cascade" }),
+  commentId: uuid("comment_id").references(() => comments.id, { onDelete: "cascade" }),
+  mentionedUserId: uuid("mentioned_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  mentioningUserId: uuid("mentioning_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  contentSnippet: text("content_snippet"),
+  mentionText: varchar("mention_text", { length: 255 }).notNull(),
+  isNotified: boolean("is_notified").default(false),
+  notifiedAt: timestamp("notified_at"),
+  isRead: boolean("is_read").default(false),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Muted Users - Track which users have muted other users
+export const mutedUsers = pgTable("muted_users", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  muterId: uuid("muter_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  mutedId: uuid("muted_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Notifications
 export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
