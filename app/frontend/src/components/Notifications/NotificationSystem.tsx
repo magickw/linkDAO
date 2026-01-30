@@ -4,7 +4,7 @@
  * Implements requirements 6.1, 6.3, 6.4, 6.5 from the interconnected social platform spec
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { NotificationCenter } from './NotificationCenter';
 import { NotificationToast } from './NotificationToast';
 import { NotificationPreferences } from './NotificationPreferences';
@@ -12,6 +12,7 @@ import { useWebSocket } from '../../hooks/useWebSocket';
 import { useWalletAuth } from '../../hooks/useWalletAuth';
 import { useAccount } from 'wagmi';
 import { notificationService } from '../../services/notificationService';
+import { enhancedOfflineSyncService } from '../../services/enhancedOfflineSyncService';
 import { AppNotification, NotificationPreferences as NotificationPrefs } from '../../types/notifications';
 
 // Re-export types for backward compatibility
@@ -34,10 +35,27 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({ classNam
   const [isOnline, setIsOnline] = useState(true);
   const [pendingNotifications, setPendingNotifications] = useState(0);
 
-  // Notification deduplication tracking
+  // Enhanced notification deduplication with configurable throttling
   const notificationDeduperRef = useRef<Map<string, number>>(new Map()); // notificationId -> timestamp
   const aggregationBufferRef = useRef<Map<string, AppNotification[]>>(new Map()); // aggregationKey -> notifications
   const aggregationTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const eventFrequencyTrackerRef = useRef<Map<string, number>>(new Map()); // eventKey -> lastEventTimestamp
+  const typingThrottleRef = useRef<Map<string, NodeJS.Timeout>>(new Map()); // conversationId -> throttleTimeout
+  
+  // Throttling configuration constants
+  const THROTTLE_CONFIG = {
+    DEFAULT: 5000, // 5 seconds default deduplication window
+    TYPING: 2000, // 2 seconds for typing indicators
+    HIGH_FREQUENCY: 1000, // 1 second for high-frequency events
+    LOW_PRIORITY: 10000, // 10 seconds for low-priority notifications
+  };
+  
+  // Frequency limiting for high-frequency events
+  const FREQUENCY_LIMITS = {
+    TYPING_EVENTS: 3, // Max 3 typing events per second
+    MESSAGE_EVENTS: 10, // Max 10 message events per second
+    REACTION_EVENTS: 5, // Max 5 reaction events per second
+  };
 
   // WebSocket connection for real-time notifications
   const { isConnected, on, off } = useWebSocket({
@@ -53,10 +71,20 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({ classNam
     }
   }, [address]);
 
-  // Set up network status listener
+  // Set up network status listener with enhanced offline sync
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOnline = () => {
+      setIsOnline(true);
+      // Trigger immediate sync when coming online
+      enhancedOfflineSyncService.on('connection:online', () => {
+        console.log('[NotificationSystem] Online detected, triggering sync');
+      });
+    };
+    
+    const handleOffline = () => {
+      setIsOnline(false);
+      console.log('[NotificationSystem] Offline detected');
+    };
     
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -67,23 +95,28 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({ classNam
     // Set up periodic check for pending notifications
     const interval = setInterval(async () => {
       if (typeof localStorage !== 'undefined') {
-        const storedQueue = localStorage.getItem('notification_queue');
-        if (storedQueue) {
-          try {
-            const queue = JSON.parse(storedQueue);
-            const pendingCount = (queue.offline?.length || 0) + (queue.failed?.length || 0);
-            setPendingNotifications(pendingCount);
-          } catch (error) {
-            console.warn('Error parsing notification queue:', error);
-          }
-        }
+        const stats = enhancedOfflineSyncService.getQueueStats();
+        setPendingNotifications(stats.pending + stats.failed);
       }
     }, 5000);
+    
+    // Listen to offline sync events
+    enhancedOfflineSyncService.on('notification:queued', (notification) => {
+      console.log('[NotificationSystem] Notification queued for offline sync:', notification.id);
+    });
+    
+    enhancedOfflineSyncService.on('sync:completed', (data) => {
+      console.log('[NotificationSystem] Offline sync completed:', data);
+      // Refresh notification counts
+      loadNotifications();
+    });
     
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       clearInterval(interval);
+      enhancedOfflineSyncService.off('notification:queued', () => {});
+      enhancedOfflineSyncService.off('sync:completed', () => {});
     };
   }, []);
 
@@ -97,6 +130,10 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({ classNam
       // Listen for message notifications from messaging system
       on('message_notification', handleMessageNotification);
 
+      // Enhanced typing indicator handling with throttling
+      on('user_typing', handleUserTyping);
+      on('user_stopped_typing', handleUserStoppedTyping);
+
       // Listen for custom message_notification events from useChatHistory
       const handleCustomMessageNotification = (event: CustomEvent) => {
         handleMessageNotification(event.detail);
@@ -108,10 +145,45 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({ classNam
         off('notification:read', handleNotificationRead);
         off('notification:bulk_read', handleBulkNotificationRead);
         off('message_notification', handleMessageNotification);
+        off('user_typing', handleUserTyping);
+        off('user_stopped_typing', handleUserStoppedTyping);
         window.removeEventListener('message_notification', handleCustomMessageNotification as EventListener);
       };
     }
   }, [isConnected, address, on, off]);
+
+  // Enhanced typing indicator handlers with throttling
+  const handleUserTyping = useCallback((data: any) => {
+    // Apply frequency limiting for typing events
+    if (!checkEventFrequency('typing', FREQUENCY_LIMITS.TYPING_EVENTS)) {
+      return;
+    }
+
+    // Throttle typing events to prevent spam
+    throttleTypingEvent(data.conversationId, () => {
+      // Process typing event after throttle delay
+      console.log('[NotificationSystem] Processing typing event:', data);
+      // Forward to existing message notification handler or create new notification
+      handleMessageNotification({
+        ...data,
+        type: 'typing_indicator',
+        category: 'direct_message',
+        title: 'Someone is typing...',
+        message: `${data.userAddress} is typing a message`
+      });
+    });
+  }, []);
+
+  const handleUserStoppedTyping = useCallback((data: any) => {
+    // Clear typing throttle when user stops typing
+    const existingTimeout = typingThrottleRef.current.get(data.conversationId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+      typingThrottleRef.current.delete(data.conversationId);
+    }
+    
+    console.log('[NotificationSystem] User stopped typing:', data);
+  }, []);
 
   // Request notification permissions on mount
   useEffect(() => {
@@ -154,6 +226,7 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({ classNam
           community_invite: { enabled: true, push: true, sound: false },
           governance_proposal: { enabled: true, push: true, sound: false },
           system_alert: { enabled: true, push: true, sound: true },
+          marketplace: { enabled: true, push: true, sound: false },
         },
         quietHours: {
           enabled: false,
@@ -174,23 +247,90 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({ classNam
     }
   };
 
-  const handleNewNotification = useCallback((notification: AppNotification) => {
-    // Deduplication: Check if we've seen this notification recently (within 5 seconds)
+  // Enhanced deduplication with configurable throttling
+  const shouldProcessNotification = (notification: AppNotification): boolean => {
     const now = Date.now();
-    const lastSeen = notificationDeduperRef.current.get(notification.id);
+    const notificationKey = `${notification.category}_${notification.fromAddress || 'system'}_${notification.title}`;
     
-    if (lastSeen && now - lastSeen < 5000) {
-      console.log('[NotificationSystem] Duplicate notification ignored:', notification.id);
+    // Get appropriate throttle time based on notification characteristics
+    let throttleTime = THROTTLE_CONFIG.DEFAULT;
+    
+    if (notification.category === 'direct_message') {
+      throttleTime = THROTTLE_CONFIG.HIGH_FREQUENCY;
+    } else if (notification.priority === 'low') {
+      throttleTime = THROTTLE_CONFIG.LOW_PRIORITY;
+    }
+    
+    const lastSeen = notificationDeduperRef.current.get(notificationKey);
+    
+    // Allow if no previous occurrence or outside throttle window
+    if (!lastSeen || now - lastSeen > throttleTime) {
+      notificationDeduperRef.current.set(notificationKey, now);
+      return true;
+    }
+    
+    console.log('[NotificationSystem] Throttled duplicate notification:', notificationKey);
+    return false;
+  };
+
+  // Advanced frequency limiting for high-frequency events
+  const checkEventFrequency = (eventType: string, maxPerSecond: number): boolean => {
+    const now = Date.now();
+    const oneSecondAgo = now - 1000;
+    
+    // Clean up old entries
+    eventFrequencyTrackerRef.current.forEach((timestamp, key) => {
+      if (timestamp < oneSecondAgo) {
+        eventFrequencyTrackerRef.current.delete(key);
+      }
+    });
+    
+    // Count events of this type in the last second
+    let eventCount = 0;
+    eventFrequencyTrackerRef.current.forEach((timestamp, key) => {
+      if (key.startsWith(eventType) && timestamp > oneSecondAgo) {
+        eventCount++;
+      }
+    });
+    
+    // Allow if under limit
+    if (eventCount < maxPerSecond) {
+      eventFrequencyTrackerRef.current.set(`${eventType}_${now}`, now);
+      return true;
+    }
+    
+    console.log(`[NotificationSystem] Frequency limit exceeded for ${eventType}: ${eventCount}/${maxPerSecond}`);
+    return false;
+  };
+
+  // Enhanced typing indicator throttling
+  const throttleTypingEvent = (conversationId: string, callback: () => void): void => {
+    // Clear existing throttle timeout
+    const existingTimeout = typingThrottleRef.current.get(conversationId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+    
+    // Set new throttle timeout
+    const timeout = setTimeout(() => {
+      callback();
+      typingThrottleRef.current.delete(conversationId);
+    }, THROTTLE_CONFIG.TYPING);
+    
+    typingThrottleRef.current.set(conversationId, timeout);
+  };
+
+  const handleNewNotification = useCallback((notification: AppNotification) => {
+    // Enhanced deduplication check
+    if (!shouldProcessNotification(notification)) {
       return;
     }
     
-    // Mark as seen
-    notificationDeduperRef.current.set(notification.id, now);
-    
-    // Clean up old deduplication entries (older than 1 minute)
-    notificationDeduperRef.current.forEach((timestamp, id) => {
-      if (now - timestamp > 60000) {
-        notificationDeduperRef.current.delete(id);
+    // Clean up old deduplication entries (older than 2 minutes)
+    const now = Date.now();
+    notificationDeduperRef.current.forEach((timestamp, key) => {
+      if (now - timestamp > 120000) {
+        notificationDeduperRef.current.delete(key);
       }
     });
 
@@ -259,6 +399,11 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({ classNam
     setNotifications(prev => [notification, ...prev]);
     setUnreadCount(prev => prev + 1);
 
+    // Queue for offline sync if not online
+    if (!isOnline) {
+      enhancedOfflineSyncService.queueNotification(notification);
+    }
+
     // Check if notification should be shown based on preferences
     if (preferences && shouldShowNotification(notification, preferences)) {
       // Show toast notification
@@ -274,7 +419,7 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({ classNam
         playNotificationSound(notification.priority);
       }
     }
-  }, [preferences]);
+  }, [preferences, isOnline]);
 
   const handleMessageNotification = useCallback((data: any) => {
     // Convert message notification to AppNotification format

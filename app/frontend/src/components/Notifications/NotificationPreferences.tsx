@@ -74,6 +74,30 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
     marketplace: 'Order updates, sales, and shipping notifications'
   };
 
+  // Enhanced preference options
+  const advancedPreferenceOptions = {
+    aggregation: {
+      enabled: true,
+      delay: 3000, // milliseconds
+      minCount: 2
+    },
+    deduplication: {
+      enabled: true,
+      timeWindow: 5000, // milliseconds
+      smartMatching: true
+    },
+    frequencyControl: {
+      typingEvents: 3, // per second
+      messageEvents: 10, // per second
+      reactionEvents: 5 // per second
+    },
+    quietHours: {
+      urgentOnly: true,
+      customSchedule: false,
+      schedule: [] as { day: string; start: string; end: string }[]
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -282,6 +306,167 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Advanced Settings */}
+          <div className="mb-8">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+              Advanced Settings
+            </h3>
+
+            <div className="space-y-6">
+              {/* Notification Aggregation */}
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+                  Notification Aggregation
+                </h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                  Group similar notifications together to reduce clutter
+                </p>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-700 dark:text-gray-300">Enable aggregation</span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={advancedPreferenceOptions.aggregation.enabled}
+                        onChange={(e) => {
+                          const newOptions = {...advancedPreferenceOptions};
+                          newOptions.aggregation.enabled = e.target.checked;
+                          // In a real implementation, this would be saved to state
+                        }}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Aggregation delay (seconds)
+                    </label>
+                    <select 
+                      value={advancedPreferenceOptions.aggregation.delay / 1000}
+                      onChange={(e) => {
+                        const newOptions = {...advancedPreferenceOptions};
+                        newOptions.aggregation.delay = parseInt(e.target.value) * 1000;
+                        // In a real implementation, this would be saved to state
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
+                    >
+                      <option value="1">1 second</option>
+                      <option value="2">2 seconds</option>
+                      <option value="3">3 seconds</option>
+                      <option value="5">5 seconds</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Deduplication Settings */}
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+                  Deduplication
+                </h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                  Prevent duplicate notifications within a time window
+                </p>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-700 dark:text-gray-300">Enable deduplication</span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={advancedPreferenceOptions.deduplication.enabled}
+                        onChange={(e) => {
+                          const newOptions = {...advancedPreferenceOptions};
+                          newOptions.deduplication.enabled = e.target.checked;
+                          // In a real implementation, this would be saved to state
+                        }}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Time window (seconds)
+                    </label>
+                    <select 
+                      value={advancedPreferenceOptions.deduplication.timeWindow / 1000}
+                      onChange={(e) => {
+                        const newOptions = {...advancedPreferenceOptions};
+                        newOptions.deduplication.timeWindow = parseInt(e.target.value) * 1000;
+                        // In a real implementation, this would be saved to state
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
+                    >
+                      <option value="2">2 seconds</option>
+                      <option value="5">5 seconds</option>
+                      <option value="10">10 seconds</option>
+                      <option value="30">30 seconds</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Frequency Control */}
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+                  Frequency Control
+                </h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                  Limit high-frequency notification events
+                </p>
+                
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Typing events per second
+                    </label>
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      value={advancedPreferenceOptions.frequencyControl.typingEvents}
+                      onChange={(e) => {
+                        const newOptions = {...advancedPreferenceOptions};
+                        newOptions.frequencyControl.typingEvents = parseInt(e.target.value);
+                        // In a real implementation, this would be saved to state
+                      }}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                    />
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {advancedPreferenceOptions.frequencyControl.typingEvents} events/sec
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Message events per second
+                    </label>
+                    <input
+                      type="range"
+                      min="1"
+                      max="20"
+                      value={advancedPreferenceOptions.frequencyControl.messageEvents}
+                      onChange={(e) => {
+                        const newOptions = {...advancedPreferenceOptions};
+                        newOptions.frequencyControl.messageEvents = parseInt(e.target.value);
+                        // In a real implementation, this would be saved to state
+                      }}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                    />
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {advancedPreferenceOptions.frequencyControl.messageEvents} events/sec
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

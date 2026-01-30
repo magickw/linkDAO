@@ -18,6 +18,7 @@ export interface AppNotification {
   isRead: boolean;
   createdAt: Date;
   expiresAt?: Date;
+  aggregated?: boolean; // Added for notification aggregation
 }
 
 // Order-specific notification interface

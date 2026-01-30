@@ -49,6 +49,25 @@ class WebSocketService {
   private readonly CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
   private cleanupInterval: NodeJS.Timeout | null = null;
   private listenerCounts: Map<string, number> = new Map();
+  
+  // Enhanced WebSocket event throttling and frequency control
+  private eventThrottleMap: Map<string, { lastSent: number; timeoutId: NodeJS.Timeout | null }> = new Map();
+  private eventFrequencyCounters: Map<string, { count: number; resetTime: number }> = new Map();
+  
+  // Throttling configuration
+  private readonly THROTTLING_CONFIG = {
+    TYPING_START: 1000, // 1 second for typing start events
+    TYPING_STOP: 2000, // 2 seconds for typing stop events
+    HEARTBEAT: 30000, // 30 seconds for heartbeat
+    DEFAULT: 500 // 500ms default throttle
+  };
+  
+  // Frequency limiting configuration
+  private readonly FREQUENCY_LIMITS = {
+    TYPING_EVENTS: 5, // Max 5 typing events per second
+    MESSAGE_EVENTS: 10, // Max 10 message events per second
+    GENERAL_EVENTS: 20 // Max 20 general events per second
+  };
 
   constructor(config: WebSocketConfig = {}) {
     this.config = {
@@ -512,7 +531,115 @@ class WebSocketService {
     }
   }
 
+  /**
+   * Enhanced event throttling to prevent spam
+   */
+  private shouldThrottleEvent(eventType: string, data: any): boolean {
+    const now = Date.now();
+    const throttleKey = `${eventType}_${JSON.stringify(data)}`;
+    const throttleConfig = this.eventThrottleMap.get(throttleKey);
+    
+    // Get appropriate throttle time
+    let throttleTime = this.THROTTLING_CONFIG.DEFAULT;
+    if (eventType === 'typing:start') {
+      throttleTime = this.THROTTLING_CONFIG.TYPING_START;
+    } else if (eventType === 'typing:stop') {
+      throttleTime = this.THROTTLING_CONFIG.TYPING_STOP;
+    } else if (eventType === 'ping') {
+      throttleTime = this.THROTTLING_CONFIG.HEARTBEAT;
+    }
+    
+    // Check if we should throttle this event
+    if (throttleConfig && now - throttleConfig.lastSent < throttleTime) {
+      // Clear existing timeout if it exists
+      if (throttleConfig.timeoutId) {
+        clearTimeout(throttleConfig.timeoutId);
+      }
+      
+      // Set new timeout to allow the event after throttle period
+      const timeoutId = setTimeout(() => {
+        this.eventThrottleMap.delete(throttleKey);
+      }, throttleTime - (now - throttleConfig.lastSent));
+      
+      this.eventThrottleMap.set(throttleKey, {
+        lastSent: throttleConfig.lastSent,
+        timeoutId
+      });
+      
+      return true; // Should throttle
+    }
+    
+    // Update throttle tracking
+    if (throttleConfig?.timeoutId) {
+      clearTimeout(throttleConfig.timeoutId);
+    }
+    
+    this.eventThrottleMap.set(throttleKey, {
+      lastSent: now,
+      timeoutId: setTimeout(() => {
+        this.eventThrottleMap.delete(throttleKey);
+      }, throttleTime)
+    });
+    
+    return false; // Don't throttle
+  }
+
+  /**
+   * Frequency limiting to prevent overwhelming the server
+   */
+  private checkEventFrequency(eventType: string): boolean {
+    const now = Date.now();
+    const oneSecondAgo = now - 1000;
+    
+    // Get frequency limit for this event type
+    let maxEventsPerSecond = this.FREQUENCY_LIMITS.GENERAL_EVENTS;
+    if (eventType.includes('typing')) {
+      maxEventsPerSecond = this.FREQUENCY_LIMITS.TYPING_EVENTS;
+    } else if (eventType.includes('message')) {
+      maxEventsPerSecond = this.FREQUENCY_LIMITS.MESSAGE_EVENTS;
+    }
+    
+    // Clean up old counters
+    this.eventFrequencyCounters.forEach((counter, key) => {
+      if (counter.resetTime < oneSecondAgo) {
+        this.eventFrequencyCounters.delete(key);
+      }
+    });
+    
+    // Check current count for this event type
+    const counter = this.eventFrequencyCounters.get(eventType) || { count: 0, resetTime: now + 1000 };
+    
+    if (counter.count >= maxEventsPerSecond) {
+      console.warn(`WebSocket frequency limit exceeded for ${eventType}: ${counter.count}/${maxEventsPerSecond}`);
+      return false; // Block the event
+    }
+    
+    // Update counter
+    this.eventFrequencyCounters.set(eventType, {
+      count: counter.count + 1,
+      resetTime: counter.resetTime
+    });
+    
+    return true; // Allow the event
+  }
+
+  /**
+   * Enhanced send method with throttling and frequency control
+   */
   send(event: string, data: any) {
+    // Check frequency limits first
+    if (!this.checkEventFrequency(event)) {
+      console.debug(`WebSocket event blocked due to frequency limit: ${event}`);
+      return;
+    }
+    
+    // Check throttling
+    if (this.shouldThrottleEvent(event, data)) {
+      console.debug(`WebSocket event throttled: ${event}`);
+      return;
+    }
+    
+    // Proceed with sending if connected
     if (this.socket?.connected) {
       this.socket.emit(event, data);
     } else if (this.config.enableFallback) {
