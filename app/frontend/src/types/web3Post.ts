@@ -24,7 +24,7 @@ export interface PostWithWeb3Data {
   // Engagement metrics
   engagementScore: number;
   views: number;
-  commentCount: number;
+  commentsCount: number;
   
   // Web3 specific data
   stakingInfo: StakingInfo;
@@ -69,7 +69,7 @@ export interface EngagementMetrics {
   totalTipped: number;
   totalReactions: number;
   commentEngagement: number;
-  shareCount: number;
+  repostsCount: number;
   viewToEngagementRatio: number;
 }
 

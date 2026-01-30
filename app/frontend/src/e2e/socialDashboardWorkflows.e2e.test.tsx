@@ -116,7 +116,7 @@ jest.mock('@/hooks/usePosts', () => ({
         createdAt: new Date(),
         onchainRef: '0x1234...5678',
         reputationScore: 750,
-        commentCount: 5,
+        commentsCount: 5,
         stakedValue: 10
       }
     ],

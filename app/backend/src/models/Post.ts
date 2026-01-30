@@ -24,7 +24,7 @@ export interface Post {
   isRepost?: boolean;
   isRepostedByMe?: boolean;
   isStatus?: boolean;
-  shares?: number;
+  repostsCount?: number;
   mediaUrls?: string[];
   location?: {
     name: string;

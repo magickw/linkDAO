@@ -125,7 +125,7 @@ export class LeaderboardService {
             const postCounts = await this.getPostCounts(communityId, timeThreshold);
 
             // Get comment counts
-            const commentCounts = await this.getCommentCounts(communityId, timeThreshold);
+            const commentsCounts = await this.getcommentsCounts(communityId, timeThreshold);
 
             // Get reaction counts
             const reactionCounts = await this.getReactionCounts(communityId, timeThreshold);
@@ -139,7 +139,7 @@ export class LeaderboardService {
             });
 
             // Add comments (weight: 5 points)
-            commentCounts.forEach(({ address, count }) => {
+            commentsCounts.forEach(({ address, count }) => {
                 engagementMap.set(address, (engagementMap.get(address) || 0) + count * 5);
             });
 
@@ -210,7 +210,7 @@ export class LeaderboardService {
         return results.map(r => ({ address: r.address, count: r.count }));
     }
 
-    private async getCommentCounts(communityId?: string, since?: Date | null) {
+    private async getcommentsCounts(communityId?: string, since?: Date | null) {
         try {
             const conditions = [];
             if (since) conditions.push(gte(comments.createdAt, since));

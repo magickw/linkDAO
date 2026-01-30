@@ -328,7 +328,7 @@ export class DatabaseService {
     }
   }
 
-  async getRepostCounts(postIds: string[]): Promise<Map<string, number>> {
+  async getrepostsCounts(postIds: string[]): Promise<Map<string, number>> {
     if (!postIds.length) return new Map();
     try {
       const counts = new Map<string, number>();

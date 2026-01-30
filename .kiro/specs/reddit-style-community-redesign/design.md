@@ -232,7 +232,7 @@ interface Post {
   mediaType: 'text' | 'image' | 'video' | 'link';
   voteScore: number;
   userVote?: 'up' | 'down';
-  commentCount: number;
+  commentsCount: number;
   topComment?: Comment;
   awards: Award[];
   isPinned: boolean;

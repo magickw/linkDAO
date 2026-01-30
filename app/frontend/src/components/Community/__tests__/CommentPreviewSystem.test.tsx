@@ -74,7 +74,7 @@ const mockComments = [
 ];
 
 const mockPostStats = {
-  commentCount: 5,
+  commentsCount: 5,
   upvotes: 25,
   downvotes: 3
 };
@@ -113,7 +113,7 @@ describe('CommentPreviewSystem', () => {
 
     it('renders empty state when no comments', async () => {
       mockCommunityPostService.getPostComments.mockResolvedValue([]);
-      mockCommunityPostService.getPostStats.mockResolvedValue({ commentCount: 0, upvotes: 0, downvotes: 0 });
+      mockCommunityPostService.getPostStats.mockResolvedValue({ commentsCount: 0, upvotes: 0, downvotes: 0 });
 
       render(<CommentPreviewSystem postId="post-1" />);
 
@@ -319,7 +319,7 @@ describe('CommentPreviewSystem', () => {
     });
 
     it('handles singular vs plural correctly in "more comments" text', async () => {
-      mockCommunityPostService.getPostStats.mockResolvedValue({ commentCount: 2, upvotes: 0, downvotes: 0 });
+      mockCommunityPostService.getPostStats.mockResolvedValue({ commentsCount: 2, upvotes: 0, downvotes: 0 });
       
       render(<CommentPreviewSystem postId="post-1" maxPreviewComments={1} />);
 
@@ -330,18 +330,18 @@ describe('CommentPreviewSystem', () => {
   });
 
   describe('Comment Count Updates', () => {
-    it('calls onCommentCountChange when comments are loaded', async () => {
-      const mockOnCommentCountChange = jest.fn();
+    it('calls oncommentsCountChange when comments are loaded', async () => {
+      const mockOncommentsCountChange = jest.fn();
       
       render(
         <CommentPreviewSystem 
           postId="post-1" 
-          onCommentCountChange={mockOnCommentCountChange} 
+          oncommentsCountChange={mockOncommentsCountChange} 
         />
       );
 
       await waitFor(() => {
-        expect(mockOnCommentCountChange).toHaveBeenCalledWith(5);
+        expect(mockOncommentsCountChange).toHaveBeenCalledWith(5);
       });
     });
 
@@ -373,7 +373,7 @@ describe('CommentPreviewSystem', () => {
 
       // Mock updated response for refresh
       mockCommunityPostService.getPostComments.mockResolvedValue(updatedComments);
-      mockCommunityPostService.getPostStats.mockResolvedValue({ commentCount: 6, upvotes: 0, downvotes: 0 });
+      mockCommunityPostService.getPostStats.mockResolvedValue({ commentsCount: 6, upvotes: 0, downvotes: 0 });
 
       // Simulate adding a comment
       const addCommentButton = screen.getByTestId('add-comment-button');

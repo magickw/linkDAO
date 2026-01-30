@@ -64,13 +64,13 @@ jest.mock('../MediaPreview', () => {
 
 // Mock PostMetadata component
 jest.mock('../PostMetadata', () => {
-  return function MockPostMetadata({ author, community, flair, commentCount, isPinned, isLocked }: any) {
+  return function MockPostMetadata({ author, community, flair, commentsCount, isPinned, isLocked }: any) {
     return (
       <div>
         <span>u/{author.slice(0, 8)}...</span>
         {community && <span>r/{community.name}</span>}
         {flair && <span>{flair}</span>}
-        <span>{commentCount} comments</span>
+        <span>{commentsCount} comments</span>
         {isPinned && <span>📌 Pinned</span>}
         {isLocked && <span>🔒</span>}
       </div>

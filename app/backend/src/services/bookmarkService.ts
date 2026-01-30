@@ -314,7 +314,7 @@ class BookmarkService {
             communityId: sql<string>`NULL`,
             upvotes: statuses.upvotes,
             downvotes: statuses.downvotes,
-            commentCount: sql<number>`0`,
+            commentsCount: sql<number>`0`,
             views: statuses.views
           }
         })

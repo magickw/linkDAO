@@ -177,21 +177,21 @@ describe('PostMetadata', () => {
   });
 
   it('shows comment count when provided', () => {
-    render(<PostMetadata {...baseProps} commentCount={42} />);
+    render(<PostMetadata {...baseProps} commentsCount={42} />);
 
     expect(screen.getByTestId('message-icon')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
   });
 
-  it('shows share count when provided and greater than 0', () => {
-    render(<PostMetadata {...baseProps} shareCount={15} />);
+  it('shows repost count when provided and greater than 0', () => {
+    render(<PostMetadata {...baseProps} repostsCount={15} />);
 
     expect(screen.getByTestId('share-icon')).toBeInTheDocument();
     expect(screen.getByText('15')).toBeInTheDocument();
   });
 
-  it('hides share count when 0', () => {
-    render(<PostMetadata {...baseProps} shareCount={0} />);
+  it('hides repost count when 0', () => {
+    render(<PostMetadata {...baseProps} repostsCount={0} />);
 
     expect(screen.queryByTestId('share-icon')).not.toBeInTheDocument();
   });

@@ -13,7 +13,7 @@ interface CommentPreviewSystemProps {
   showExpandButton?: boolean;
   className?: string;
   onExpand?: () => void;
-  onCommentCountChange?: (count: number) => void;
+  oncommentsCountChange?: (count: number) => void;
 }
 
 interface CommentPreview {
@@ -34,13 +34,13 @@ export default function CommentPreviewSystem({
   showExpandButton = true,
   className = '',
   onExpand,
-  onCommentCountChange
+  oncommentsCountChange
 }: CommentPreviewSystemProps) {
   const { addToast } = useToast();
 
   // State
   const [commentPreviews, setCommentPreviews] = useState<CommentPreview[]>([]);
-  const [totalCommentCount, setTotalCommentCount] = useState(0);
+  const [totalcommentsCount, setTotalcommentsCount] = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,10 +74,10 @@ export default function CommentPreviewSystem({
       
       // Get total comment count
       const stats = await CommunityPostService.getPostStats(postId);
-      setTotalCommentCount(stats.commentCount || comments.length);
+      setTotalcommentsCount(stats.commentsCount || comments.length);
       
-      if (onCommentCountChange) {
-        onCommentCountChange(stats.commentCount || comments.length);
+      if (oncommentsCountChange) {
+        oncommentsCountChange(stats.commentsCount || comments.length);
       }
     } catch (err) {
       console.error('Error loading comment previews:', err);
@@ -223,7 +223,7 @@ export default function CommentPreviewSystem({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
           <span>
-            {totalCommentCount} {totalCommentCount === 1 ? 'comment' : 'comments'}
+            {totalcommentsCount} {totalcommentsCount === 1 ? 'comment' : 'comments'}
           </span>
         </div>
         
@@ -306,13 +306,13 @@ export default function CommentPreviewSystem({
           ))}
 
           {/* Show more comments indicator */}
-          {totalCommentCount > maxPreviewComments && (
+          {totalcommentsCount > maxPreviewComments && (
             <div className="text-center">
               <button
                 onClick={handleToggleExpand}
                 className="text-sm text-primary-600 dark:text-primary-400 hover:underline font-medium transition-colors duration-200"
               >
-                View {totalCommentCount - maxPreviewComments} more {totalCommentCount - maxPreviewComments === 1 ? 'comment' : 'comments'}
+                View {totalcommentsCount - maxPreviewComments} more {totalcommentsCount - maxPreviewComments === 1 ? 'comment' : 'comments'}
               </button>
             </div>
           )}

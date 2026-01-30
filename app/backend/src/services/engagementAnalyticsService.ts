@@ -1,7 +1,7 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
 import { eq, and, gte, lte, desc, sql, count, sum, avg, gt } from 'drizzle-orm';
-import { posts, users, reactions, tips, views, comments, shares, bookmarks, statuses, statusReactions, statusViews, communityMembers } from '../db/schema';
+import { posts, users, reactions, tips, views, comments, reposts, bookmarks, statuses, statusReactions, statusViews, communityMembers } from '../db/schema';
 import type {
   EngagementAnalytics,
   EngagementTrend,
@@ -34,7 +34,7 @@ export class EngagementAnalyticsService {
       const { startDate: prevStartDate, endDate: prevEndDate } = this.getPreviousPeriod(startDate, endDate);
 
       // Get current period metrics
-      const [reactionsCount, commentsCount, tipsData, viewsCount, sharesCount] = await Promise.all([
+      const [reactionsCount, commentsCount, tipsData, viewsCount, repostsCount] = await Promise.all([
         // Reactions count
         db.select({ count: count() })
           .from(reactions)
@@ -62,10 +62,10 @@ export class EngagementAnalyticsService {
           .where(gte(views.createdAt, startDate))
           .then(r => r[0]?.count || 0),
 
-        // Shares count
+        // Reposts count
         db.select({ count: count() })
-          .from(shares)
-          .where(gte(shares.createdAt, startDate))
+          .from(reposts)
+          .where(gte(reposts.createdAt, startDate))
           .then(r => r[0]?.count || 0)
       ]);
 
@@ -95,7 +95,7 @@ export class EngagementAnalyticsService {
           .then(r => r[0]?.count || 0)
       ]);
 
-      const totalEngagement = Number(reactionsCount) + Number(commentsCount) + Number(sharesCount) + tipsData.count;
+      const totalEngagement = Number(reactionsCount) + Number(commentsCount) + Number(repostsCount) + tipsData.count;
       const prevTotalEngagement = Number(prevReactionsCount) + Number(prevCommentsCount) + prevTipsData.count;
 
       const totalReach = Number(viewsCount);
@@ -126,7 +126,7 @@ export class EngagementAnalyticsService {
 
         reactions: Number(reactionsCount),
         comments: Number(commentsCount),
-        shares: Number(sharesCount),
+        reposts: Number(repostsCount),
         tips: tipsData.count,
 
         engagementChange: Math.round(engagementChange * 10) / 10,
@@ -188,7 +188,7 @@ export class EngagementAnalyticsService {
           nextDate.setDate(nextDate.getDate() + 1);
         }
 
-        const [postsCount, reactionsCount, commentsCount, sharesCount, tipsCount, viewsCount] = await Promise.all([
+        const [postsCount, reactionsCount, commentsCount, repostsCount, tipsCount, viewsCount] = await Promise.all([
           db.select({ count: count() })
             .from(posts)
             .where(and(gte(posts.createdAt, date), lte(posts.createdAt, nextDate)))
@@ -205,8 +205,8 @@ export class EngagementAnalyticsService {
             .then(r => r[0]?.count || 0),
 
           db.select({ count: count() })
-            .from(shares)
-            .where(and(gte(shares.createdAt, date), lte(shares.createdAt, nextDate)))
+            .from(reposts)
+            .where(and(gte(reposts.createdAt, date), lte(reposts.createdAt, nextDate)))
             .then(r => r[0]?.count || 0),
 
           db.select({ count: count() })
@@ -220,7 +220,7 @@ export class EngagementAnalyticsService {
             .then(r => r[0]?.count || 0)
         ]);
 
-        const totalEngagement = Number(reactionsCount) + Number(commentsCount) + Number(sharesCount) + Number(tipsCount);
+        const totalEngagement = Number(reactionsCount) + Number(commentsCount) + Number(repostsCount) + Number(tipsCount);
         const reach = Number(viewsCount);
         const engagementRate = reach > 0 ? (totalEngagement / reach) * 100 : 0;
 
@@ -229,7 +229,7 @@ export class EngagementAnalyticsService {
           posts: Number(postsCount),
           reactions: Number(reactionsCount),
           comments: Number(commentsCount),
-          shares: Number(sharesCount),
+          reposts: Number(repostsCount),
           tips: Number(tipsCount),
           reach,
           engagementRate: Math.round(engagementRate * 10) / 10
@@ -258,7 +258,7 @@ export class EngagementAnalyticsService {
       });
 
       // Interactions are automatically tracked when users perform actions
-      // (reactions, comments, shares, tips, views)
+      // (reactions, comments, reposts, tips, views)
     } catch (error) {
       safeLogger.error('Error tracking engagement interaction:', error);
       throw new Error('Failed to track engagement interaction');
@@ -316,7 +316,7 @@ export class EngagementAnalyticsService {
 
       for (const post of postsWithMetrics) {
         // Get detailed metrics for each post
-        const [reactionsCount, commentsCount, sharesCount, tipsCount, viewsCount] = await Promise.all([
+        const [reactionsCount, commentsCount, repostsCount, tipsCount, viewsCount] = await Promise.all([
           db.select({ count: count() })
             .from(reactions)
             .where(eq(reactions.postId, post.id))
@@ -328,8 +328,8 @@ export class EngagementAnalyticsService {
             .then(r => r[0]?.count || 0),
 
           db.select({ count: count() })
-            .from(shares)
-            .where(eq(shares.postId, post.id))
+            .from(reposts)
+            .where(eq(reposts.postId, post.id))
             .then(r => r[0]?.count || 0),
 
           db.select({ count: count() })
@@ -346,7 +346,7 @@ export class EngagementAnalyticsService {
         // Calculate engagement score
         const engagementScore = (Number(reactionsCount) * 2) +
           (Number(commentsCount) * 3) +
-          (Number(sharesCount) * 5) +
+          (Number(repostsCount) * 5) +
           (Number(tipsCount) * 10) +
           ((post.upvotes || 0) - (post.downvotes || 0));
 
@@ -356,7 +356,7 @@ export class EngagementAnalyticsService {
           createdAt: post.createdAt || new Date(),
           reactions: Number(reactionsCount),
           comments: Number(commentsCount),
-          shares: Number(sharesCount),
+          reposts: Number(repostsCount),
           tips: Number(tipsCount),
           views: Number(viewsCount),
           engagementScore,
@@ -416,7 +416,7 @@ export class EngagementAnalyticsService {
       const windowStart = new Date(Date.now() - windowMs);
       const windowEnd = new Date();
 
-      const [reactionsData, commentsData, sharesData, tipsData, viewsData] = await Promise.all([
+      const [reactionsData, commentsData, repostsData, tipsData, viewsData] = await Promise.all([
         db.select({
           count: count(),
           uniqueUsers: sql<number>`COUNT(DISTINCT ${reactions.userId})`
@@ -437,10 +437,10 @@ export class EngagementAnalyticsService {
           .then(r => r[0]?.count || 0),
 
         db.select({ count: count() })
-          .from(shares)
+          .from(reposts)
           .where(and(
-            eq(shares.postId, postId),
-            gte(shares.createdAt, windowStart)
+            eq(reposts.postId, postId),
+            gte(reposts.createdAt, windowStart)
           ))
           .then(r => r[0]?.count || 0),
 
@@ -464,7 +464,7 @@ export class EngagementAnalyticsService {
           .then(r => ({ count: r[0]?.count || 0, uniqueUsers: r[0]?.uniqueUsers || 0 }))
       ]);
 
-      const totalInteractions = Number(reactionsData.count) + Number(commentsData) + Number(sharesData) + Number(tipsData);
+      const totalInteractions = Number(reactionsData.count) + Number(commentsData) + Number(repostsData) + Number(tipsData);
       const uniqueUsers = Math.max(Number(reactionsData.uniqueUsers), Number(viewsData.uniqueUsers));
 
       // Calculate engagement velocity (interactions per hour)
@@ -485,7 +485,7 @@ export class EngagementAnalyticsService {
         regularUserInteractions: totalInteractions,
         reactions: Number(reactionsData.count),
         comments: Number(commentsData),
-        shares: Number(sharesData),
+        reposts: Number(repostsData),
         tips: Number(tipsData),
         views: Number(viewsData.count),
         windowStart,
@@ -516,7 +516,7 @@ export class EngagementAnalyticsService {
           createdAt: new Date(),
           reactions: aggregate.reactions,
           comments: aggregate.comments,
-          shares: aggregate.shares,
+          reposts: aggregate.reposts,
           tips: aggregate.tips,
           views: aggregate.views,
           engagementScore: aggregate.socialProofScore,
@@ -715,7 +715,7 @@ export class EngagementAnalyticsService {
       totalTipsReceived: 0,
       reactions: 0,
       comments: 0,
-      shares: 0,
+      reposts: 0,
       tips: 0,
       engagementChange: 0,
       reachChange: 0,
@@ -746,7 +746,7 @@ export class EngagementAnalyticsService {
         posts: 0,
         reactions: 0,
         comments: 0,
-        shares: 0,
+        reposts: 0,
         tips: 0,
         reach: 0,
         engagementRate: 0
@@ -796,7 +796,7 @@ export class EngagementAnalyticsService {
       regularUserInteractions: 0,
       reactions: 0,
       comments: 0,
-      shares: 0,
+      reposts: 0,
       tips: 0,
       views: 0,
       windowStart: new Date(Date.now() - 24 * 60 * 60 * 1000),
@@ -837,7 +837,7 @@ export class EngagementAnalyticsService {
       createdAt: new Date(),
       reactions: 0,
       comments: 0,
-      shares: 0,
+      reposts: 0,
       tips: 0,
       views: 0,
       engagementScore: 0,

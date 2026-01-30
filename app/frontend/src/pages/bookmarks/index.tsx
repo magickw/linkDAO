@@ -153,7 +153,7 @@ const BookmarkCard: React.FC<BookmarkCardProps> = ({ bookmark, onRemove, isRemov
           </span>
           <span className="flex items-center space-x-1">
             <MessageCircle className="w-4 h-4" />
-            <span>{post.commentCount || 0}</span>
+            <span>{post.commentsCount || 0}</span>
           </span>
           <span className="flex items-center space-x-1">
             <Eye className="w-4 h-4" />

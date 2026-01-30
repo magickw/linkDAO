@@ -79,7 +79,7 @@ export default function CommunityPostPage() {
                         },
                         createdAt: new Date(rawPost.createdAt),
                         updatedAt: new Date(rawPost.updatedAt || rawPost.createdAt),
-                        comments: typeof rawPost.commentCount === 'number' ? rawPost.commentCount : 0,
+                        comments: typeof rawPost.commentsCount === 'number' ? rawPost.commentsCount : 0,
                         previews: [],
                         hashtags: [],
                         mentions: []

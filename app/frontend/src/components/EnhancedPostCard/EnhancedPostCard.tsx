@@ -212,7 +212,7 @@ const EnhancedPostCard = React.memo(({
 
     // Sync repost state
     setIsRepostedByMe(post.isRepostedByMe);
-    setRepostCount(post.reposts || 0);
+    setrepostsCount(post.reposts || 0);
   }, [post]);
 
   const handleReport = useCallback(() => {
@@ -226,7 +226,7 @@ const EnhancedPostCard = React.memo(({
   }, [addToast]);
 
   const [isRepostedByMe, setIsRepostedByMe] = useState(post.isRepostedByMe);
-  const [repostCount, setRepostCount] = useState(post.reposts || 0);
+  const [repostsCount, setrepostsCount] = useState(post.reposts || 0);
 
   const handleRepost = useCallback(async (postId: string, message?: string, media?: string[], replyRestriction?: string) => {
     try {
@@ -240,7 +240,7 @@ const EnhancedPostCard = React.memo(({
       if (!message) {
         setIsRepostedByMe(true);
       }
-      setRepostCount(prev => prev + 1);
+      setrepostsCount(prev => prev + 1);
       addToast(message ? 'Quote post created successfully!' : 'Post reposted successfully!', 'success');
       // In a real app, you might want to refresh the feed
       return result;
@@ -259,7 +259,7 @@ const EnhancedPostCard = React.memo(({
       }
       await PostService.unrepostPost(postId, address);
       setIsRepostedByMe(false);
-      setRepostCount(prev => Math.max(0, prev - 1));
+      setrepostsCount(prev => Math.max(0, prev - 1));
       addToast('Repost removed', 'success');
     } catch (error) {
       console.error('Error removing repost:', error);
@@ -914,10 +914,10 @@ const EnhancedPostCard = React.memo(({
                     walletAddress: post.walletAddress, // Ensure walletAddress is passed
                     communityId: post.communityId,
                     communityName: post.communityName || 'general',
-                    commentCount: post.comments,
+                    commentsCount: post.comments,
                     shareId: (post as any).shareId,
                     isRepostedByMe: isRepostedByMe,
-                    reposts: repostCount,
+                    reposts: repostsCount,
                     authorProfile: post.authorProfile,
                     media: post.media,
                     views: post.views,

@@ -10,7 +10,7 @@ interface PostHoverPreviewProps {
     authorName: string;
     communityName: string;
     upvotes: number;
-    commentCount: number;
+    commentsCount: number;
     createdAt: string;
     tags: string[];
   };
@@ -80,7 +80,7 @@ export const PostHoverPreview: React.FC<PostHoverPreviewProps> = ({
               </div>
               <div className="flex items-center space-x-1">
                 <MessageCircle className="w-3 h-3" />
-                <span>{post.commentCount}</span>
+                <span>{post.commentsCount}</span>
               </div>
             </div>
             <div className="flex items-center space-x-1">

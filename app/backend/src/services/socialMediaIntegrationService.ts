@@ -17,7 +17,7 @@ export interface SocialMediaPost {
   permalink?: string;
   metrics?: {
     likes?: number;
-    shares?: number;
+    reposts?: number;
     comments?: number;
     views?: number;
   };
@@ -570,7 +570,7 @@ export class SocialMediaIntegrationService {
           permalink: `https://${platform}.com/post/${postId}`,
           metrics: {
             likes: Math.floor(Math.random() * 1000),
-            shares: Math.floor(Math.random() * 500),
+            reposts: Math.floor(Math.random() * 500),
             comments: Math.floor(Math.random() * 200),
             views: Math.floor(Math.random() * 10000)
           }

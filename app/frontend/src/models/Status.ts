@@ -134,7 +134,7 @@ export function convertBackendStatusToStatus(backendPost: any): Status {
     // Engagement data (will be populated by services)
     reactions: [] as Reaction[], // Reactions will be fetched separately to avoid overfetching
     tips: [] as Tip[],
-    comments: backendPost.commentCount || 0,
+    comments: backendPost.commentsCount || 0,
     reposts: backendPost.reposts || 0,
     views: backendPost.views || 0,
     engagementScore: backendPost.engagementScore || 0,

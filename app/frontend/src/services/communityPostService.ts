@@ -211,7 +211,7 @@ export class CommunityPostService {
     }
   }
 
-  static async getPostCommentCount(postId: string): Promise<number> {
+  static async getPostcommentsCount(postId: string): Promise<number> {
     try {
       // Since there's no dedicated comment count endpoint, fetch comments and count them
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/community-posts/${postId}/comments?limit=1000`, {

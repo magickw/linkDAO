@@ -71,7 +71,7 @@ export default function Web3SocialPostCard({
   const [showQuickActions, setShowQuickActions] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showPostModal, setShowPostModal] = useState(false);
-  const [commentCount, setCommentCount] = useState(post.commentCount || 0);
+  const [commentsCount, setcommentsCount] = useState(post.commentsCount || 0);
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [reactionsFetched, setReactionsFetched] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0); // Add refresh trigger state
@@ -176,19 +176,19 @@ export default function Web3SocialPostCard({
 
   // Update comment count when component mounts
   useEffect(() => {
-    const updateCommentCount = async () => {
+    const updatecommentsCount = async () => {
       try {
-        const count = await CommunityPostService.getPostCommentCount(post.id);
-        setCommentCount(count);
+        const count = await CommunityPostService.getPostcommentsCount(post.id);
+        setcommentsCount(count);
       } catch (error) {
         console.error('Error updating comment count:', error);
         // Fallback to the original count if API call fails
-        setCommentCount(post.commentCount || 0);
+        setcommentsCount(post.commentsCount || 0);
       }
     };
 
-    updateCommentCount();
-  }, [post.id, post.commentCount]);
+    updatecommentsCount();
+  }, [post.id, post.commentsCount]);
 
   // Handle reaction (staking tokens)
   const handleReaction = async (reactionType: string, amount: number = 1) => {
@@ -528,14 +528,14 @@ export default function Web3SocialPostCard({
     // Weighted scoring system
     const stakeWeight = totalStaked * 2; // Stakes have high weight
     const reactionWeight = totalReactions * 3; // Reactions show engagement
-    const commentWeight = commentCount * 5; // Comments are highly valuable
+    const commentWeight = commentsCount * 5; // Comments are highly valuable
     const viewWeight = viewCount * 0.1; // Views provide baseline
 
     const rawScore = stakeWeight + reactionWeight + commentWeight + viewWeight;
     const engagementScore = Math.min(Math.round(rawScore / 10), 100);
 
     // Calculate engagement rate (interactions per view)
-    const totalInteractions = totalReactions + commentCount + (totalStaked > 0 ? 1 : 0);
+    const totalInteractions = totalReactions + commentsCount + (totalStaked > 0 ? 1 : 0);
     const engagementRate = ((totalInteractions / viewCount) * 100).toFixed(1);
 
     return {
@@ -543,12 +543,12 @@ export default function Web3SocialPostCard({
       rate: parseFloat(engagementRate),
       totalStaked,
       totalReactions,
-      commentCount,
+      commentsCount,
       viewCount,
       isHighEngagement: engagementScore > 70,
       isTrending: engagementScore > 80
     };
-  }, [reactions, commentCount, post.views]);
+  }, [reactions, commentsCount, post.views]);
 
   // Real-time engagement update effect
   const [lastUpdateTime, setLastUpdateTime] = useState(Date.now());
@@ -791,7 +791,7 @@ export default function Web3SocialPostCard({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
-              <span className="font-medium">{commentCount}</span>
+              <span className="font-medium">{commentsCount}</span>
               <span className="text-xs text-blue-500">comments</span>
             </div>
             
@@ -886,7 +886,7 @@ export default function Web3SocialPostCard({
             content: post.content, // add actual content
             shareId: post.shareId, // add shareId
             author: post.author,
-            commentCount: commentCount,
+            commentsCount: commentsCount,
             stakedValue: reactions.reduce((sum, r) => sum + r.totalStaked, 0),
             authorProfile: post.authorProfile // add author info
           }}
@@ -941,7 +941,7 @@ export default function Web3SocialPostCard({
           postId={post.id}
           initialComments={post.comments || []}
           postType="feed"
-          onCommentCountChange={(count) => setCommentCount(count)}
+          oncommentsCountChange={(count) => setcommentsCount(count)}
         />
       </div>
     </GestureHandler>

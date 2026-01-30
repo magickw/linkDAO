@@ -544,7 +544,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
                   tags: post.tags || [],
                   reactions: post.reactions || [],
                   tips: post.tips || [],
-                  comments: typeof post.commentCount === 'number' ? post.commentCount : (post.comments?.length || 0),
+                  comments: typeof post.commentsCount === 'number' ? post.commentsCount : (post.comments?.length || 0),
                   reposts: post.reposts || 0,
                   views: post.views || 0,
                   engagementScore: post.engagementScore || 0,

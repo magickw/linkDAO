@@ -106,7 +106,7 @@ interface Post {
   communityId: string;
   upvotes: number;
   downvotes: number;
-  commentCount: number;
+  commentsCount: number;
   createdAt: string;
   tags: string[];
   stakedTokens: number;
@@ -437,7 +437,7 @@ const CommunitiesPage: React.FC = () => {
         communityId: post.communityId,
         upvotes: post.upvotes,
         downvotes: post.downvotes,
-        commentCount: post.commentCount,
+        commentsCount: post.commentsCount,
         viewCount: post.viewCount || post.views || 0,
         // Don't include comments array - let CommunityPostCardEnhanced load from API for consistency
         createdAt: post.createdAt instanceof Date ? post.createdAt.toISOString() : post.createdAt,

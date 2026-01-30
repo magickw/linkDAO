@@ -13,7 +13,7 @@
 - **Reposts**: When users repost content within the LinkDAO app (trackable)
 - **Shares**: When users copy/paste a URL and share it externally (untraceable)
 
-We track **reposts only** because external URL shares cannot be tracked. The shift from "shareCount" to "repostCount" reflects this distinction.
+We track **reposts only** because external URL shares cannot be tracked. The shift from "shareCount" to "repostsCount" reflects this distinction.
 
 ---
 
@@ -175,7 +175,7 @@ Repost counts are calculated on every feed fetch via SQL GROUP BY:
 
 ```typescript
 // feedService.ts line 613-638
-const statusRepostCounts = await db
+const statusrepostsCounts = await db
   .select({
     parentId: statuses.parentId,
     count: sql<number>`COUNT(*)`.mapWith(Number)
@@ -205,12 +205,12 @@ CREATE INDEX idx_statuses_repost_count ON statuses(repost_count DESC);
 ```typescript
 // In repostPost after creating repost:
 await db.update(statuses)
-  .set({ repostCount: sql`${statuses.repostCount} + 1` })
+  .set({ repostsCount: sql`${statuses.repostsCount} + 1` })
   .where(eq(statuses.id, targetPostId));
 
 // In unrepostPost after deleting repost:
 await db.update(statuses)
-  .set({ repostCount: sql`${statuses.repostCount} - 1` })
+  .set({ repostsCount: sql`${statuses.repostsCount} - 1` })
   .where(eq(statuses.id, targetPostId));
 ```
 
@@ -222,7 +222,7 @@ const cached = await redis.get(cacheKey);
 if (cached) return parseInt(cached);
 
 // If not cached, calculate and cache
-const count = await calculateRepostCount(postId);
+const count = await calculaterepostsCount(postId);
 await redis.setex(cacheKey, 300, count.toString()); // 5min TTL
 return count;
 ```

@@ -507,7 +507,7 @@ export class PostService {
       let isRepostedByMe = false;
 
       try {
-        const counts = await databaseService.getRepostCounts([postId]);
+        const counts = await databaseService.getrepostsCounts([postId]);
         shares = counts.get(postId) || 0;
 
         if (viewerId) {
@@ -1074,15 +1074,15 @@ export class PostService {
 
       // Fetch user reposts and repost counts in parallel
       let userReposts = new Set<string>();
-      let repostCounts = new Map<string, number>();
+      let repostsCounts = new Map<string, number>();
 
       try {
         const [reposts, counts] = await Promise.all([
           databaseService.getUserRepostIds(user.id),
-          databaseService.getRepostCounts(Array.from(allPostIds))
+          databaseService.getrepostsCounts(Array.from(allPostIds))
         ]);
         userReposts = reposts;
-        repostCounts = counts;
+        repostsCounts = counts;
       } catch (e) {
         safeLogger.warn('Failed to fetch enrichment data:', e);
       }
@@ -1110,7 +1110,7 @@ export class PostService {
           isRepostedByMe: userReposts.has(dbPost.id.toString()),
           isStatus: false,
           isRepost: dbPost.isRepost,
-          shares: repostCounts.get(dbPost.id.toString()) || 0,
+          repostsCount: repostsCounts.get(dbPost.id.toString()) || 0,
           mediaUrls: dbPost.mediaUrls ? JSON.parse(dbPost.mediaUrls) : [],
           location: dbPost.location || undefined,
           upvotes: dbPost.upvotes || 0,
@@ -1142,7 +1142,7 @@ export class PostService {
           isStatus: true, // Mark as status
           isRepost: dbPost.isRepost,
           title: null, // Statuses don't have titles
-          shares: repostCounts.get(dbPost.id.toString()) || 0,
+          repostsCount: repostsCounts.get(dbPost.id.toString()) || 0,
           mediaUrls: dbPost.mediaUrls ? JSON.parse(dbPost.mediaUrls) : [],
           location: dbPost.location || undefined,
           upvotes: dbPost.upvotes || 0,

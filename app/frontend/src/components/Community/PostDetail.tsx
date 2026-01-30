@@ -42,8 +42,8 @@ export default function PostDetail({
   const router = useRouter();
   const { addToast } = useToast();
   const [showShareModal, setShowShareModal] = useState(false);
-  const [commentCount, setCommentCount] = useState(
-    typeof post.commentCount === 'number' ? post.commentCount : (Array.isArray(post.comments) ? post.comments.length : 0)
+  const [commentsCount, setcommentsCount] = useState(
+    typeof post.commentsCount === 'number' ? post.commentsCount : (Array.isArray(post.comments) ? post.comments.length : 0)
   );
 
   const handleCopyShareLink = () => {
@@ -59,7 +59,7 @@ export default function PostDetail({
         <CommunityPostCardEnhanced
           post={{
             ...post,
-            commentCount: commentCount
+            commentsCount: commentsCount
           }}
           community={community}
           userMembership={userMembership}
@@ -76,7 +76,7 @@ export default function PostDetail({
               postType="community"
               communityId={community.id}
               userMembership={userMembership}
-              onCommentCountChange={setCommentCount}
+              oncommentsCountChange={setcommentsCount}
             />
           </div>
         </div>
@@ -132,7 +132,7 @@ export default function PostDetail({
           <CommunityPostCardEnhanced
             post={{
               ...post,
-              commentCount: commentCount
+              commentsCount: commentsCount
             }}
             community={community}
             userMembership={userMembership}
@@ -151,7 +151,7 @@ export default function PostDetail({
                 postType="community"
                 communityId={community.id}
                 userMembership={userMembership}
-                onCommentCountChange={setCommentCount}
+                oncommentsCountChange={setcommentsCount}
               />
             </div>
           </div>

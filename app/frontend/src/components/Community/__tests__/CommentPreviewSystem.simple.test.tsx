@@ -51,7 +51,7 @@ const mockComments = [
 ];
 
 const mockPostStats = {
-  commentCount: 5,
+  commentsCount: 5,
   upvotes: 25,
   downvotes: 3
 };
@@ -104,7 +104,7 @@ describe('CommentPreviewSystem - Core Functionality', () => {
 
   it('handles empty state correctly', async () => {
     mockCommunityPostService.getPostComments.mockResolvedValue([]);
-    mockCommunityPostService.getPostStats.mockResolvedValue({ commentCount: 0, upvotes: 0, downvotes: 0 });
+    mockCommunityPostService.getPostStats.mockResolvedValue({ commentsCount: 0, upvotes: 0, downvotes: 0 });
 
     render(<CommentPreviewSystem postId="post-1" />);
 
@@ -154,18 +154,18 @@ describe('CommentPreviewSystem - Core Functionality', () => {
     expect(screen.getByText('View 4 more comments')).toBeInTheDocument();
   });
 
-  it('calls onCommentCountChange callback', async () => {
-    const mockOnCommentCountChange = jest.fn();
+  it('calls oncommentsCountChange callback', async () => {
+    const mockOncommentsCountChange = jest.fn();
     
     render(
       <CommentPreviewSystem 
         postId="post-1" 
-        onCommentCountChange={mockOnCommentCountChange} 
+        oncommentsCountChange={mockOncommentsCountChange} 
       />
     );
 
     await waitFor(() => {
-      expect(mockOnCommentCountChange).toHaveBeenCalledWith(5);
+      expect(mockOncommentsCountChange).toHaveBeenCalledWith(5);
     });
   });
 

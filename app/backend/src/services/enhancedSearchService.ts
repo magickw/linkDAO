@@ -297,7 +297,7 @@ export class EnhancedSearchService {
                     views: Math.floor(Math.random() * 1000) + 100,
                     likes: Math.floor(Math.random() * 200) + 10,
                     comments: Math.floor(Math.random() * 50) + 5,
-                    shares: Math.floor(Math.random() * 20) + 1,
+                    reposts: Math.floor(Math.random() * 20) + 1,
                     tips: Math.floor(Math.random() * 10),
                     reactions: [
                         { type: '🔥', count: Math.floor(Math.random() * 50), emoji: '🔥' },

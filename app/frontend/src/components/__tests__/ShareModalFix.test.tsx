@@ -173,7 +173,7 @@ describe('Feed Card Container Fix', () => {
     },
     createdAt: new Date(),
     tags: ['test'],
-    commentCount: 5,
+    commentsCount: 5,
     views: 100,
     reactions: []
   };
@@ -219,7 +219,7 @@ describe('Integration Test', () => {
       },
       createdAt: new Date(),
       tags: ['test'],
-      commentCount: 5,
+      commentsCount: 5,
       views: 100,
       reactions: []
     };

@@ -698,7 +698,7 @@ export class FeedService {
       const tipTotalMap = new Map<number | string, number>();
       const commentMap = new Map<number | string, number>();
       const viewMap = new Map<number | string, number>();
-      const repostCountMap = new Map<number | string, number>();
+      const repostsCountMap = new Map<number | string, number>();
       const repostedSet = new Set<string>();
 
       // Populate maps with regular post data
@@ -717,10 +717,10 @@ export class FeedService {
 
       // Populate repost count map
       (regularSharesData as any[]).forEach(s => {
-        if (s.parentId) repostCountMap.set(s.parentId, Number(s.count));
+        if (s.parentId) repostsCountMap.set(s.parentId, Number(s.count));
       });
       (statusSharesData as any[]).forEach(s => {
-        if (s.parentId) repostCountMap.set(s.parentId, Number(s.count));
+        if (s.parentId) repostsCountMap.set(s.parentId, Number(s.count));
       });
 
       // Populate reposted set
@@ -738,7 +738,7 @@ export class FeedService {
         tips: tipCountMap.size,
         comments: commentMap.size,
         views: viewMap.size,
-        reposts: repostCountMap.size
+        reposts: repostsCountMap.size
       });
 
       // 4. Attach metrics to posts using map lookups (O(1) per post)
@@ -755,9 +755,9 @@ export class FeedService {
         const reactionCount = Number(reactionMap.get(post.id) || 0);
         const tipCount = Number(tipCountMap.get(post.id) || 0);
         const totalTipAmount = Number(tipTotalMap.get(post.id) || 0);
-        const commentCount = Number(commentMap.get(post.id) || 0);
+        const commentsCount = Number(commentMap.get(post.id) || 0);
         const viewCount = Number(viewMap.get(post.id) || 0);
-        const repostCount = Number(repostCountMap.get(post.id) || 0);
+        const repostsCount = Number(repostsCountMap.get(post.id) || 0);
 
         const isRepostedByMe = repostedSet.has(post.id);
         const rawOriginalPost = post.isRepost && post.parentId ? originalPostsMap.get(post.parentId) : null;
@@ -766,18 +766,18 @@ export class FeedService {
         if (rawOriginalPost) {
           // CANONICAL ENGAGEMENT: Reuse engagement stats from maps (already fetched in bulk)
           // This ensures one post = one engagement state, shared across all contexts
-          const originalCommentCount = Number(commentMap.get(rawOriginalPost.id) || 0);
+          const originalcommentsCount = Number(commentMap.get(rawOriginalPost.id) || 0);
           const originalReactionCount = Number(reactionMap.get(rawOriginalPost.id) || 0);
           const originalViewCount = Number(viewMap.get(rawOriginalPost.id) || 0);
-          const originalRepostCount = Number(repostCountMap.get(rawOriginalPost.id) || 0);
+          const originalrepostsCount = Number(repostsCountMap.get(rawOriginalPost.id) || 0);
 
           console.log('🔍 [BACKEND FEED] Original post engagement lookup:', {
             originalPostId: rawOriginalPost.id,
             isStatus: rawOriginalPost.isStatus,
-            commentCount: originalCommentCount,
+            commentsCount: originalcommentsCount,
             reactionCount: originalReactionCount,
             viewCount: originalViewCount,
-            repostCount: originalRepostCount
+            repostsCount: originalrepostsCount
           });
 
           // Transform raw DB result into expected frontend structure
@@ -806,8 +806,8 @@ export class FeedService {
             hashtags: [],
             mentions: [],
             // Use canonical engagement counts from maps (O(1) lookup)
-            comments: originalCommentCount,
-            reposts: originalRepostCount, // Repost count
+            comments: originalcommentsCount,
+            reposts: originalrepostsCount, // Repost count
             views: originalViewCount,
             reactionCount: originalReactionCount,
             // Use actual upvotes/downvotes from database
@@ -828,7 +828,7 @@ export class FeedService {
         const score = this.calculateEngagementScore(
           reactionCount,
           tipCount,
-          commentCount
+          commentsCount
         );
 
         return {
@@ -837,9 +837,9 @@ export class FeedService {
           reactionCount,
           tipCount,
           totalTipAmount,
-          commentCount,
+          commentsCount,
           viewCount,
-          reposts: repostCount, // Repost count
+          reposts: repostsCount, // Repost count
           isRepostedByMe,
           originalPost,
           engagementScore: score,
@@ -1148,7 +1148,7 @@ export class FeedService {
         reactionCount: 0,
         tipCount: 0,
         totalTipAmount: 0,
-        commentCount: 0
+        commentsCount: 0
       };
 
       // Broadcast new post via WebSocket for real-time updates
@@ -1622,7 +1622,7 @@ export class FeedService {
       }
 
       // Get engagement metrics
-      const [reactionData, tipData, commentData, viewData, bookmarkData, shareData] = await Promise.all([
+      const [reactionData, tipData, commentData, viewData, bookmarkData, repostData] = await Promise.all([
         db.select({
           count: sql<number>`COUNT(*)`,
           totalAmount: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)`
@@ -1661,18 +1661,21 @@ export class FeedService {
         db.select({
           count: sql<number>`COUNT(*)`
         })
-          .from(shares)
-          .where(eq(shares.postId, postId))
+          .from(posts)
+          .where(and(
+            eq(posts.parentId, postId),
+            eq(posts.isRepost, true)
+          ))
       ]);
 
       return {
         postId: post[0].id,
         reactionCount: reactionData[0]?.count || 0,
-        commentCount: commentData[0]?.count || 0,
+        commentsCount: commentData[0]?.count || 0,
         tipCount: tipData[0]?.count || 0,
         viewCount: viewData[0]?.count || 0,
         bookmarkCount: bookmarkData[0]?.count || 0,
-        shareCount: shareData[0]?.count || 0,
+        repostsCount: repostData[0]?.count || 0,
         totalTipAmount: tipData[0]?.totalAmount || 0,
         totalReactionAmount: reactionData[0]?.totalAmount || 0,
         stakedValue: post[0].stakedValue,
@@ -2593,14 +2596,14 @@ export class FeedService {
     return (reactions * 1) + (tips * 2) + (comments * 3);
   }
 
-  private calculateEngagementRate(reactions: number, tips: number, shares: number): number {
+  private calculateEngagementRate(reactions: number, tips: number, repostsCount: number): number {
     // Simple engagement rate calculation
-    return reactions + tips + shares;
+    return reactions + tips + repostsCount;
   }
 
-  private calculateViralityScore(shares: number, comments: number, timeSinceCreation: number): number {
+  private calculateViralityScore(repostsCount: number, comments: number, timeSinceCreation: number): number {
     // Simple virality score calculation
-    return (shares * 0.5) + (comments * 0.3) + (timeSinceCreation * 0.2);
+    return (repostsCount * 0.5) + (comments * 0.3) + (timeSinceCreation * 0.2);
   }
 
   private calculateQualityScore(tipAmount: number, reactionCount: number, viewCount: number): number {

@@ -30,7 +30,7 @@ export default function StatusSharePage() {
     const [canonicalUrl, setCanonicalUrl] = useState<string>('');
     const [ownerInfo, setOwnerInfo] = useState<{ handle: string; name: string } | null>(null);
     const [copied, setCopied] = useState(false);
-    const [commentCount, setCommentCount] = useState(0);
+    const [commentsCount, setcommentsCount] = useState(0);
 
     useEffect(() => {
         if (!shareId || typeof shareId !== 'string') return;
@@ -213,7 +213,7 @@ export default function StatusSharePage() {
     };
 
     const handleCommentAdded = () => {
-        setCommentCount(prev => prev + 1);
+        setcommentsCount(prev => prev + 1);
     };
 
     // Generate meta tags for social sharing

@@ -7,7 +7,6 @@
 import React, { useState } from 'react';
 import { ShareModal } from './ShareModal';
 import { ShareableContent } from '../../services/contentSharingService';
-import { contentSharingService } from '../../services/contentSharingService';
 
 interface ShareButtonProps {
   content: ShareableContent;
@@ -27,28 +26,8 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
   onShareComplete
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [shareCount, setShareCount] = useState<number | null>(null);
-
-  // Load share count on mount
-  React.useEffect(() => {
-    loadShareCount();
-  }, [content.id, content.type]);
-
-  const loadShareCount = async () => {
-    try {
-      const analytics = await contentSharingService.getSharingAnalytics(content.id, content.type);
-      setShareCount(analytics.totalShares);
-    } catch (error) {
-      console.error('Error loading share count:', error);
-    }
-  };
 
   const handleShareComplete = (shareType: string, target: string) => {
-    // Update share count
-    if (shareCount !== null) {
-      setShareCount(shareCount + 1);
-    }
-    
     onShareComplete?.(shareType, target);
   };
 
@@ -102,11 +81,6 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
         {(showLabel || variant === 'button' || variant === 'text') && (
           <span className={`${size === 'small' ? 'text-xs' : 'text-sm'} font-medium`}>
             Share
-            {shareCount !== null && shareCount > 0 && (
-              <span className="ml-1 text-gray-500 dark:text-gray-400">
-                ({shareCount})
-              </span>
-            )}
           </span>
         )}
       </button>

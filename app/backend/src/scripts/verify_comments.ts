@@ -91,10 +91,10 @@ async function verifyComments() {
 
         const feedRegularPost = feed.posts.find((p: any) => p.id === regularPostId);
 
-        if (feedRegularPost && feedRegularPost.commentCount === 2) {
+        if (feedRegularPost && feedRegularPost.commentsCount === 2) {
             console.log('✅ Regular post comment count correct in feed');
         } else {
-            console.error('❌ Regular post comment count incorrect in feed:', feedRegularPost?.commentCount);
+            console.error('❌ Regular post comment count incorrect in feed:', feedRegularPost?.commentsCount);
         }
 
     } catch (error) {

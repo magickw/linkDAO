@@ -19,7 +19,7 @@ interface PostInteractionBarProps {
     author: string;
     communityId?: string;
     communityName?: string;
-    commentCount?: number;
+    commentsCount?: number;
     shareId?: string;
     isRepostedByMe?: boolean;
     authorProfile?: {
@@ -79,11 +79,11 @@ export default function PostInteractionBar({
       views: post.views,
       upvotes: post.upvotes,
       downvotes: post.downvotes,
-      commentCount: post.commentCount,
+      commentsCount: post.commentsCount,
       reposts: post.reposts,
       postType
     });
-  }, [post.id, post.views, post.upvotes, post.downvotes, post.commentCount, post.reposts, postType]);
+  }, [post.id, post.views, post.upvotes, post.downvotes, post.commentsCount, post.reposts, postType]);
 
   // Sync with prop changes
   useEffect(() => {
@@ -258,8 +258,8 @@ export default function PostInteractionBar({
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            <span className="hidden sm:inline">{post.commentCount || 0} Comments</span>
-            <span className="sm:hidden">{post.commentCount || 0}</span>
+            <span className="hidden sm:inline">{post.commentsCount || 0} Comments</span>
+            <span className="sm:hidden">{post.commentsCount || 0}</span>
           </button>
 
           {/* Repost Button & Dropdown */}

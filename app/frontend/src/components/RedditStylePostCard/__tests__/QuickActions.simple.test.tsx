@@ -56,13 +56,13 @@ jest.mock('../MediaPreview', () => {
 });
 
 jest.mock('../PostMetadata', () => {
-  return function MockPostMetadata({ author, community, flair, commentCount }: any) {
+  return function MockPostMetadata({ author, community, flair, commentsCount }: any) {
     return (
       <div>
         <span>u/{author.slice(0, 8)}...</span>
         <span>r/{community?.name}</span>
         <span>{flair?.name}</span>
-        <span>{commentCount} comments</span>
+        <span>{commentsCount} comments</span>
       </div>
     );
   };

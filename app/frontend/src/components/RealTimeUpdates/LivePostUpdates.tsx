@@ -14,7 +14,7 @@ interface LivePostUpdatesProps {
 
 interface PostActivityState {
   postId: string;
-  commentCount: number;
+  commentsCount: number;
   reactionCount: number;
   stakeAmount: number;
   tipAmount: number;
@@ -50,7 +50,7 @@ export const LivePostUpdates: React.FC<LivePostUpdatesProps> = ({
           const stats = activity.reduce((acc, update) => {
             switch (update.updateType) {
               case 'new_comment':
-                acc.commentCount += update.data.count || 1;
+                acc.commentsCount += update.data.count || 1;
                 break;
               case 'reaction_added':
                 acc.reactionCount += update.data.count || 1;
@@ -63,7 +63,7 @@ export const LivePostUpdates: React.FC<LivePostUpdatesProps> = ({
                 break;
             }
             return acc;
-          }, { commentCount: 0, reactionCount: 0, stakeAmount: 0, tipAmount: 0 });
+          }, { commentsCount: 0, reactionCount: 0, stakeAmount: 0, tipAmount: 0 });
 
           setPostStates(prev => {
             const newStates = new Map(prev);
@@ -209,7 +209,7 @@ export const LivePostUpdates: React.FC<LivePostUpdatesProps> = ({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className={`text-center ${getAnimationClasses(state.isAnimating)}`}>
                   <div className="text-lg font-semibold text-blue-600">
-                    {state.commentCount}
+                    {state.commentsCount}
                   </div>
                   <div className="text-xs text-gray-500">Comments</div>
                 </div>

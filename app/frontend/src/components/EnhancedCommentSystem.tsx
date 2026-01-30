@@ -17,7 +17,7 @@ interface EnhancedCommentSystemProps {
   userMembership?: CommunityMembership | null;
   isLocked?: boolean;
   onCommentAdded?: (comment: Comment) => void;
-  onCommentCountChange?: (count: number) => void; // Add callback for comment count changes
+  oncommentsCountChange?: (count: number) => void; // Add callback for comment count changes
   className?: string;
 }
 
@@ -31,7 +31,7 @@ export default function EnhancedCommentSystem({
   userMembership,
   isLocked = false,
   onCommentAdded,
-  onCommentCountChange,
+  oncommentsCountChange,
   className = ''
 }: EnhancedCommentSystemProps) {
   const { address, isConnected, hasWallet, requestConnection } = useWeb3();
@@ -109,21 +109,21 @@ export default function EnhancedCommentSystem({
       setComments(commentsData);
 
       // Update comment count
-      let commentCount;
+      let commentsCount;
       if (postType === 'feed' || postType === 'enhanced') {
         // For feed posts, get comment count from response or use length
         // Try to get total from pagination if available
         const pagination = (response as any).pagination || (response as any).data?.pagination;
-        commentCount = pagination?.total || commentsData.length;
+        commentsCount = pagination?.total || commentsData.length;
       } else {
         // For community posts, use the service method
-        commentCount = await CommunityPostService.getPostCommentCount(postId);
+        commentsCount = await CommunityPostService.getPostcommentsCount(postId);
       }
 
-      console.log('[EnhancedCommentSystem] Final comment count:', commentCount);
+      console.log('[EnhancedCommentSystem] Final comment count:', commentsCount);
 
-      if (onCommentCountChange) {
-        onCommentCountChange(commentCount);
+      if (oncommentsCountChange) {
+        oncommentsCountChange(commentsCount);
       }
     } catch (err) {
       console.error('[EnhancedCommentSystem] Error loading comments:', err);
@@ -131,7 +131,7 @@ export default function EnhancedCommentSystem({
     } finally {
       setCommentsLoading(false);
     }
-  }, [postId, sortBy, postType, onCommentCountChange, addToast]);
+  }, [postId, sortBy, postType, oncommentsCountChange, addToast]);
 
   // Load community information when communityId is provided
   useEffect(() => {
@@ -285,18 +285,18 @@ export default function EnhancedCommentSystem({
       setShowCommentForm(false);
 
       // Update comment count after adding a new comment
-      let commentCount;
+      let commentsCount;
       if (postType === 'feed' || postType === 'enhanced') {
         // For feed posts, get updated comments to count
         const updatedComments = await FeedService.getPostComments(postId, 1, 100, sortBy);
-        commentCount = Array.isArray(updatedComments) ? updatedComments.length : (updatedComments.comments?.length || 0);
+        commentsCount = Array.isArray(updatedComments) ? updatedComments.length : (updatedComments.comments?.length || 0);
       } else {
         // For community posts, use the service method
-        commentCount = await CommunityPostService.getPostCommentCount(postId);
+        commentsCount = await CommunityPostService.getPostcommentsCount(postId);
       }
 
-      if (onCommentCountChange) {
-        onCommentCountChange(commentCount);
+      if (oncommentsCountChange) {
+        oncommentsCountChange(commentsCount);
       }
 
       if (onCommentAdded) {

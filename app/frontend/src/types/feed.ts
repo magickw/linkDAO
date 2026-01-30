@@ -100,7 +100,7 @@ export interface EnhancedPost {
   reactionCount?: number;
   tipCount?: number;
   totalTipAmount?: number;
-  commentCount?: number;
+  commentsCount?: number;
 
   // Flag to distinguish statuses from regular posts
   isStatus?: boolean;

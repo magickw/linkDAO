@@ -96,7 +96,7 @@ export default function PostModal({
     },
     createdAt: post.createdAt instanceof Date ? post.createdAt : new Date(post.createdAt),
     updatedAt: post.updatedAt instanceof Date ? post.updatedAt : new Date(post.updatedAt || post.createdAt),
-    comments: typeof post.commentCount === 'number' ? post.commentCount : (Array.isArray(post.comments) ? post.comments.length : 0),
+    comments: typeof post.commentsCount === 'number' ? post.commentsCount : (Array.isArray(post.comments) ? post.comments.length : 0),
     previews: post.previews || [],
     hashtags: post.hashtags || [],
     mentions: post.mentions || []

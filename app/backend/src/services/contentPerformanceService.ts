@@ -34,13 +34,13 @@ export interface ContentPerformanceMetrics {
   // Engagement metrics
   viewCount: number;
   reactionCount: number;
-  shareCount: number;
+  repostsCount: number;
   bookmarkCount: number;
-  commentCount: number;
-  
+  commentsCount: number;
+
   // Engagement rates
   viewToReactionRate: number; // percentage
-  viewToShareRate: number; // percentage
+  viewToRepostRate: number; // percentage
   viewToBookmarkRate: number; // percentage
   
   // Virality metrics
@@ -142,10 +142,10 @@ export class ContentPerformanceService {
       }
 
       // Get engagement metrics
-      const [viewCountResult, reactionCountResult, shareCountResult, bookmarkCountResult, commentCountResult] = await Promise.all([
+      const [viewCountResult, reactionCountResult, repostsCountResult, bookmarkCountResult, commentsCountResult] = await Promise.all([
         db.select({ count: count() }).from(views).where(eq(views.postId, postId)),
         db.select({ count: count() }).from(reactions).where(eq(reactions.postId, postId)),
-        db.select({ count: count() }).from(shares).where(eq(shares.postId, postId)),
+        db.select({ count: count() }).from(posts).where(and(eq(posts.parentId, postId), eq(posts.isRepost, true))),
         db.select({ count: count() }).from(bookmarks).where(eq(bookmarks.postId, postId)),
         // For comment count, we would need to check replies to this post
         Promise.resolve([{ count: 0 }]) // Placeholder
@@ -153,46 +153,46 @@ export class ContentPerformanceService {
 
       const viewCount = viewCountResult[0].count;
       const reactionCount = reactionCountResult[0].count;
-      const shareCount = shareCountResult[0].count;
+      const repostsCount = repostsCountResult[0].count;
       const bookmarkCount = bookmarkCountResult[0].count;
-      const commentCount = commentCountResult[0].count;
+      const commentsCount = commentsCountResult[0].count;
 
       // Calculate engagement rates
       const viewToReactionRate = viewCount > 0 ? (reactionCount / viewCount) * 100 : 0;
-      const viewToShareRate = viewCount > 0 ? (shareCount / viewCount) * 100 : 0;
+      const viewToRepostRate = viewCount > 0 ? (repostsCount / viewCount) * 100 : 0;
       const viewToBookmarkRate = viewCount > 0 ? (bookmarkCount / viewCount) * 100 : 0;
 
       // Calculate engagement score (weighted composite)
       const engagementScore = Math.round(
-        (viewCount * 0.1) + 
-        (reactionCount * 2) + 
-        (shareCount * 3) + 
-        (bookmarkCount * 2) + 
-        (commentCount * 2.5)
+        (viewCount * 0.1) +
+        (reactionCount * 2) +
+        (repostsCount * 3) +
+        (bookmarkCount * 2) +
+        (commentsCount * 2.5)
       );
 
       // Estimate virality score
       const viralityScore = Math.round(
-        (shareCount * 5) + 
-        (viewToShareRate * 2) + 
+        (repostsCount * 5) +
+        (viewToRepostRate * 2) +
         (engagementScore * 0.1)
       );
 
       // Estimate reach
-      const reachEstimate = viewCount + (shareCount * 10); // Simplified model
+      const reachEstimate = viewCount + (repostsCount * 10); // Simplified model
 
       // Trending score (simplified)
       const trendingScore = Math.round(
-        (reactionCount * 1.5) + 
-        (shareCount * 2) + 
+        (reactionCount * 1.5) +
+        (repostsCount * 2) +
         (bookmarkCount * 1.2) +
         (viewToReactionRate * 0.5)
       );
 
       // Quality score (simplified)
       const qualityScore = Math.round(
-        (viewToReactionRate * 0.3) + 
-        (viewToShareRate * 0.4) + 
+        (viewToReactionRate * 0.3) +
+        (viewToRepostRate * 0.4) +
         (viewToBookmarkRate * 0.3)
       );
 
@@ -226,11 +226,11 @@ export class ContentPerformanceService {
         createdAt: post.createdAt,
         viewCount,
         reactionCount,
-        shareCount,
+        repostsCount,
         bookmarkCount,
-        commentCount,
+        commentsCount,
         viewToReactionRate,
-        viewToShareRate,
+        viewToRepostRate,
         viewToBookmarkRate,
         viralityScore,
         reachEstimate,
@@ -521,7 +521,7 @@ export class ContentPerformanceService {
       // Calculate aggregates
       const totalViews = postMetrics.reduce((sum, metrics) => sum + metrics.viewCount, 0);
       const totalReactions = postMetrics.reduce((sum, metrics) => sum + metrics.reactionCount, 0);
-      const totalShares = postMetrics.reduce((sum, metrics) => sum + metrics.shareCount, 0);
+      const totalReposts = postMetrics.reduce((sum, metrics) => sum + metrics.repostsCount, 0);
       const avgEngagementScore = postMetrics.reduce((sum, metrics) => sum + metrics.engagementScore, 0) / postMetrics.length;
       const qualityScore = postMetrics.reduce((sum, metrics) => sum + metrics.qualityScore, 0) / postMetrics.length;
       const trendingPosts = postMetrics.filter(metrics => metrics.trendingScore > 50).length;

@@ -425,7 +425,7 @@ import { CommentPreviewSystem } from '@/components/Community/CommentPreviewSyste
 <CommentPreviewSystem
   postId="post-123"
   topComment={topCommentData}
-  commentCount={15}
+  commentsCount={15}
   onExpand={handleExpand}
 />
 ```
@@ -433,7 +433,7 @@ import { CommentPreviewSystem } from '@/components/Community/CommentPreviewSyste
 **Props:**
 - `postId: string` - Post identifier
 - `topComment?: Comment` - Top comment data
-- `commentCount: number` - Total comment count
+- `commentsCount: number` - Total comment count
 - `onExpand: (postId: string) => void` - Expand handler
 
 **Features:**
@@ -687,7 +687,7 @@ All components use consistent CSS class naming:
 
 // Descriptive text for complex interactions
 <span className="sr-only">
-  Post has {commentCount} comments. Click to expand.
+  Post has {commentsCount} comments. Click to expand.
 </span>
 ```
 

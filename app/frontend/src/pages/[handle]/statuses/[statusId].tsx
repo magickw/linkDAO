@@ -27,7 +27,7 @@ export default function StatusPage() {
     const [status, setStatus] = useState<Status | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [commentCount, setCommentCount] = useState(0);
+    const [commentsCount, setcommentsCount] = useState(0);
 
     useEffect(() => {
         if (!statusId || typeof statusId !== 'string') return;
@@ -170,7 +170,7 @@ export default function StatusPage() {
     };
 
     const handleCommentAdded = () => {
-        setCommentCount(prev => prev + 1);
+        setcommentsCount(prev => prev + 1);
     };
 
     // Generate meta tags for social sharing

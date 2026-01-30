@@ -31,7 +31,7 @@ interface Contributor {
   name: string;
   messageCount: number;
   reactionCount: number;
-  shareCount: number;
+  repostsCount: number;
   tokenEarned: number;
   rank: number;
 }
@@ -69,7 +69,7 @@ interface MemberInsight {
 interface EngagementMetrics {
   totalMessages: number;
   totalReactions: number;
-  totalShares: number;
+  totalReposts: number;
   activeMembers: number;
   engagementRate: number;
   avgSessionDuration: number;

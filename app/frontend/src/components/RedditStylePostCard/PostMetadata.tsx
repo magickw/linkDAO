@@ -27,8 +27,8 @@ interface PostMetadataProps {
   flair?: FlairConfig | string;
   awards?: PostAward[];
   crosspost?: CrosspostInfo;
-  commentCount?: number;
-  shareCount?: number;
+  commentsCount?: number;
+  repostsCount?: number;
   isPinned?: boolean;
   isLocked?: boolean;
   isSponsored?: boolean;
@@ -48,8 +48,8 @@ export default function PostMetadata({
   flair,
   awards = [],
   crosspost,
-  commentCount,
-  shareCount,
+  commentsCount,
+  repostsCount,
   isPinned = false,
   isLocked = false,
   isSponsored = false,
@@ -290,17 +290,17 @@ export default function PostMetadata({
 
       {/* Engagement Stats */}
       <div className="flex items-center space-x-3 ml-auto">
-        {commentCount !== undefined && (
+        {commentsCount !== undefined && (
           <div className="flex items-center space-x-1">
             <MessageCircle className="w-3 h-3" />
-            <span className="text-xs">{commentCount}</span>
+            <span className="text-xs">{commentsCount}</span>
           </div>
         )}
 
-        {shareCount !== undefined && shareCount > 0 && (
+        {repostsCount !== undefined && repostsCount > 0 && (
           <div className="flex items-center space-x-1">
             <Share2 className="w-3 h-3" />
-            <span className="text-xs">{shareCount}</span>
+            <span className="text-xs">{repostsCount}</span>
           </div>
         )}
       </div>

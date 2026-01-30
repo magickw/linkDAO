@@ -73,7 +73,7 @@ describe('Communities page - comment navigation', () => {
           communityId: 'comm-1',
           content: 'Hello',
           author: '0xabc',
-          commentCount: 0,
+          commentsCount: 0,
           contentCid: '',
           shareId: 's1',
           authorProfile: { handle: 'bob' }

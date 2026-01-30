@@ -20,7 +20,7 @@ export interface BookmarkedPost {
     communityId?: string;
     upvotes?: number;
     downvotes?: number;
-    commentCount?: number;
+    commentsCount?: number;
     views?: number;
   };
 }

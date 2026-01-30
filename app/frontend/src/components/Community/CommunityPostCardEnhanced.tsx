@@ -245,7 +245,7 @@ function CommunityPostCardEnhanced({
                 communityName: community.displayName || community.name,
                 upvotes: upvoteCount,
                 downvotes: downvoteCount,
-                commentCount: post.comments,
+                commentsCount: post.comments,
                 viewCount: post.views || post.viewCount || 0
               }}
               postType="community"
@@ -267,7 +267,7 @@ function CommunityPostCardEnhanced({
                 postType="community"
                 communityId={community.id}
                 userMembership={userMembership}
-                onCommentCountChange={(count) => {
+                oncommentsCountChange={(count) => {
                   // Optional: Update local comment count state if needed
                 }}
               />
