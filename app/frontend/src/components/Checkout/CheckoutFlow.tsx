@@ -1403,7 +1403,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         </GlassPanel>
       )}
 
-      <div className="flex gap-4 justify-center">
+      <div className="flex gap-4 justify-center flex-wrap">
         <Button variant="outline" onClick={() => router.push('/marketplace')}>
           Continue Shopping
         </Button>
@@ -1411,30 +1411,71 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
           View Orders
         </Button>
         {orderData?.orderId && (
-          <Button 
-            variant="outline" 
-            onClick={async () => {
-              try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io'}/api/orders/${orderData.orderId}/purchase-order`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' }
-                });
-                const data = await response.json();
-                
-                if (!response.ok) {
-                  throw new Error(data.message || 'Failed to generate purchase order');
+          <>
+            <Button 
+              variant="outline" 
+              onClick={async () => {
+                try {
+                  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io'}/api/orders/${orderData.orderId}/purchase-order`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                  });
+                  const data = await response.json();
+                  
+                  if (!response.ok) {
+                    throw new Error(data.message || 'Failed to generate purchase order');
+                  }
+                  
+                  if (data.pdfUrl) {
+                    window.open(data.pdfUrl, '_blank');
+                  }
+                } catch (error) {
+                  console.error('Error generating purchase order:', error);
                 }
-                
-                if (data.pdfUrl) {
-                  window.open(data.pdfUrl, '_blank');
+              }}
+            >
+              Download PO
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={async () => {
+                try {
+                  addToast('Sending receipt to your email...', 'info');
+                  
+                  // Get receipts for this order
+                  const receiptsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io'}/api/receipts/order/${orderData.orderId}`);
+                  const receiptsData = await receiptsResponse.json();
+                  
+                  if (!receiptsResponse.ok || !receiptsData.receipts || receiptsData.receipts.length === 0) {
+                    addToast('No receipt found for this order yet. It will be available shortly.', 'warning');
+                    return;
+                  }
+                  
+                  // Send receipt email
+                  const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io'}/api/receipts/send-email`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      orderId: orderData.orderId,
+                      totalCost: selectedPaymentMethod?.costEstimate.totalCost || orderData.totalAmount,
+                      paymentMethod: selectedPaymentMethod?.method.name || 'Unknown'
+                    })
+                  });
+                  
+                  if (emailResponse.ok) {
+                    addToast('Receipt sent to your email!', 'success');
+                  } else {
+                    throw new Error('Failed to send email');
+                  }
+                } catch (error) {
+                  console.error('Error sending receipt email:', error);
+                  addToast('Unable to send email receipt right now.', 'error');
                 }
-              } catch (error) {
-                console.error('Error generating purchase order:', error);
-              }
-            }}
-          >
-            Download PO
-          </Button>
+              }}
+            >
+              Email Receipt
+            </Button>
+          </>
         )}
       </div>
     </div>

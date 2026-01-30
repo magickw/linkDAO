@@ -374,9 +374,48 @@ const OrderDetailPage: React.FC = () => {
                 <li>• Escrow releases to seller once you confirm the item or after the auto-complete window.</li>
                 <li>• Need to escalate? Start a support ticket with the DAO arbitration council.</li>
               </ul>
-              <Button variant="outline" onClick={() => router.push(`/support/disputes?orderId=${order.id}`)}>
-                Contact support
-              </Button>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => router.push(`/support/disputes?orderId=${order.id}`)}>
+                  Contact support
+                </Button>
+                {(order.status === 'COMPLETED' || order.status === 'DELIVERED') && (
+                  <Button 
+                    variant="primary"
+                    onClick={() => {
+                      try {
+                        // Add items to cart
+                        const cartItem = {
+                          productId: order.product.id,
+                          quantity: order.product.quantity,
+                          price: order.product.unitPrice,
+                          title: order.product.title,
+                          image: order.product.image,
+                          sellerId: order.sellerAddress
+                        };
+                        
+                        // Add to cart via localStorage for now
+                        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+                        const existingItemIndex = cart.findIndex((item: any) => item.productId === cartItem.productId);
+                        
+                        if (existingItemIndex >= 0) {
+                          cart[existingItemIndex].quantity += cartItem.quantity;
+                        } else {
+                          cart.push(cartItem);
+                        }
+                        
+                        localStorage.setItem('cart', JSON.stringify(cart));
+                        addToast('Items added to cart!', 'success');
+                        router.push('/marketplace/checkout');
+                      } catch (error) {
+                        console.error('Error adding to cart:', error);
+                        addToast('Failed to add items to cart', 'error');
+                      }
+                    }}
+                  >
+                    Reorder
+                  </Button>
+                )}
+              </div>
             </GlassPanel>
 
             <GlassPanel variant="secondary" className="p-6 space-y-4">
@@ -470,6 +509,42 @@ const OrderDetailPage: React.FC = () => {
                 }}
               >
                 Download purchase order (PDF)
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={async () => {
+                  try {
+                    if (!walletAddress) {
+                      addToast('Connect your wallet to send receipt.', 'info');
+                      return;
+                    }
+
+                    addToast('Sending receipt to your email...', 'info');
+                    
+                    // Send receipt email
+                    const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io'}/api/receipts/send-email`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        orderId: order.id,
+                        totalCost: order.totalAmount,
+                        paymentMethod: order.paymentMethod || 'Unknown'
+                      })
+                    });
+                    
+                    if (emailResponse.ok) {
+                      addToast('Receipt sent to your email!', 'success');
+                    } else {
+                      throw new Error('Failed to send email');
+                    }
+                  } catch (error) {
+                    console.error('Error sending receipt email:', error);
+                    addToast('Unable to send email receipt right now.', 'error');
+                  }
+                }}
+              >
+                Email receipt
               </Button>
               <Button
                 variant="outline"

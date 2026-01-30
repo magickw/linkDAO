@@ -387,12 +387,110 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
     const [shippingForm, setShippingForm] = useState({ trackingNumber: '', carrier: 'FedEx' });
     const [packingSlipModal, setPackingSlipModal] = useState<{ isOpen: boolean; slip: any }>({ isOpen: false, slip: null });
 
+    // Bulk operations state
+    const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+    const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
     // Service modals
     const [scheduleModal, setScheduleModal] = useState<{ isOpen: boolean; orderId: string | null }>({ isOpen: false, orderId: null });
     const [deliverableModal, setDeliverableModal] = useState<{ isOpen: boolean; orderId: string | null; deliverables: ServiceDeliverable[] }>({ isOpen: false, orderId: null, deliverables: [] });
 
     // NFT Escrow modal
     const [nftDepositModal, setNftDepositModal] = useState<{ isOpen: boolean; order: SellerOrder | null }>({ isOpen: false, order: null });
+
+    // Bulk operations handlers
+    const handleSelectOrder = (orderId: string) => {
+        setSelectedOrderIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(orderId)) {
+                newSet.delete(orderId);
+            } else {
+                newSet.add(orderId);
+            }
+            return newSet;
+        });
+    };
+
+    const handleSelectAll = () => {
+        const orders = (() => {
+            if (!dashboardData) return [];
+            switch (activeStatus) {
+                case 'new': return dashboardData.orders.new;
+                case 'processing': return dashboardData.orders.processing;
+                case 'ready': return dashboardData.orders.readyToShip;
+                case 'shipped': return dashboardData.orders.shipped;
+                case 'completed': return dashboardData.orders.completed;
+                case 'cancelled': return dashboardData.orders.cancelled;
+                default: return [];
+            }
+        })();
+
+        const allIds = orders.map(o => o.id);
+        const allSelected = allIds.every(id => selectedOrderIds.has(id));
+        
+        if (allSelected) {
+            setSelectedOrderIds(new Set());
+        } else {
+            setSelectedOrderIds(new Set(allIds));
+        }
+    };
+
+    const handleBulkPrintPackingSlips = async () => {
+        if (selectedOrderIds.size === 0) return;
+        
+        setBulkActionLoading(true);
+        try {
+            // Print each packing slip sequentially
+            for (const orderId of selectedOrderIds) {
+                const order = orders.find(o => o.id === orderId);
+                if (order && requiresShipping(order) && !isServiceOrder(order)) {
+                    await handlePrintPackingSlip(orderId);
+                }
+            }
+            alert(`Printed ${selectedOrderIds.size} packing slips`);
+            setSelectedOrderIds(new Set());
+        } catch (error) {
+            console.error('Error printing bulk packing slips:', error);
+            alert('Failed to print some packing slips');
+        } finally {
+            setBulkActionLoading(false);
+        }
+    };
+
+    const handleBulkUpdateStatus = async (newStatus: string) => {
+        if (selectedOrderIds.size === 0) return;
+        
+        setBulkActionLoading(true);
+        try {
+            // Update status for each order
+            let successCount = 0;
+            for (const orderId of selectedOrderIds) {
+                try {
+                    // Call the appropriate workflow action based on status
+                    if (newStatus === 'processing') {
+                        await handleProcess(orderId);
+                    } else if (newStatus === 'shipped') {
+                        // For shipping, we need tracking info - skip for bulk
+                        continue;
+                    } else if (newStatus === 'completed') {
+                        await completeDigitalDelivery(orderId);
+                    }
+                    successCount++;
+                } catch (error) {
+                    console.error(`Failed to update order ${orderId}:`, error);
+                }
+            }
+            
+            alert(`Updated ${successCount} of ${selectedOrderIds.size} orders to ${newStatus}`);
+            setSelectedOrderIds(new Set());
+            refresh();
+        } catch (error) {
+            console.error('Error in bulk status update:', error);
+            alert('Failed to update order statuses');
+        } finally {
+            setBulkActionLoading(false);
+        }
+    };
 
     if (loading && !dashboardData) {
         return (
@@ -548,18 +646,95 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
                 })}
             </div>
 
+            {/* Bulk Action Toolbar */}
+            {selectedOrderIds.size > 0 && (
+                <GlassPanel className="p-4 mb-4 border border-blue-500/30">
+                    <div className="flex items-center justify-between flex-wrap gap-4">
+                        <div className="flex items-center gap-3">
+                            <span className="text-white font-medium">
+                                {selectedOrderIds.size} order{selectedOrderIds.size !== 1 ? 's' : ''} selected
+                            </span>
+                            <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => setSelectedOrderIds(new Set())}
+                            >
+                                Clear selection
+                            </Button>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {activeStatus === 'new' && !orders.some(isServiceOrder) && (
+                                <>
+                                    <Button 
+                                        variant="secondary" 
+                                        size="sm"
+                                        onClick={handleBulkPrintPackingSlips}
+                                        disabled={bulkActionLoading}
+                                    >
+                                        Print Packing Slips ({selectedOrderIds.size})
+                                    </Button>
+                                    <Button 
+                                        variant="primary" 
+                                        size="sm"
+                                        onClick={() => handleBulkUpdateStatus('processing')}
+                                        disabled={bulkActionLoading}
+                                    >
+                                        Start Processing ({selectedOrderIds.size})
+                                    </Button>
+                                </>
+                            )}
+                            {activeStatus === 'processing' && (
+                                <Button 
+                                    variant="primary" 
+                                    size="sm"
+                                    onClick={() => handleBulkUpdateStatus('completed')}
+                                    disabled={bulkActionLoading}
+                                >
+                                    Mark as Delivered ({selectedOrderIds.size})
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                </GlassPanel>
+            )}
+
             <div className="space-y-4">
                 {orders.length === 0 ? (
                     <GlassPanel className="p-8 text-center text-gray-400">
                         No orders in this status.
                     </GlassPanel>
                 ) : (
-                    orders.map((order: SellerOrder, idx) => (
+                    <>
+                        {/* Select All Checkbox */}
+                        {orders.length > 0 && (
+                            <div className="mb-2">
+                                <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={orders.every(o => selectedOrderIds.has(o.id))}
+                                        onChange={handleSelectAll}
+                                        className="w-4 h-4 rounded border-gray-600 text-blue-500 focus:ring-blue-500 bg-gray-700"
+                                    />
+                                    Select all orders
+                                </label>
+                            </div>
+                        )}
+                        
+                        {orders.map((order: SellerOrder, idx) => (
                         <GlassPanel key={order.id || idx} className="p-6">
                             <div className="flex justify-between items-start mb-4">
-                                <div>
-                                    <h3 className="text-lg font-bold text-white">Order #{order.id?.slice(0, 8) || 'Unknown'}</h3>
-                                    <p className="text-sm text-gray-400">Placed on {new Date(order.createdAt).toLocaleDateString()}</p>
+                                <div className="flex items-start gap-3">
+                                    {/* Order Checkbox */}
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedOrderIds.has(order.id)}
+                                        onChange={() => handleSelectOrder(order.id)}
+                                        className="mt-1 w-4 h-4 rounded border-gray-600 text-blue-500 focus:ring-blue-500 bg-gray-700 cursor-pointer"
+                                    />
+                                    <div>
+                                        <h3 className="text-lg font-bold text-white">Order #{order.id?.slice(0, 8) || 'Unknown'}</h3>
+                                        <p className="text-sm text-gray-400">Placed on {new Date(order.createdAt).toLocaleDateString()}</p>
+                                    </div>
                                 </div>
                                 <div className="text-right">
                                     <p className="text-xl font-bold text-green-400">${order.totalAmount.toFixed(2)}</p>
