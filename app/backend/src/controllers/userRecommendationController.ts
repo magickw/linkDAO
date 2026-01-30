@@ -54,7 +54,7 @@ export async function getUserRecommendations(req: AuthenticatedRequest, res: Res
           reasons: rec.reasons,
           mutualConnections: rec.mutualConnections,
           activityScore: rec.activityScore,
-          reputationScore: reputation.score || 0,
+          reputationScore: ('totalScore' in reputation ? reputation.totalScore : reputation.score) || 0,
           communityOverlap: rec.communityOverlap,
           profile: profile ? {
             displayName: profile.displayName,
