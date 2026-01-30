@@ -1093,8 +1093,42 @@ export const sellers = pgTable("sellers", {
   applicationReviewedBy: uuid("application_reviewed_by"), // Admin user who reviewed
   applicationRejectionReason: text("application_rejection_reason"), // Why application was rejected
   applicationAdminNotes: text("application_admin_notes"), // Admin notes during review
+  // Stripe integration
+  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }), // For fee charging
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Seller fee charges table
+export const sellerFeeCharges = pgTable('seller_fee_charges', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  sellerWalletAddress: varchar('seller_wallet_address', { length: 42 }).notNull().references(() => sellers.walletAddress),
+  amount: varchar('amount', { length: 20 }).notNull(),
+  currency: varchar('currency', { length: 3 }).notNull().default('USD'),
+  reason: varchar('reason', { length: 100 }).notNull(), // listing_fee, premium_features, etc.
+  status: varchar('status', { length: 20 }).notNull().default('pending'), // pending, charged, failed, waived, refunded
+  chargeId: varchar('charge_id', { length: 255 }), // Stripe charge ID
+  paymentMethodId: varchar('payment_method_id', { length: 255 }), // Stripe payment method ID
+  failureReason: text('failure_reason'),
+  metadata: jsonb('metadata'), // Additional data like listing ID, feature type, etc.
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  processedAt: timestamp('processed_at')
+});
+
+// Seller revenue tracking table
+export const sellerRevenue = pgTable('seller_revenue', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  sellerWalletAddress: varchar('seller_wallet_address', { length: 42 }).notNull().references(() => sellers.walletAddress),
+  orderId: varchar('order_id', { length: 255 }).references(() => orders.id),
+  amount: varchar('amount', { length: 20 }).notNull(),
+  currency: varchar('currency', { length: 3 }).notNull().default('USD'),
+  type: varchar('type', { length: 20 }).notNull(), // sale, refund, adjustment
+  status: varchar('status', { length: 20 }).notNull().default('pending'), // pending, available, withdrawn
+  relatedTransactionId: varchar('related_transaction_id', { length: 255 }), // For refunds/adjustments
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  availableAt: timestamp('available_at'), // When funds become available
+  withdrawnAt: timestamp('withdrawn_at') // When funds were withdrawn
 });
 
 // Seller activities for timeline

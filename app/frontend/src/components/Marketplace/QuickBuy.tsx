@@ -149,11 +149,57 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
         address,
         0 // shipping
       );
-
-      setTaxCalculation(taxResult);
+      // No tax calculation needed - using fee service instead
     } catch (e) {
-      console.warn('Tax calc failed', e);
-      setTaxCalculation(null);
+      console.warn('Fee calculation failed', e);
+    }
+  };
+
+  // Load payment method prioritization
+  const loadPaymentPrioritization = async () => {
+    try {
+      const availableMethods = await getAvailablePaymentMethods();
+      
+      const context: PrioritizationContext = {
+        userContext: {
+          userAddress: address || 'anonymous',
+          chainId: chainId || 1,
+          walletBalances: [],
+          preferences: {
+            preferredMethods: [],
+            avoidedMethods: [],
+            maxGasFeeThreshold: 50,
+            preferStablecoins: true,
+            preferFiat: false,
+            lastUsedMethods: [],
+            autoSelectBestOption: true
+          }
+        },
+        transactionAmount: parseFloat(listing.price) * 2000, // Convert ETH to USD estimate
+        transactionCurrency: 'USD',
+        marketConditions: {
+          gasConditions: [{
+            chainId: 1,
+            gasPrice: BigInt(20e9),
+            gasPriceUSD: 5.00,
+            networkCongestion: 'medium',
+            blockTime: 12,
+            lastUpdated: new Date()
+          }],
+          exchangeRates: [],
+          networkAvailability: [],
+          lastUpdated: new Date()
+        },
+        availablePaymentMethods: availableMethods
+      };
+
+      const result = await prioritizationService.prioritizePaymentMethods(context);
+      setPrioritizationResult(result);
+      if (result.defaultMethod) {
+        setSelectedPaymentMethod(result.defaultMethod);
+      }
+    } catch (err) {
+      console.error('Failed to load payment options', err);
     }
   };
 
@@ -250,66 +296,6 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
     };
   };
 
-  const loadPaymentPrioritization = async () => {
-    if (!listing) return;
-    setLoading(true);
-    try {
-      const context: PrioritizationContext = {
-        transactionAmount: parseFloat(listing.price), // Assuming price is in ETH/USD? CheckoutFlow assumes FIAT total. QuickBuy listing.price seems to be ETH.
-        // Wait, listing.price in PurchaseModal was treated as ETH.
-        // QuickBuy originally checked "balance < price" (ETH).
-        // CheckoutFlow treats cartState.totals.total.fiat as the amount.
-        // We need to clarify if listing.price is ETH or USD. 
-        // Based on "Buy Now - {listing.price} ETH" in UI, it is ETH.
-        // UnifiedCheckoutService likely expects USD amount? 
-        // CheckoutFlow: amount: parseFloat(cartState.totals.total.fiat) -> USD.
-        // So we need to convert ETH to USD for the service context if the service expects USD.
-        // Or if listing.price is USD?
-        // PurchaseModal: fiat: (parseFloat(listing.price) * 1650).toFixed(2). 
-        // So listing.price IS ETH. We need to convert it to USD for the context roughly.
-        // For the sake of this refactor, let's look at how CheckoutFlow uses it.
-        // CheckoutFlow passes `cartState.totals.total.fiat`.
-        // We should calculate estimated USD.
-        transactionCurrency: 'USD',
-        userContext: {
-          userAddress: address || undefined,
-          chainId: chainId || 1,
-          walletBalances: [],
-          preferences: {
-            preferredMethods: [],
-            avoidedMethods: [],
-            maxGasFeeThreshold: 50,
-            preferStablecoins: true,
-            preferFiat: false,
-            lastUsedMethods: [],
-            autoSelectBestOption: true
-          }
-        },
-        availablePaymentMethods: await getAvailablePaymentMethods(),
-        marketConditions: await getCurrentMarketConditions()
-      };
-
-      // Rough ETH -> USD conversion for context if needed, or update context to support ETH.
-      // UnifiedCheckoutService likely handles currency conversion internally or expects USD.
-      // Let's perform a rough conversion using the 1650 rate found elsewhere to populate the USD expectation
-      // OR better, we simply pass the ETH amount if the type allows.
-      // PrioritizationContext: transactionAmount: number, transactionCurrency: string.
-      // Let's convert for now to match CheckoutFlow pattern.
-      const ethPrice = parseFloat(listing.price);
-      context.transactionAmount = ethPrice * 2000; // Using 2000 as per CheckoutFlow mock rate for consistency
-
-      const result = await prioritizationService.prioritizePaymentMethods(context);
-      setPrioritizationResult(result);
-      if (result.defaultMethod) {
-        setSelectedPaymentMethod(result.defaultMethod);
-      }
-    } catch (err) {
-      console.error('Failed to load payment options', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handlePaymentMethodSelect = async (method: PrioritizedPaymentMethod) => {
     setSelectedPaymentMethod(method);
     if (method.method.type !== PaymentMethodType.FIAT_STRIPE && isConnected) {
@@ -360,7 +346,7 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
         listingId: listing.id,
         buyerAddress: address,
         sellerAddress: listing.sellerWalletAddress,
-        amount: (parseFloat(listing.price) * 2000) + (taxCalculation?.taxAmount || 0), // Include tax
+        amount: (parseFloat(listing.price) * 2000) + (fees.taxAmount || 0), // Include tax from fee calculation
         currency: 'USD',
         selectedPaymentMethod,
         paymentDetails: {
@@ -509,19 +495,22 @@ export const QuickBuy: React.FC<QuickBuyProps> = ({
                 </div>
               </div>
 
-              {/* Fee Breakdown */}
-              <FeeBreakdown
-                itemPrice={itemPrice}
-                platformFee={fees.platformFee}
-                platformFeeRate={fees.platformFeeRate}
-                processingFee={fees.processingFee}
-                taxAmount={fees.taxAmount}
-                taxRate={fees.taxRate}
-                shippingCost={0}
-                totalAmount={fees.totalAmount}
-                paymentMethod={selectedPaymentMethodType}
-                currency="ETH"
-              />
+              {/* Price & Fee Breakdown */}
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                {/* Fee Breakdown - Hide platform fee from buyers */}
+                <FeeBreakdown
+                  itemPrice={itemPrice}
+                  platformFee={fees.platformFee}
+                  platformFeeRate={fees.platformFeeRate}
+                  processingFee={fees.processingFee}
+                  taxAmount={fees.taxAmount}
+                  taxRate={fees.taxRate}
+                  shippingCost={0}
+                  totalAmount={fees.totalAmount}
+                  paymentMethod={selectedPaymentMethodType}
+                  currency="ETH"
+                  showPlatformFee={false} // Hidden from buyers
+                />
 
                 {prioritizationResult ? (
                   <div className="mt-4">

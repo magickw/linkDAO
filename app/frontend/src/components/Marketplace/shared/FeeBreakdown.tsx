@@ -3,8 +3,8 @@ import { DollarSign, Percent, Truck, CreditCard, FileText } from 'lucide-react';
 
 interface FeeBreakdownProps {
   itemPrice: number;
-  platformFee: number;
-  platformFeeRate: number;
+  platformFee?: number;
+  platformFeeRate?: number;
   processingFee: number;
   taxAmount: number;
   taxRate: number;
@@ -12,13 +12,14 @@ interface FeeBreakdownProps {
   totalAmount: number;
   paymentMethod: 'fiat' | 'crypto';
   currency: string;
+  showPlatformFee?: boolean; // New prop to control platform fee visibility
   className?: string;
 }
 
 export const FeeBreakdown: React.FC<FeeBreakdownProps> = ({
   itemPrice,
-  platformFee,
-  platformFeeRate,
+  platformFee = 0,
+  platformFeeRate = 0,
   processingFee,
   taxAmount,
   taxRate,
@@ -26,6 +27,7 @@ export const FeeBreakdown: React.FC<FeeBreakdownProps> = ({
   totalAmount,
   paymentMethod,
   currency,
+  showPlatformFee = false, // Default to false for buyer view
   className = ''
 }) => {
   const formatCurrency = (amount: number) => {
@@ -57,16 +59,18 @@ export const FeeBreakdown: React.FC<FeeBreakdownProps> = ({
           <span className="text-white font-medium">{formatAmount(itemPrice)}</span>
         </div>
 
-        {/* Platform Fee */}
-        <div className="flex justify-between">
-          <div className="flex items-center">
-            <Percent className="w-4 h-4 mr-2 text-blue-400" />
-            <span className="text-white/70">
-              Platform Fee ({platformFeeRate}%)
-            </span>
+        {/* Platform Fee - Only shown when explicitly requested (for sellers) */}
+        {showPlatformFee && platformFee > 0 && (
+          <div className="flex justify-between">
+            <div className="flex items-center">
+              <Percent className="w-4 h-4 mr-2 text-blue-400" />
+              <span className="text-white/70">
+                Platform Fee ({platformFeeRate.toFixed(1)}%)
+              </span>
+            </div>
+            <span className="text-white">{formatAmount(platformFee)}</span>
           </div>
-          <span className="text-white">{formatAmount(platformFee)}</span>
-        </div>
+        )}
 
         {/* Processing Fee */}
         <div className="flex justify-between">

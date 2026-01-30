@@ -3,6 +3,7 @@ import { sellers, products, users, categories } from '../../db/schema';
 import { eq, and, desc, asc, or } from 'drizzle-orm';
 import { safeLogger } from '../../utils/safeLogger';
 import { cacheService } from './cacheService';
+import { sellerFeeChargingService } from '../sellerFeeChargingService';
 
 /**
  * Listing Query Options
@@ -536,6 +537,26 @@ class SellerListingService {
       listingStatus: initialListingStatus,
       publishedAt: new Date(), // Always set publishedAt for marketplace visibility
     }).returning();
+
+    // Check and process listing fee after listing is created
+    const LISTING_FEE_AMOUNT = 5.00; // $5 listing fee
+    try {
+      const feeCharge = await sellerFeeChargingService.processListingFee(
+        data.walletAddress,
+        newListing.id,
+        LISTING_FEE_AMOUNT
+      );
+      
+      if (feeCharge && feeCharge.status === 'failed') {
+        // Log the failure but don't block listing creation
+        safeLogger.warn(`Listing fee charge failed for seller ${data.walletAddress}: ${feeCharge.failureReason}`);
+      } else if (feeCharge) {
+        safeLogger.info(`Successfully charged listing fee for seller ${data.walletAddress}: $${LISTING_FEE_AMOUNT}`);
+      }
+    } catch (error) {
+      // Log error but don't block listing creation
+      safeLogger.error(`Error processing listing fee for seller ${data.walletAddress}:`, error);
+    }
 
     return {
       id: newListing.id,

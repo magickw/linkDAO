@@ -562,7 +562,7 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
 
   const ReviewStep = () => (
     <div className="space-y-6">
-      {/* Fee Breakdown */}
+      {/* Fee Breakdown - Hide platform fee from buyers */}
       <FeeBreakdown
         itemPrice={subtotal}
         platformFee={fees.platformFee}
@@ -574,6 +574,7 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
         totalAmount={total}
         paymentMethod={selectedPaymentMethod}
         currency="ETH"
+        showPlatformFee={false} // Hidden from buyers
       />
 
       {/* Shipping Address */}
