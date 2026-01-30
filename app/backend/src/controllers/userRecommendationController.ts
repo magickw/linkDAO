@@ -195,16 +195,25 @@ export async function getRecommendationInsights(req: AuthenticatedRequest, res: 
     const profile = await userProfileService.getProfileById(userId);
     const followingCount = 0; // TODO: Get from database when available
 
-    // Get mutual connections stats
-    const mutualConnections = await userRecommendationService['getMutualConnectionsCount'](userId, userId);
+    // Get recommendation quality metrics
+    const recentRecommendations = await userRecommendationService.generateRecommendations({
+      currentUserId: userId,
+      algorithm: 'hybrid',
+      timeframe: 'week'
+    }, 5);
+
+    const avgScore = recentRecommendations.length > 0
+      ? recentRecommendations.reduce((sum, rec) => sum + rec.score, 0) / recentRecommendations.length
+      : 0;
 
     res.json({
       success: true,
       data: {
         followingCount,
-        mutualConnections,
-        recommendationQuality: 'high',
-        suggestions: followingCount < 10 
+        recommendationCount: recentRecommendations.length,
+        avgScore: Math.round(avgScore),
+        recommendationQuality: avgScore > 70 ? 'high' : avgScore > 40 ? 'medium' : 'low',
+        suggestions: followingCount < 10
           ? 'Follow more users to improve recommendations'
           : 'Your recommendations are personalized based on your activity',
         lastUpdated: new Date().toISOString()
