@@ -2,10 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { useWeb3 } from '@/context/Web3Context';
-import Layout from '@/components/Layout';
-import NavigationSidebar from '@/components/NavigationSidebar';
-import { SmartRightSidebar } from '@/components/SmartRightSidebar';
-import SearchInterface from '@/components/SearchInterface';
+import { EnhancedSearchInterface } from '@/components/EnhancedSearch/EnhancedSearchInterface';
 import TrendingContent from '@/components/TrendingContent';
 import RecommendationSystem from '@/components/RecommendationSystem';
 
@@ -66,152 +63,173 @@ export default function SearchPage() {
         <meta name="description" content="Search posts, communities, and users. Discover trending content and get personalized recommendations." />
       </Head>
 
-      <Layout title="Search & Discovery">
-        <div className="flex bg-gray-50 dark:bg-gray-900">
-          {/* Left Sidebar */}
-          <div className="hidden lg:flex lg:flex-shrink-0">
-            <div className="flex flex-col w-64">
-              <NavigationSidebar className="h-full" />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        {/* Header */}
+        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-screen-2xl mx-auto px-4 py-4">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Search & Discovery</h1>
+          </div>
+        </header>
+
+        {/* Main Grid Layout - Same as Home Page */}
+        <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-6 w-full px-0 sm:px-2 lg:px-4 mx-auto max-w-screen-2xl pt-0 lg:pt-6">
+          {/* Left Sidebar - Navigation - Hidden on mobile */}
+          <div className="hidden lg:block lg:col-span-3">
+            <div className="sticky top-24">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Navigation</h3>
+                <nav className="space-y-2">
+                  <a 
+                    href="/" 
+                    className="block px-3 py-2 rounded-md text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    Home
+                  </a>
+                  <a 
+                    href="/communities" 
+                    className="block px-3 py-2 rounded-md text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    Communities
+                  </a>
+                  <a 
+                    href="/profile" 
+                    className="block px-3 py-2 rounded-md text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    Profile
+                  </a>
+                </nav>
+              </div>
             </div>
           </div>
 
-          {/* Main Content */}
-          <div className="flex-1 flex flex-col min-h-screen">
-            <div className="flex-1 flex">
-              <div className="flex-1 overflow-y-auto pb-24 md:pb-6">
-                <div className="max-w-2xl mx-auto py-6 px-4">
-                  {/* Navigation Tabs */}
-                  <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 mb-6 overflow-x-auto">
-            {[
-              { id: 'search', label: 'Search', icon: '🔍', description: 'Search everything' },
-              { id: 'trending', label: 'Trending', icon: '🔥', description: 'What\'s hot now' },
-              { id: 'recommendations', label: 'For You', icon: '💡', description: 'Personalized picks' }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center space-x-2 px-4 py-3 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap min-w-0 ${
-                  activeTab === tab.id
-                    ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                }`}
-              >
-                <span className="text-lg">{tab.icon}</span>
-                <div className="text-left">
-                  <div>{tab.label}</div>
-                  <div className="text-xs opacity-75 hidden sm:block">{tab.description}</div>
-                </div>
-              </button>
-            ))}
-                  </div>
-
-                  {/* Tab Content */}
-                  <div>
-            {activeTab === 'search' && (
-              <SearchInterface
-                initialQuery={initialQuery}
-                initialFilters={{ type: initialType as any }}
-                onResultSelect={handleResultSelect}
-              />
-            )}
-
-            {activeTab === 'trending' && (
-              <div className="space-y-8">
-                <TrendingContent
-                  timeRange="day"
-                  limit={15}
-                  onItemClick={handleTrendingItemClick}
-                />
-                
-                {/* Additional trending sections */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <TrendingContent
-                    timeRange="week"
-                    limit={5}
-                    showPosts={false}
-                    showTopics={false}
-                    onItemClick={handleTrendingItemClick}
-                    className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6"
-                  />
-                  
-                  <TrendingContent
-                    timeRange="month"
-                    limit={5}
-                    showCommunities={false}
-                    showTopics={false}
-                    onItemClick={handleTrendingItemClick}
-                    className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6"
-                  />
-                </div>
+          {/* Center Search Content - Same width as Home Feed */}
+          <div className="col-span-1 lg:col-span-9">
+            <div className="py-6 px-4">
+              {/* Navigation Tabs */}
+              <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 mb-6 overflow-x-auto">
+                {[
+                  { id: 'search', label: 'Search', icon: '🔍', description: 'Search everything' },
+                  { id: 'trending', label: 'Trending', icon: '🔥', description: 'What\'s hot now' },
+                  { id: 'recommendations', label: 'For You', icon: '💡', description: 'Personalized picks' }
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`flex items-center space-x-2 px-4 py-3 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap min-w-0 ${
+                      activeTab === tab.id
+                        ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    <span className="text-lg">{tab.icon}</span>
+                    <div className="text-left">
+                      <div>{tab.label}</div>
+                      <div className="text-xs opacity-75 hidden sm:block">{tab.description}</div>
+                    </div>
+                  </button>
+                ))}
               </div>
-            )}
 
-            {activeTab === 'recommendations' && (
-              <div className="space-y-8">
-                {isConnected ? (
-                  <>
-                    <RecommendationSystem
-                      type="both"
-                      basedOn="activity"
-                      limit={12}
+              {/* Tab Content */}
+              <div>
+                {activeTab === 'search' && (
+                  <EnhancedSearchInterface
+                    initialQuery={initialQuery}
+                    initialFilters={{ type: initialType as any }}
+                    onResultSelect={handleResultSelect}
+                    showFilters={true}
+                    placeholder="Search content..."
+                  />
+                )}
+
+                {activeTab === 'trending' && (
+                  <div className="space-y-8">
+                    <TrendingContent
+                      timeRange="day"
+                      limit={15}
+                      onItemClick={handleTrendingItemClick}
                     />
                     
-                    {/* Additional recommendation sections */}
+                    {/* Additional trending sections */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                      <RecommendationSystem
-                        type="communities"
-                        basedOn="trending"
-                        limit={6}
-                        showHeaders={true}
+                      <TrendingContent
+                        timeRange="week"
+                        limit={5}
+                        showPosts={false}
+                        showTopics={false}
+                        onItemClick={handleTrendingItemClick}
+                        className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6"
                       />
                       
-                      <RecommendationSystem
-                        type="users"
-                        basedOn="network"
-                        limit={6}
-                        showHeaders={true}
+                      <TrendingContent
+                        timeRange="month"
+                        limit={5}
+                        showCommunities={false}
+                        showTopics={false}
+                        onItemClick={handleTrendingItemClick}
+                        className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6"
                       />
-                    </div>
-                  </>
-                ) : (
-                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
-                    <div className="max-w-md mx-auto">
-                      <div className="text-6xl mb-4">🔐</div>
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                        Connect Your Wallet
-                      </h2>
-                      <p className="text-gray-600 dark:text-gray-400 mb-6">
-                        Connect your wallet to get personalized recommendations based on your activity, 
-                        interests, and network connections.
-                      </p>
-                      <button
-                        onClick={() => {
-                          // This would trigger wallet connection
-                          // The actual implementation depends on your Web3Context
-                        }}
-                        className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
-                      >
-                        Connect Wallet
-                      </button>
                     </div>
                   </div>
                 )}
-              </div>
-            )}
-                  </div>
-                </div>
-              </div>
 
-              {/* Right Sidebar */}
-              <div className="hidden xl:flex xl:flex-shrink-0">
-                <div className="flex flex-col w-80">
-                  <SmartRightSidebar context="feed" />
-                </div>
+                {activeTab === 'recommendations' && (
+                  <div className="space-y-8">
+                    {isConnected ? (
+                      <>
+                        <RecommendationSystem
+                          type="both"
+                          basedOn="activity"
+                          limit={12}
+                        />
+                        
+                        {/* Additional recommendation sections */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                          <RecommendationSystem
+                            type="communities"
+                            basedOn="trending"
+                            limit={6}
+                            showHeaders={true}
+                          />
+                          
+                          <RecommendationSystem
+                            type="users"
+                            basedOn="network"
+                            limit={6}
+                            showHeaders={true}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
+                        <div className="max-w-md mx-auto">
+                          <div className="text-6xl mb-4">🔐</div>
+                          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                            Connect Your Wallet
+                          </h2>
+                          <p className="text-gray-600 dark:text-gray-400 mb-6">
+                            Connect your wallet to get personalized recommendations based on your activity, 
+                            interests, and network connections.
+                          </p>
+                          <button
+                            onClick={() => {
+                              // This would trigger wallet connection
+                              // The actual implementation depends on your Web3Context
+                            }}
+                            className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+                          >
+                            Connect Wallet
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
-      </Layout>
+      </div>
     </>
   );
 }

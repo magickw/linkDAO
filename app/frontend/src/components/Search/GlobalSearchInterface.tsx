@@ -61,7 +61,7 @@ interface GlobalSearchInterfaceProps {
 
 export const GlobalSearchInterface: React.FC<GlobalSearchInterfaceProps> = ({
   className = '',
-  placeholder = 'Search posts, communities, users...',
+  placeholder = 'Search content...',
   showFilters = true,
   showHistory = true,
   showSuggestions = true,
@@ -69,6 +69,19 @@ export const GlobalSearchInterface: React.FC<GlobalSearchInterfaceProps> = ({
   initialQuery = '',
   compact = false
 }) => {
+  // Add keyboard shortcut effect
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Press '/' to focus search
+      if (e.key === '/' && e.target instanceof HTMLElement && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
   const router = useRouter();
   const searchInputRef = useRef<HTMLInputElement>(null);
   
@@ -275,7 +288,7 @@ export const GlobalSearchInterface: React.FC<GlobalSearchInterfaceProps> = ({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             className={`
-              w-full px-4 py-3 pl-12 pr-12
+              w-full px-4 py-3 pl-12 pr-20
               border border-gray-300 dark:border-gray-600
               rounded-lg
               bg-white dark:bg-gray-800
@@ -295,8 +308,13 @@ export const GlobalSearchInterface: React.FC<GlobalSearchInterfaceProps> = ({
             </svg>
           </div>
 
-          {/* Loading/Clear Button */}
-          <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+          {/* Loading/Clear Button and Shortcut Hint */}
+          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
+            {/* Keyboard shortcut hint */}
+            <div className="hidden sm:block text-xs text-gray-400 dark:text-gray-500 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
+              /
+            </div>
+            
             {loading ? (
               <LoadingSpinner size="sm" />
             ) : query ? (
@@ -318,7 +336,7 @@ export const GlobalSearchInterface: React.FC<GlobalSearchInterfaceProps> = ({
 
         {/* Search Dropdown */}
         {isExpanded && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl max-h-96 overflow-hidden z-50">
+          <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl max-h-96 overflow-hidden z-50" style={{ maxWidth: 'calc(100vw - 2rem)' }}>
             {/* Filters */}
             {showFilters && !compact && (
               <div className="border-b border-gray-200 dark:border-gray-700 p-4">

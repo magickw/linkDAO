@@ -1510,28 +1510,158 @@ export class SearchService {
   }
 
   async getTrendingHashtags(limit: number = 20, timeframe: string = '24h'): Promise<any> {
+    const db = this.databaseService.getDatabase();
     try {
-      // For now, return empty array as placeholder
-      // In a real implementation, this would query the database for trending hashtags
-      return { 
-        hashtags: [], 
-        total: 0 
-      };
+      // Calculate timeframe
+      const now = new Date();
+      let timeThreshold: Date;
+      switch (timeframe) {
+        case 'hour': timeThreshold = new Date(now.getTime() - 60 * 60 * 1000); break;
+        case 'day':
+        case '24h': timeThreshold = new Date(now.getTime() - 24 * 60 * 60 * 1000); break;
+        case 'week':
+        case '7d': timeThreshold = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); break;
+        case 'month': timeThreshold = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); break;
+        default: timeThreshold = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      }
+
+      // Query post tags
+      const trendingPosts = await db.select({
+        tag: schema.postTags.tag,
+        count: sql<number>`count(*)`
+      })
+      .from(schema.postTags)
+      .where(gte(schema.postTags.createdAt, timeThreshold))
+      .groupBy(schema.postTags.tag)
+      .orderBy(desc(sql`count(*)`))
+      .limit(limit);
+
+      // Query status tags
+      const trendingStatuses = await db.select({
+        tag: schema.statusTags.tag,
+        count: sql<number>`count(*)`
+      })
+      .from(schema.statusTags)
+      .where(gte(schema.statusTags.createdAt, timeThreshold))
+      .groupBy(schema.statusTags.tag)
+      .orderBy(desc(sql`count(*)`))
+      .limit(limit);
+
+      // Combine and aggregate
+      const tagMap = new Map<string, number>();
+      trendingPosts.forEach(t => tagMap.set(t.tag, (tagMap.get(t.tag) || 0) + Number(t.count)));
+      trendingStatuses.forEach(t => tagMap.set(t.tag, (tagMap.get(t.tag) || 0) + Number(t.count)));
+
+      const result = Array.from(tagMap.entries())
+        .map(([tag, count]) => ({
+          tag,
+          count,
+          growth: Math.floor(Math.random() * 20) // Placeholder for growth
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, limit);
+
+      return result;
     } catch (error) {
       safeLogger.error('Error getting trending hashtags:', error);
-      return { 
-        hashtags: [], 
-        total: 0 
-      };
+      return [];
     }
   }
 
   async getPostsByHashtag(hashtag: string, limit: number = 20, offset: number = 0): Promise<any> {
-    return { posts: [], total: 0 };
+    const db = this.databaseService.getDatabase();
+    try {
+      const cleanTag = hashtag.replace('#', '').toLowerCase();
+
+      // Find regular posts with this tag
+      const postResults = await db.select({
+        id: schema.posts.id,
+        authorId: schema.posts.authorId,
+        content: schema.posts.content,
+        contentCid: schema.posts.contentCid,
+        title: schema.posts.title,
+        mediaCids: schema.posts.mediaCids,
+        tags: schema.posts.tags,
+        createdAt: schema.posts.createdAt,
+        upvotes: schema.posts.upvotes,
+        downvotes: schema.posts.downvotes,
+        views: schema.posts.views,
+        walletAddress: schema.users.walletAddress,
+        handle: schema.users.handle,
+        displayName: schema.users.displayName,
+        avatarCid: schema.users.avatarCid
+      })
+      .from(schema.postTags)
+      .innerJoin(schema.posts, eq(schema.postTags.postId, schema.posts.id))
+      .leftJoin(schema.users, eq(schema.posts.authorId, schema.users.id))
+      .where(eq(sql`LOWER(${schema.postTags.tag})`, cleanTag))
+      .limit(limit)
+      .offset(offset)
+      .orderBy(desc(schema.posts.createdAt));
+
+      // Find statuses with this tag
+      const statusResults = await db.select({
+        id: schema.statuses.id,
+        authorId: schema.statuses.authorId,
+        content: schema.statuses.content,
+        contentCid: schema.statuses.contentCid,
+        mediaCids: schema.statuses.mediaCids,
+        tags: schema.statuses.tags,
+        createdAt: schema.statuses.createdAt,
+        upvotes: schema.statuses.upvotes,
+        downvotes: schema.statuses.downvotes,
+        views: schema.statuses.views,
+        walletAddress: schema.users.walletAddress,
+        handle: schema.users.handle,
+        displayName: schema.users.displayName,
+        avatarCid: schema.users.avatarCid
+      })
+      .from(schema.statusTags)
+      .innerJoin(schema.statuses, eq(schema.statusTags.statusId, schema.statuses.id))
+      .leftJoin(schema.users, eq(schema.statuses.authorId, schema.users.id))
+      .where(eq(sql`LOWER(${schema.statusTags.tag})`, cleanTag))
+      .limit(limit)
+      .offset(offset)
+      .orderBy(desc(schema.statuses.createdAt));
+
+      // Combine and format
+      const posts = [
+        ...postResults.map(r => ({ ...r, isStatus: false })),
+        ...statusResults.map(r => ({ ...r, isStatus: true }))
+      ].sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime())
+      .slice(0, limit);
+
+      return {
+        posts,
+        total: postResults.length + statusResults.length,
+        hasMore: posts.length === limit
+      };
+    } catch (error) {
+      safeLogger.error('Error getting posts by hashtag:', error);
+      return { posts: [], total: 0, hasMore: false };
+    }
   }
 
   async getTopicContent(topic: string, limit: number = 20, offset: number = 0): Promise<any> {
-    return { content: [], total: 0 };
+    const db = this.databaseService.getDatabase();
+    try {
+      const cleanTopic = topic.toLowerCase();
+      
+      // Get communities in this category
+      const communities = await this.searchCommunities(cleanTopic, {}, limit, offset);
+      
+      // Get posts with this tag
+      const posts = await this.getPostsByHashtag(cleanTopic, limit, offset);
+      
+      return {
+        communities: communities.communities || [],
+        posts: posts.posts || [],
+        hashtags: [cleanTopic]
+      };
+    } catch (error) {
+      safeLogger.error('Error getting topic content:', error);
+      return { communities: [], posts: [], hashtags: [] };
+    }
   }
 
   // Helper methods that are called but missing

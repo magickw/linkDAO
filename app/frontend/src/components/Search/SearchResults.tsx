@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { SearchResult } from './GlobalSearchInterface';
+import { SearchPreview } from './SearchPreview';
 import { useRouter } from 'next/router';
 
 interface SearchResultsProps {
@@ -108,19 +109,19 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   return (
     <div className="search-results">
       {results.map((result, index) => (
-        <div
-          key={result.id}
-          className={`
-            search-result-item
-            flex items-start space-x-3 p-3 cursor-pointer transition-colors
-            hover:bg-gray-50 dark:hover:bg-gray-700
-            ${result.isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
-            ${compact ? 'py-2' : 'py-3'}
-          `}
-          onClick={() => onResultSelect(result)}
-        >
-          {/* Icon/Image */}
-          <div className="flex-shrink-0">
+        <SearchPreview key={result.id} result={result} position={index}>
+          <div
+            className={`
+              search-result-item
+              flex items-start space-x-3 p-3 cursor-pointer transition-colors
+              hover:bg-gray-50 dark:hover:bg-gray-700
+              ${result.isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
+              ${compact ? 'py-2' : 'py-3'}
+            `}
+            onClick={() => onResultSelect(result)}
+          >
+            {/* Icon/Image */}
+            <div className="flex-shrink-0">
             {result.imageUrl ? (
               <img
                 src={result.imageUrl}
@@ -233,6 +234,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             </div>
           </div>
         </div>
+        </SearchPreview>
       ))}
 
       <style jsx>{`

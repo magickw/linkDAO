@@ -5,6 +5,7 @@ import { EnhancedSearchFilters, SearchSuggestion } from '../../types/enhancedSea
 import { SearchResultsView } from './SearchResultsView';
 import { SearchSuggestions } from './SearchSuggestions';
 import { SearchFilters } from './SearchFilters';
+import { SavedSearches } from '../Search/SavedSearches';
 import { LoadingSkeletons } from '../LoadingSkeletons';
 
 interface EnhancedSearchInterfaceProps {
@@ -23,7 +24,7 @@ export function EnhancedSearchInterface({
   onResultSelect,
   className = '',
   showFilters = true,
-  placeholder = 'Search posts, communities, users, hashtags, and topics...',
+  placeholder = 'Search content...',
   communityId
 }: EnhancedSearchInterfaceProps) {
   const router = useRouter();
@@ -68,6 +69,19 @@ export function EnhancedSearchInterface({
       setFilters({ ...filters, ...initialFilters });
     }
   }, [initialQuery, initialFilters]);
+
+  // Keyboard shortcut for focusing search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Handle search submission
   const handleSearch = async (searchQuery?: string) => {
@@ -151,6 +165,16 @@ export function EnhancedSearchInterface({
     <div className={`max-w-6xl mx-auto ${className}`}>
       {/* Search Header */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+        {/* Saved Searches */}
+        <div className="mb-4">
+          <SavedSearches 
+            onSearchSelect={(savedSearch) => {
+              setQuery(savedSearch.query);
+              setFilters(savedSearch.filters || {});
+              handleSearch(savedSearch.query);
+            }}
+          />
+        </div>
         {/* Search Input */}
         <div className="relative mb-6">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -175,8 +199,15 @@ export function EnhancedSearchInterface({
             }}
             onFocus={() => setShowSuggestions(true)}
             placeholder={placeholder}
-            className="block w-full pl-12 pr-16 py-4 text-lg border border-gray-300 dark:border-gray-600 rounded-xl leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
+            className="block w-full pl-12 pr-24 py-4 text-lg border border-gray-300 dark:border-gray-600 rounded-xl leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
           />
+          
+          {/* Keyboard Shortcut Hint */}
+          <div className="absolute inset-y-0 right-20 flex items-center">
+            <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+              /
+            </span>
+          </div>
           
           {/* Search Actions */}
           <div className="absolute inset-y-0 right-0 flex items-center space-x-2 pr-4">
@@ -212,12 +243,16 @@ export function EnhancedSearchInterface({
 
           {/* Search Suggestions */}
           {showSuggestions && suggestions.length > 0 && (
-            <SearchSuggestions
+            <div 
               ref={suggestionsRef}
-              suggestions={suggestions}
-              onSelect={handleSuggestionSelect}
-              onClose={() => setShowSuggestions(false)}
-            />
+              className="absolute z-50 mt-1 w-full max-w-2xl mx-auto left-0 right-0 bg-white dark:bg-gray-800 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+            >
+              <SearchSuggestions
+                suggestions={suggestions}
+                onSelect={handleSuggestionSelect}
+                onClose={() => setShowSuggestions(false)}
+              />
+            </div>
           )}
         </div>
 

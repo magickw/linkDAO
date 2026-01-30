@@ -199,20 +199,95 @@ export default function RecommendationSystem({
 
   if (!hasRecommendations) {
     return (
-      <EmptyState
-        title="No recommendations available"
-        description={
-          isConnected 
-            ? "We're still learning about your preferences. Interact with more content to get personalized recommendations!"
-            : "Connect your wallet to get personalized recommendations based on your activity."
-        }
-        icon={
-          <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-          </svg>
-        }
-        className={className}
-      />
+      <div className={className}>
+        {!isConnected ? (
+          // Guest User Preview
+          <div className="bg-gradient-to-br from-primary-50 to-secondary-50 dark:from-gray-800 dark:to-gray-900 rounded-xl border border-primary-200 dark:border-gray-700 p-8 text-center">
+            <div className="max-w-md mx-auto">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                Unlock Personalized Recommendations
+              </h2>
+              
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                Connect your wallet to get tailored recommendations based on your interests, activity, and network connections.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div className="bg-white dark:bg-gray-700/50 rounded-lg p-4">
+                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Community Matches</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Find communities aligned with your interests</p>
+                </div>
+                
+                <div className="bg-white dark:bg-gray-700/50 rounded-lg p-4">
+                  <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                  </div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Smart Discovery</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Discover trending content and popular topics</p>
+                </div>
+                
+                <div className="bg-white dark:bg-gray-700/50 rounded-lg p-4">
+                  <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">People You Might Know</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Connect with users in your network</p>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => {
+                  // Trigger wallet connection
+                  const connectButton = document.querySelector('[data-testid="connect-wallet-button"]') as HTMLElement;
+                  if (connectButton) {
+                    connectButton.click();
+                  } else {
+                    // Fallback: show toast to connect wallet
+                    addToast('Please connect your wallet to unlock recommendations', 'info');
+                  }
+                }}
+                className="px-6 py-3 bg-gradient-to-r from-primary-600 to-secondary-600 text-white font-semibold rounded-lg hover:from-primary-700 hover:to-secondary-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              >
+                Connect Wallet to Get Started
+              </button>
+              
+              <div className="mt-6 text-sm text-gray-500 dark:text-gray-400">
+                <p>Already have an account? <span className="text-primary-600 dark:text-primary-400 font-medium">Sign in</span> to see your personalized feed</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <EmptyState
+            title="No recommendations available"
+            description={
+              isConnected 
+                ? "We're still learning about your preferences. Interact with more content to get personalized recommendations!"
+                : "Connect your wallet to get personalized recommendations based on your activity."
+            }
+            icon={
+              <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+            }
+            className={className}
+          />
+        )}
+      </div>
     );
   }
 

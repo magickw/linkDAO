@@ -1,4 +1,5 @@
-import { Post } from '../models/Post';
+import { Post, convertBackendPostToPost } from '../models/Post';
+import { convertBackendStatusToStatus } from '../models/Status';
 import { Community } from '../models/Community';
 import { UserProfile } from '../models/UserProfile';
 import { fuzzySearch, tokenizeSearch } from './fuzzySearchUtils';
@@ -107,8 +108,17 @@ export class SearchService {
         return { posts: [], communities: [], users: [], hashtags: [], totalResults: 0, hasMore: false };
       }
       const anyJson: any = json as any;
+      
+      const posts = (Array.isArray(anyJson?.posts) ? anyJson.posts : []).map((post: any) => {
+        if (post.isStatus === true) {
+          return convertBackendStatusToStatus(post) as any as Post;
+        } else {
+          return convertBackendPostToPost(post);
+        }
+      });
+
       return {
-        posts: Array.isArray(anyJson?.posts) ? anyJson.posts : [],
+        posts,
         communities: Array.isArray(anyJson?.communities) ? anyJson.communities : [],
         users: Array.isArray(anyJson?.users) ? anyJson.users : [],
         hashtags: Array.isArray(anyJson?.hashtags) ? anyJson.hashtags : [],
@@ -219,12 +229,21 @@ export class SearchService {
         throw new Error((error && (error.error || error.message)) || 'Post search failed');
       }
       
-      const json = await safeJson<{ posts: Post[]; hasMore: boolean; total: number }>(response);
+      const json = await safeJson<{ posts: any[]; hasMore: boolean; total: number }>(response);
       const anyJson: any = json || {};
+      
+      const posts = (Array.isArray(anyJson?.posts) ? anyJson.posts : []).map((post: any) => {
+        if (post.isStatus === true) {
+          return convertBackendStatusToStatus(post) as any as Post;
+        } else {
+          return convertBackendPostToPost(post);
+        }
+      });
+
       return {
-        posts: Array.isArray(anyJson?.posts) ? anyJson.posts : [],
+        posts,
         hasMore: Boolean(anyJson?.hasMore),
-        total: Number.isFinite(anyJson?.total) ? anyJson.total : (Array.isArray(anyJson?.posts) ? anyJson.posts.length : 0),
+        total: Number.isFinite(anyJson?.total) ? anyJson.total : posts.length,
       };
     } catch (error) {
       clearTimeout(timeoutId);
@@ -387,8 +406,23 @@ export class SearchService {
         throw new Error(response.statusText || 'Failed to fetch trending content');
       }
       
-      const json = await safeJson<TrendingContent>(response);
-      return json || { posts: [], communities: [], hashtags: [], topics: [] };
+      const json = await safeJson<any>(response);
+      if (!json) return { posts: [], communities: [], hashtags: [], topics: [] };
+
+      const posts = (Array.isArray(json?.posts) ? json.posts : []).map((post: any) => {
+        if (post.isStatus === true) {
+          return convertBackendStatusToStatus(post) as any as Post;
+        } else {
+          return convertBackendPostToPost(post);
+        }
+      });
+
+      return {
+        posts,
+        communities: Array.isArray(json?.communities) ? json.communities : [],
+        hashtags: Array.isArray(json?.hashtags) ? json.hashtags : [],
+        topics: Array.isArray(json?.topics) ? json.topics : [],
+      };
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -431,8 +465,16 @@ export class SearchService {
         throw new Error(response.statusText || 'Failed to fetch trending hashtags');
       }
       
-      const json = await safeJson<{ tag: string; count: number; growth: number }[]>(response);
-      return json || [];
+      const json = await safeJson<any>(response);
+      
+      // Handle both array and object responses
+      if (Array.isArray(json)) {
+        return json;
+      } else if (json && Array.isArray(json.hashtags)) {
+        return json.hashtags;
+      }
+      
+      return [];
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -562,7 +604,7 @@ export class SearchService {
     filters: SearchFilters = {},
     limit: number = 20,
     offset: number = 0
-  ): Promise<{ posts: Post[]; hasMore: boolean; total: number }> {
+  ): Promise<{ posts: any[]; hasMore: boolean; total: number }> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     
@@ -579,7 +621,7 @@ export class SearchService {
         )
       });
 
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/hashtags/${hashtag.replace('#', '')}/posts?${searchParams}`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/search/hashtags/${hashtag.replace('#', '')}/posts?${searchParams}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -594,12 +636,21 @@ export class SearchService {
         throw new Error((error && (error.error || error.message)) || 'Failed to fetch hashtag posts');
       }
       
-      const json = await safeJson<{ posts: Post[]; hasMore: boolean; total: number }>(response);
+      const json = await safeJson<{ posts: any[]; hasMore: boolean; total: number }>(response);
       const anyJson: any = json || {};
+      
+      const posts = (Array.isArray(anyJson?.posts) ? anyJson.posts : []).map((post: any) => {
+        if (post.isStatus === true) {
+          return convertBackendStatusToStatus(post) as any as Post;
+        } else {
+          return convertBackendPostToPost(post);
+        }
+      });
+
       return {
-        posts: Array.isArray(anyJson?.posts) ? anyJson.posts : [],
+        posts,
         hasMore: Boolean(anyJson?.hasMore),
-        total: Number.isFinite(anyJson?.total) ? anyJson.total : (Array.isArray(anyJson?.posts) ? anyJson.posts.length : 0),
+        total: Number.isFinite(anyJson?.total) ? anyJson.total : posts.length,
       };
     } catch (error) {
       clearTimeout(timeoutId);
@@ -645,8 +696,17 @@ export class SearchService {
       }
       
       const json = await safeJson<any>(response);
+      
+      const posts = (Array.isArray(json?.posts) ? json.posts : []).map((post: any) => {
+        if (post.isStatus === true) {
+          return convertBackendStatusToStatus(post) as any as Post;
+        } else {
+          return convertBackendPostToPost(post);
+        }
+      });
+
       return {
-        posts: Array.isArray(json?.posts) ? json.posts : [],
+        posts,
         communities: Array.isArray(json?.communities) ? json.communities : [],
         hashtags: Array.isArray(json?.hashtags) ? json.hashtags : [],
       };

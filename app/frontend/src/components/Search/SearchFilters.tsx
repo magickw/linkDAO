@@ -12,17 +12,25 @@ interface SearchFiltersProps {
   onChange: (filters: Partial<SearchQuery['filters']>) => void;
   compact?: boolean;
   showAdvanced?: boolean;
+  // Configurable options
+  contentTypes?: Array<{ value: string; label: string; icon: string }>;
+  timeRanges?: Array<{ value: string; label: string }>;
+  sortOptions?: Array<{ value: string; label: string }>;
 }
 
 export const SearchFilters: React.FC<SearchFiltersProps> = ({
   filters,
   onChange,
   compact = false,
-  showAdvanced = false
+  showAdvanced = false,
+  contentTypes,
+  timeRanges,
+  sortOptions
 }) => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(showAdvanced);
 
-  const contentTypes = [
+  // Default values if not provided
+  const defaultContentTypes = [
     { value: 'all', label: 'All', icon: '🔍' },
     { value: 'posts', label: 'Posts', icon: '📝' },
     { value: 'communities', label: 'Communities', icon: '👥' },
@@ -30,18 +38,23 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
     { value: 'hashtags', label: 'Hashtags', icon: '#️⃣' }
   ];
 
-  const timeRanges = [
+  const defaultTimeRanges = [
     { value: 'all', label: 'All time' },
     { value: '24h', label: 'Last 24 hours' },
     { value: '7d', label: 'Last week' },
     { value: '30d', label: 'Last month' }
   ];
 
-  const sortOptions = [
+  const defaultSortOptions = [
     { value: 'relevance', label: 'Most relevant' },
     { value: 'recent', label: 'Most recent' },
     { value: 'popular', label: 'Most popular' }
   ];
+
+  // Use provided props or defaults
+  const finalContentTypes = contentTypes || defaultContentTypes;
+  const finalTimeRanges = timeRanges || defaultTimeRanges;
+  const finalSortOptions = sortOptions || defaultSortOptions;
 
   const handleFilterChange = (key: keyof SearchQuery['filters'], value: any) => {
     onChange({ [key]: value });
@@ -57,7 +70,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
           </label>
         )}
         <div className={`flex ${compact ? 'space-x-1' : 'space-x-2'} overflow-x-auto`}>
-          {contentTypes.map((type) => (
+          {finalContentTypes.map((type) => (
             <button
               key={type.value}
               onClick={() => handleFilterChange('type', type.value)}
@@ -85,7 +98,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
             onChange={(e) => handleFilterChange('timeRange', e.target.value)}
             className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           >
-            {timeRanges.map((range) => (
+            {finalTimeRanges.map((range) => (
               <option key={range.value} value={range.value}>
                 {range.label}
               </option>
@@ -97,7 +110,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
             onChange={(e) => handleFilterChange('sortBy', e.target.value)}
             className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           >
-            {sortOptions.map((option) => (
+            {finalSortOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -112,7 +125,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               Time Range
             </label>
             <div className="flex space-x-2">
-              {timeRanges.map((range) => (
+              {finalTimeRanges.map((range) => (
                 <button
                   key={range.value}
                   onClick={() => handleFilterChange('timeRange', range.value)}
@@ -136,7 +149,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               Sort By
             </label>
             <div className="flex space-x-2">
-              {sortOptions.map((option) => (
+              {finalSortOptions.map((option) => (
                 <button
                   key={option.value}
                   onClick={() => handleFilterChange('sortBy', option.value)}
@@ -229,7 +242,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         <div className="flex flex-wrap gap-2">
           {filters.type && filters.type !== 'all' && (
             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-              Type: {contentTypes.find(t => t.value === filters.type)?.label}
+              Type: {finalContentTypes.find(t => t.value === filters.type)?.label}
               <button
                 onClick={() => handleFilterChange('type', 'all')}
                 className="ml-1 text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-100"
@@ -241,7 +254,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
           
           {filters.timeRange && filters.timeRange !== 'all' && (
             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-              Time: {timeRanges.find(t => t.value === filters.timeRange)?.label}
+              Time: {finalTimeRanges.find(t => t.value === filters.timeRange)?.label}
               <button
                 onClick={() => handleFilterChange('timeRange', 'all')}
                 className="ml-1 text-green-600 hover:text-green-800 dark:text-green-300 dark:hover:text-green-100"
@@ -253,7 +266,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
           
           {filters.sortBy && filters.sortBy !== 'relevance' && (
             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-              Sort: {sortOptions.find(s => s.value === filters.sortBy)?.label}
+              Sort: {finalSortOptions.find(s => s.value === filters.sortBy)?.label}
               <button
                 onClick={() => handleFilterChange('sortBy', 'relevance')}
                 className="ml-1 text-purple-600 hover:text-purple-800 dark:text-purple-300 dark:hover:text-purple-100"
