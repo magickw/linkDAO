@@ -99,7 +99,10 @@ export class PostService {
     try {
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${id}`, {
         method: 'PUT',
-        headers: await enhancedAuthService.getAuthHeaders(),
+        headers: {
+          ...await enhancedAuthService.getAuthHeaders(),
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify(data)
       });
 
@@ -151,7 +154,10 @@ export class PostService {
     try {
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/react`, {
         method: 'POST',
-        headers: await enhancedAuthService.getAuthHeaders(),
+        headers: {
+          ...await enhancedAuthService.getAuthHeaders(),
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           type,
           tokenAmount
@@ -194,7 +200,10 @@ export class PostService {
     try {
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/tip`, {
         method: 'POST',
-        headers: await enhancedAuthService.getAuthHeaders(),
+        headers: {
+          ...await enhancedAuthService.getAuthHeaders(),
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           amount,
           tokenType,
@@ -242,7 +251,10 @@ export class PostService {
     try {
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/comments`, {
         method: 'POST',
-        headers: await enhancedAuthService.getAuthHeaders(),
+        headers: {
+          ...await enhancedAuthService.getAuthHeaders(),
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           content,
           parentId
@@ -456,7 +468,10 @@ export class PostService {
     try {
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/repost`, {
         method: 'POST',
-        headers: await enhancedAuthService.getAuthHeaders(),
+        headers: {
+          ...await enhancedAuthService.getAuthHeaders(),
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           originalPostId,
           author,
@@ -477,7 +492,10 @@ export class PostService {
     try {
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/unrepost`, {
         method: 'POST',
-        headers: await enhancedAuthService.getAuthHeaders(),
+        headers: {
+          ...await enhancedAuthService.getAuthHeaders(),
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           originalPostId,
           author
@@ -495,7 +513,10 @@ export class PostService {
     try {
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${originalPostId}/share`, {
         method: 'POST',
-        headers: await enhancedAuthService.getAuthHeaders(),
+        headers: {
+          ...await enhancedAuthService.getAuthHeaders(),
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           targetCommunityId,
           author
