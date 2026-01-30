@@ -6,7 +6,7 @@ import {
   recordRecommendationFeedback,
   getRecommendationInsights
 } from '../controllers/userRecommendationController';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware } from '../middleware/authMiddleware';
 
 const router = Router();
 
