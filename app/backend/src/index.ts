@@ -496,6 +496,7 @@ import userRoutes from './routes/userRoutes';
 import communityRoutes from './routes/communityRoutes';
 import { commentRoutes } from './routes/commentRoutes';
 import notificationRoutes from './routes/notificationRoutes';
+import mentionRoutes from './routes/mentionRoutes';
 import { userNotificationRoutes } from './routes/userNotificationRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import healthRoutes from './routes/healthRoutes';
@@ -506,6 +507,7 @@ import bookmarkRoutes from './routes/bookmarkRoutes';
 import shareRoutes from './routes/shareRoutes';
 import followRoutes from './routes/followRoutes';
 import blockRoutes from './routes/blockRoutes';
+import muteRoutes from './routes/muteRoutes';
 import messagingRoutes from './routes/messagingRoutes';
 import notificationPreferencesRoutes from './routes/notificationPreferencesRoutes';
 import enhancedFiatPaymentRoutes from './routes/enhancedFiatPaymentRoutes';
@@ -616,6 +618,7 @@ app.use('/api/notification-analytics', notificationAnalyticsRoutes);
 app.use('/api/communities', communityRoutes);
 app.use('/api', commentRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/mentions', mentionRoutes);
 app.use('/api/user-notifications', userNotificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/track', trackingRoutes);
@@ -811,6 +814,9 @@ app.use('/api/follow', followRoutes);
 
 // Use block routes
 app.use('/api/block', blockRoutes);
+
+// Use mute routes
+app.use('/api', muteRoutes);
 
 // Use community routes
 app.use('/api/communities', communityRoutes);
