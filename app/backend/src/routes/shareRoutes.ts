@@ -63,16 +63,16 @@ router.get('/:shareId', async (req, res) => {
 // All other share routes require authentication
 router.use(authenticateToken);
 
+// Get user's sharing history (specific route before generic :postId pattern)
+router.get('/my-shares', shareController.getUserShares.bind(shareController));
+
 // Track a share
-router.post('/track', csrfProtection,  shareController.trackShare.bind(shareController));
+router.post('/track', csrfProtection, shareController.trackShare.bind(shareController));
 
 // Get share count for a post
 router.get('/:postId/count', shareController.getShareCount.bind(shareController));
 
 // Get share breakdown
 router.get('/:postId/breakdown', shareController.getShareBreakdown.bind(shareController));
-
-// Get user's sharing history
-router.get('/my-shares', shareController.getUserShares.bind(shareController));
 
 export default router;
