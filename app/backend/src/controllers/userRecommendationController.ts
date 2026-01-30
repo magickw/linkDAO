@@ -101,13 +101,9 @@ export async function getCommunityRecommendations(req: AuthenticatedRequest, res
 
     const limit = parseInt(req.query.limit as string) || 10;
 
-    // Get user's interests from their posts
-    const interests = await userRecommendationService['getUserInterests'](userId);
-
-    // Build context with interests
+    // Get recommendations for communities
     const context: RecommendationContext = {
       currentUserId: userId,
-      interests,
       algorithm: 'content',
       timeframe: 'week'
     };
@@ -121,7 +117,6 @@ export async function getCommunityRecommendations(req: AuthenticatedRequest, res
         metadata: {
           totalFound: recommendations.length,
           returned: recommendations.length,
-          interests: interests.slice(0, 5),
           timestamp: new Date().toISOString()
         }
       }
