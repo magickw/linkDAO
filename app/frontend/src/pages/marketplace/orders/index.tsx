@@ -28,7 +28,11 @@ import { Button } from '@/design-system/components/Button';
 import Layout from '@/components/Layout';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { ENV_CONFIG } from '@/config/environment';
+import { enhancedAuthService } from '@/services/enhancedAuthService';
 import OrderProgressBar from '@/components/Marketplace/OrderTracking/OrderProgressBar';
+import { ENV_CONFIG } from '../../../config/environment';
+import { enhancedAuthService } from '../../../services/enhancedAuthService';
 
 interface Order {
     id: string;
@@ -707,18 +711,17 @@ function OrderDetailsModal({ order, onClose, onCancelOrder, canCancel, isCancell
     // Handle invoice download
     const handleDownloadInvoice = async () => {
         try {
-            // Dynamic import to avoid SSR issues if any, though client-side is fine 
-            const { DocumentGenerator } = await import('@/utils/DocumentGenerator');
-
-            // Map Order to DocumentData
-            const docData: any = {
-                type: 'PURCHASE_ORDER',
-                documentNumber: order.orderNumber,
+            toast?.loading('Generating Purchase Order...');
+            
+            // Map Order to DocumentData for backend creation
+            const poData = {
+                poNumber: order.orderNumber,
+                buyerId: order.buyer?.walletAddress, // Using address as ID for simplicity or fetch actual UUID
+                sellerId: order.seller?.walletAddress,
                 date: new Date(order.createdAt),
                 status: (order.status || 'PENDING').toUpperCase(),
                 currency: order.currency || 'USD',
 
-                // Construct Sender (Seller) Info
                 sender: {
                     name: order.seller?.displayName || order.seller?.handle || 'Unknown Seller',
                     address: {
@@ -728,13 +731,9 @@ function OrderDetailsModal({ order, onClose, onCancelOrder, canCancel, isCancell
                         postalCode: order.seller?.address?.postalCode || '',
                         country: order.seller?.address?.country || 'N/A'
                     },
-                    // These would ideally come from the seller profile extended data
-                    registrationNumber: 'Ref: ' + (order.seller?.walletAddress?.substring(0, 8) || ''),
-                    email: 'seller@linkdao.io', // Placeholder or derived
                     walletAddress: order.seller?.walletAddress
                 },
 
-                // Construct Recipient (Buyer) Info
                 recipient: {
                     name: order.buyer?.displayName || order.buyer?.handle || 'Unknown Buyer',
                     address: {
@@ -761,29 +760,32 @@ function OrderDetailsModal({ order, onClose, onCancelOrder, canCancel, isCancell
                 total: order.total,
 
                 note: `Order ID: ${order.id}`,
-                terms: 'Payment is due immediately. LinkDAO acts as the platform provider. Crypto payments are final upon blockchain confirmation.',
-
-                paymentDetails: {
-                    method: order.paymentMethod || 'Crypto',
-                    crypto: (!order.paymentMethod || order.paymentMethod === 'Crypto' || order.paymentMethod === 'ETH') ? {
-                        network: 'Ethereum',
-                        currency: order.currency || 'ETH',
-                        address: order.seller?.walletAddress || ''
-                    } : undefined,
-                    creditCard: (order.paymentMethod === 'CREDIT_CARD' || order.paymentMethod === 'Card') ? {
-                        brand: 'Visa', // Placeholder or derive from data if available
-                        last4: '4242'  // Placeholder: In real app, map from order.paymentDetails.last4
-                    } : undefined
-                }
+                terms: 'Payment is due immediately. LinkDAO acts as the platform provider. Crypto payments are final upon blockchain confirmation.'
             };
 
-            const generator = new DocumentGenerator(docData);
-            generator.save(`LinkDAO-PO-${order.orderNumber}.pdf`);
+            const response = await fetch(`${ENV_CONFIG.BACKEND_URL}/api/orders/${order.id}/purchase-order`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(await enhancedAuthService.getAuthHeaders())
+                },
+                body: JSON.stringify(poData)
+            });
+
+            if (!response.ok) throw new Error('Failed to generate PO');
+
+            const result = await response.json();
+            if (result.success && result.data.pdfUrl) {
+                toast?.dismiss();
+                window.open(result.data.pdfUrl, '_blank');
+            } else {
+                throw new Error('PDF URL not found in response');
+            }
 
         } catch (error) {
             console.error('Failed to generate PDF:', error);
-            // Fallback or toast
-            toast?.error('Failed to generate invoice');
+            toast?.dismiss();
+            toast?.error('Failed to generate purchase order');
         }
     };
 

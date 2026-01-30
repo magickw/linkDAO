@@ -8,6 +8,7 @@ import { UserProfile } from '@/models/UserProfile';
 import { EnhancedSecuritySettings } from '@/components/Settings/EnhancedSecuritySettings';
 import EmailPreferences from '@/components/Settings/EmailPreferences';
 import SocialConnectionsTab from '@/components/SocialMedia/SocialConnectionsTab';
+import DocumentHub from '@/components/User/DocumentHub';
 
 export default function Settings() {
   const { address, isConnected } = useAccount();
@@ -40,7 +41,8 @@ export default function Settings() {
 
   const validateEmail = (email: string): boolean => {
     if (!email) return true; // Email is optional
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[^
+\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
@@ -75,6 +77,7 @@ export default function Settings() {
   const tabs = [
     { id: 'profile', name: 'Profile', icon: '👤' },
     { id: 'wallet', name: 'Wallet', icon: '💰' },
+    { id: 'documents', name: 'Documents', icon: '📄' },
     { id: 'preferences', name: 'Preferences', icon: '⚙️' },
     { id: 'social', name: 'Social Connections', icon: '🔗' },
     { id: 'security', name: 'Security & Notifications', icon: '🔒' },
@@ -287,6 +290,12 @@ export default function Settings() {
                       </div>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {activeTab === 'documents' && (
+                <div className="p-6">
+                  <DocumentHub />
                 </div>
               )}
 
