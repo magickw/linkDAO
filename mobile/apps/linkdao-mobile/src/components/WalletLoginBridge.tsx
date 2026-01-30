@@ -8,6 +8,7 @@ import { useEffect, useRef } from 'react';
 import { useAuthStore } from '../store';
 import { authService } from '@linkdao/shared';
 import { walletService } from '../services/walletConnectService';
+import { hapticFeedback } from '../utils/haptics';
 
 interface WalletLoginBridgeProps {
   autoLogin?: boolean;
@@ -107,6 +108,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
         if (result.success && result.token && result.user) {
           lastAuthenticatedAddress = walletAddress;
           console.log(`✅ Login successful for ${addressKey}`);
+          hapticFeedback.success();
           setUser(result.user);
           setToken(result.token);
           if (onLoginSuccess) {

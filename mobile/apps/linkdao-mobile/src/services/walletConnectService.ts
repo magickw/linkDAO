@@ -10,6 +10,7 @@ import { ethers } from 'ethers';
 // Import only types for the injected SDK state
 import type { SDKState } from '@metamask/sdk-react-native';
 import { setWalletAdapter, IWalletAdapter } from '@linkdao/shared';
+import { hapticFeedback } from '../utils/haptics';
 
 const STORAGE_KEY = 'wallet_connection';
 
@@ -133,11 +134,13 @@ class WalletService implements IWalletAdapter {
         };
 
         await this.saveConnection(this.activeConnection);
+        hapticFeedback.success();
         console.log(`✅ Connected to ${provider}:`, address);
       }
 
       return address;
     } catch (error) {
+      hapticFeedback.error();
       const errorMsg = error instanceof Error ? error.message : String(error);
       // Only show serious errors, suppress wallet-not-found errors and SDK initialization
       if (!errorMsg.includes('not installed') && !errorMsg.includes('found') && !errorMsg.includes('Redirecting') && !errorMsg.includes('SDK not yet injected') && !errorMsg.includes('not yet implemented')) {
@@ -355,6 +358,7 @@ class WalletService implements IWalletAdapter {
       if (this.currentProvider === 'dev-mock') {
         // Development mock signer - return a valid-looking signature
         const mockSignature = '0x' + 'a'.repeat(130); // 65 bytes in hex (130 chars)
+        hapticFeedback.success();
         console.log('✅ Mock signature generated for development');
         return mockSignature;
       }
@@ -371,6 +375,7 @@ class WalletService implements IWalletAdapter {
           params: [message, address],
         }) as string;
 
+        hapticFeedback.success();
         console.log('✅ Message signed via MetaMask SDK');
         return signature;
       }
@@ -380,12 +385,14 @@ class WalletService implements IWalletAdapter {
         const { walletConnectV2Service } = await import('./walletConnectV2Service');
         const signature = await walletConnectV2Service.signMessage(message);
 
+        hapticFeedback.success();
         console.log('✅ Message signed via WalletConnect V2');
         return signature;
       }
 
       throw new Error('No signer available for current provider');
     } catch (error) {
+      hapticFeedback.error();
       console.error('❌ Failed to sign message:', error);
       throw error;
     }
@@ -413,12 +420,14 @@ class WalletService implements IWalletAdapter {
           params: [tx],
         }) as string;
 
+        hapticFeedback.success();
         console.log('✅ Transaction sent via MetaMask SDK:', hash);
         return hash;
       }
 
       throw new Error('Transaction sending not supported for this provider');
     } catch (error) {
+      hapticFeedback.error();
       console.error('❌ Failed to send transaction:', error);
       throw error;
     }

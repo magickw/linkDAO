@@ -148,6 +148,7 @@ export default function CommunityTipButton({
       {/* Tip Button */}
       <button
         onClick={handleTipClick}
+        data-cursor="tip"
         className={`flex items-center space-x-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors duration-200 ${className}`}
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

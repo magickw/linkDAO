@@ -9,7 +9,7 @@ export interface TransactionFee {
   id: string;
   type: 'listing' | 'sale' | 'offer' | 'auction' | 'escrow' | 'dispute';
   amount: string;
-  currency: 'LDAO' | 'USDC' | 'ETH';
+  currency: 'LDAO' | 'USDC' | 'ETH' | 'USD';
   percentage: number;
   baseFee: string;
   recipient: string;
@@ -23,11 +23,13 @@ export interface FeeStructure {
   listingFee: {
     enabled: boolean;
     baseFee: {
-      LDAO: string;
-      USDC: string;
-      ETH: string;
+      LDAO?: string;
+      USDC?: string;
+      ETH?: string;
+      USD: string;
     };
     percentage: number;
+    period?: 'monthly' | 'per_listing';
     waivers: {
       daoApproved: boolean;
       reputationThreshold: number;
@@ -166,11 +168,10 @@ export class MarketplaceFeeService {
       listingFee: {
         enabled: true,
         baseFee: {
-          LDAO: '5',
-          USDC: '2',
-          ETH: '0.001'
+          USD: '0.10'
         },
-        percentage: 0.5,
+        percentage: 0, // No percentage fee
+        period: 'monthly', // Charge per month
         waivers: {
           daoApproved: true,
           reputationThreshold: 100,
@@ -215,14 +216,15 @@ export class MarketplaceFeeService {
   static async calculateListingFee(
     sellerAddress: string,
     price: string,
-    currency: 'LDAO' | 'USDC' | 'ETH'
+    currency: 'LDAO' | 'USDC' | 'ETH' | 'USD'
   ): Promise<{ fee: string; discounts: FeeDiscount[]; waivers: string[] }> {
     if (!MarketplaceFeeService.feeStructure) {
       await MarketplaceFeeService.loadFeeStructure();
     }
 
     const structure = MarketplaceFeeService.feeStructure!;
-    let fee = structure.listingFee.baseFee[currency];
+    // For fixed monthly fee, use USD value
+    let fee = structure.listingFee.baseFee.USD || '0.10';
     const discounts: FeeDiscount[] = [];
     const waivers: string[] = [];
 
@@ -231,24 +233,22 @@ export class MarketplaceFeeService {
       const isApproved = await MarketplaceFeeService.checkDAOApproval(sellerAddress);
       if (isApproved) {
         waivers.push('DAO Approved Seller');
+        fee = '0'; // No fee for DAO approved sellers
       }
     }
 
-    // Calculate percentage fee if not waived
+    // No percentage fee for fixed pricing model
+    // Apply discounts only if no waivers
     if (waivers.length === 0) {
-      const percentageFee = (parseFloat(price) * structure.listingFee.percentage / 100).toString();
-      fee = (parseFloat(fee) + parseFloat(percentageFee)).toString();
-    }
-
-    // Apply discounts
-    const userDiscounts = await MarketplaceFeeService.getUserDiscounts(sellerAddress);
-    for (const discount of userDiscounts) {
-      if (discount.applicableFees.includes('listing')) {
-        discounts.push(discount);
-        if (discount.type === 'percentage') {
-          fee = (parseFloat(fee) * (1 - Number(discount.value) / 100)).toString();
-        } else if (discount.type === 'fixed') {
-          fee = Math.max(0, parseFloat(fee) - parseFloat(String(discount.value))).toString();
+      const userDiscounts = await MarketplaceFeeService.getUserDiscounts(sellerAddress);
+      for (const discount of userDiscounts) {
+        if (discount.applicableFees.includes('listing')) {
+          discounts.push(discount);
+          if (discount.type === 'percentage') {
+            fee = (parseFloat(fee) * (1 - Number(discount.value) / 100)).toString();
+          } else if (discount.type === 'fixed') {
+            fee = Math.max(0, parseFloat(fee) - parseFloat(String(discount.value))).toString();
+          }
         }
       }
     }

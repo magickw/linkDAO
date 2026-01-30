@@ -19,6 +19,7 @@ interface InfiniteScrollFeedProps {
   enableVirtualization?: boolean; // Enable virtual scrolling for large feeds
   virtualHeight?: number; // Height of the virtualized list
   itemHeight?: number; // Height of each item in the virtualized list
+  zenMode?: boolean;
 }
 
 const InfiniteScrollFeed = React.memo(({
@@ -32,7 +33,8 @@ const InfiniteScrollFeed = React.memo(({
   onError,
   enableVirtualization = false,
   virtualHeight = 600,
-  itemHeight = 300
+  itemHeight = 300,
+  zenMode = false
 }: InfiniteScrollFeedProps) => {
   const { isMobile } = useMobileOptimization();
   // Use useMemo to prevent unnecessary re-renders
@@ -324,6 +326,7 @@ const InfiniteScrollFeed = React.memo(({
         onExpand={() => {
           console.log('Expand post');
         }}
+        zenMode={zenMode}
       />
     );
   }, [enableVirtualization, posts, virtualHeight, itemHeight]);

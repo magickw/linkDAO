@@ -11,15 +11,40 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '../../src/store';
 import { authService } from '@linkdao/shared';
 import { walletService } from '../../src/services/walletConnectService';
+import { canAuthenticateWithBiometrics, authenticateWithBiometrics, getBiometryTypeName, isBiometricAvailable } from '../../src/services/biometricService';
+import { hapticFeedback } from '../../src/utils/haptics';
 
 export default function LoginScreen() {
   const [walletAddress, setWalletAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [connector, setConnector] = useState<any>(null);
+  const [biometricsEnabled, setBiometricsEnabled] = useState(false);
+  const [biometryType, setBiometryType] = useState<any>(undefined);
   const hasAttemptedRef = useRef<string | null>(null);
+  const biometricAttemptedRef = useRef(false);
 
   const { walletAddress: paramWalletAddress, connector: paramConnector } = useLocalSearchParams();
+
+  // Check biometrics on mount
+  useEffect(() => {
+    const checkBiometrics = async () => {
+      const enabled = await canAuthenticateWithBiometrics();
+      setBiometricsEnabled(enabled);
+      
+      const { biometryType } = await isBiometricAvailable();
+      setBiometryType(biometryType);
+
+      // Auto-trigger biometrics if enabled and not already attempted
+      if (enabled && !biometricAttemptedRef.current && !isAuthenticated) {
+        biometricAttemptedRef.current = true;
+        // Small delay to ensure UI is ready
+        setTimeout(handleBiometricLogin, 500);
+      }
+    };
+    
+    checkBiometrics();
+  }, [isAuthenticated]);
 
   const setUser = useAuthStore((state) => state.setUser);
   const setToken = useAuthStore((state) => state.setToken);
@@ -87,6 +112,31 @@ export default function LoginScreen() {
     }
   };
 
+  const handleBiometricLogin = async () => {
+    try {
+      setLoading(true);
+      const result = await authenticateWithBiometrics('Sign in to LinkDAO');
+      
+      if (result.success) {
+        hapticFeedback.success();
+        // Since biometrics proved device ownership, we can try to restore the last session
+        // or prompt for wallet signature if token is expired
+        const response = await authService.checkSession();
+        if (response.success && response.user) {
+          setUser(response.user);
+          router.replace('/(tabs)');
+        } else {
+          // If session is not restorable, we need them to use the wallet button
+          addToast('Biometric verified. Please sign with your wallet.', 'info');
+        }
+      }
+    } catch (error) {
+      console.error('Biometric login error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleWalletConnect = () => {
     router.push('/auth/wallet-connect');
   };
@@ -136,6 +186,23 @@ export default function LoginScreen() {
                 {loading ? 'Authenticating...' : isConnected ? 'Authenticate' : 'Sign In with Wallet'}
               </Text>
             </TouchableOpacity>
+
+            {/* Biometric Login Option */}
+            {biometricsEnabled && !loading && (
+              <TouchableOpacity
+                style={styles.biometricButton}
+                onPress={handleBiometricLogin}
+              >
+                <Ionicons 
+                  name={biometryType === 'FaceID' ? 'scan-outline' : 'finger-print-outline'} 
+                  size={24} 
+                  color="#3b82f6" 
+                />
+                <Text style={styles.biometricButtonText}>
+                  Sign in with {getBiometryTypeName(biometryType)}
+                </Text>
+              </TouchableOpacity>
+            )}
 
             {/* Register Link */}
             <View style={styles.registerContainer}>
@@ -235,6 +302,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  biometricButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    marginBottom: 24,
+    gap: 8,
+  },
+  biometricButtonText: {
+    fontSize: 16,
+    color: '#3b82f6',
+    fontWeight: '500',
   },
   registerContainer: {
     flexDirection: 'row',

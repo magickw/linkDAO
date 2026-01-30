@@ -7,6 +7,14 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { apiClient } from './apiClient';
+import { router } from 'expo-router';
+
+// Notification category IDs
+export const NOTIFICATION_CATEGORIES = {
+    COMMENT: 'comment_actions',
+    COMMUNITY_INVITE: 'community_invite_actions',
+    ESCROW_ACTION: 'escrow_actions',
+};
 
 // Configure notification behavior
 Notifications.setNotificationHandler({
@@ -16,6 +24,38 @@ Notifications.setNotificationHandler({
         shouldSetBadge: true,
     }),
 });
+
+/**
+ * Define notification categories for interactive actions
+ */
+async function setNotificationCategories() {
+    await Notifications.setNotificationCategoryAsync(NOTIFICATION_CATEGORIES.COMMENT, [
+        {
+            identifier: 'like',
+            buttonTitle: '❤️ Like',
+            options: { opensAppToForeground: false },
+        },
+        {
+            identifier: 'reply',
+            buttonTitle: '💬 Reply',
+            options: { opensAppToForeground: true },
+            textInput: { placeholder: 'Type your reply...', submitButtonTitle: 'Send' },
+        },
+    ]);
+
+    await Notifications.setNotificationCategoryAsync(NOTIFICATION_CATEGORIES.COMMUNITY_INVITE, [
+        {
+            identifier: 'accept',
+            buttonTitle: '✅ Accept',
+            options: { opensAppToForeground: false },
+        },
+        {
+            identifier: 'decline',
+            buttonTitle: '❌ Decline',
+            options: { opensAppToForeground: false },
+        },
+    ]);
+}
 
 export interface NotificationData {
     title: string;
@@ -52,6 +92,9 @@ class NotificationService {
      * Initialize notification service
      */
     async initialize() {
+        // Set up notification categories
+        await setNotificationCategories();
+
         // Set up notification listeners
         this.notificationListener = Notifications.addNotificationReceivedListener(
             this.handleNotificationReceived
@@ -236,33 +279,31 @@ class NotificationService {
         // Navigate based on notification type
         switch (data.type) {
             case 'comment':
-                // Navigate to post with comment
-                console.log('[Notifications] Navigate to post:', data.postId);
-                break;
-
             case 'reaction':
-                // Navigate to post
-                console.log('[Notifications] Navigate to post:', data.postId);
+            case 'mention':
+                if (data.postId) {
+                    router.push(`/post/${data.postId}`);
+                }
                 break;
 
             case 'tip':
-                // Navigate to tips screen
-                console.log('[Notifications] Navigate to tips');
-                break;
-
-            case 'mention':
-                // Navigate to mentioned post
-                console.log('[Notifications] Navigate to post:', data.postId);
+                router.push('/wallet');
                 break;
 
             case 'community':
-                // Navigate to community
-                console.log('[Notifications] Navigate to community:', data.communityId);
+                if (data.communityId) {
+                    router.push(`/communities/${data.communityId}`);
+                }
                 break;
 
             case 'moderation':
-                // Navigate to moderation tools
-                console.log('[Notifications] Navigate to moderation:', data.communityId);
+                router.push('/settings/moderation');
+                break;
+
+            case 'escrow':
+                if (data.orderId) {
+                    router.push(`/marketplace/orders/${data.orderId}`);
+                }
                 break;
 
             default:

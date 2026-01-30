@@ -1176,7 +1176,8 @@ export const SellerOrdersTab: React.FC<SellerOrdersTabProps> = ({ isActive }) =>
                                 )}
                             </div>
                         </GlassPanel>
-                    ))
+                        ))
+                    </>
                 )}
             </div>
 

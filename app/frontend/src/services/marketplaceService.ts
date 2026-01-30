@@ -6,6 +6,7 @@
 // import { ApiCacheManager } from '../utils/apiCacheManager';
 import { fetchWithRetry } from '../utils/apiUtils';
 import { API_BASE_URL } from '../config/api';
+import { productCache, sellerCache, categoryCache } from './marketplaceDataCache';
 
 
 
@@ -457,6 +458,13 @@ export class UnifiedMarketplaceService {
 
   async getListingById(id: string): Promise<Product | null> {
     try {
+      // Check cache first
+      const cached = await productCache.get<Product>(id);
+      if (cached) {
+        console.log(`[MarketplaceService] Returning cached listing for ${id}`);
+        return cached;
+      }
+
       const response = await this.makeApiRequest(`/api/marketplace/listings/${id}`, {
         headers: {
           'Content-Type': 'application/json',
@@ -544,6 +552,10 @@ export class UnifiedMarketplaceService {
             safetyScore: 85
           }
         } as Product;
+
+        // Store in cache
+        await productCache.set(id, product);
+        return product;
       } else {
         console.warn('[MarketplaceService] Listing API returned unexpected format:', result);
         return this.createFallbackProduct(id);
@@ -741,18 +753,29 @@ export class UnifiedMarketplaceService {
         }
       });
 
+      const paramsString = params.toString();
+      const cacheKey = `search_${paramsString}`;
+
+      // Check cache first
+      const cached = await searchCache.get<Product[]>(cacheKey);
+      if (cached) return cached;
+
       // Add cache-busting parameter to prevent service worker caching issues
       const cacheBuster = `_=${Date.now()}`;
-      const paramsString = params.toString();
       const separator = paramsString ? '&' : '';
       const endpoint = `/api/marketplace/search?${paramsString}${separator}${cacheBuster}`;
       const response = await this.makeApiRequest(endpoint);
 
       if (!response.ok) {
         throw new Error('Failed to search products');
-      } const result = await response.json();
+      } 
+      
+      const result = await response.json();
       if (result.success) {
-        return result.data.products || [];
+        const products = result.data.products || [];
+        // Store in cache
+        await searchCache.set(cacheKey, products);
+        return products;
       } else {
         throw new Error(result.message || 'Failed to search products');
       }
@@ -1403,21 +1426,33 @@ export class UnifiedMarketplaceService {
       console.error('Health check failed:', error);
       return false;
     }
-  } async getCategories(): Promise<CategoryInfo[]> {
-    // Add cache-busting parameter to prevent service worker caching issues
-    const cacheBuster = `_=${Date.now()}`;
-    const endpoint = `/api/marketplace/listings/categories?${cacheBuster}`;
-    const response = await this.makeApiRequest(endpoint);
+  }  async getCategories(): Promise<CategoryInfo[]> {
+    try {
+      // Check cache first
+      const cached = await categoryCache.get<CategoryInfo[]>('all_categories');
+      if (cached) return cached;
 
-    if (!response.ok) {
-      throw new Error(`Categories API request failed with status: ${response.status}`);
-    }
+      // Add cache-busting parameter to prevent service worker caching issues
+      const cacheBuster = `_=${Date.now()}`;
+      const endpoint = `/api/marketplace/listings/categories?${cacheBuster}`;
+      const response = await this.makeApiRequest(endpoint);
 
-    const result = await response.json();
-    if (result.success) {
-      return result.data || [];
-    } else {
-      throw new Error(result.message || 'Failed to fetch categories');
+      if (!response.ok) {
+        throw new Error(`Categories API request failed with status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        const categories = result.data || [];
+        // Store in cache
+        await categoryCache.set('all_categories', categories);
+        return categories;
+      } else {
+        throw new Error(result.message || 'Failed to fetch categories');
+      }
+    } catch (error) {
+      console.error('[MarketplaceService] Error in getCategories:', error);
+      return [];
     }
   }
 
@@ -1434,12 +1469,16 @@ export class UnifiedMarketplaceService {
         return null;
       }
 
+      // Check cache first
+      const cached = await sellerCache.get<SellerInfo>(sellerId);
+      if (cached) return cached;
+
       // Try to use the seller service if available
       const { sellerService } = await import('@/services/sellerService');
       const sellerProfile = await sellerService.getSellerProfile(sellerId);
 
       if (sellerProfile) {
-        return {
+        const sellerInfo: SellerInfo = {
           id: sellerProfile.walletAddress,
           walletAddress: sellerProfile.walletAddress,
           displayName: sellerProfile.storeName,
@@ -1451,6 +1490,10 @@ export class UnifiedMarketplaceService {
           profileImageUrl: sellerProfile.profileImageCdn,
           isOnline: true // Default value
         };
+
+        // Store in cache
+        await sellerCache.set(sellerId, sellerInfo);
+        return sellerInfo;
       }
 
       return null;

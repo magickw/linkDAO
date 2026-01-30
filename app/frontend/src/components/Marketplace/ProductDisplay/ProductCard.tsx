@@ -825,7 +825,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         nftShadow={product.seller.daoApproved ? 'dao' : (product.isNFT ? 'standard' : undefined)}
       >
         {/* Image */}
-        <div className="relative h-48 w-full">
+        <div className="relative h-48 w-full" data-cursor="buy">
           <OptimizedImage
             src={getProductImage(product)}
             alt={product.title}
@@ -1054,6 +1054,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   }}
                   className="flex-1"
                   disabled={product.inventory === 0}
+                  data-cursor="buy"
                 >
                   {product.inventory === 0 ? 'Out of Stock' : 'Buy Now'}
                 </Button>

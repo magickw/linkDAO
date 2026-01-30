@@ -12,6 +12,7 @@ import { useAuthStore, useSettingsStore, useNotificationStore } from '../src/sto
 import { authService } from '@linkdao/shared';
 import { isBiometricAvailable, getBiometricConfig, enableBiometrics, disableBiometrics, getBiometryTypeName } from '../src/services';
 import { offlineManager } from '../src/services';
+import { hapticFeedback } from '../src/utils/haptics';
 
 type TabType = 'profile' | 'wallet' | 'preferences' | 'social' | 'security';
 
@@ -105,11 +106,13 @@ export default function SettingsScreen() {
   };
 
   const handleBiometricToggle = async (value: boolean) => {
+    hapticFeedback.light();
     if (value) {
       try {
         const { available, biometryType } = await isBiometricAvailable();
 
         if (!available) {
+          hapticFeedback.error();
           Alert.alert(
             'Biometrics Not Available',
             'Your device does not support biometric authentication.'
@@ -119,14 +122,17 @@ export default function SettingsScreen() {
 
         const result = await enableBiometrics();
         if (result.success) {
+          hapticFeedback.success();
           setLocalBiometricEnabled(true);
           setBiometricType(getBiometryTypeName(result.biometryType));
           setBiometricEnabled(true);
           Alert.alert('Success', `${getBiometryTypeName(result.biometryType)} has been enabled for authentication`);
         } else {
+          hapticFeedback.warning();
           Alert.alert('Failed', result.error || 'Failed to enable biometrics');
         }
       } catch (error) {
+        hapticFeedback.error();
         console.error('Error enabling biometrics:', error);
         Alert.alert('Error', 'Failed to enable biometric authentication');
       }
@@ -134,12 +140,14 @@ export default function SettingsScreen() {
       try {
         const success = await disableBiometrics();
         if (success) {
+          hapticFeedback.medium();
           setLocalBiometricEnabled(false);
           setBiometricType(null);
           setBiometricEnabled(false);
           Alert.alert('Success', 'Biometric authentication has been disabled');
         }
       } catch (error) {
+        hapticFeedback.error();
         console.error('Error disabling biometrics:', error);
         Alert.alert('Error', 'Failed to disable biometric authentication');
       }
@@ -504,7 +512,51 @@ export default function SettingsScreen() {
         <Text style={styles.successText}>Security Status: Good</Text>
       </View>
 
-      <TouchableOpacity
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Biometric Authentication</Text>
+        <View style={styles.settingItem}>
+          <View style={styles.settingInfo}>
+            <Text style={styles.settingTitle}>Enable {biometricType || 'Biometrics'}</Text>
+            <Text style={styles.settingDescription}>
+              Use {biometricType || 'biometrics'} to sign in and authorize transactions
+            </Text>
+          </View>
+          <Switch
+            value={localBiometricEnabled}
+            onValueChange={handleBiometricToggle}
+            trackColor={{ false: '#d1d5db', true: '#3b82f6' }}
+            thumbColor={Platform.OS === 'android' ? '#ffffff' : undefined}
+          />
+        </View>
+
+        {localBiometricEnabled && (
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={async () => {
+              hapticFeedback.selection();
+              const result = await authenticateWithBiometrics('Test authentication');
+              if (result.success) {
+                hapticFeedback.success();
+                Alert.alert('Success', 'Biometric authentication verified');
+              } else if (result.error !== 'Authentication was cancelled') {
+                hapticFeedback.error();
+                Alert.alert('Error', result.error);
+              }
+            }}
+          >
+            <Ionicons name="finger-print-outline" size={24} color="#3b82f6" />
+            <View style={styles.actionCardInfo}>
+              <Text style={styles.actionCardTitle}>Test {biometricType}</Text>
+              <Text style={styles.actionCardDescription}>Verify your biometric setup works</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Account Security</Text>
+        <TouchableOpacity
           style={styles.actionCard}
           onPress={() => router.push('/settings/security')}
         >
@@ -515,6 +567,7 @@ export default function SettingsScreen() {
           </View>
           <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
         </TouchableOpacity>
+      </View>
     </View>
   );
 

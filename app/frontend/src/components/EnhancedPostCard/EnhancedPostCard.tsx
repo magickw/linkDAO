@@ -62,6 +62,7 @@ interface EnhancedPostCardProps {
   showPreviews?: boolean;
   showSocialProof?: boolean;
   showTrending?: boolean;
+  zenMode?: boolean;
   onReaction?: (postId: string, reactionType: string, amount?: number) => Promise<void>;
   onTip?: (postId: string, amount: string, token: string) => Promise<void>;
   onExpand?: () => void;
@@ -85,7 +86,8 @@ const areEqual = (prevProps: EnhancedPostCardProps, nextProps: EnhancedPostCardP
     prevProps.post.downvotes === nextProps.post.downvotes &&
     prevProps.showPreviews === nextProps.showPreviews &&
     prevProps.showSocialProof === nextProps.showSocialProof &&
-    prevProps.showTrending === nextProps.showTrending
+    prevProps.showTrending === nextProps.showTrending &&
+    prevProps.zenMode === nextProps.zenMode
   );
 };
 
@@ -95,6 +97,7 @@ const EnhancedPostCard = React.memo(({
   showPreviews = true,
   showSocialProof = true,
   showTrending = true,
+  zenMode = false,
   onReaction,
   onTip,
   onExpand,
@@ -591,7 +594,7 @@ const EnhancedPostCard = React.memo(({
                     </Link>
 
                     {/* Reputation indicator */}
-                    {post.authorProfile.reputationTier && (
+                    {!zenMode && post.authorProfile.reputationTier && (
                       <div
                         className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 border-2 border-white dark:border-gray-800 flex items-center justify-center shadow-sm"
                         aria-label={`Reputation tier: ${post.authorProfile.reputationTier}`}
@@ -617,6 +620,7 @@ const EnhancedPostCard = React.memo(({
                       }}
                       size="md"
                       showTooltip={true}
+                      zenMode={zenMode}
                     />
 
                     <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -644,7 +648,7 @@ const EnhancedPostCard = React.memo(({
                 {/* Post Actions Menu */}
                 <div className="flex items-center space-x-2">
                   {/* Trending Badge */}
-                  {showTrending && trendingLevel && (
+                  {!zenMode && showTrending && trendingLevel && (
                     <div className="flex-shrink-0">
                       <TrendingBadge
                         level={trendingLevel}
@@ -728,7 +732,7 @@ const EnhancedPostCard = React.memo(({
 
               {/* Media */}
               {post.media && post.media.length > 0 && (
-                <div className="mb-4 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
+                <div className="mb-4 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800" data-cursor="nft">
                   {post.media.length === 1 ? (
                     <div className="flex justify-center cursor-zoom-in" onClick={() => window.open(post.media[0], '_blank')}>
                       <OptimizedImage
@@ -873,14 +877,14 @@ const EnhancedPostCard = React.memo(({
               )}
 
               {/* Social Proof */}
-              {showSocialProof && post.socialProof && (
+              {!zenMode && showSocialProof && post.socialProof && (
                 <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                   <SocialProofIndicator socialProof={post.socialProof} />
                 </div>
               )}
 
               {/* Reaction Purchase System */}
-              {post.reactions && post.reactions.length > 0 && (
+              {!zenMode && post.reactions && post.reactions.length > 0 && (
                 <div className="mb-4">
                   <ReactionPurchaseSystem
                     postId={post.id}
@@ -940,6 +944,7 @@ const EnhancedPostCard = React.memo(({
                   onUnrepost={handleUnrepost}
                   onUpvote={onUpvote}
                   onDownvote={onDownvote}
+                  zenMode={zenMode}
                   className="border-none p-0 !bg-transparent"
                 />
               </div>

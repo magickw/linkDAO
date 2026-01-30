@@ -276,3 +276,18 @@
 .prose sup {
   @apply text-xs;
 }
+
+/* Custom Cursor Support */
+@media (hover: hover) and (pointer: fine) {
+  body, 
+  a, 
+  button, 
+  [role="button"],
+  input,
+  textarea,
+  select,
+  .cursor-pointer,
+  .cursor-zoom-in {
+    cursor: none !important;
+  }
+}

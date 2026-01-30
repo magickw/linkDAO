@@ -31,6 +31,7 @@ interface OnChainIdentityBadgeProps {
     identityData?: OnChainIdentityData;
     size?: 'sm' | 'md' | 'lg';
     showTooltip?: boolean;
+    zenMode?: boolean;
     className?: string;
 }
 
@@ -39,6 +40,7 @@ export const OnChainIdentityBadge: React.FC<OnChainIdentityBadgeProps> = ({
     identityData,
     size = 'md',
     showTooltip = true,
+    zenMode = false,
     className = ''
 }) => {
     const [showDetails, setShowDetails] = useState(false);
@@ -104,90 +106,92 @@ export const OnChainIdentityBadge: React.FC<OnChainIdentityBadgeProps> = ({
             </Link>
 
             {/* Reputation Badge */}
-            <div
-                className="relative"
-                onMouseEnter={() => showTooltip && setShowDetails(true)}
-                onMouseLeave={() => showTooltip && setShowDetails(false)}
-            >
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getReputationColor(data.reputationScore)}`}>
-                    <Shield className="w-3 h-3" />
-                    {getReputationLabel(data.reputationScore)}
-                </span>
+            {!zenMode && (
+                <div
+                    className="relative"
+                    onMouseEnter={() => showTooltip && setShowDetails(true)}
+                    onMouseLeave={() => showTooltip && setShowDetails(false)}
+                >
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getReputationColor(data.reputationScore)}`}>
+                        <Shield className="w-3 h-3" />
+                        {getReputationLabel(data.reputationScore)}
+                    </span>
 
-                {/* Tooltip */}
-                {showDetails && showTooltip && (
-                    <div className="absolute z-50 left-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4">
-                        <div className="space-y-3">
-                            {/* Reputation Score */}
-                            <div>
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className="text-xs text-gray-500 dark:text-gray-400">Reputation</span>
-                                    <span className="text-sm font-bold text-gray-900 dark:text-white">{data.reputationScore}</span>
-                                </div>
-                                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                                    <div
-                                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-full rounded-full transition-all"
-                                        style={{ width: `${(data.reputationScore / 1000) * 100}%` }}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Voting Power */}
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                                    <Vote className="w-3 h-3" />
-                                    Voting Power
-                                </span>
-                                <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                                    {data.votingPower.toLocaleString()} LDAO
-                                </span>
-                            </div>
-
-                            {/* XP Badges */}
-                            {data.xpBadges.length > 0 && (
+                    {/* Tooltip */}
+                    {showDetails && showTooltip && (
+                        <div className="absolute z-50 left-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4">
+                            <div className="space-y-3">
+                                {/* Reputation Score */}
                                 <div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">Achievements</div>
-                                    <div className="flex flex-wrap gap-1">
-                                        {data.xpBadges.map((badge) => (
-                                            <div
-                                                key={badge.id}
-                                                className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full"
-                                                title={badge.name}
-                                            >
-                                                <span className={badge.color}>
-                                                    {getBadgeIcon(badge.icon)}
-                                                </span>
-                                                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                                                    {badge.name} L{badge.level}
-                                                </span>
-                                            </div>
-                                        ))}
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Reputation</span>
+                                        <span className="text-sm font-bold text-gray-900 dark:text-white">{data.reputationScore}</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                                        <div
+                                            className="bg-gradient-to-r from-blue-500 to-purple-500 h-full rounded-full transition-all"
+                                            style={{ width: `${(data.reputationScore / 1000) * 100}%` }}
+                                        />
                                     </div>
                                 </div>
-                            )}
 
-                            {/* Stats */}
-                            <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                                <div className="flex items-center justify-between text-xs">
-                                    <span className="text-gray-500 dark:text-gray-400">Total Contributions</span>
-                                    <span className="font-semibold text-gray-900 dark:text-white">{data.totalContributions}</span>
+                                {/* Voting Power */}
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                        <Vote className="w-3 h-3" />
+                                        Voting Power
+                                    </span>
+                                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                                        {data.votingPower.toLocaleString()} LDAO
+                                    </span>
                                 </div>
-                                {data.memberSince && (
-                                    <div className="flex items-center justify-between text-xs mt-1">
-                                        <span className="text-gray-500 dark:text-gray-400">Member Since</span>
-                                        <span className="font-semibold text-gray-900 dark:text-white">
-                                            {data.memberSince.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                                        </span>
+
+                                {/* XP Badges */}
+                                {data.xpBadges.length > 0 && (
+                                    <div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">Achievements</div>
+                                        <div className="flex flex-wrap gap-1">
+                                            {data.xpBadges.map((badge) => (
+                                                <div
+                                                    key={badge.id}
+                                                    className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full"
+                                                    title={badge.name}
+                                                >
+                                                    <span className={badge.color}>
+                                                        {getBadgeIcon(badge.icon)}
+                                                    </span>
+                                                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                        {badge.name} L{badge.level}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
+
+                                {/* Stats */}
+                                <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                                    <div className="flex items-center justify-between text-xs">
+                                        <span className="text-gray-500 dark:text-gray-400">Total Contributions</span>
+                                        <span className="font-semibold text-gray-900 dark:text-white">{data.totalContributions}</span>
+                                    </div>
+                                    {data.memberSince && (
+                                        <div className="flex items-center justify-between text-xs mt-1">
+                                            <span className="text-gray-500 dark:text-gray-400">Member Since</span>
+                                            <span className="font-semibold text-gray-900 dark:text-white">
+                                                {data.memberSince.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
+            )}
 
             {/* XP Badges (visible inline for larger sizes) */}
-            {size !== 'sm' && data.xpBadges.length > 0 && (
+            {!zenMode && size !== 'sm' && data.xpBadges.length > 0 && (
                 <div className="flex items-center gap-1">
                     {data.xpBadges.slice(0, 3).map((badge) => (
                         <div

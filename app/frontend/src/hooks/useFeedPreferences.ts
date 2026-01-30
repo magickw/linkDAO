@@ -20,6 +20,7 @@ interface DisplayPreferences {
   showTrendingBadges: boolean;
   showPreviews: boolean;
   compactMode: boolean;
+  zenMode: boolean;
   infiniteScroll: boolean;
   postsPerPage: number;
   updateDisplayPreferences: (preferences: Partial<DisplayPreferences>) => void;
@@ -153,6 +154,7 @@ export const useDisplayPreferences = (): DisplayPreferences => {
     showTrendingBadges: true,
     showPreviews: true,
     compactMode: false,
+    zenMode: false,
     infiniteScroll: true,
     postsPerPage: 20,
     updateDisplayPreferences: () => {}

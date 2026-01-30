@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { webSocketService } from '../services/webSocketService';
+import { hapticFeedback } from '../utils/haptics';
 
 export interface Reaction {
     type: 'fire' | 'rocket' | 'diamond';
@@ -79,6 +80,9 @@ export default function PostReactions({
         const newUserReaction = localUserReaction === reactionType ? undefined : reactionType;
         setLocalUserReaction(newUserReaction);
 
+        // Haptic feedback
+        hapticFeedback.medium();
+
         setShowPicker(false);
         setAnimating(true);
 
@@ -100,10 +104,12 @@ export default function PostReactions({
     };
 
     const handleLongPress = () => {
+        hapticFeedback.selection();
         setShowPicker(true);
     };
 
     const handleQuickReact = async () => {
+        hapticFeedback.light();
         if (localUserReaction) {
             // Remove reaction
             await handleReaction(localUserReaction);

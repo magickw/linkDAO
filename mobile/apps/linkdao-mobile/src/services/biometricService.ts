@@ -257,6 +257,17 @@ export async function authenticateWithBiometrics(
 }
 
 /**
+ * Check if user can authenticate with biometrics (available and enabled)
+ */
+export async function canAuthenticateWithBiometrics(): Promise<boolean> {
+  const { available } = await isBiometricAvailable();
+  if (!available) return false;
+
+  const config = await getBiometricConfig();
+  return !!(config && config.enableBiometrics);
+}
+
+/**
  * Get biometry type name for display
  */
 export function getBiometryTypeName(biometryType?: BiometryTypes): string {

@@ -66,6 +66,9 @@ export {
   PulseLoader
 } from './LoadingSkeletons';
 
+// Custom Cursor
+export { CustomCursor } from './CustomCursor';
+
 // Responsive Design
 export {
   ResponsiveContainer,

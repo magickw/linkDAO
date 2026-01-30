@@ -136,7 +136,7 @@ const EnhancedFeedView = React.memo(({
 
   // Preferences hooks - now defaults to following feed with newest posts
   const { currentSort, currentTimeRange, updateSort, updateTimeRange } = useFeedSortingPreferences();
-  const { showSocialProof, showTrendingBadges, infiniteScroll, postsPerPage } = useDisplayPreferences();
+  const { showSocialProof, showTrendingBadges, infiniteScroll, postsPerPage, zenMode, updateDisplayPreferences } = useDisplayPreferences();
   const { isEnabled: autoRefreshEnabled, interval: refreshInterval } = useAutoRefreshPreferences();
 
   // State - properly memoized
@@ -383,6 +383,7 @@ const EnhancedFeedView = React.memo(({
         post={post}
         showSocialProof={showSocialProof}
         showTrending={showTrendingBadges}
+        zenMode={zenMode}
         className=""
         onReaction={async (postId, reactionType, amount) => {
           console.log('Reaction', postId, reactionType, amount);
@@ -422,7 +423,7 @@ const EnhancedFeedView = React.memo(({
         }}
       />
     </div>
-  ), [showSocialProof, showTrendingBadges]);
+  ), [showSocialProof, showTrendingBadges, zenMode]);
 
   // Memoized sorting options
   const sortingOptions = useMemo(() => [
@@ -434,27 +435,47 @@ const EnhancedFeedView = React.memo(({
 
   // Memoized sorting header
   const sortingHeader = useMemo(() => (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-4">
-      <div className="flex items-center justify-center border-b border-gray-200 dark:border-gray-700">
-        {sortingOptions.map(option => (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-4 overflow-hidden">
+      <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+        <div className="flex flex-1 items-center justify-center">
+          {sortingOptions.map(option => (
+            <button
+              key={option.value}
+              onClick={() => handleSortChange(option.value)}
+              className={`flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 relative ${filter.sortBy === option.value
+                ? 'text-primary-600 dark:text-primary-400'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                }`}
+              title={option.desc}
+            >
+              {option.label}
+              {filter.sortBy === option.value && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600 dark:bg-primary-400" />
+              )}
+            </button>
+          ))}
+        </div>
+        
+        {/* Zen Mode Toggle */}
+        <div className="px-4 border-l border-gray-200 dark:border-gray-700 h-full py-2">
           <button
-            key={option.value}
-            onClick={() => handleSortChange(option.value)}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 relative ${filter.sortBy === option.value
-              ? 'text-primary-600 dark:text-primary-400'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-              }`}
-            title={option.desc}
+            onClick={() => updateDisplayPreferences({ zenMode: !zenMode })}
+            className={`p-2 rounded-lg transition-all duration-300 flex items-center space-x-2 ${
+              zenMode 
+                ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300 shadow-inner' 
+                : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700/50'
+            }`}
+            title={zenMode ? 'Disable Zen Mode' : 'Enable Zen Mode (hide metrics)'}
           >
-            {option.label}
-            {filter.sortBy === option.value && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600 dark:bg-primary-400" />
-            )}
+            <span className={`text-lg transition-transform duration-500 ${zenMode ? 'rotate-12 scale-110' : ''}`}>🧘</span>
+            <span className="hidden lg:inline text-xs font-bold uppercase tracking-wider">
+              {zenMode ? 'Zen On' : 'Zen Off'}
+            </span>
           </button>
-        ))}
+        </div>
       </div>
     </div>
-  ), [sortingOptions, filter.sortBy, handleSortChange]);
+  ), [sortingOptions, filter.sortBy, handleSortChange, zenMode, updateDisplayPreferences]);
 
   // Memoized community metrics
   const communityMetrics = useMemo(() => {
@@ -506,6 +527,7 @@ const EnhancedFeedView = React.memo(({
           enableVirtualization={true} // Enable virtual scrolling for better performance
           virtualHeight={isMobile ? 500 : 600} // Adjust height based on device
           itemHeight={isMobile ? 250 : 300} // Adjust item height based on device
+          zenMode={zenMode}
         >
           {(feedPosts, scrollState) => (
             <div>
@@ -559,6 +581,9 @@ const EnhancedFeedView = React.memo(({
 
         {/* Error state */}
         {errorState}
+
+        {/* Sorting and Zen Mode Header */}
+        {sortingHeader}
 
         {/* Feed Content */}
         {feedContent}

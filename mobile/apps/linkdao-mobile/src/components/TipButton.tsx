@@ -17,6 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { tippingService, walletService } from '../services';
 import { ethers } from 'ethers';
+import { hapticFeedback } from '../utils/haptics';
 
 interface TipButtonProps {
     recipientId: string;
@@ -74,15 +75,18 @@ export default function TipButton({
             });
 
             if (result.success) {
+                hapticFeedback.success();
                 Alert.alert('Success', `Sent ${tipAmount} LDAO tip!\nTransaction: ${txHash.slice(0, 10)}...`);
                 setShowModal(false);
                 setAmount('');
                 setMessage('');
                 onTipSent?.();
             } else {
+                hapticFeedback.warning();
                 Alert.alert('Partially Successful', 'Transaction sent but failed to record in history.');
             }
         } catch (error: any) {
+            hapticFeedback.error();
             console.error('Error sending tip:', error);
             Alert.alert('Error', error.message || 'Failed to send tip');
         } finally {

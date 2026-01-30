@@ -20,6 +20,7 @@ import { FeedService } from '@/services/feedService';
 import { FeedFilter, FeedSortType, EnhancedPost } from '@/types/feed';
 import EnhancedPostCard from '@/components/EnhancedPostCard/EnhancedPostCard';
 import { useWeb3 } from '@/context/Web3Context';
+import { useDisplayPreferences } from '@/hooks/useFeedPreferences';
 
 interface EnhancedHomeFeedProps {
   userProfile?: any;
@@ -43,6 +44,7 @@ export default function EnhancedHomeFeed({
   const { addToast } = useToast();
   const { address: userAddress, isConnected } = useWeb3();
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const { zenMode, updateDisplayPreferences } = useDisplayPreferences();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -192,6 +194,24 @@ export default function EnhancedHomeFeed({
 
   return (
     <div className={className}>
+      {/* Feed Controls */}
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={() => updateDisplayPreferences({ zenMode: !zenMode })}
+          className={`px-4 py-2 rounded-full transition-all duration-300 flex items-center space-x-2 ${
+            zenMode 
+              ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300 shadow-inner border border-primary-200 dark:border-primary-800' 
+              : 'bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700/50 border border-gray-200 dark:border-gray-700'
+          }`}
+          title={zenMode ? 'Disable Zen Mode' : 'Enable Zen Mode (hide metrics)'}
+        >
+          <span className={`text-lg transition-transform duration-500 ${zenMode ? 'rotate-12 scale-110' : ''}`}>🧘</span>
+          <span className="text-xs font-bold uppercase tracking-wider">
+            {zenMode ? 'Zen Mode On' : 'Zen Mode Off'}
+          </span>
+        </button>
+      </div>
+
       {/* Enhanced Posts Feed */}
       <div className="space-y-6">
         {filteredPosts.map((post, index) => (
@@ -203,6 +223,7 @@ export default function EnhancedHomeFeed({
           >
             <EnhancedPostCard
               post={post}
+              zenMode={zenMode}
               onUpvote={async (postId) => {
                 try {
                   const response = await FeedService.upvotePost(postId);

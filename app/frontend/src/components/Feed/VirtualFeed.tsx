@@ -14,6 +14,7 @@ interface VirtualFeedProps {
   showPreviews?: boolean;
   showSocialProof?: boolean;
   showTrending?: boolean;
+  zenMode?: boolean;
 }
 
 // Item renderer for react-window
@@ -27,6 +28,7 @@ const PostItem: React.FC<{
   showPreviews?: boolean;
   showSocialProof?: boolean;
   showTrending?: boolean;
+  zenMode?: boolean;
 }> = ({ 
   data, 
   index, 
@@ -36,7 +38,8 @@ const PostItem: React.FC<{
   onExpand,
   showPreviews,
   showSocialProof,
-  showTrending
+  showTrending,
+  zenMode = false
 }) => {
   const post = data[index];
   
@@ -133,6 +136,7 @@ const PostItem: React.FC<{
         showPreviews={showPreviews}
         showSocialProof={showSocialProof}
         showTrending={showTrending}
+        zenMode={zenMode}
         className="h-full"
       />
     </div>
@@ -148,7 +152,8 @@ const VirtualFeed: React.FC<VirtualFeedProps> = ({
   onExpand,
   showPreviews = true,
   showSocialProof = true,
-  showTrending = true
+  showTrending = true,
+  zenMode = false
 }) => {
   // Handle empty posts case
   if (!posts || posts.length === 0) {
@@ -181,6 +186,7 @@ const VirtualFeed: React.FC<VirtualFeedProps> = ({
           showPreviews={showPreviews}
           showSocialProof={showSocialProof}
           showTrending={showTrending}
+          zenMode={zenMode}
         />
       )}
     </List>

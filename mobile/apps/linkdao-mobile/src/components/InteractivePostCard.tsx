@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { PostCard } from './PostCard';
 import { Post } from '../store/postsStore';
 import { Pressable, StyleSheet } from 'react-native';
+import { hapticFeedback } from '../utils/haptics';
 
 interface InteractivePostCardProps {
   post: Post;
@@ -24,7 +25,10 @@ export const InteractivePostCard: React.FC<InteractivePostCardProps> = (props) =
       style={[styles.container, pressed && styles.pressed]}
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}
-      onPress={() => props.onPress?.(props.post.id)}
+      onPress={() => {
+        hapticFeedback.light();
+        props.onPress?.(props.post.id);
+      }}
     >
       <PostCard {...props} />
     </Pressable>
