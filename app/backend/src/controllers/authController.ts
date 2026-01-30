@@ -706,15 +706,16 @@ class AuthController {
         { expiresIn: '7d' }
       );
 
-      // Update session in DB
+      // Update session in DB with token rotation
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
       const refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
+      // Token rotation: invalidate old refresh token
       await db
         .update(authSessions)
         .set({
           sessionToken: newSessionToken,
-          refreshToken: newRefreshToken,
+          refreshToken: newRefreshToken, // New refresh token
           expiresAt: expiresAt,
           refreshExpiresAt: refreshExpiresAt,
           lastUsedAt: new Date(),
@@ -742,8 +743,25 @@ class AuthController {
    */
   async logout(req: AuthenticatedRequest, res: Response) {
     try {
-      // In a JWT-based system, logout is typically handled client-side
-      // by removing the token. Here we just confirm the logout.
+      if (!req.user) {
+        return errorResponse(res, 'UNAUTHORIZED', 'Authentication required', 401);
+      }
+
+      // Get the session token from the Authorization header
+      const authHeader = req.headers.authorization;
+      const sessionToken = authHeader && authHeader.split(' ')[1];
+
+      if (sessionToken) {
+        // Mark session as inactive in database
+        await db.update(authSessions)
+          .set({ 
+            isActive: false,
+            updatedAt: new Date()
+          })
+          .where(eq(authSessions.sessionToken, sessionToken));
+
+        safeLogger.info(`Session revoked for user: ${req.user.walletAddress}`);
+      }
 
       successResponse(res, {
         message: 'Successfully logged out'

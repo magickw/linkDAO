@@ -28,14 +28,14 @@ export const ComparisonDrawer: React.FC = () => {
   if (state.items.length === 0) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
+    <div className="sticky bottom-0 left-0 right-0 z-50 pointer-events-none">
       <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className="pointer-events-auto mx-auto max-w-4xl px-4 pb-6"
+            className="pointer-events-auto max-w-screen-2xl mx-auto px-2 sm:px-4 lg:px-6 pb-6"
           >
             <GlassPanel variant="primary" className="shadow-2xl overflow-hidden border-blue-500/30">
               <div className="p-4 flex items-center justify-between border-b border-white/10 bg-blue-600/10">
@@ -111,7 +111,7 @@ export const ComparisonDrawer: React.FC = () => {
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           onClick={() => setIsOpen(true)}
-          className="pointer-events-auto absolute bottom-6 right-24 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-transform hover:scale-110 z-50 flex items-center justify-center border-2 border-white/20"
+          className="pointer-events-auto fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-transform hover:scale-110 z-50 flex items-center justify-center border-2 border-white/20"
           title="Open Comparison"
         >
           <BarChart2 size={24} />

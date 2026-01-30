@@ -159,8 +159,8 @@ const ComparePage: React.FC = () => {
   return (
     <Layout fullWidth>
       <SEO title="Product Comparison - LinkDAO Marketplace" />
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 py-12 px-4">
-        <div className="max-w-7xl mx-auto space-y-8">
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 py-12">
+        <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 lg:px-6 space-y-8">
           <div className="flex items-center justify-between">
             <button
               onClick={() => router.back()}
