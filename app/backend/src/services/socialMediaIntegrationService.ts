@@ -10,7 +10,7 @@ export interface SocialMediaPost {
   id: string;
   content: string;
   mediaUrls?: string[];
-  platform: 'twitter' | 'discord' | 'telegram' | 'facebook' | 'linkedin';
+  platform: 'twitter' | 'discord' | 'telegram' | 'facebook' | 'linkedin' | 'bluesky' | 'threads';
   scheduledAt?: Date;
   status: 'draft' | 'scheduled' | 'posted' | 'failed';
   externalId?: string;
@@ -25,7 +25,7 @@ export interface SocialMediaPost {
 
 export interface CrossPostConfig {
   postId: string;
-  platforms: Array<'twitter' | 'discord' | 'telegram' | 'facebook' | 'linkedin'>;
+  platforms: Array<'twitter' | 'discord' | 'telegram' | 'facebook' | 'linkedin' | 'bluesky' | 'threads'>;
   contentTemplate: string;
   includeMedia: boolean;
   autoPost: boolean;
@@ -65,6 +65,9 @@ const PLATFORM_CHAR_LIMITS: Record<SocialPlatform, number> = {
   facebook: 63206,
   linkedin: 3000,
   threads: 500,
+  bluesky: 300,
+  discord: 2000,
+  telegram: 4096,
 };
 
 export class SocialMediaIntegrationService {
@@ -541,7 +544,7 @@ export class SocialMediaIntegrationService {
    * Post content to a specific social media platform
    */
   private async postToPlatform(
-    platform: 'twitter' | 'discord' | 'telegram' | 'facebook' | 'linkedin',
+    platform: 'twitter' | 'discord' | 'telegram' | 'facebook' | 'linkedin' | 'bluesky' | 'threads',
     content: string,
     mediaUrls: string[],
     scheduleTime?: Date
@@ -658,7 +661,7 @@ export class SocialMediaIntegrationService {
       // In a real implementation, this would fetch actual analytics data
       // For now, we'll return mock data
 
-      const platforms: Array<'twitter' | 'discord' | 'telegram' | 'facebook' | 'linkedin'> =
+      const platforms: Array<'twitter' | 'discord' | 'telegram' | 'facebook' | 'linkedin' | 'bluesky' | 'threads'> =
         ['twitter', 'discord', 'telegram'];
 
       const analytics: SocialMediaAnalytics[] = platforms.map(platform => ({
@@ -690,7 +693,7 @@ export class SocialMediaIntegrationService {
    */
   async optimizeContentForSocialSharing(
     content: string,
-    targetPlatforms: Array<'twitter' | 'discord' | 'telegram' | 'facebook' | 'linkedin'>
+    targetPlatforms: Array<'twitter' | 'discord' | 'telegram' | 'facebook' | 'linkedin' | 'bluesky' | 'threads'>
   ): Promise<{
     optimizedContent: string;
     suggestions: string[];

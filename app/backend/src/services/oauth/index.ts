@@ -8,3 +8,4 @@ export { TwitterOAuthProvider } from './twitterOAuthProvider';
 export { FacebookOAuthProvider } from './facebookOAuthProvider';
 export { LinkedInOAuthProvider } from './linkedinOAuthProvider';
 export { ThreadsOAuthProvider } from './threadsOAuthProvider';
+export { BlueskyOAuthProvider } from './blueskyOAuthProvider';

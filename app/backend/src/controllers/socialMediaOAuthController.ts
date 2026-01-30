@@ -25,7 +25,7 @@ class SocialMediaOAuthController {
       }
 
       if (!platform || !isSupportedPlatform(platform)) {
-        return ApiResponse.badRequest(res, `Unsupported platform: ${platform}. Supported: twitter, facebook, linkedin, threads`);
+        return ApiResponse.badRequest(res, `Unsupported platform: ${platform}. Supported: twitter, facebook, linkedin, threads, bluesky`);
       }
 
       const result = await socialMediaConnectionService.initiateOAuth(userId, platform);

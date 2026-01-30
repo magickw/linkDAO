@@ -10,7 +10,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
   'http://localhost:10000';
 
 // Platform types
-export type SocialPlatform = 'twitter' | 'facebook' | 'linkedin' | 'threads';
+export type SocialPlatform = 'twitter' | 'facebook' | 'linkedin' | 'threads' | 'bluesky';
 
 // Connection status
 export type ConnectionStatus = 'active' | 'expired' | 'revoked' | 'error';
@@ -242,6 +242,14 @@ export const PLATFORM_CONFIG: Record<SocialPlatform, {
     color: '#000000',
     description: 'Share your statuses to Threads with up to 500 characters and 10 images',
     features: ['500 characters', '10 images', 'Instagram integration'],
+  },
+  bluesky: {
+    name: 'bluesky',
+    displayName: 'Bluesky',
+    icon: '🦋',
+    color: '#0085FF',
+    description: 'Share your statuses to Bluesky with up to 300 characters and 4 images',
+    features: ['300 characters', '4 images', 'Open network'],
   },
 };
 

@@ -137,7 +137,7 @@ const SocialConnectionsTab: React.FC<SocialConnectionsTabProps> = ({ onToast }) 
     }
   };
 
-  const platforms: SocialPlatform[] = ['twitter', 'facebook', 'linkedin', 'threads'];
+  const platforms: SocialPlatform[] = ['twitter', 'facebook', 'linkedin', 'threads', 'bluesky'];
 
   if (loading) {
     return (

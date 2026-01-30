@@ -88,6 +88,7 @@
     "deploy:production": "bash scripts/deploy-production.sh"
   },
   "dependencies": {
+    "@atproto/api": "^0.18.20",
     "@aws-sdk/client-s3": "^3.972.0",
     "@aws-sdk/s3-request-presigner": "^3.972.0",
     "@coinbase/cdp-sdk": "^1.40.1",

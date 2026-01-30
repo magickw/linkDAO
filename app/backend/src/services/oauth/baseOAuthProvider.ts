@@ -34,7 +34,7 @@ export interface OAuthUserInfo {
 }
 
 // Supported platforms
-export type SocialPlatform = 'twitter' | 'facebook' | 'linkedin' | 'threads';
+export type SocialPlatform = 'twitter' | 'facebook' | 'linkedin' | 'threads' | 'bluesky' | 'discord' | 'telegram';
 
 // Content to post to social media
 export interface SocialMediaContent {
@@ -57,6 +57,9 @@ export const PLATFORM_LIMITS: Record<SocialPlatform, { textLimit: number; mediaL
   facebook: { textLimit: 63206, mediaLimit: 10 },
   linkedin: { textLimit: 3000, mediaLimit: 9 },
   threads: { textLimit: 500, mediaLimit: 10 },
+  bluesky: { textLimit: 300, mediaLimit: 4 },
+  discord: { textLimit: 2000, mediaLimit: 10 },
+  telegram: { textLimit: 4096, mediaLimit: 10 },
 };
 
 /**
@@ -187,6 +190,9 @@ export function getOAuthProvider(platform: SocialPlatform): BaseOAuthProvider {
     case 'threads':
       const { ThreadsOAuthProvider } = require('./threadsOAuthProvider');
       return new ThreadsOAuthProvider();
+    case 'bluesky':
+      const { BlueskyOAuthProvider } = require('./blueskyOAuthProvider');
+      return new BlueskyOAuthProvider();
     default:
       throw new Error(`Unsupported platform: ${platform}`);
   }
@@ -196,5 +202,5 @@ export function getOAuthProvider(platform: SocialPlatform): BaseOAuthProvider {
  * Check if a platform is supported
  */
 export function isSupportedPlatform(platform: string): platform is SocialPlatform {
-  return ['twitter', 'facebook', 'linkedin', 'threads'].includes(platform);
+  return ['twitter', 'facebook', 'linkedin', 'threads', 'bluesky'].includes(platform);
 }
