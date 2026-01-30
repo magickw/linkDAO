@@ -28,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
 
         if (!response.ok) {
-            console.warn(`RPC Proxy: Target returned ${response.status} ${response.statusText}`);
+            console.warn(`RPC Proxy: Target returned ${response.status} ${response.statusText} for URL: ${target}`);
             // Forward the error status but try to parse body if possible
             const errorText = await response.text();
             try {
@@ -42,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const data = await response.json();
         return res.status(200).json(data);
     } catch (error: any) {
-        console.error('RPC Proxy Error:', error.message);
+        console.error('RPC Proxy Error:', error.message, 'for target:', target);
         return res.status(500).json({ error: 'Proxy request failed', details: error.message });
     }
 }
