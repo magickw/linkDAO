@@ -111,8 +111,8 @@ const EnhancedPostCard = React.memo(({
   const [isPinned, setIsPinned] = useState(post.pinnedUntil && new Date(post.pinnedUntil) > new Date());
 
   // Vote state
-  const [upvoteCount, setUpvoteCount] = useState((post as any).upvotes || 0);
-  const [downvoteCount, setDownvoteCount] = useState((post as any).downvotes || 0);
+  const [upvoteCount, setUpvoteCount] = useState(post.upvotes || 0);
+  const [downvoteCount, setDownvoteCount] = useState(post.downvotes || 0);
   const [userVote, setUserVote] = useState<'upvote' | 'downvote' | null>((post as any).userVote || null);
 
   // Extract video URLs from content for embedding
@@ -203,8 +203,8 @@ const EnhancedPostCard = React.memo(({
 
   // Sync state with props if post changes
   useEffect(() => {
-    setUpvoteCount((post as any).upvotes || 0);
-    setDownvoteCount((post as any).downvotes || 0);
+    setUpvoteCount(post.upvotes || 0);
+    setDownvoteCount(post.downvotes || 0);
     // Only sync userVote if explicitly provided, to avoid overwriting local optimistic state with null
     if ((post as any).userVote !== undefined) {
       setUserVote((post as any).userVote);

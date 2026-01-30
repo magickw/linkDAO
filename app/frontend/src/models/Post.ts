@@ -84,6 +84,8 @@ export function convertBackendPostToPost(backendPost: any): Post {
     comments: backendPost.commentCount || 0,
     reposts: backendPost.reposts || 0,
     views: backendPost.views || 0,
+    upvotes: backendPost.upvotes || 0,
+    downvotes: backendPost.downvotes || 0,
     engagementScore: backendPost.engagementScore || 0,
     reactionCount: backendPost.reactionCount || 0, // Include reaction count for display
 
