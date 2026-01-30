@@ -55,6 +55,7 @@ import {
   cachingMiddleware
 } from './middleware/cachingMiddleware';
 import { ultimateCorsMiddleware } from './middleware/ultimateCors';
+import { criticalDiagnosticMiddleware, postRouteDiagnosticMiddleware } from './middleware/criticalDiagnosticMiddleware';
 // import { ultraEmergencyCorsMiddleware } from './middleware/ultraEmergencyCors';
 // import { corsMiddleware } from './middleware/corsMiddleware';
 // import { emergencyCorsMiddleware, simpleCorsMiddleware } from './middleware/emergencyCorsMiddleware';
@@ -430,6 +431,9 @@ import { getCSRFToken } from './middleware/csrfProtection';
 // ULTIMATE CORS FIX - Uses res.writeHead() at lowest HTTP level
 // This CANNOT be overridden by any other middleware or environment variables
 app.use(ultimateCorsMiddleware);
+
+// CRITICAL DIAGNOSTIC - logs all request flow to catch where repost requests disappear
+app.use(criticalDiagnosticMiddleware);
 
 app.use(securityHeaders);
 app.use(helmetMiddleware);
@@ -1434,6 +1438,9 @@ app.get('/cart', (req, res) => {
 // Use missing endpoints for better fallbacks (after all specific routes, before error handlers)
 // BUT: Only apply to API routes to avoid interfering with share URL routes
 app.use('/api', missingEndpoints);
+
+// POST-ROUTE DIAGNOSTIC - catch any requests that weren't handled by routes
+app.use(postRouteDiagnosticMiddleware);
 
 process.stdout.write('📝 All routes and middleware registered successfully\n');
 process.stdout.write(`📡 Attempting to start server on port ${PORT}...\n`);
