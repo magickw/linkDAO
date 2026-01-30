@@ -72,6 +72,19 @@ export default function PostInteractionBar({
   const [isBookmarked, setIsBookmarked] = useState(initialIsBookmarked);
   const [isBookmarkLoading, setIsBookmarkLoading] = useState(false);
 
+  // Log engagement stats when post changes (helps diagnose missing data)
+  useEffect(() => {
+    console.log('[PostInteractionBar] Engagement stats for post:', {
+      postId: post.id,
+      views: post.views,
+      upvotes: post.upvotes,
+      downvotes: post.downvotes,
+      commentCount: post.commentCount,
+      shareCount: post.shareCount,
+      postType
+    });
+  }, [post.id, post.views, post.upvotes, post.downvotes, post.commentCount, post.shareCount, postType]);
+
   // Sync with prop changes
   useEffect(() => {
     setIsBookmarked(initialIsBookmarked);

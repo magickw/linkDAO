@@ -87,32 +87,20 @@ export default function EnhancedCommentSystem({
       let commentsData: Comment[] = [];
 
       if (Array.isArray(response)) {
-        console.log('[EnhancedCommentSystem] Response is array:', response);
         commentsData = response;
       } else if (response && typeof response === 'object') {
         const anyResponse = response as any;
-        console.log('[EnhancedCommentSystem] Response is object, checking structure:', {
-          hasData: !!anyResponse.data,
-          isDataArray: Array.isArray(anyResponse.data),
-          hasComments: !!anyResponse.comments,
-          isCommentsArray: Array.isArray(anyResponse.comments),
-          hasDataComments: !!anyResponse.data?.comments,
-          isDataCommentsArray: Array.isArray(anyResponse.data?.comments)
-        });
 
         // Check for 'data' wrapper first (common in our API)
         if (anyResponse.data) {
           if (Array.isArray(anyResponse.data)) {
-            console.log('[EnhancedCommentSystem] Using anyResponse.data as array');
             commentsData = anyResponse.data;
           } else if (anyResponse.data.comments && Array.isArray(anyResponse.data.comments)) {
-            console.log('[EnhancedCommentSystem] Using anyResponse.data.comments as array');
             commentsData = anyResponse.data.comments;
           }
         }
         // Check for direct 'comments' property (common in service returns)
         else if (anyResponse.comments && Array.isArray(anyResponse.comments)) {
-          console.log('[EnhancedCommentSystem] Using anyResponse.comments as array');
           commentsData = anyResponse.comments;
         }
       }

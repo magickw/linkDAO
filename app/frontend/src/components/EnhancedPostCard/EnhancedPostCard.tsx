@@ -115,19 +115,6 @@ const EnhancedPostCard = React.memo(({
   const [downvoteCount, setDownvoteCount] = useState(post.downvotes || 0);
   const [userVote, setUserVote] = useState<'upvote' | 'downvote' | null>((post as any).userVote || null);
 
-  // Add logging for engagement stats
-  useEffect(() => {
-    console.log('[EnhancedPostCard] Post engagement stats:', {
-      postId: post.id,
-      views: post.views,
-      upvotes: post.upvotes,
-      downvotes: post.downvotes,
-      comments: post.comments,
-      upvoteCount,
-      downvoteCount
-    });
-  }, [post.id, post.views, post.upvotes, post.downvotes, post.comments]);
-
   // Extract video URLs from content for embedding
   const videoEmbeds = useMemo(() => {
     if (!post.content) return [];
