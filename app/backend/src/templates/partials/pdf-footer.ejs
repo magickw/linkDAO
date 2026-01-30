@@ -1,50 +1,64 @@
 <footer class="pdf-footer">
   <div class="footer-container">
     <div class="footer-section">
-      <p><strong>Contact:</strong></p>
+      <p class="section-label">Support</p>
       <p>Email: support@linkdao.io</p>
-      <p>Website: linkdao.io</p>
+      <p>Help Center: help.linkdao.io</p>
     </div>
     <div class="footer-section">
-      <p><strong>Terms:</strong></p>
-      <p>This receipt is valid for 7 years</p>
-      <p>Keep this for your records</p>
+      <p class="section-label">Trust & Safety</p>
+      <p>All transactions are protected by LinkDAO Escrow.</p>
+      <p>Keep this document for your records.</p>
     </div>
-    <div class="footer-section">
-      <p><strong>Legal:</strong></p>
-      <p>LinkDAO © 2026</p>
-      <p>All rights reserved</p>
+    <div class="footer-section text-right">
+      <p class="brand-small">LinkDAO Web3 Marketplace</p>
+      <p>© 2026 LinkDAO Infrastructure</p>
+      <p class="timestamp">Generated on <%= new Date().toLocaleString('en-US') %></p>
     </div>
   </div>
 </footer>
 
 <style>
   .pdf-footer {
-    margin-top: 40px;
+    margin-top: 50px;
     padding-top: 20px;
-    border-top: 2px solid #e0e0e0;
-    font-size: 11px;
-    color: #999;
+    border-top: 1px solid #eee;
+    color: #95a5a6;
+    font-size: 10px;
   }
 
   .footer-container {
     display: flex;
     justify-content: space-between;
-    gap: 20px;
   }
 
   .footer-section {
     flex: 1;
   }
 
-  .footer-section p {
-    margin: 5px 0;
-    color: #999;
+  .section-label {
+    font-weight: 700;
+    color: #7f8c8d;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+    font-size: 9px;
   }
 
-  .footer-section strong {
-    color: #555;
-    display: block;
-    margin-bottom: 8px;
+  .footer-section p {
+    margin: 3px 0;
+  }
+
+  .text-right {
+    text-align: right;
+  }
+
+  .brand-small {
+    font-weight: 700;
+    color: #2c3e50;
+  }
+
+  .timestamp {
+    color: #bdc3c7;
+    font-style: italic;
   }
 </style>

@@ -6870,6 +6870,94 @@ export const taxComplianceAlerts = pgTable("tax_compliance_alerts", {
 }));
 
 
+
+// Document Management
+export const invoices = pgTable("invoices", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  invoiceNumber: varchar("invoice_number", { length: 100 }).notNull().unique(),
+  invoiceType: varchar("invoice_type", { length: 20 }).notNull(), // 'tax', 'seller'
+  orderId: uuid("order_id").references(() => orders.id),
+  buyerId: uuid("buyer_id").references(() => users.id),
+  sellerId: uuid("seller_id").references(() => users.id),
+  issueDate: timestamp("issue_date").notNull(),
+  dueDate: timestamp("due_date"),
+  currency: varchar("currency", { length: 10 }).notNull(),
+  subtotal: numeric("subtotal", { precision: 20, scale: 8 }).notNull(),
+  taxAmount: numeric("tax_amount", { precision: 20, scale: 8 }).notNull(),
+  totalAmount: numeric("total_amount", { precision: 20, scale: 8 }).notNull(),
+  buyerTaxId: varchar("buyer_tax_id", { length: 50 }),
+  sellerTaxId: varchar("seller_tax_id", { length: 50 }),
+  taxRate: numeric("tax_rate", { precision: 5, scale: 2 }),
+  taxJurisdiction: varchar("tax_jurisdiction", { length: 100 }),
+  items: jsonb("items"),
+  metadata: jsonb("metadata"),
+  pdfUrl: text("pdf_url"),
+  pdfS3Key: text("pdf_s3_key"),
+  status: varchar("status", { length: 32 }).default("draft"), // 'draft', 'issued', 'paid', 'cancelled'
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  invoiceNumberIdx: index("idx_invoices_number").on(t.invoiceNumber),
+  orderIdIdx: index("idx_invoices_order_id").on(t.orderId),
+  sellerIdIdx: index("idx_invoices_seller_id").on(t.sellerId),
+  buyerIdIdx: index("idx_invoices_buyer_id").on(t.buyerId),
+}));
+
+export const purchaseOrders = pgTable("purchase_orders", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  poNumber: varchar("po_number", { length: 100 }).notNull().unique(),
+  orderId: uuid("order_id").references(() => orders.id).notNull(),
+  buyerId: uuid("buyer_id").references(() => users.id).notNull(),
+  sellerId: uuid("seller_id").references(() => users.id).notNull(),
+  issueDate: timestamp("issue_date").notNull(),
+  status: varchar("status", { length: 32 }).default("pending"),
+  currency: varchar("currency", { length: 10 }).notNull(),
+  totalAmount: numeric("total_amount", { precision: 20, scale: 8 }).notNull(),
+  pdfUrl: text("pdf_url"),
+  pdfS3Key: text("pdf_s3_key"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  poNumberIdx: index("idx_po_number").on(t.poNumber),
+  orderIdIdx: index("idx_po_order_id").on(t.orderId),
+  buyerIdIdx: index("idx_po_buyer_id").on(t.buyerId),
+  sellerIdIdx: index("idx_po_seller_id").on(t.sellerId),
+}));
+
+// Webhook Endpoints for order event subscriptions
+export const webhookEndpoints = pgTable("webhook_endpoints", {
+  id: serial("id").primaryKey(),
+  sellerId: uuid("seller_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  url: text("url").notNull(),
+  events: text("events").notNull(), // JSON array of event types
+  isActive: boolean("is_active").default(true),
+  secret: varchar("secret", { length: 255 }), // For signing webhooks
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  sellerIdIdx: index("idx_webhook_endpoints_seller").on(t.sellerId),
+  isActiveIdx: index("idx_webhook_endpoints_active").on(t.isActive),
+}));
+
+// Webhook Delivery Logs
+export const webhookLogs = pgTable("webhook_logs", {
+  id: serial("id").primaryKey(),
+  webhookId: integer("webhook_id").references(() => webhookEndpoints.id, { onDelete: "cascade" }).notNull(),
+  event: varchar("event", { length: 64 }).notNull(),
+  orderId: uuid("order_id").references(() => orders.id, { onDelete: "cascade" }),
+  statusCode: integer("status_code"),
+  responseBody: text("response_body"),
+  errorMessage: text("error_message"),
+  retryAttempt: integer("retry_attempt").default(1),
+  success: boolean("success").default(false),
+  sentAt: timestamp("sent_at").defaultNow(),
+}, (t) => ({
+  webhookIdIdx: index("idx_webhook_logs_webhook").on(t.webhookId),
+  orderIdIdx: index("idx_webhook_logs_order").on(t.orderId),
+  sentAtIdx: index("idx_webhook_logs_sent_at").on(t.sentAt),
+}));
+
 // Verification Schema
 export * from "./verificationSchema";
 

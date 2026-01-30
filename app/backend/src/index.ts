@@ -1257,6 +1257,7 @@ import x402PaymentRoutes from './routes/x402PaymentRoutes';
 
 // Import receipt routes
 import receiptRoutes from './routes/receiptRoutes';
+import documentRoutes from './routes/documentRoutes';
 
 // Import return routes
 import returnRoutes from './routes/returnRoutes';
@@ -1279,6 +1280,7 @@ app.use('/api/x402-payments', x402PaymentRoutes);
 
 // Receipt routes
 app.use('/api', receiptRoutes);
+app.use('/api', documentRoutes);
 
 // Marketplace search routes
 app.use('/api/marketplace/search', marketplaceSearchRoutes);

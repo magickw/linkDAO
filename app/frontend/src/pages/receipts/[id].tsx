@@ -1,23 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
-import { useAccount } from 'wagmi';
+import { useReactToPrint } from 'react-to-print';
 import { receiptService } from '../../services/receiptService';
 import { PaymentReceipt } from '../../types/receipt';
 import { ReceiptDisplay } from '../../components/Marketplace/Receipt/ReceiptDisplay';
+import { useWeb3 } from '../../context/Web3Context';
+import GlassPanel from '../../components/GlassPanel';
+import Header from '../../components/Header';
+import Footer from '../../components/Footer';
 
 const ReceiptPage: React.FC = () => {
   const router = useRouter();
-  const { address, isConnected } = useAccount();
-  const { id } = router.query;
+  const { id } = router.query as { id: string };
+  const { address, isConnected } = useWeb3();
   const [receipt, setReceipt] = useState<PaymentReceipt | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (id && typeof id === 'string') {
+    if (id) {
       fetchReceipt(id);
     }
   }, [id]);
+
+  const handlePrint = useReactToPrint({
+    contentRef: receiptRef,
+    documentTitle: receipt ? `Receipt-${receipt.receiptNumber}` : 'Receipt'
+  });
 
   const fetchReceipt = async (receiptId: string) => {
     try {
@@ -30,13 +40,12 @@ const ReceiptPage: React.FC = () => {
       }
 
       // Check if user is authorized to view this receipt
-      if (isConnected && address && fetchedReceipt.buyerAddress !== address) {
+      if (isConnected && address && fetchedReceipt.buyerAddress.toLowerCase() !== address.toLowerCase()) {
         setError('You are not authorized to view this receipt');
         return;
       }
 
       setReceipt(fetchedReceipt);
-      setError(null);
     } catch (err) {
       setError('Failed to load receipt');
       console.error('Error fetching receipt:', err);
@@ -51,16 +60,6 @@ const ReceiptPage: React.FC = () => {
         await receiptService.downloadReceiptPDF(receipt.id);
       } catch (err) {
         console.error('Error downloading receipt:', err);
-      }
-    }
-  };
-
-  const handlePrint = () => {
-    if (receipt) {
-      try {
-        receiptService.printReceipt(receipt);
-      } catch (err) {
-        console.error('Error printing receipt:', err);
       }
     }
   };
@@ -135,12 +134,12 @@ const ReceiptPage: React.FC = () => {
             Back to Home
           </button>
         </div>
-        <ReceiptDisplay 
-          receipt={receipt}
-          onDownload={handleDownload}
-          onPrint={handlePrint}
-        />
-      </div>
+                    <ReceiptDisplay 
+                      ref={receiptRef}
+                      receipt={receipt} 
+                      onDownload={handleDownload}
+                      onPrint={handlePrint}
+                    />      </div>
     </div>
   );
 };

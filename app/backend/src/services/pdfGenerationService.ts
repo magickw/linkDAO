@@ -355,6 +355,59 @@ export class PdfGenerationService {
   }
 
   /**
+   * Generate a purchase order PDF
+   */
+  async generatePurchaseOrderPDF(poData: any): Promise<PDFGenerationResult> {
+    let page: Page | null = null;
+
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      page = await this.getPage();
+
+      const html = await this.renderTemplate('purchase-order', poData);
+
+      await page.setContent(html, {
+        waitUntil: 'networkidle0',
+        timeout: 30000,
+      });
+
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        landscape: false,
+        margin: {
+          top: '15mm',
+          bottom: '15mm',
+          left: '10mm',
+          right: '10mm',
+        },
+      });
+
+      const filename = `PurchaseOrder-${poData.documentNumber || Date.now()}.pdf`;
+      const size = Buffer.byteLength(pdfBuffer);
+
+      safeLogger.info(`[PDFService] Generated purchase order PDF: ${filename} (${size} bytes)`);
+
+      return {
+        buffer: pdfBuffer,
+        filename,
+        mimeType: 'application/pdf',
+        size,
+      };
+    } catch (error) {
+      safeLogger.error('[PDFService] Error generating purchase order PDF:', error);
+      throw error;
+    } finally {
+      if (page) {
+        this.releasePage(page);
+      }
+    }
+  }
+
+  /**
    * Generate PDF and upload to S3
    */
   async generateAndUploadPDF(
@@ -375,6 +428,9 @@ export class PdfGenerationService {
           break;
         case 'seller-invoice':
           pdfResult = await this.generateSellerInvoicePDF(data);
+          break;
+        case 'purchase-order':
+          pdfResult = await this.generatePurchaseOrderPDF(data);
           break;
         default:
           throw new Error(`Unknown template: ${templateName}`);

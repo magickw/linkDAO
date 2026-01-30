@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { 
   PaymentReceipt, 
   MarketplaceReceipt, 
@@ -11,11 +11,11 @@ interface ReceiptDisplayProps {
   onPrint?: () => void;
 }
 
-export const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({ 
+export const ReceiptDisplay = forwardRef<HTMLDivElement, ReceiptDisplayProps>(({ 
   receipt, 
   onDownload,
   onPrint 
-}) => {
+}, ref) => {
   const isMarketplaceReceipt = (receipt as MarketplaceReceipt).orderId !== undefined;
   const isLDAOReceipt = (receipt as LDAOPurchaseReceipt).tokensPurchased !== undefined;
 
@@ -56,7 +56,7 @@ export const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl mx-auto">
+    <div ref={ref} className="bg-white rounded-lg shadow-lg p-6 max-w-2xl mx-auto print:shadow-none print:p-0">
       {/* Header */}
       <div className="border-b pb-4 mb-6">
         <div className="flex justify-between items-start">
@@ -76,7 +76,7 @@ export const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
       </div>
 
       {/* Purchase Type Badge */}
-      <div className="mb-6">
+      <div className="mb-6 print:mb-4">
         <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
           isMarketplaceReceipt 
             ? 'bg-blue-100 text-blue-800' 
@@ -87,24 +87,24 @@ export const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
       </div>
 
       {/* Buyer Information */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 print:mb-6 print:grid-cols-2">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-3">Buyer Information</h3>
           <div className="space-y-2">
             {isMarketplaceReceipt && (
               <p className="text-gray-600">
-                <span className="font-medium">Order Number:</span> {(receipt as MarketplaceReceipt).displayOrderId || (receipt as MarketplaceReceipt).orderId}
+                <span className="font-medium text-gray-900">Order Number:</span> {(receipt as MarketplaceReceipt).displayOrderId || (receipt as MarketplaceReceipt).orderId}
               </p>
             )}
             <p className="text-gray-600">
-              <span className="font-medium">Wallet:</span> {receipt.buyerAddress}
+              <span className="font-medium text-gray-900">Wallet:</span> {receipt.buyerAddress}
             </p>
             <p className="text-gray-600">
-              <span className="font-medium">Payment Method:</span> {receipt.paymentMethod}
+              <span className="font-medium text-gray-900">Payment Method:</span> {receipt.paymentMethod}
             </p>
             {receipt.transactionHash && (
-              <p className="text-gray-600">
-                <span className="font-medium">Transaction Hash:</span> {receipt.transactionHash}
+              <p className="text-gray-600 break-all">
+                <span className="font-medium text-gray-900">Transaction Hash:</span> {receipt.transactionHash}
               </p>
             )}
           </div>
@@ -115,10 +115,10 @@ export const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Seller Information</h3>
             <div className="space-y-2">
               <p className="text-gray-600">
-                <span className="font-medium">Name:</span> {(receipt as MarketplaceReceipt).sellerName || 'N/A'}
+                <span className="font-medium text-gray-900">Name:</span> {(receipt as MarketplaceReceipt).sellerName || 'N/A'}
               </p>
               <p className="text-gray-600">
-                <span className="font-medium">Wallet:</span> {(receipt as MarketplaceReceipt).sellerAddress || 'N/A'}
+                <span className="font-medium text-gray-900">Wallet:</span> {(receipt as MarketplaceReceipt).sellerAddress || 'N/A'}
               </p>
             </div>
           </div>
@@ -127,9 +127,9 @@ export const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
 
       {/* Order Details */}
       {isMarketplaceReceipt && (
-        <div className="mb-8">
+        <div className="mb-8 print:mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Order Details</h3>
-          <div className="bg-gray-50 rounded-lg p-4">
+          <div className="bg-gray-50 rounded-lg p-4 print:bg-transparent print:p-0">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
@@ -141,7 +141,7 @@ export const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
               </thead>
               <tbody>
                 {(receipt as MarketplaceReceipt).items.map((item, index) => (
-                  <tr key={index} className="border-b">
+                  <tr key={index} className="border-b last:border-0">
                     <td className="py-3 text-gray-900">{item.name}</td>
                     <td className="py-3 text-right text-gray-600">{item.quantity}</td>
                     <td className="py-3 text-right text-gray-600">
@@ -160,17 +160,17 @@ export const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
 
       {/* Token Purchase Details */}
       {isLDAOReceipt && (
-        <div className="mb-8">
+        <div className="mb-8 print:mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Token Purchase Details</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 print:bg-transparent print:p-0">
             <div>
               <p className="text-gray-600">
-                <span className="font-medium">Tokens Purchased:</span> {(receipt as LDAOPurchaseReceipt).tokensPurchased}
+                <span className="font-medium text-gray-900">Tokens Purchased:</span> {(receipt as LDAOPurchaseReceipt).tokensPurchased}
               </p>
             </div>
             <div>
               <p className="text-gray-600">
-                <span className="font-medium">Price Per Token:</span> {formatCurrency((receipt as LDAOPurchaseReceipt).pricePerToken, 'USD')}
+                <span className="font-medium text-gray-900">Price Per Token:</span> {formatCurrency((receipt as LDAOPurchaseReceipt).pricePerToken, 'USD')}
               </p>
             </div>
           </div>
@@ -178,42 +178,42 @@ export const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
       )}
 
       {/* Payment Summary */}
-      <div className="mb-8">
+      <div className="mb-8 print:mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Summary</h3>
-        <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-          <div className="flex justify-between">
-            <span className="text-gray-600">Subtotal</span>
-            <span className="font-medium">{formatCurrency(receipt.amount, receipt.currency)}</span>
+        <div className="bg-gray-50 rounded-lg p-4 space-y-2 print:bg-transparent print:p-0">
+          <div className="flex justify-between text-gray-600">
+            <span>Subtotal</span>
+            <span className="font-medium text-gray-900">{formatCurrency(receipt.amount, receipt.currency)}</span>
           </div>
           
           {receipt.fees && (
             <>
               {receipt.fees.processing && parseFloat(receipt.fees.processing) > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Processing Fee</span>
-                  <span className="font-medium">{formatCurrency(receipt.fees.processing, receipt.currency)}</span>
+                <div className="flex justify-between text-gray-600">
+                  <span>Processing Fee</span>
+                  <span className="font-medium text-gray-900">{formatCurrency(receipt.fees.processing, receipt.currency)}</span>
                 </div>
               )}
               {receipt.fees.platform && parseFloat(receipt.fees.platform) > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Platform Fee</span>
-                  <span className="font-medium">{formatCurrency(receipt.fees.platform, receipt.currency)}</span>
+                <div className="flex justify-between text-gray-600">
+                  <span>Platform Fee</span>
+                  <span className="font-medium text-gray-900">{formatCurrency(receipt.fees.platform, receipt.currency)}</span>
                 </div>
               )}
               {receipt.fees.gas && parseFloat(receipt.fees.gas) > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Gas Fee</span>
-                  <span className="font-medium">{formatCurrency(receipt.fees.gas, receipt.currency)}</span>
+                <div className="flex justify-between text-gray-600">
+                  <span>Gas Fee</span>
+                  <span className="font-medium text-gray-900">{formatCurrency(receipt.fees.gas, receipt.currency)}</span>
                 </div>
               )}
-              <div className="border-t pt-2 flex justify-between font-semibold">
+              <div className="border-t pt-2 flex justify-between font-semibold text-gray-700">
                 <span>Total Fees</span>
                 <span>{formatCurrency(receipt.fees.total, receipt.currency)}</span>
               </div>
             </>
           )}
           
-          <div className="border-t pt-2 flex justify-between text-lg font-bold">
+          <div className="border-t-2 border-gray-900 pt-2 flex justify-between text-lg font-bold text-gray-900">
             <span>Total Paid</span>
             <span>{formatCurrency(
               (parseFloat(receipt.amount) + parseFloat(receipt.fees?.total || '0')).toString(), 
@@ -224,10 +224,10 @@ export const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
       </div>
 
       {/* Transaction Status */}
-      <div className="mb-8">
+      <div className="mb-8 print:mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Transaction Status</h3>
         <div className="flex items-center">
-          <div className={`w-3 h-3 rounded-full mr-3 ${
+          <div className={`w-3 h-3 rounded-full mr-3 print:border ${
             receipt.status === 'completed' ? 'bg-green-500' : 
             receipt.status === 'failed' ? 'bg-red-500' : 'bg-yellow-500'
           }`}></div>
@@ -238,8 +238,8 @@ export const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex justify-end space-x-3">
+      {/* Action Buttons - Hidden when printing */}
+      <div className="flex justify-end space-x-3 print:hidden">
         {onPrint && (
           <button
             onClick={onPrint}
@@ -259,10 +259,12 @@ export const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
       </div>
 
       {/* Footer */}
-      <div className="mt-8 pt-6 border-t text-center text-sm text-gray-500">
+      <div className="mt-8 pt-6 border-t text-center text-sm text-gray-500 print:mt-4">
         <p>Thank you for your purchase on LinkDAO!</p>
         <p className="mt-1">This is an official receipt for your transaction.</p>
       </div>
     </div>
   );
-};
+});
+
+ReceiptDisplay.displayName = 'ReceiptDisplay';

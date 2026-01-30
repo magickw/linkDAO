@@ -322,6 +322,30 @@ router.get(
 );
 
 /**
+ * @route GET /api/orders/:orderId/purchase-order
+ * @desc Get purchase order
+ * @access Private
+ */
+router.get(
+  '/:orderId/purchase-order',
+  orderRateLimit,
+  authMiddleware,
+  orderController.getPurchaseOrder.bind(orderController)
+);
+
+/**
+ * @route POST /api/orders/:orderId/purchase-order
+ * @desc Generate purchase order
+ * @access Private
+ */
+router.post(
+  '/:orderId/purchase-order',
+  orderRateLimit,
+  authMiddleware,
+  orderController.generatePurchaseOrder.bind(orderController)
+);
+
+/**
  * @route PUT /api/orders/bulk/status
  * @desc Bulk update order status
  * @access Private

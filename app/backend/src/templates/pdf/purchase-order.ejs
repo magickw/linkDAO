@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Purchase Order <%= documentNumber %></title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #2c3e50; background: white; }
+    body { padding: 40px; line-height: 1.5; }
+    .container { max-width: 800px; margin: 0 auto; }
+    .section { margin-bottom: 30px; }
+    .section-title { font-size: 12px; font-weight: 700; color: #2980b9; text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+    .party-info { display: flex; gap: 40px; margin-bottom: 30px; }
+    .party-block { flex: 1; font-size: 12px; }
+    .party-block strong { color: #2c3e50; display: block; margin-bottom: 5px; font-size: 13px; }
+    .party-block p { color: #7f8c8d; margin: 2px 0; }
+    .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
+    .items-table th { background: #f9f9f9; padding: 10px; text-align: left; font-weight: 700; border-bottom: 2px solid #2980b9; }
+    .items-table td { padding: 10px; border-bottom: 1px solid #eee; }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .summary-section { display: flex; justify-content: flex-end; }
+    .summary-table { width: 300px; font-size: 12px; }
+    .summary-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+    .summary-row.total { border-top: 2px solid #2c3e50; font-weight: 700; font-size: 14px; color: #2c3e50; margin-top: 5px; }
+    .notes-section { font-size: 11px; color: #7f8c8d; background: #f9f9f9; padding: 15px; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <%- include('../partials/pdf-header', { 
+      title: 'Purchase Order', 
+      idLabel: 'PO', 
+      idValue: documentNumber, 
+      date: date, 
+      status: status 
+    }) %>
+
+    <div class="party-info">
+      <div class="party-block">
+        <p class="section-title">Seller</p>
+        <strong><%= sender.name %></strong>
+        <p><%= sender.address.street %></p>
+        <p><%= sender.address.city %>, <%= sender.address.state %> <%= sender.address.postalCode %></p>
+        <p><%= sender.address.country %></p>
+        <% if (sender.walletAddress) { %>
+          <p style="margin-top: 5px; font-family: monospace; font-size: 10px;">Wallet: <%= sender.walletAddress %></p>
+        <% } %>
+      </div>
+      <div class="party-block">
+        <p class="section-title">Ship To</p>
+        <strong><%= recipient.name %></strong>
+        <p><%= recipient.address.street %></p>
+        <p><%= recipient.address.city %>, <%= recipient.address.state %> <%= recipient.address.postalCode %></p>
+        <p><%= recipient.address.country %></p>
+        <% if (recipient.phone) { %>
+          <p>Phone: <%= recipient.phone %></p>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="section">
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th class="text-center">Qty</th>
+            <th class="text-right">Unit Price</th>
+            <th class="text-right">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% items.forEach(item => { %>
+            <tr>
+              <td><%= item.description %></td>
+              <td class="text-center"><%= item.quantity %></td>
+              <td class="text-right"><%= currency %> <%= item.unitPrice.toFixed(2) %></td>
+              <td class="text-right"><%= currency %> <%= item.total.toFixed(2) %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section summary-section">
+      <div class="summary-table">
+        <div class="summary-row">
+          <span>Subtotal</span>
+          <span><%= currency %> <%= subtotal.toFixed(2) %></span>
+        </div>
+        <% if (taxTotal > 0) { %>
+          <div class="summary-row">
+            <span>Tax</span>
+            <span><%= currency %> <%= taxTotal.toFixed(2) %></span>
+          </div>
+        <% } %>
+        <% if (shippingTotal > 0) { %>
+          <div class="summary-row">
+            <span>Shipping</span>
+            <span><%= currency %> <%= shippingTotal.toFixed(2) %></span>
+          </div>
+        <% } %>
+        <div class="summary-row total">
+          <span>TOTAL</span>
+          <span><%= currency %> <%= total.toFixed(2) %></span>
+        </div>
+      </div>
+    </div>
+
+    <% if (note || terms) { %>
+      <div class="section notes-section">
+        <% if (note) { %>
+          <p><strong>Note:</strong> <%= note %></p>
+        <% } %>
+        <% if (terms) { %>
+          <p style="margin-top: 10px;"><strong>Terms:</strong> <%= terms %></p>
+        <% } %>
+      </div>
+    <% } %>
+
+    <%- include('../partials/pdf-footer') %>
+  </div>
+</body>
+</html>

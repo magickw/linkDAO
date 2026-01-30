@@ -5,341 +5,52 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Receipt <%= receiptNumber %></title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      color: #333;
-      background: white;
-    }
-
-    body {
-      padding: 40px;
-      line-height: 1.6;
-    }
-
-    .receipt-container {
-      max-width: 800px;
-      margin: 0 auto;
-      background: white;
-    }
-
-    /* Header Section */
-    .receipt-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 40px;
-      border-bottom: 3px solid #007bff;
-      padding-bottom: 20px;
-    }
-
-    .company-info h1 {
-      margin: 0 0 5px 0;
-      color: #007bff;
-      font-size: 32px;
-      font-weight: 700;
-    }
-
-    .company-info p {
-      margin: 2px 0;
-      font-size: 12px;
-      color: #666;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .receipt-meta {
-      text-align: right;
-      font-size: 13px;
-    }
-
-    .receipt-meta-item {
-      display: flex;
-      justify-content: flex-end;
-      margin-bottom: 8px;
-    }
-
-    .receipt-meta-label {
-      font-weight: 600;
-      color: #333;
-      width: 100px;
-      text-align: right;
-      margin-right: 10px;
-    }
-
-    .receipt-meta-value {
-      color: #666;
-    }
-
-    /* Section Styling */
-    .section {
-      margin-bottom: 30px;
-    }
-
-    .section-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: #007bff;
-      text-transform: uppercase;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #e0e0e0;
-    }
-
-    /* Buyer & Seller Info */
-    .buyer-seller-section {
-      display: flex;
-      gap: 40px;
-    }
-
-    .info-block {
-      flex: 1;
-      font-size: 12px;
-    }
-
-    .info-block p {
-      margin: 5px 0;
-      color: #555;
-    }
-
-    .info-block strong {
-      color: #333;
-      display: block;
-      margin-top: 10px;
-      font-size: 13px;
-    }
-
-    /* Items Table */
-    .items-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
-      font-size: 13px;
-    }
-
-    .items-table thead {
-      background: #f8f9fa;
-      border-top: 2px solid #007bff;
-      border-bottom: 2px solid #007bff;
-    }
-
-    .items-table th {
-      padding: 12px;
-      text-align: left;
-      font-weight: 600;
-      color: #333;
-      border: none;
-    }
-
-    .items-table td {
-      padding: 12px;
-      border-bottom: 1px solid #e0e0e0;
-      color: #555;
-    }
-
-    .items-table tr:last-child td {
-      border-bottom: 2px solid #e0e0e0;
-    }
-
-    .items-table .text-right {
-      text-align: right;
-    }
-
-    .items-table .text-center {
-      text-align: center;
-    }
-
-    /* Summary Section */
-    .summary-section {
-      display: flex;
-      justify-content: flex-end;
-      margin-bottom: 30px;
-    }
-
-    .summary-table {
-      width: 350px;
-      font-size: 13px;
-    }
-
-    .summary-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px 0;
-      border-bottom: 1px solid #e0e0e0;
-    }
-
-    .summary-row.total {
-      border-top: 2px solid #007bff;
-      border-bottom: 2px solid #007bff;
-      padding: 12px 0;
-      font-weight: 700;
-      font-size: 16px;
-      color: #007bff;
-    }
-
-    .summary-label {
-      color: #555;
-    }
-
-    .summary-value {
-      color: #333;
-      font-weight: 500;
-      text-align: right;
-    }
-
-    /* Payment Details */
-    .payment-details {
-      display: flex;
-      gap: 20px;
-      margin-bottom: 30px;
-    }
-
-    .payment-detail-item {
-      flex: 1;
-      padding: 15px;
-      background: #f8f9fa;
-      border-radius: 5px;
-      font-size: 12px;
-    }
-
-    .payment-detail-item strong {
-      display: block;
-      color: #007bff;
-      margin-bottom: 8px;
-      font-size: 13px;
-    }
-
-    .payment-detail-item p {
-      margin: 3px 0;
-      color: #666;
-      word-break: break-all;
-      font-family: 'Courier New', monospace;
-    }
-
-    /* Footer */
-    .receipt-footer {
-      margin-top: 50px;
-      padding-top: 20px;
-      border-top: 2px solid #e0e0e0;
-      text-align: center;
-      font-size: 11px;
-      color: #999;
-    }
-
-    .footer-text {
-      margin: 8px 0;
-    }
-
-    /* Status Badge */
-    .status-badge {
-      display: inline-block;
-      padding: 6px 12px;
-      border-radius: 4px;
-      font-weight: 600;
-      text-transform: uppercase;
-      font-size: 11px;
-      letter-spacing: 1px;
-    }
-
-    .status-badge.completed {
-      background: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
-    }
-
-    .status-badge.pending {
-      background: #fff3cd;
-      color: #856404;
-      border: 1px solid #ffeeba;
-    }
-
-    /* Shipping Address */
-    .shipping-section {
-      padding: 15px;
-      background: #f8f9fa;
-      border-radius: 5px;
-      font-size: 12px;
-      margin-bottom: 20px;
-    }
-
-    .shipping-section strong {
-      color: #007bff;
-      display: block;
-      margin-bottom: 10px;
-    }
-
-    .shipping-address {
-      color: #555;
-      line-height: 1.8;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #2c3e50; background: white; }
+    body { padding: 40px; line-height: 1.5; }
+    .container { max-width: 800px; margin: 0 auto; }
+    .section { margin-bottom: 30px; }
+    .section-title { font-size: 12px; font-weight: 700; color: #2980b9; text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+    .info-grid { display: flex; gap: 40px; margin-bottom: 30px; }
+    .info-block { flex: 1; font-size: 12px; }
+    .info-block strong { color: #2c3e50; display: block; margin-bottom: 5px; font-size: 13px; }
+    .info-block p { color: #7f8c8d; margin: 2px 0; }
+    .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
+    .items-table th { background: #f9f9f9; padding: 10px; text-align: left; font-weight: 700; border-bottom: 2px solid #2980b9; }
+    .items-table td { padding: 10px; border-bottom: 1px solid #eee; }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .summary-section { display: flex; justify-content: flex-end; }
+    .summary-table { width: 300px; font-size: 12px; }
+    .summary-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+    .summary-row.total { border-top: 2px solid #2c3e50; font-weight: 700; font-size: 14px; color: #2c3e50; margin-top: 5px; }
+    .payment-badge { background: #f8f9fa; border-radius: 5px; padding: 15px; border-left: 4px solid #2980b9; }
+    .payment-badge p { font-family: monospace; font-size: 10px; color: #7f8c8d; margin-top: 5px; }
   </style>
 </head>
 <body>
-  <div class="receipt-container">
-    <!-- Header -->
-    <div class="receipt-header">
-      <div class="company-info">
-        <h1>LinkDAO</h1>
-        <p>Web3 Marketplace Receipt</p>
-      </div>
-      <div class="receipt-meta">
-        <div class="receipt-meta-item">
-          <span class="receipt-meta-label">Receipt #:</span>
-          <span class="receipt-meta-value"><strong><%= receiptNumber %></strong></span>
-        </div>
-        <div class="receipt-meta-item">
-          <span class="receipt-meta-label">Date:</span>
-          <span class="receipt-meta-value"><%= new Date(createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span>
-        </div>
-        <div class="receipt-meta-item">
-          <span class="receipt-meta-label">Status:</span>
-          <span class="receipt-meta-value">
-            <span class="status-badge completed">COMPLETED</span>
-          </span>
-        </div>
-      </div>
-    </div>
+  <div class="container">
+    <%- include('../partials/pdf-header', { 
+      title: 'Payment Receipt', 
+      idLabel: 'Receipt', 
+      idValue: receiptNumber, 
+      date: createdAt, 
+      status: 'completed' 
+    }) %>
 
-    <!-- Buyer & Seller Info -->
-    <div class="section">
-      <div class="section-title">Order Information</div>
-      <div class="buyer-seller-section">
-        <div class="info-block">
-          <strong>Buyer</strong>
-          <% if (buyerInfo && buyerInfo.buyerId) { %>
-            <p><strong>ID:</strong> <%= buyerInfo.buyerId %></p>
-          <% } %>
-          <% if (buyerInfo && buyerInfo.startAddress) { %>
-            <p><strong>Wallet:</strong> <%= buyerInfo.startAddress.substring(0, 10) %>...<%=buyerInfo.startAddress.substring(buyerInfo.startAddress.length - 8) %></p>
-          <% } %>
-        </div>
-        <div class="info-block">
-          <strong>Payment Method</strong>
-          <p><%= (paymentDetails && paymentDetails.method) ? paymentDetails.method.toUpperCase() : 'CRYPTO' %></p>
-          <% if (paymentDetails && paymentDetails.transactionId) { %>
-            <p><strong>Transaction ID:</strong> <%= paymentDetails.transactionId.substring(0, 16) %>...</p>
-          <% } %>
-        </div>
-        <div class="info-block">
-          <strong>Order Currency</strong>
-          <p><%= pricing && pricing.currency ? pricing.currency.toUpperCase() : 'USD' %></p>
-        </div>
+    <div class="info-grid">
+      <div class="info-block">
+        <p class="section-title">Buyer Information</p>
+        <strong><%= buyerInfo && buyerInfo.name ? buyerInfo.name : 'LinkDAO User' %></strong>
+        <% if (buyerInfo && buyerInfo.startAddress) { %>
+          <p>Wallet: <%= buyerInfo.startAddress %></p>
+        <% } %>
+        <p>Method: <%= (paymentDetails && paymentDetails.method) ? paymentDetails.method.toUpperCase() : 'CRYPTO' %></p>
       </div>
-    </div>
-
-    <!-- Shipping Address (if available) -->
-    <% if (buyerInfo && buyerInfo.shippingAddress) { %>
-      <div class="section">
-        <div class="shipping-section">
-          <strong>Shipping Address</strong>
-          <div class="shipping-address">
+      <% if (buyerInfo && buyerInfo.shippingAddress) { %>
+        <div class="info-block">
+          <p class="section-title">Shipping Address</p>
+          <div style="color: #7f8c8d;">
             <%
               const addr = buyerInfo.shippingAddress;
               if (typeof addr === 'string') {
@@ -348,35 +59,24 @@
             <%
               } else if (typeof addr === 'object') {
             %>
-              <% if (addr.name) { %>
-                <%= addr.name %><br>
-              <% } %>
-              <% if (addr.street) { %>
-                <%= addr.street %><br>
-              <% } %>
-              <% if (addr.city) { %>
-                <%= addr.city %>, <% if (addr.state) { %><%= addr.state %> <% } %><%= addr.postalCode || '' %><br>
-              <% } %>
-              <% if (addr.country) { %>
-                <%= addr.country %>
-              <% } %>
-            <%
-              }
-            %>
+              <% if (addr.name) { %><%= addr.name %><br><% } %>
+              <% if (addr.street) { %><%= addr.street %><br><% } %>
+              <% if (addr.city) { %><%= addr.city %>, <% if (addr.state) { %><%= addr.state %> <% } %><%= addr.postalCode || '' %><br><% } %>
+              <% if (addr.country) { %><%= addr.country %><% } %>
+            <% } %>
           </div>
         </div>
-      </div>
-    <% } %>
+      <% } %>
+    </div>
 
-    <!-- Items Table -->
     <% if (items && items.length > 0) { %>
       <div class="section">
-        <div class="section-title">Order Items</div>
+        <p class="section-title">Purchased Items</p>
         <table class="items-table">
           <thead>
             <tr>
-              <th>Item Description</th>
-              <th class="text-center">Quantity</th>
+              <th>Description</th>
+              <th class="text-center">Qty</th>
               <th class="text-right">Unit Price</th>
               <th class="text-right">Total</th>
             </tr>
@@ -386,8 +86,8 @@
               <tr>
                 <td><%= item.description || item.name || 'Item' %></td>
                 <td class="text-center"><%= item.quantity || 1 %></td>
-                <td class="text-right"><%= typeof item.price === 'number' ? item.price.toFixed(8) : item.price %> <%= pricing && pricing.currency %></td>
-                <td class="text-right"><strong><%= typeof item.total === 'number' ? item.total.toFixed(8) : item.total %> <%= pricing && pricing.currency %></strong></td>
+                <td class="text-right"><%= pricing && pricing.currency %> <%= (typeof item.price === 'number' ? item.price : parseFloat(item.price)).toFixed(2) %></td>
+                <td class="text-right"><strong><%= pricing && pricing.currency %> <%= (typeof item.total === 'number' ? item.total : parseFloat(item.total)).toFixed(2) %></strong></td>
               </tr>
             <% }); %>
           </tbody>
@@ -395,68 +95,44 @@
       </div>
     <% } %>
 
-    <!-- Pricing Summary -->
     <% if (pricing) { %>
-      <div class="summary-section">
+      <div class="section summary-section">
         <div class="summary-table">
           <div class="summary-row">
-            <span class="summary-label">Subtotal</span>
-            <span class="summary-value"><%= typeof pricing.subtotal === 'number' ? pricing.subtotal.toFixed(8) : pricing.subtotal %></span>
+            <span>Subtotal</span>
+            <span><%= pricing.currency %> <%= parseFloat(pricing.subtotal).toFixed(2) %></span>
           </div>
           <% if (pricing.tax && parseFloat(pricing.tax) > 0) { %>
             <div class="summary-row">
-              <span class="summary-label">Tax</span>
-              <span class="summary-value"><%= typeof pricing.tax === 'number' ? pricing.tax.toFixed(8) : pricing.tax %></span>
+              <span>Tax</span>
+              <span><%= pricing.currency %> <%= parseFloat(pricing.tax).toFixed(2) %></span>
             </div>
           <% } %>
           <% if (pricing.platformFee && parseFloat(pricing.platformFee) > 0) { %>
             <div class="summary-row">
-              <span class="summary-label">Platform Fee</span>
-              <span class="summary-value"><%= typeof pricing.platformFee === 'number' ? pricing.platformFee.toFixed(8) : pricing.platformFee %></span>
-            </div>
-          <% } %>
-          <% if (pricing.processingFee && parseFloat(pricing.processingFee) > 0) { %>
-            <div class="summary-row">
-              <span class="summary-label">Processing Fee</span>
-              <span class="summary-value"><%= typeof pricing.processingFee === 'number' ? pricing.processingFee.toFixed(8) : pricing.processingFee %></span>
+              <span>Platform Fee</span>
+              <span><%= pricing.currency %> <%= parseFloat(pricing.platformFee).toFixed(2) %></span>
             </div>
           <% } %>
           <div class="summary-row total">
-            <span class="summary-label">TOTAL</span>
-            <span class="summary-value"><%= typeof pricing.total === 'number' ? pricing.total.toFixed(8) : pricing.total %> <%= pricing.currency %></span>
+            <span>TOTAL PAID</span>
+            <span><%= pricing.currency %> <%= parseFloat(pricing.total).toFixed(2) %></span>
           </div>
         </div>
       </div>
     <% } %>
 
-    <!-- Payment Details -->
-    <div class="section">
-      <div class="section-title">Payment Details</div>
-      <div class="payment-details">
-        <% if (paymentDetails && paymentDetails.transactionHash) { %>
-          <div class="payment-detail-item">
-            <strong>Transaction Hash</strong>
-            <p><%= paymentDetails.transactionHash %></p>
-          </div>
-        <% } %>
-        <% if (paymentDetails && paymentDetails.timestamp) { %>
-          <div class="payment-detail-item">
-            <strong>Completed At</strong>
-            <p><%= new Date(paymentDetails.timestamp).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) %></p>
-          </div>
-        <% } %>
+    <% if (paymentDetails && paymentDetails.transactionHash) { %>
+      <div class="section">
+        <p class="section-title">On-Chain Transaction</p>
+        <div class="payment-badge">
+          <strong>Transaction Hash</strong>
+          <p><%= paymentDetails.transactionHash %></p>
+        </div>
       </div>
-    </div>
+    <% } %>
 
-    <!-- Footer -->
-    <div class="receipt-footer">
-      <div class="footer-text"><strong>LinkDAO © 2026 | All Rights Reserved</strong></div>
-      <div class="footer-text">Support: support@linkdao.io | Website: linkdao.io</div>
-      <div class="footer-text">This receipt is valid for 7 years. Please keep this for your records.</div>
-      <div class="footer-text" style="margin-top: 15px; font-size: 10px; color: #bbb;">
-        Generated on <%= new Date().toLocaleString('en-US') %> | This is an automated receipt from LinkDAO Marketplace
-      </div>
-    </div>
+    <%- include('../partials/pdf-footer') %>
   </div>
 </body>
 </html>

@@ -15,6 +15,7 @@ import {
 import { AppError, NotFoundError, ValidationError } from '../middleware/errorHandler';
 
 import { OrderTimelineService } from '../services/orderTimelineService';
+import { purchaseOrderService } from '../services/purchaseOrderService';
 
 const orderService = new OrderService();
 const shippingService = new ShippingService();
@@ -50,6 +51,71 @@ export class OrderController {
       if (error instanceof AppError) {
         throw error;
       }
+      throw new AppError(error.message);
+    }
+  }
+
+  /**
+   * Generate purchase order PDF
+   */
+  async generatePurchaseOrder(req: Request, res: Response): Promise<Response> {
+    try {
+      const { orderId } = req.params;
+      const poData = req.body;
+
+      if (!orderId) {
+        throw new ValidationError('Order ID is required');
+      }
+
+      // 1. Check if PO already exists
+      let po = await purchaseOrderService.getPOByOrderId(orderId);
+
+      // 2. If not, create it
+      if (!po) {
+        if (!poData || !poData.poNumber) {
+          throw new ValidationError('Purchase Order data is required to create a new PO');
+        }
+        po = await purchaseOrderService.createPurchaseOrder({
+          ...poData,
+          orderId
+        });
+      }
+
+      // 3. Ensure PDF is generated
+      if (!po.pdfUrl) {
+        const pdfUrl = await purchaseOrderService.generatePOPDF(po.id);
+        po.pdfUrl = pdfUrl;
+      }
+
+      return res.json({
+        success: true,
+        data: po
+      });
+    } catch (error: any) {
+      safeLogger.error('[OrderController] Error generating PO:', error);
+      if (error instanceof AppError) throw error;
+      throw new AppError(error.message);
+    }
+  }
+
+  /**
+   * Get purchase order
+   */
+  async getPurchaseOrder(req: Request, res: Response): Promise<Response> {
+    try {
+      const { orderId } = req.params;
+      const po = await purchaseOrderService.getPOByOrderId(orderId);
+      
+      if (!po) {
+        throw new NotFoundError('Purchase Order not found for this order');
+      }
+
+      return res.json({
+        success: true,
+        data: po
+      });
+    } catch (error: any) {
+      if (error instanceof AppError) throw error;
       throw new AppError(error.message);
     }
   }
