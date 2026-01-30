@@ -2,6 +2,7 @@ import express from 'express';
 import { PostController } from '../controllers/postController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { csrfProtection } from '../middleware/csrfProtection';
+import { repostDiagnosticMiddleware, repostPostAuthDiagnosticMiddleware } from '../middleware/repostDiagnosticMiddleware';
 
 const router = express.Router();
 const postController = new PostController();
@@ -19,7 +20,7 @@ router.get('/health', (req, res) => {
 // Routes
 // CRITICAL: specific routes must come before parameterized routes
 console.log('Registering /api/posts/repost route');
-router.post('/repost', authMiddleware, postController.repostPost.bind(postController));
+router.post('/repost', repostDiagnosticMiddleware, authMiddleware, repostPostAuthDiagnosticMiddleware, postController.repostPost.bind(postController));
 router.post('/unrepost', authMiddleware, postController.unrepostPost.bind(postController));
 
 router.post('/', postController.createPost.bind(postController));

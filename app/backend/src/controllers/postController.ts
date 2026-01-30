@@ -526,11 +526,30 @@ export class PostController {
   }
 
   async sharePost(req: Request, res: Response): Promise<Response> {
+    const shareStartTime = Date.now();
+    console.log('🚀 [SHARE] === START sharePost method ===');
+    
     try {
       const { id } = req.params; // Original post ID
       const { targetCommunityId, author } = req.body;
 
+      console.log('📋 [SHARE] POST /api/posts/:id/share - Sharing post to community');
+      console.log('📥 [SHARE] Request details:', { 
+        originalPostId: id, 
+        targetCommunityId, 
+        author 
+      });
+
+      if (!id) {
+        console.log('⚠️ [SHARE] Missing original post ID');
+        return res.status(400).json({
+          success: false,
+          error: 'Original post ID is required'
+        });
+      }
+
       if (!targetCommunityId) {
+        console.log('⚠️ [SHARE] Missing targetCommunityId');
         return res.status(400).json({
           success: false,
           error: 'Target community ID is required'
@@ -538,20 +557,36 @@ export class PostController {
       }
 
       if (!author) {
+        console.log('⚠️ [SHARE] Missing author');
         return res.status(400).json({
           success: false,
           error: 'Author address is required'
         });
       }
 
+      console.log(`🔄 [SHARE] Calling postService.sharePostToCommunity...`);
+      const serviceStart = Date.now();
+      
       const post = await this.postService.sharePostToCommunity(id, targetCommunityId, author);
+      
+      console.log(`✅ [SHARE] Post shared successfully. New Post ID: ${post.id}`);
+      console.log(`⏱️ [SHARE] Service call took ${Date.now() - serviceStart}ms`);
+      console.log(`⏱️ [SHARE] === TOTAL TIME: ${Date.now() - shareStartTime}ms ===`);
 
       return res.status(201).json({
         success: true,
         data: post
       });
     } catch (error: any) {
-      console.error('Error sharing post:', error);
+      console.error('❌ [SHARE] Error sharing post:', error);
+      console.error('❌ [SHARE] Error details:', {
+        message: error?.message,
+        code: error?.code,
+        stack: error?.stack?.substring(0, 500),
+        raw: JSON.stringify(error)
+      });
+      console.log(`⏱️ [SHARE] === FAILED AFTER: ${Date.now() - shareStartTime}ms ===`);
+      
       return res.status(500).json({
         success: false,
         error: error.message || 'Failed to share post'

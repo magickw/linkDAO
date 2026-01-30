@@ -406,17 +406,23 @@ export class PostService {
 
   async sharePostToCommunity(originalPostId: string, targetCommunityId: string, authorAddress: string): Promise<Post> {
     try {
+      safeLogger.info(`[sharePostToCommunity] Attempting to share post ${originalPostId} to community ${targetCommunityId} by ${authorAddress}`);
+
       // 1. Get original post
       const originalPost = await this.getPostById(originalPostId);
       if (!originalPost) {
+        safeLogger.warn(`[sharePostToCommunity] Original post ${originalPostId} not found`);
         throw new Error('Original post not found');
       }
 
-      // 2. Verify ownership - only the original author can cross-post their own content
-      if (originalPost.author.toLowerCase() !== authorAddress.toLowerCase()) {
-        safeLogger.warn(`Unauthorized cross-post attempt: User ${authorAddress} tried to share post ${originalPostId} owned by ${originalPost.author}`);
-        throw new Error('You can only share your own posts to other communities');
-      }
+      // 2. Verify ownership - REMOVED to allow sharing/reposting others' content
+      // Users should be able to share interesting content to communities
+      // if (originalPost.author.toLowerCase() !== authorAddress.toLowerCase()) {
+      //   safeLogger.warn(`Unauthorized cross-post attempt: User ${authorAddress} tried to share post ${originalPostId} owned by ${originalPost.author}`);
+      //   throw new Error('You can only share your own posts to other communities');
+      // }
+
+      safeLogger.info(`[sharePostToCommunity] Creating repost for original post ${originalPostId} by ${originalPost.author}`);
 
       // 3. Prepare new post input as a clone
       const input: CreatePostInput = {
@@ -431,13 +437,6 @@ export class PostService {
       };
 
       // 4. Create using standard method (handles user creation, validation etc)
-      // Optimization: We could bypass IPFS upload since we have CIDs, but strict types might require re-upload logic flow 
-      // to be bypassed. 
-      // In the modified createPost above, we check if media items are already CIDs, which they are.
-      // For content, createPost tries to upload 'content'. 
-      // If we want to strictly link contentCid, we might need a lower level DB call or update createPost to accept contentCid.
-      // For now, re-uploading text (cheap) or getting identical CID is acceptable overhead for code reuse.
-
       return await this.createPost(input);
 
     } catch (error) {
