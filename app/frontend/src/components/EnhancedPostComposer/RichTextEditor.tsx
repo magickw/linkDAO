@@ -13,6 +13,7 @@ interface RichTextEditorProps {
     facebook?: boolean;
     linkedin?: boolean;
     threads?: boolean;
+    bluesky?: boolean;
   };
   onShareToSocialMediaChange?: (shareToSocialMedia: any) => void;
 }

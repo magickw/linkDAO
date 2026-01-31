@@ -158,6 +158,7 @@ export interface CreatePostInput {
     facebook?: boolean;
     linkedin?: boolean;
     threads?: boolean;
+    bluesky?: boolean;
   };
 }
 

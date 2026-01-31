@@ -22,6 +22,7 @@ export interface CreateStatusInput {
     facebook?: boolean;
     linkedin?: boolean;
     threads?: boolean;
+    bluesky?: boolean;
   };
 }
 

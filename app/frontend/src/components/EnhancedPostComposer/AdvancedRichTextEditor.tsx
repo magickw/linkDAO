@@ -37,6 +37,7 @@ interface AdvancedRichTextEditorProps {
     facebook?: boolean;
     linkedin?: boolean;
     threads?: boolean;
+    bluesky?: boolean;
   };
   onShareToSocialMediaChange?: (shareToSocialMedia: any) => void;
 }
@@ -438,6 +439,7 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
                 { id: 'facebook', label: 'f', color: 'hover:text-[#1877F2] hover:bg-blue-50 dark:hover:bg-blue-900/20', activeColor: 'text-[#1877F2] bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800', name: 'Facebook', charLimit: 63206, imageLimit: 10 },
                 { id: 'linkedin', label: 'in', color: 'hover:text-[#0A66C2] hover:bg-blue-50 dark:hover:bg-blue-900/20', activeColor: 'text-[#0A66C2] bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800', name: 'LinkedIn', charLimit: 3000, imageLimit: 9 },
                 { id: 'threads', label: '@', color: 'hover:text-black hover:bg-gray-200 dark:hover:text-white dark:hover:bg-gray-700', activeColor: 'text-black bg-gray-200 dark:text-white dark:bg-gray-700 ring-1 ring-gray-300 dark:ring-gray-600', name: 'Threads', charLimit: 500, imageLimit: 10 },
+                { id: 'bluesky', label: '🦋', color: 'hover:text-[#0085FF] hover:bg-blue-50 dark:hover:bg-blue-900/20', activeColor: 'text-[#0085FF] bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800', name: 'Bluesky', charLimit: 300, imageLimit: 4 },
               ].map((platform) => {
                 const isActive = !!(shareToSocialMedia as any)[platform.id];
                 const plainText = value.replace(/<[^>]*>/g, '');

@@ -128,6 +128,7 @@ const FacebookStylePostComposer = React.memo(({
   const [shareToFacebook, setShareToFacebook] = useState(false);
   const [shareToLinkedIn, setShareToLinkedIn] = useState(false);
   const [shareToThreads, setShareToThreads] = useState(false);
+  const [shareToBluesky, setShareToBluesky] = useState(false);
 
   const [uploadError, setUploadError] = useState<string>('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -420,6 +421,7 @@ const FacebookStylePostComposer = React.memo(({
           facebook: shareToFacebook,
           linkedin: shareToLinkedIn,
           threads: shareToThreads,
+          bluesky: shareToBluesky,
         },
         // We could also pass structured data like location and links if the backend supports it
       };
@@ -440,6 +442,7 @@ const FacebookStylePostComposer = React.memo(({
       setShareToFacebook(false);
       setShareToLinkedIn(false);
       setShareToThreads(false);
+      setShareToBluesky(false);
       setUploadError('');
     } catch (error) {
       console.error('Error submitting post:', error);
@@ -447,7 +450,7 @@ const FacebookStylePostComposer = React.memo(({
       const errorMessage = error instanceof Error ? error.message : 'Failed to create post. Please try again.';
       setUploadError(errorMessage);
     }
-  }, [content, selectedLocation, selectedFiles, onSubmit, extractHashtags, userName, shareToTwitter, shareToFacebook, shareToLinkedIn, shareToThreads]);
+  }, [content, selectedLocation, selectedFiles, onSubmit, extractHashtags, userName, shareToTwitter, shareToFacebook, shareToLinkedIn, shareToThreads, shareToBluesky]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -886,6 +889,18 @@ const FacebookStylePostComposer = React.memo(({
                     disabled={isLoading}
                   >
                     <span className="text-sm font-bold">@</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShareToBluesky(!shareToBluesky)}
+                    className={`p-2 rounded-lg transition-all ${shareToBluesky
+                      ? 'text-[#0085FF] bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800'
+                      : 'text-gray-400 hover:text-[#0085FF] hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                      }`}
+                    title="Share to Bluesky"
+                    disabled={isLoading}
+                  >
+                    <span className="text-sm">🦋</span>
                   </button>
                 </div>
               </div>
