@@ -14,7 +14,7 @@ import {
   users
 } from '../../db/schema';
 import { eq, and, desc, sql, inArray, lt } from 'drizzle-orm';
-import { getWebSocketService } from '../websocket/webSocketService';
+import { getWebSocketService } from '../webSocketService';
 import {
   sanitizeMessage,
   sanitizeMessageTemplate,

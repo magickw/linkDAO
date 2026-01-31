@@ -1,12 +1,11 @@
 /**
  * Memory Monitoring Service for Messaging Components
  * Provides centralized monitoring and cleanup for all messaging-related memory usage
+ *
+ * MIGRATED: Now uses unifiedMessagingService which manages its own memory
+ * through IndexedDB cache limits and backend API as source of truth.
  */
-
-// Note: The deprecated messagingService is imported for backward compatibility
-// with existing memory monitoring. The new unifiedMessagingService manages its own
-// memory through IndexedDB cache limits.
-import { messagingService } from './messagingService';
+import { unifiedMessagingService } from './unifiedMessagingService';
 import { webSocketService } from './webSocketService';
 
 interface MemoryStats {
@@ -78,13 +77,21 @@ class MemoryMonitorService {
    * Get current memory statistics
    */
   public getMemoryStats(): MemoryStats {
-    const messagingStats = messagingService.getMemoryUsage();
+    // unifiedMessagingService manages memory internally via IndexedDB cache limits
+    const pendingCount = unifiedMessagingService.getPendingMessagesCount();
     const webSocketStats = webSocketService.getMemoryUsage();
     const systemStats = this.getSystemMemoryStats();
 
     return {
       timestamp: Date.now(),
-      messagingService: messagingStats,
+      messagingService: {
+        conversations: 0, // unifiedMessagingService doesn't expose this
+        messages: pendingCount, // Use pending messages as proxy
+        blockedUsers: 0, // Not tracked by unifiedMessagingService
+        typingTimeouts: 0, // Not tracked by unifiedMessagingService
+        eventListeners: 0, // Not tracked by unifiedMessagingService
+        totalMessages: pendingCount
+      },
       webSocketService: webSocketStats,
       system: systemStats
     };

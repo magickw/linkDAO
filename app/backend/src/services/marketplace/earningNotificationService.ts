@@ -1,4 +1,4 @@
-import { WebSocketService } from '../websocket/webSocketService';
+import { WebSocketService } from '../webSocketService';
 import { safeLogger } from '../../utils/safeLogger';
 import { notificationService } from '../notificationService';
 

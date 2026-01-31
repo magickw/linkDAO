@@ -2,17 +2,16 @@
  * NFT Negotiation Bot Service
  * AI-powered bot for NFT deal negotiations with testnet ETH rewards
  *
- * @deprecated This service uses the deprecated messagingService.
- * When the messagingService is removed, this will need to be updated
- * to use unifiedMessagingService events and methods instead.
- *
- * TODO: Migrate to use unifiedMessagingService:
- * - Replace messagingService.on() with unifiedMessagingService.on()
- * - Replace messagingService.sendMessage() with unifiedMessagingService.sendMessage()
+ * MIGRATED: Now uses unifiedMessagingService which uses backend API as source of truth
+ * instead of the deprecated IndexedDB-based messagingService.
  */
 
 import { ethers } from 'ethers';
-import messagingService, { ChatMessage } from './messagingService';
+import { unifiedMessagingService } from './unifiedMessagingService';
+import { Message } from '@/types/messaging';
+
+// Type alias for backward compatibility
+type ChatMessage = Message;
 
 export interface NFTOffer {
   id: string;
@@ -80,9 +79,24 @@ class NFTNegotiationBot {
   }
 
   private initializeBot(): void {
-    // Listen for NFT-related messages
-    messagingService.on('message_received', this.handleIncomingMessage.bind(this));
-    messagingService.on('message_sent', this.handleOutgoingMessage.bind(this));
+    // Listen for NFT-related messages using unifiedMessagingService
+    this.unsubscribeReceived = unifiedMessagingService.on('message_received', (payload) => {
+      this.handleIncomingMessage(payload.message);
+    });
+    this.unsubscribeSent = unifiedMessagingService.on('message_sent', (payload) => {
+      this.handleOutgoingMessage(payload.message);
+    });
+  }
+
+  private unsubscribeReceived: (() => void) | null = null;
+  private unsubscribeSent: (() => void) | null = null;
+
+  /**
+   * Cleanup event listeners
+   */
+  public destroy(): void {
+    if (this.unsubscribeReceived) this.unsubscribeReceived();
+    if (this.unsubscribeSent) this.unsubscribeSent();
   }
 
   /**
@@ -174,11 +188,14 @@ class NFTNegotiationBot {
         metadata.offerAmount = response.data.counterOffer;
       }
 
-      await messagingService.sendMessage(
+      await unifiedMessagingService.sendMessage(
         toAddress,
         response.message,
-        messageType,
-        metadata
+        {
+          contentType: 'text',
+          attachments: [],
+          metadata: metadata || {}
+        }
       );
 
       // Handle rewards
@@ -200,13 +217,17 @@ class NFTNegotiationBot {
       const mockTxHash = `0x${Math.random().toString(16).slice(2)}${Date.now().toString(16)}`;
       
       // Send confirmation message
-      await messagingService.sendMessage(
+      await unifiedMessagingService.sendMessage(
         toAddress,
         `🎉 Congratulations! You've been rewarded ${amount} testnet ETH for successful NFT negotiation!\n\nTransaction: ${mockTxHash}\n\nKeep negotiating to earn more rewards!`,
-        'system',
         {
-          rewardAmount: amount,
-          transactionHash: mockTxHash
+          contentType: 'text',
+          attachments: [],
+          metadata: {
+            rewardAmount: amount,
+            transactionHash: mockTxHash,
+            isSystem: true
+          }
         }
       );
 
@@ -358,10 +379,14 @@ class NFTNegotiationBot {
   }
 
   private async sendErrorResponse(toAddress: string): Promise<void> {
-    await messagingService.sendMessage(
+    await unifiedMessagingService.sendMessage(
       toAddress,
       "Sorry, I'm having trouble processing your request right now. Please try again later!",
-      'system'
+      {
+        contentType: 'text',
+        attachments: [],
+        metadata: { isSystem: true }
+      }
     );
   }
 
@@ -402,10 +427,13 @@ class NFTNegotiationBot {
     const nftData = this.getNFTMetadata(nftTokenId);
     const message = `Hi! I see you're interested in ${nftData?.name || `Token #${nftTokenId}`}. Current price is ${nftData?.currentPrice} ETH. What's your offer?`;
     
-    await messagingService.sendMessage(
+    await unifiedMessagingService.sendMessage(
       userAddress,
       message,
-      'text'
+      {
+        contentType: 'text',
+        attachments: []
+      }
     );
   }
 

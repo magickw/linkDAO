@@ -5,7 +5,7 @@ import { supportTickets, supportFAQ, supportCategories, ticketResponses } from '
 import emailService from '../emailService';
 import { createNotification } from '../notificationHelper';
 import { escapeLikePattern, generateSecureId } from '../../utils/securityUtils';
-import { getWebSocketService } from '../websocket/webSocketService';
+import { getWebSocketService } from '../webSocketService';
 
 export interface SupportTicket {
   id: string;

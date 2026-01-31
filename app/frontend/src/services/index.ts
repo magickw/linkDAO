@@ -4,8 +4,7 @@ export * from './enhancedAuthService';
 export * from './communityService';
 export * from './communityPostService';
 export * from './feedService';
-export * from './messagingService'; // @deprecated - use unifiedMessagingService instead
-export * from './unifiedMessagingService'; // NEW: Uses backend API as source of truth
+export * from './unifiedMessagingService'; // Uses backend API as source of truth
 export * from './notificationService';
 export * from './postService';
 export * from './profileService';
