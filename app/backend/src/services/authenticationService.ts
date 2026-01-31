@@ -50,8 +50,8 @@ export class AuthenticationService {
   private sessionExpiryHours: number = 24;
   private refreshExpiryDays: number = 7; // Reduced from 30 days for security
   private nonceExpiryMinutes: number = 10;
-  private maxSessionAgeDays: number = 7; // Force re-authentication after 7 days regardless of activity
-  private inactivityTimeoutHours: number = 4; // Session expires after 4 hours of inactivity
+  private maxSessionAgeDays: number = 30; // Force re-authentication after 30 days regardless of activity
+  private inactivityTimeoutHours: number = 168; // Session expires after 7 days of inactivity (increased from 4 hours)
 
   constructor(connectionString: string, jwtSecret: string) {
     const sql = postgres(connectionString, { ssl: 'require' });

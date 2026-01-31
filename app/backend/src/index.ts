@@ -1461,6 +1461,13 @@ app.use(postRouteDiagnosticMiddleware);
 process.stdout.write('📝 All routes and middleware registered successfully\n');
 process.stdout.write(`📡 Attempting to start server on port ${PORT}...\n`);
 
+// Configure request timeouts to prevent long-hanging requests
+// The typical pattern is: headers timeout < keep-alive timeout < socket timeout
+httpServer.timeout = 30000; // 30 second total request timeout (protects against extremely long-hanging requests)
+httpServer.keepAliveTimeout = 65000; // 65 seconds for keep-alive connections (must be > timeout header)
+httpServer.headersTimeout = 40000; // 40 seconds for headers (should be > timeout)
+httpServer.requestTimeout = 30000; // 30 seconds for complete request
+
 // Start server
 httpServer.listen(PORT, () => {
   console.log(`🚀 LinkDAO Backend with Enhanced Social Platform running on port ${PORT}`);

@@ -62,16 +62,9 @@ export class DataEncryptionService {
       iterations: 100000
     };
 
-    // In production, this would come from secure key management
-    // Skip encryption in development mode
-    const nodeEnv = process.env.NODE_ENV || 'development';
-    if (nodeEnv === 'development') {
-      console.warn('⚠️  Data encryption service disabled in development mode');
-      // Create a dummy master key for development
-      this.masterKey = crypto.randomBytes(this.config.keyLength);
-    } else {
-      this.masterKey = this.deriveMasterKey();
-    }
+    // Derive master key from environment variables or fallback
+    // This ensures consistency across service instances
+    this.masterKey = this.deriveMasterKey();
     
     this.initializePrivacyControls();
     this.initializeDataClassifications();
@@ -85,14 +78,30 @@ export class DataEncryptionService {
     const salt = process.env.ENCRYPTION_SALT;
     const isProd = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
 
-    if (!password || !salt) {
-      if (isProd) {
-        throw new Error('CRITICAL SECURITY ERROR: ENCRYPTION_PASSWORD and ENCRYPTION_SALT must be set in production!');
+    // In production, always require encryption keys to be set
+    if (isProd && (!password || !salt)) {
+      throw new Error('CRITICAL SECURITY ERROR: ENCRYPTION_PASSWORD and ENCRYPTION_SALT must be set in production!');
+    }
+
+    // For development, allow using a fallback but be consistent
+    // Use MASTER_ENCRYPTION_KEY if available, otherwise derive from password/salt
+    const masterKeyEnv = process.env.MASTER_ENCRYPTION_KEY;
+    if (masterKeyEnv) {
+      try {
+        return Buffer.from(masterKeyEnv, 'hex');
+      } catch (error) {
+        console.warn('⚠️  MASTER_ENCRYPTION_KEY is not valid hex format');
       }
+    }
+
+    if (!password || !salt) {
       console.warn('⚠️  ENCRYPTION_PASSWORD or ENCRYPTION_SALT not set - using development fallback');
       console.warn('⚠️  This is NOT secure for production! Please set proper encryption keys.');
-      // Fallback to development key generation to avoid breaking the service
-      return crypto.randomBytes(this.config.keyLength);
+      // Use a consistent fallback key based on the node environment
+      // This is only acceptable for development
+      const fallbackPassword = 'linkdao-development-fallback-key-do-not-use-in-production';
+      const fallbackSalt = 'linkdao-development-fallback-salt-do-not-use-in-production';
+      return crypto.pbkdf2Sync(fallbackPassword, fallbackSalt, this.config.iterations, this.config.keyLength, 'sha512');
     }
 
     if (password.length < 32 || salt.length < 32) {
@@ -101,8 +110,10 @@ export class DataEncryptionService {
       }
       console.warn('⚠️  ENCRYPTION_PASSWORD or ENCRYPTION_SALT too short - using development fallback');
       console.warn('⚠️  This is NOT secure for production! Keys must be at least 32 characters.');
-      // Fallback to development key generation to avoid breaking the service
-      return crypto.randomBytes(this.config.keyLength);
+      // Use fallback for development
+      const fallbackPassword = 'linkdao-development-fallback-key-do-not-use-in-production';
+      const fallbackSalt = 'linkdao-development-fallback-salt-do-not-use-in-production';
+      return crypto.pbkdf2Sync(fallbackPassword, fallbackSalt, this.config.iterations, this.config.keyLength, 'sha512');
     }
 
     return crypto.pbkdf2Sync(password, salt, this.config.iterations, this.config.keyLength, 'sha512');

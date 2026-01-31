@@ -149,17 +149,17 @@ class SecurityManager {
 
   // Encryption utilities
   encrypt(text: string, key?: string): { encrypted: string; iv: string; tag: string } {
-    const encryptionKey = key ? crypto.scryptSync(key, 'salt', 32) : crypto.randomBytes(32);
+    const encryptionKey = key ? crypto.scryptSync(key, 'salt', 32) : this.getMasterEncryptionKey();
     const iv = crypto.randomBytes(12); // GCM mode typically uses 12-byte IV
-    
+
     const cipher: any = crypto.createCipheriv(this.config.encryption.algorithm, encryptionKey, iv);
     cipher.setAAD(Buffer.from('marketplace-api', 'utf8'));
-    
+
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    
+
     const tag = cipher.getAuthTag();
-    
+
     return {
       encrypted,
       iv: iv.toString('hex'),
@@ -168,18 +168,26 @@ class SecurityManager {
   }
 
   decrypt(encryptedData: { encrypted: string; iv: string; tag: string }, key?: string): string {
-    const encryptionKey = key ? crypto.scryptSync(key, 'salt', 32) : crypto.randomBytes(32);
+    const encryptionKey = key ? crypto.scryptSync(key, 'salt', 32) : this.getMasterEncryptionKey();
     const iv = Buffer.from(encryptedData.iv, 'hex');
     const tag = Buffer.from(encryptedData.tag, 'hex');
-    
+
     const decipher: any = crypto.createDecipheriv(this.config.encryption.algorithm, encryptionKey, iv);
     decipher.setAAD(Buffer.from('marketplace-api', 'utf8'));
     decipher.setAuthTag(tag);
-    
+
     let decrypted = decipher.update(encryptedData.encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
-    
+
     return decrypted;
+  }
+
+  private getMasterEncryptionKey(): Buffer {
+    const masterKeyHex = process.env.MASTER_ENCRYPTION_KEY;
+    if (!masterKeyHex) {
+      throw new Error('MASTER_ENCRYPTION_KEY environment variable not configured');
+    }
+    return Buffer.from(masterKeyHex, 'hex');
   }
 
   // JWT utilities

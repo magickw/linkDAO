@@ -206,8 +206,8 @@ SET upvotes = COALESCE(
   (
     SELECT COUNT(*)::int
     FROM status_votes
-    WHERE status_votes.statusId = statuses.id
-      AND status_votes.voteType = 'upvote'
+    WHERE status_votes.status_id = statuses.id
+      AND status_votes.vote_type = 'upvote'
   ),
   0
 );
@@ -218,8 +218,8 @@ SET downvotes = COALESCE(
   (
     SELECT COUNT(*)::int
     FROM status_votes
-    WHERE status_votes.statusId = statuses.id
-      AND status_votes.voteType = 'downvote'
+    WHERE status_votes.status_id = statuses.id
+      AND status_votes.vote_type = 'downvote'
   ),
   0
 );
@@ -230,7 +230,7 @@ SET views = COALESCE(
   (
     SELECT COUNT(*)::int
     FROM status_views
-    WHERE status_views.statusId = statuses.id
+    WHERE status_views.status_id = statuses.id
   ),
   0
 );
@@ -295,6 +295,67 @@ DROP TRIGGER IF EXISTS trigger_update_post_view_counts ON views;
 CREATE TRIGGER trigger_update_post_view_counts
 AFTER INSERT ON views
 FOR EACH ROW EXECUTE FUNCTION update_post_view_counts();
+
+-- ============================================================================
+-- FIX 8: Add triggers for status_votes and status_views
+-- ============================================================================
+
+-- Create trigger function to update status vote counts
+CREATE OR REPLACE FUNCTION update_status_vote_counts()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.vote_type = 'upvote' THEN
+      UPDATE statuses SET upvotes = upvotes + 1 WHERE id = NEW.status_id;
+    ELSIF NEW.vote_type = 'downvote' THEN
+      UPDATE statuses SET downvotes = downvotes + 1 WHERE id = NEW.status_id;
+    END IF;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    IF OLD.vote_type = 'upvote' THEN
+      UPDATE statuses SET upvotes = GREATEST(upvotes - 1, 0) WHERE id = OLD.status_id;
+    ELSIF OLD.vote_type = 'downvote' THEN
+      UPDATE statuses SET downvotes = GREATEST(downvotes - 1, 0) WHERE id = OLD.status_id;
+    END IF;
+    RETURN OLD;
+  ELSIF TG_OP = 'UPDATE' THEN
+    IF OLD.vote_type != NEW.vote_type THEN
+      -- Switch from upvote to downvote
+      IF OLD.vote_type = 'upvote' AND NEW.vote_type = 'downvote' THEN
+        UPDATE statuses SET upvotes = GREATEST(upvotes - 1, 0), downvotes = downvotes + 1 WHERE id = NEW.status_id;
+      -- Switch from downvote to upvote
+      ELSIF OLD.vote_type = 'downvote' AND NEW.vote_type = 'upvote' THEN
+        UPDATE statuses SET downvotes = GREATEST(downvotes - 1, 0), upvotes = upvotes + 1 WHERE id = NEW.status_id;
+      END IF;
+    END IF;
+    RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger for status_votes
+DROP TRIGGER IF EXISTS trigger_update_status_vote_counts ON status_votes;
+CREATE TRIGGER trigger_update_status_vote_counts
+AFTER INSERT OR UPDATE OR DELETE ON status_votes
+FOR EACH ROW EXECUTE FUNCTION update_status_vote_counts();
+
+-- Create trigger function to update status view counts
+CREATE OR REPLACE FUNCTION update_status_view_counts()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    UPDATE statuses SET views = views + 1 WHERE id = NEW.status_id;
+    RETURN NEW;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger for status_views
+DROP TRIGGER IF EXISTS trigger_update_status_view_counts ON status_views;
+CREATE TRIGGER trigger_update_status_view_counts
+AFTER INSERT ON status_views
+FOR EACH ROW EXECUTE FUNCTION update_status_view_counts();
 
 -- ============================================================================
 -- VERIFICATION QUERIES
