@@ -13,13 +13,13 @@ const recommendationService = new RecommendationService();
 export async function getCommunityRecommendations(req: Request, res: Response) {
   try {
     const { userId, limit = 10 } = req.query;
-    
+
     if (!userId || typeof userId !== 'string') {
       return res.status(400).json({ error: 'userId is required' });
     }
 
     const recommendations = await recommendationService.getPrecomputedCommunityRecommendations(
-      userId, 
+      userId,
       Number(limit)
     );
 
@@ -29,7 +29,11 @@ export async function getCommunityRecommendations(req: Request, res: Response) {
     });
   } catch (error) {
     safeLogger.error('Error getting community recommendations:', error);
-    res.status(500).json({ error: 'Failed to get community recommendations' });
+    const errorMessage = error instanceof Error ? error.message : 'Failed to get community recommendations';
+    res.status(500).json({
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+    });
   }
 }
 
@@ -40,13 +44,13 @@ export async function getCommunityRecommendations(req: Request, res: Response) {
 export async function getUserRecommendations(req: Request, res: Response) {
   try {
     const { userId, limit = 10 } = req.query;
-    
+
     if (!userId || typeof userId !== 'string') {
       return res.status(400).json({ error: 'userId is required' });
     }
 
     const recommendations = await recommendationService.getPrecomputedUserRecommendations(
-      userId, 
+      userId,
       Number(limit)
     );
 
@@ -56,7 +60,11 @@ export async function getUserRecommendations(req: Request, res: Response) {
     });
   } catch (error) {
     safeLogger.error('Error getting user recommendations:', error);
-    res.status(500).json({ error: 'Failed to get user recommendations' });
+    const errorMessage = error instanceof Error ? error.message : 'Failed to get user recommendations';
+    res.status(500).json({
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+    });
   }
 }
 

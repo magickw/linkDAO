@@ -136,7 +136,14 @@ export async function globalFetch<T = any>(
       let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
       try {
         const errorData = await response.json();
-        errorMessage = errorData.error || errorData.message || errorMessage;
+        const rawError = errorData.error || errorData.message;
+        if (typeof rawError === 'string') {
+          errorMessage = rawError;
+        } else if (rawError && typeof rawError === 'object' && rawError.message) {
+          errorMessage = rawError.message;
+        } else if (rawError) {
+          errorMessage = JSON.stringify(rawError);
+        }
       } catch {
         // If we can't parse error as JSON, use the default message
       }

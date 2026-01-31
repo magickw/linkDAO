@@ -18,6 +18,12 @@ const oauthRateLimiter = rateLimitingMiddleware({
   message: 'Too many OAuth requests, please try again later',
 });
 
+// Bluesky Client Metadata (Public)
+router.get(
+  '/bluesky-metadata.json',
+  (req, res) => socialMediaOAuthController.getBlueskyMetadata(req, res)
+);
+
 // Initiate OAuth flow
 // POST /api/social-media/connect/:platform
 router.post(

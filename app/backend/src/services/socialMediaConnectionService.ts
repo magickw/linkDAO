@@ -72,19 +72,22 @@ class SocialMediaConnectionService {
 
     // Generate state and code verifier
     const state = crypto.randomBytes(32).toString('hex');
-    const codeVerifier = platform === 'twitter'
+    const codeVerifier = (platform === 'twitter' || platform === 'bluesky')
       ? crypto.randomBytes(32).toString('base64url')
       : undefined;
 
     // Get OAuth provider
+    safeLogger.info(`Getting OAuth provider for ${platform}`);
     const provider = getOAuthProvider(platform);
 
     // Generate authorization URL
+    safeLogger.info(`Generating authorization URL for ${platform}`);
     const authUrl = provider.getAuthorizationUrl(state, codeVerifier);
 
     // Store state in database for CSRF protection
     const expiresAt = new Date(Date.now() + OAUTH_STATE_EXPIRY_MS);
 
+    safeLogger.info(`Storing OAuth state for ${platform}`, { state, userId });
     await db.insert(oauthStates).values({
       state,
       userId,

@@ -12,6 +12,34 @@ import { ApiResponse } from '../utils/apiResponse';
 
 class SocialMediaOAuthController {
   /**
+   * Serve Bluesky Client Metadata
+   * GET /api/social-media/bluesky-metadata.json
+   */
+  async getBlueskyMetadata(req: Request, res: Response): Promise<void> {
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.linkdao.io';
+    const frontendUrl = getPrimaryFrontendUrl();
+
+    const metadata = {
+      client_id: `${backendUrl}/api/social-media/bluesky-metadata.json`,
+      client_name: 'LinkDAO',
+      client_uri: frontendUrl,
+      logo_uri: `${frontendUrl}/logo.png`,
+      redirect_uris: [
+        `${backendUrl}/api/social-media/callback/bluesky`
+      ],
+      grant_types: ['authorization_code', 'refresh_token'],
+      response_types: ['code'],
+      scope: 'atproto transition:generic',
+      token_endpoint_auth_method: 'none',
+      application_type: 'web',
+      dpop_bound_access_tokens: true
+    };
+
+    res.header('Content-Type', 'application/json');
+    res.status(200).send(JSON.stringify(metadata, null, 2));
+  }
+
+  /**
    * Initiate OAuth flow for a platform
    * POST /api/social-media/connect/:platform
    */
@@ -36,7 +64,15 @@ class SocialMediaOAuthController {
       });
     } catch (error) {
       safeLogger.error('OAuth initiation error:', error);
-      return ApiResponse.serverError(res, error instanceof Error ? error.message : 'Failed to initiate OAuth');
+
+      const errorMessage = error instanceof Error ? error.message : 'Failed to initiate OAuth';
+
+      // Check if it's a configuration error
+      if (errorMessage.includes('not configured') || errorMessage.includes('BLUESKY_CLIENT_ID')) {
+        return ApiResponse.badRequest(res, `${errorMessage} Please contact the administrator to configure this platform.`);
+      }
+
+      return ApiResponse.serverError(res, errorMessage);
     }
   }
 

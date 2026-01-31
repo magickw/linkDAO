@@ -531,7 +531,7 @@ export class EnhancedSearchService {
         ...(preferences && { preferences: preferences.join(',') })
       });
 
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/discovery?${searchParams}`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/search/enhanced/discovery?${searchParams}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
