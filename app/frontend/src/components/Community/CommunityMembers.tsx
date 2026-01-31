@@ -72,17 +72,24 @@ export const CommunityMembers: React.FC<CommunityMembersProps> = ({
       });
 
       const response = await fetch(`/api/communities/${communityId}/members?${params}`);
-      
+
       if (!response.ok) {
         throw new Error('Failed to load members');
       }
 
       const data = await response.json();
-      
+
+      // Convert lastActive from string to Date if needed
+      const convertedMembers = (data.members || []).map((member: any) => ({
+        ...member,
+        lastActive: typeof member.lastActive === 'string' ? new Date(member.lastActive) : member.lastActive,
+        joinedAt: typeof member.joinedAt === 'string' ? new Date(member.joinedAt) : member.joinedAt
+      }));
+
       if (reset || pageNum === 1) {
-        setMembers(data.members);
+        setMembers(convertedMembers);
       } else {
-        setMembers(prev => [...prev, ...data.members]);
+        setMembers(prev => [...prev, ...convertedMembers]);
       }
 
       setHasMore(data.hasMore);

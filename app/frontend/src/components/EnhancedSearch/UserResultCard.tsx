@@ -42,12 +42,30 @@ export function UserResultCard({
   const formatTimeAgo = (date: Date) => {
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
+
     if (diffInSeconds < 60) return 'just now';
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
     if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
     return `${Math.floor(diffInSeconds / 2592000)}mo ago`;
+  };
+
+  // Helper to safely convert lastActive to a Date
+  const getLastActiveTime = (): number => {
+    if (!user.lastActive) return Date.now();
+
+    // If it's already a Date, use it
+    if (user.lastActive instanceof Date) {
+      return user.lastActive.getTime();
+    }
+
+    // If it's a string, parse it
+    if (typeof user.lastActive === 'string') {
+      return new Date(user.lastActive).getTime();
+    }
+
+    // Fallback to current time
+    return Date.now();
   };
 
   const getReputationColor = (level: number) => {
@@ -95,7 +113,7 @@ export function UserResultCard({
           
           {/* Online Status */}
           <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-gray-800 ${
-            Date.now() - user.lastActive.getTime() < 300000 ? 'bg-green-500' : 'bg-gray-400'
+            Date.now() - getLastActiveTime() < 300000 ? 'bg-green-500' : 'bg-gray-400'
           }`}></div>
         </div>
 

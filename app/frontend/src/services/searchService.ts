@@ -358,10 +358,17 @@ export class SearchService {
       
       const json = await safeJson<{ users: UserProfile[]; hasMore: boolean; total: number }>(response);
       const anyJson: any = json || {};
+
+      // Convert lastActive from string to Date if needed
+      const convertedUsers = (anyJson?.users || []).map((user: any) => ({
+        ...user,
+        lastActive: typeof user.lastActive === 'string' ? new Date(user.lastActive) : user.lastActive
+      }));
+
       return {
-        users: Array.isArray(anyJson?.users) ? anyJson.users : [],
+        users: Array.isArray(convertedUsers) ? convertedUsers : [],
         hasMore: Boolean(anyJson?.hasMore),
-        total: Number.isFinite(anyJson?.total) ? anyJson.total : (Array.isArray(anyJson?.users) ? anyJson.users.length : 0),
+        total: Number.isFinite(anyJson?.total) ? anyJson.total : (Array.isArray(convertedUsers) ? convertedUsers.length : 0),
       };
     } catch (error) {
       clearTimeout(timeoutId);

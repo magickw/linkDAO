@@ -464,21 +464,24 @@ COMMENT ON FUNCTION update_post_view_counts() IS 'Trigger function to keep post 
 -- SUMMARY
 -- ============================================================================
 
-RAISE NOTICE '';
-RAISE NOTICE '==========================================';
-RAISE NOTICE 'Engagement Stats Schema Fix Complete';
-RAISE NOTICE '==========================================';
-RAISE NOTICE '';
-RAISE NOTICE 'Changes made:';
-RAISE NOTICE '1. post_votes.post_id changed from INTEGER to UUID';
-RAISE NOTICE '2. views.post_id changed from INTEGER to UUID';
-RAISE NOTICE '3. Foreign key constraints recreated';
-RAISE NOTICE '4. Indexes created for performance';
-RAISE NOTICE '5. Engagement stats recalculated from tracking tables';
-RAISE NOTICE '6. Triggers added to keep counts in sync';
-RAISE NOTICE '';
-RAISE NOTICE 'Next steps:';
-RAISE NOTICE '1. Test upvote/downvote functionality';
-RAISE NOTICE '2. Test view tracking';
-RAISE NOTICE '3. Verify counts display correctly in frontend';
-RAISE NOTICE '';
+DO $$
+BEGIN
+  RAISE NOTICE '';
+  RAISE NOTICE '==========================================';
+  RAISE NOTICE 'Engagement Stats Schema Fix Complete';
+  RAISE NOTICE '==========================================';
+  RAISE NOTICE '';
+  RAISE NOTICE 'Changes made:';
+  RAISE NOTICE '1. post_votes.post_id changed from INTEGER to UUID';
+  RAISE NOTICE '2. views.post_id changed from INTEGER to UUID';
+  RAISE NOTICE '3. Foreign key constraints recreated';
+  RAISE NOTICE '4. Indexes created for performance';
+  RAISE NOTICE '5. Engagement stats recalculated from tracking tables';
+  RAISE NOTICE '6. Triggers added to keep counts in sync';
+  RAISE NOTICE '';
+  RAISE NOTICE 'Next steps:';
+  RAISE NOTICE '1. Test upvote/downvote functionality';
+  RAISE NOTICE '2. Test view tracking';
+  RAISE NOTICE '3. Verify counts display correctly in frontend';
+  RAISE NOTICE '';
+END $$;

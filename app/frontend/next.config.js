@@ -89,7 +89,8 @@ const nextConfig = {
         }
       })(),
       // Alias for React Native AsyncStorage (used by MetaMask SDK) to prevent browser warnings
-      '@react-native-async-storage/async-storage': require.resolve('async-storage'),
+      // Commented out since async-storage is not installed and MetaMask SDK provides its own fallback
+      // '@react-native-async-storage/async-storage': require.resolve('async-storage'),
     };
 
     // Suppress Solana instruction-plans errors - it's an optional dependency from coinbase SDK
