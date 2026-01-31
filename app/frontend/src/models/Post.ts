@@ -93,7 +93,27 @@ export function convertBackendPostToPost(backendPost: any): Post {
     previews: [] as ContentPreview[],
     hashtags: [],  // Required field
     mentions: [],  // Required field
-    socialProof: undefined,
+
+    // Engagement metrics for EnhancedPost interface
+    engagementMetrics: {
+      views: backendPost.views || 0,
+      likes: backendPost.likes || backendPost.reactionCount || 0,
+      comments: backendPost.commentsCount || 0,
+      reposts: backendPost.reposts || 0,
+      tips: backendPost.tips || 0,
+      reactions: [],
+      engagementRate: backendPost.engagementScore ? (backendPost.engagementScore / 100) : 0,
+      trendingVelocity: 0
+    },
+
+    // Social proof for EnhancedPost interface
+    socialProof: {
+      followedUsersWhoEngaged: [],
+      totalEngagementFromFollowed: 0,
+      communityLeadersWhoEngaged: [],
+      verifiedUsersWhoEngaged: []
+    },
+
     trendingStatus: backendPost.trendingScore > 0 ? 'trending' : null,
     trendingScore: backendPost.trendingScore || 0,
     isBookmarked: false,

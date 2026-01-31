@@ -115,6 +115,17 @@ export function convertBackendStatusToStatus(backendPost: any): Status {
     return field;
   };
 
+  // Helper function to safely convert to Date
+  const toDate = (value: any): Date => {
+    if (!value) return new Date();
+    if (value instanceof Date) return value;
+    if (typeof value === 'string' || typeof value === 'number') {
+      const date = new Date(value);
+      return isNaN(date.getTime()) ? new Date() : date;
+    }
+    return new Date();
+  };
+
   return {
     id: backendPost.id?.toString() || '',
     author: backendPost.walletAddress || backendPost.authorId || '',
@@ -126,8 +137,8 @@ export function convertBackendStatusToStatus(backendPost: any): Status {
     shareId: backendPost.shareId || '', // Include shareId for share URLs
     mediaCids: safeJsonParse(backendPost.mediaCids, []),
     tags: safeJsonParse(backendPost.tags, []),
-    createdAt: new Date(backendPost.createdAt || Date.now()),
-    updatedAt: new Date(backendPost.updatedAt || backendPost.createdAt || Date.now()),
+    createdAt: toDate(backendPost.createdAt),
+    updatedAt: toDate(backendPost.updatedAt || backendPost.createdAt),
     onchainRef: backendPost.onchainRef || '',
     stakedValue: parseFloat(backendPost.stakedValue || backendPost.staked_value || 0),
     reputationScore: parseInt(backendPost.reputationScore || backendPost.reputation_score || 0),
@@ -138,6 +149,8 @@ export function convertBackendStatusToStatus(backendPost: any): Status {
     comments: backendPost.commentsCount || 0,
     reposts: backendPost.reposts || 0,
     views: backendPost.views || 0,
+    upvotes: backendPost.upvotes || 0,
+    downvotes: backendPost.downvotes || 0,
     engagementScore: backendPost.engagementScore || 0,
     reactionCount: backendPost.reactionCount || 0, // Include reaction count for display
 
@@ -145,7 +158,27 @@ export function convertBackendStatusToStatus(backendPost: any): Status {
     previews: [] as ContentPreview[],
     hashtags: [],  // Required field
     mentions: [],  // Required field
-    socialProof: undefined,
+
+    // Engagement metrics for EnhancedPost interface
+    engagementMetrics: {
+      views: backendPost.views || 0,
+      likes: backendPost.likes || backendPost.reactionCount || 0,
+      comments: backendPost.commentsCount || 0,
+      reposts: backendPost.reposts || 0,
+      tips: backendPost.tips || 0,
+      reactions: [],
+      engagementRate: backendPost.engagementScore ? (backendPost.engagementScore / 100) : 0,
+      trendingVelocity: 0
+    },
+
+    // Social proof for EnhancedPost interface
+    socialProof: {
+      followedUsersWhoEngaged: [],
+      totalEngagementFromFollowed: 0,
+      communityLeadersWhoEngaged: [],
+      verifiedUsersWhoEngaged: []
+    },
+
     trendingStatus: backendPost.trendingScore > 0 ? 'trending' : null,
     trendingScore: backendPost.trendingScore || 0,
     isBookmarked: false,

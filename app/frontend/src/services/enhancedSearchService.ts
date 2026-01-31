@@ -849,20 +849,33 @@ export class EnhancedSearchService {
     data: Partial<LearningData>
   ): Promise<void> {
     try {
-      await fetch(`${BACKEND_API_BASE_URL}/api/learning/${userId}`, {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Try to get auth token if available
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/learning/${userId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(data)
       });
-      
+
+      // Only log actual errors, not 401s which are expected if not authenticated
+      if (!response.ok && response.status !== 401) {
+        console.warn(`Learning data update failed with status ${response.status}`);
+      }
+
       // Clear recommendation caches to reflect updated learning
       this.clearCacheByPattern(`user-recs:${userId}`);
       this.clearCacheByPattern(`community-recs:${userId}`);
       this.clearCacheByPattern(`discovery:${userId}`);
     } catch (error) {
-      // Fail silently for learning data updates
+      // Fail silently for learning data updates - this is optional analytics
       console.warn('Failed to update learning data:', error);
     }
   }
@@ -872,15 +885,28 @@ export class EnhancedSearchService {
    */
   private static async trackSearchAnalytics(analytics: SearchAnalytics): Promise<void> {
     try {
-      await fetch(`${BACKEND_API_BASE_URL}/api/analytics/search`, {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Try to get auth token if available
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/analytics/search`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(analytics)
       });
+
+      // Only log actual errors, not 401s which are expected if not authenticated
+      if (!response.ok && response.status !== 401) {
+        console.warn(`Search analytics tracking failed with status ${response.status}`);
+      }
     } catch (error) {
-      // Fail silently for analytics
+      // Fail silently for analytics - this is optional analytics
       console.warn('Failed to track search analytics:', error);
     }
   }
