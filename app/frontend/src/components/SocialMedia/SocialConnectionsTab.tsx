@@ -66,7 +66,7 @@ const SocialConnectionsTab: React.FC<SocialConnectionsTabProps> = ({ onToast }) 
     setConnectingPlatform(platform);
     try {
       const response = await initiateOAuth(platform);
-      
+
       if (response.success && response.data?.authUrl) {
         // Open OAuth URL in new window
         const oauthWindow = window.open(
