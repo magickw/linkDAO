@@ -261,12 +261,13 @@ export class BlueskyOAuthProvider extends BaseOAuthProvider {
       const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString());
       const did = payload.sub;
 
-      agent.session = {
+      // Use resumeSession method instead of direct assignment
+      await agent.resumeSession({
         accessJwt: accessToken,
         refreshJwt: undefined,
         did: did,
         handle: '',
-      };
+      });
 
       await agent.com.atproto.server.deleteSession();
     } catch (error) {
@@ -287,12 +288,13 @@ export class BlueskyOAuthProvider extends BaseOAuthProvider {
       const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString());
       const did = payload.sub;
 
-      agent.session = {
+      // Use resumeSession method instead of direct assignment
+      await agent.resumeSession({
         accessJwt: accessToken,
         refreshJwt: undefined,
         did: did,
         handle: '',
-      };
+      });
 
       const rt = new RichText({ text: adaptedContent.text });
       await rt.detectFacets(agent);

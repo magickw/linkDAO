@@ -191,16 +191,16 @@ export class StatusService {
             displayName: users.displayName
           })
           .from(users)
-          .where(eq(users.id, input.authorId))
+          .where(eq(users.id, postData.authorId))
           .limit(1);
 
         if (author && author.length > 0) {
           const mentionCount = await mentionService.processMentions({
             statusId: newPost.id,
-            authorId: input.authorId,
+            authorId: postData.authorId,
             authorWalletAddress: author[0].walletAddress,
             authorHandle: author[0].displayName || author[0].handle || author[0].walletAddress.substring(0, 10),
-            content: input.content || '',
+            content: postData.content || '',
             contentUrl: `/status/${newPost.id}`
           });
 

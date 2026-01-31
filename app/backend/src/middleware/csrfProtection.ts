@@ -161,6 +161,11 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     return next();
   }
 
+  // Skip CSRF for public preview endpoint (no authentication required)
+  if (req.path === '/api/preview/link' && req.method === 'POST') {
+    return next();
+  }
+
   safeLogger.debug(`[csrfProtection] ${req.method} ${req.path}`);
 
   // Development mode handling - only allow from localhost
