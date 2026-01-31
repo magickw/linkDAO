@@ -13,8 +13,10 @@ const BSKY_SERVICE_URL = 'https://bsky.social';
 export class BlueskyOAuthProvider extends BaseOAuthProvider {
   constructor() {
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.linkdao.io';
+    // Use the official public metadata URL as the production default Client ID
+    const defaultClientId = 'https://api.linkdao.io/api/social-media/bluesky-metadata.json';
     const config: OAuthConfig = {
-      clientId: process.env.BLUESKY_CLIENT_ID || `${backendUrl}/api/social-media/bluesky-metadata.json`,
+      clientId: process.env.BLUESKY_CLIENT_ID || (process.env.NODE_ENV === 'production' ? defaultClientId : `${backendUrl}/api/social-media/bluesky-metadata.json`),
       clientSecret: process.env.BLUESKY_CLIENT_SECRET || '',
       callbackUrl: process.env.BLUESKY_CALLBACK_URL || `${backendUrl}/api/social-media/callback/bluesky`,
       scopes: ['atproto'],

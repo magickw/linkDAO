@@ -83,8 +83,12 @@ export class DataEncryptionService {
   private deriveMasterKey(): Buffer {
     const password = process.env.ENCRYPTION_PASSWORD;
     const salt = process.env.ENCRYPTION_SALT;
+    const isProd = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
 
     if (!password || !salt) {
+      if (isProd) {
+        throw new Error('CRITICAL SECURITY ERROR: ENCRYPTION_PASSWORD and ENCRYPTION_SALT must be set in production!');
+      }
       console.warn('⚠️  ENCRYPTION_PASSWORD or ENCRYPTION_SALT not set - using development fallback');
       console.warn('⚠️  This is NOT secure for production! Please set proper encryption keys.');
       // Fallback to development key generation to avoid breaking the service
@@ -92,6 +96,9 @@ export class DataEncryptionService {
     }
 
     if (password.length < 32 || salt.length < 32) {
+      if (isProd) {
+        throw new Error('CRITICAL SECURITY ERROR: ENCRYPTION_PASSWORD and ENCRYPTION_SALT must be at least 32 characters in production!');
+      }
       console.warn('⚠️  ENCRYPTION_PASSWORD or ENCRYPTION_SALT too short - using development fallback');
       console.warn('⚠️  This is NOT secure for production! Keys must be at least 32 characters.');
       // Fallback to development key generation to avoid breaking the service
@@ -631,15 +638,25 @@ export class DataEncryptionService {
 let dataEncryptionService: DataEncryptionService | null = null;
 
 try {
-  if (process.env.ENCRYPTION_PASSWORD && process.env.ENCRYPTION_SALT) {
+  const isProd = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+  const hasCredentials = process.env.ENCRYPTION_PASSWORD && process.env.ENCRYPTION_SALT;
+
+  if (hasCredentials) {
     dataEncryptionService = new DataEncryptionService();
     console.log('✅ Data encryption service initialized');
+  } else if (isProd) {
+    throw new Error('CRITICAL SECURITY ERROR: Data encryption credentials missing in production!');
   } else {
     console.warn('⚠️  ENCRYPTION_PASSWORD and ENCRYPTION_SALT not set - data encryption service disabled');
     console.warn('⚠️  For production deployments, these environment variables must be configured');
   }
 } catch (error) {
   console.error('❌ Failed to initialize data encryption service:', error);
+  const isProd = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+  if (isProd) {
+    // Fail hard in production
+    process.exit(1);
+  }
   console.warn('⚠️  Application will continue without data encryption');
   dataEncryptionService = null;
 }
