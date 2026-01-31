@@ -4,6 +4,7 @@ import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import { EmojiPicker } from './EmojiPicker';
 import { QuickReplyPanel } from './QuickReplyPanel';
 import { VoiceMessageRecorder } from './VoiceMessageRecorder';
+import { TemplateSelector } from './Templates/TemplateSelector';
 
 interface MessageInputProps {
   newMessage: string;
@@ -68,6 +69,13 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const handleQuickReplySelect = (reply: string) => {
     setNewMessage(reply);
     setShowQuickReplies(false);
+    if (messageInputRef.current) {
+      messageInputRef.current.focus();
+    }
+  };
+
+  const handleTemplateSelect = (templateContent: string) => {
+    setNewMessage(prev => prev ? `${prev}\n${templateContent}` : templateContent);
     if (messageInputRef.current) {
       messageInputRef.current.focus();
     }
@@ -201,13 +209,14 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         </div>
         
         {/* Quick actions bar */}
-        <div className="flex mt-2 px-1">
-          <button 
+        <div className="flex mt-2 px-1 gap-3">
+          <button
             className="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 font-medium"
             onClick={() => setShowQuickReplies(!showQuickReplies)}
           >
             Quick Replies
           </button>
+          <TemplateSelector onSelectTemplate={handleTemplateSelect} />
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Conversation, ConversationSettings, GroupConversation } from '../../types/messaging';
 import { unifiedMessagingService } from '../../services/unifiedMessagingService';
+import { BlockedUsersManager } from './BlockedUsers/BlockedUsersManager';
 
 interface ConversationSettingsModalProps {
   isOpen: boolean;
@@ -450,6 +451,15 @@ export const ConversationSettingsModal: React.FC<ConversationSettingsModalProps>
                 >
                   Clear History
                 </button>
+              </div>
+
+              {/* Blocked Users */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Blocked Users</h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  Manage users you have blocked from messaging you
+                </p>
+                <BlockedUsersManager onBlockingChange={() => {}} />
               </div>
 
               {/* Delete Conversation */}
