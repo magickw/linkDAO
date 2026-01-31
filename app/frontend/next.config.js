@@ -88,6 +88,8 @@ const nextConfig = {
           return path.resolve(__dirname, '../node_modules/porto/node_modules/zod/mini/index.js');
         }
       })(),
+      // Alias for React Native AsyncStorage (used by MetaMask SDK) to prevent browser warnings
+      '@react-native-async-storage/async-storage': require.resolve('async-storage'),
     };
 
     // Suppress Solana instruction-plans errors - it's an optional dependency from coinbase SDK

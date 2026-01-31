@@ -45,3 +45,21 @@ class AuthService {
 }
 
 export const authService = new AuthService();
+
+// Export authenticatedFetch function for use in other services
+export async function authenticatedFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  const token = authService.getToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  return fetch(url, {
+    ...options,
+    headers,
+  });
+}

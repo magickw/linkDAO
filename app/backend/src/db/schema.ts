@@ -311,7 +311,7 @@ export const statusReactions = pgTable("status_reactions", {
 // Post Votes - track individual upvotes/downvotes on posts
 export const postVotes = pgTable("post_votes", {
   id: serial("id").primaryKey(),
-  postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+  postId: uuid("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   voteType: varchar("vote_type", { length: 10 }).notNull(), // 'upvote' or 'downvote'
   createdAt: timestamp("created_at").defaultNow(),
@@ -319,6 +319,7 @@ export const postVotes = pgTable("post_votes", {
 }, (t) => ({
   postIdIdx: index("idx_post_votes_post_id").on(t.postId),
   userIdIdx: index("idx_post_votes_user_id").on(t.userId),
+  voteTypeIdx: index("idx_post_votes_vote_type").on(t.voteType),
   postUserUnique: unique("idx_post_votes_post_user").on(t.postId, t.userId),
   postFk: foreignKey({
     columns: [t.postId],
@@ -547,6 +548,10 @@ export const views = pgTable("views", {
   userAgent: text("user_agent"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
+  postIdIdx: index("idx_views_post_id").on(t.postId),
+  userIdIdx: index("idx_views_user_id").on(t.userId),
+  ipAddressIdx: index("idx_views_ip_address").on(t.ipAddress),
+  createdAtIdx: index("idx_views_created_at").on(t.createdAt),
   postUserIdx: index("view_post_user_idx").on(t.postId, t.userId),
   postCreatedIdx: index("view_post_created_idx").on(t.postId, t.createdAt),
   postFk: foreignKey({
