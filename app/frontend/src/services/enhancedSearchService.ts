@@ -13,6 +13,8 @@ import {
   LearningData,
   SearchAnalytics
 } from '../types/enhancedSearch';
+import { Post, convertBackendPostToPost } from '../models/Post';
+import { convertBackendStatusToStatus } from '../models/Status';
 import { fuzzySearch, tokenizeSearch } from './fuzzySearchUtils';
 import { aiSuggestionService } from './aiSuggestionService';
 
@@ -78,6 +80,17 @@ export class EnhancedSearchService {
       
       const result = await response.json();
       result.searchTime = Date.now() - startTime;
+      
+      // Convert backend posts to frontend models
+      if (Array.isArray(result.posts)) {
+        result.posts = result.posts.map((post: any) => {
+          if (post.isStatus === true) {
+            return convertBackendStatusToStatus(post);
+          } else {
+            return convertBackendPostToPost(post);
+          }
+        });
+      }
       
       // Cache the result
       this.setCachedResult(cacheKey, result);
@@ -443,6 +456,17 @@ export class EnhancedSearchService {
       
       const result = await response.json();
       
+      // Convert backend posts to frontend models
+      if (Array.isArray(result.topPosts)) {
+        result.topPosts = result.topPosts.map((post: any) => {
+          if (post.isStatus === true) {
+            return convertBackendStatusToStatus(post);
+          } else {
+            return convertBackendPostToPost(post);
+          }
+        });
+      }
+      
       // Cache the result
       this.setCachedResult(cacheKey, result);
       
@@ -496,6 +520,17 @@ export class EnhancedSearchService {
       
       const result = await response.json();
       
+      // Convert backend posts to frontend models
+      if (Array.isArray(result.recentPosts)) {
+        result.recentPosts = result.recentPosts.map((post: any) => {
+          if (post.isStatus === true) {
+            return convertBackendStatusToStatus(post);
+          } else {
+            return convertBackendPostToPost(post);
+          }
+        });
+      }
+      
       // Cache the result
       this.setCachedResult(cacheKey, result);
       
@@ -543,10 +578,35 @@ export class EnhancedSearchService {
       
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch discovery content');
-      }
-      
       const result = await response.json();
+      
+      // Convert backend posts to frontend models in different sections
+      const convertPosts = (posts: any[]) => {
+        if (!Array.isArray(posts)) return [];
+        return posts.map((post: any) => {
+          if (post.isStatus === true) {
+            return convertBackendStatusToStatus(post);
+          } else {
+            return convertBackendPostToPost(post);
+          }
+        });
+      };
+
+      if (result.trending?.posts) {
+        result.trending.posts = convertPosts(result.trending.posts);
+      }
+      if (result.recommendations?.posts) {
+        result.recommendations.posts = convertPosts(result.recommendations.posts);
+      }
+      if (result.personalized?.forYou) {
+        result.personalized.forYou = convertPosts(result.personalized.forYou);
+      }
+      if (result.personalized?.basedOnActivity) {
+        result.personalized.basedOnActivity = convertPosts(result.personalized.basedOnActivity);
+      }
+      if (result.personalized?.fromNetwork) {
+        result.personalized.fromNetwork = convertPosts(result.personalized.fromNetwork);
+      }
       
       // Cache the result
       this.setCachedResult(cacheKey, result);

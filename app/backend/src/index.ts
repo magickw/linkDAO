@@ -1211,7 +1211,7 @@ app.use('/api/reactions', tokenReactionRoutes);
 
 // Enhanced search routes (should be just before error handlers)
 app.use('/api/search', searchRoutes);
-app.use('/api/search/enhanced', enhancedSearchRoutes);
+app.use('/api', enhancedSearchRoutes);
 
 // User recommendation routes
 import userRecommendationRoutes from './routes/userRecommendationRoutes';

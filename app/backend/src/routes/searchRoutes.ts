@@ -35,7 +35,6 @@ router.get('/topics/:topic', searchRateLimit, SearchController.getTopicContent);
 
 // Search suggestions
 router.get('/suggestions', searchRateLimit, SearchController.getSearchSuggestions);
-router.get('/suggestions/enhanced', searchRateLimit, SearchController.getEnhancedSearchSuggestions);
 
 // Recommendations
 router.get('/recommendations/communities', searchRateLimit, SearchController.getRecommendedCommunities);

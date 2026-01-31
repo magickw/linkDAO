@@ -313,86 +313,98 @@ export class SearchService {
    * Get search suggestions and autocomplete with enhanced functionality
    */
   async getSearchSuggestions(query: string, limit: number = 10): Promise<string[]> {
-    const cacheKey = `suggestions:${query.toLowerCase()}:${limit}`;
-    const cached = await this.redisService.get(cacheKey);
-    if (cached) {
-      return JSON.parse(cached);
+    try {
+      const cacheKey = `suggestions:${query.toLowerCase()}:${limit}`;
+      const cached = await this.redisService.get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+
+      const db = this.databaseService.getDatabase();
+      if (!db || !db.select) {
+        safeLogger.warn('Database not available for search suggestions');
+        return [];
+      }
+      
+      // Get product title suggestions
+      const titleSuggestions = await db.select({
+        title: schema.products.title,
+      })
+        .from(schema.products)
+        .where(
+          and(
+            like(schema.products.title, `%${query}%`),
+            eq(schema.products.status, 'active')
+          )
+        )
+        .limit(Math.ceil(limit / 2));
+      
+      // Get category suggestions
+      const categorySuggestions = await db.select({
+        name: schema.categories.name,
+      })
+        .from(schema.categories)
+        .where(
+          and(
+            like(schema.categories.name, `%${query}%`),
+            eq(schema.categories.isActive, true)
+          )
+        )
+        .limit(Math.ceil(limit / 2));
+      
+      // Get tag suggestions
+      const tagSuggestions = await db.select({
+        tag: schema.productTags.tag,
+      })
+        .from(schema.productTags)
+        .where(like(schema.productTags.tag, `%${query.toLowerCase()}%`))
+        .groupBy(schema.productTags.tag)
+        .limit(Math.ceil(limit / 2));
+      
+      // Get seller suggestions (new)
+      let sellerSuggestions: any[] = [];
+      try {
+        sellerSuggestions = await db.select({
+          displayName: schema.sellers.storeName,
+          storeName: schema.sellers.storeName,
+        })
+          .from(schema.sellers)
+          .where(
+            like(schema.sellers.storeName, `%${query}%`)
+          )
+          .limit(Math.ceil(limit / 3));
+      } catch (sellerError) {
+        safeLogger.warn('Error fetching seller suggestions:', sellerError);
+      }
+      
+      // Combine and deduplicate suggestions
+      const suggestions = [
+        ...titleSuggestions.map((s: any) => s.title),
+        ...categorySuggestions.map((s: any) => s.name),
+        ...tagSuggestions.map((s: any) => s.tag),
+        ...sellerSuggestions.map((s: any) => s.displayName || s.storeName),
+      ];
+      
+      const uniqueSuggestions = [...new Set(suggestions)]
+        .filter(Boolean)
+        .slice(0, limit)
+        .sort((a, b) => {
+          // Prioritize exact matches and shorter strings
+          const aExact = a.toLowerCase().includes(query.toLowerCase());
+          const bExact = b.toLowerCase().includes(query.toLowerCase());
+          if (aExact && !bExact) return -1;
+          if (!aExact && bExact) return 1;
+          return a.length - b.length;
+        });
+
+      // Cache the result
+      await this.redisService.set(cacheKey, JSON.stringify(uniqueSuggestions), this.CACHE_TTL);
+      
+      return uniqueSuggestions;
+    } catch (error) {
+      safeLogger.error('Error in getSearchSuggestions:', error);
+      return []; // Return empty array on error instead of throwing
     }
-
-    const db = this.databaseService.getDatabase();
-    
-    // Get product title suggestions
-    const titleSuggestions = await db.select({
-      title: schema.products.title,
-    })
-      .from(schema.products)
-      .where(
-        and(
-          like(schema.products.title, `%${query}%`),
-          eq(schema.products.status, 'active')
-        )
-      )
-      .limit(limit / 2);
-    
-    // Get category suggestions
-    const categorySuggestions = await db.select({
-      name: schema.categories.name,
-    })
-      .from(schema.categories)
-      .where(
-        and(
-          like(schema.categories.name, `%${query}%`),
-          eq(schema.categories.isActive, true)
-        )
-      )
-      .limit(limit / 2);
-    
-    // Get tag suggestions
-    const tagSuggestions = await db.select({
-      tag: schema.productTags.tag,
-    })
-      .from(schema.productTags)
-      .where(like(schema.productTags.tag, `%${query.toLowerCase()}%`))
-      .groupBy(schema.productTags.tag)
-      .limit(limit / 2);
-    
-    // Get seller suggestions (new)
-    const sellerSuggestions = await db.select({
-      displayName: schema.sellers.storeName, // Use storeName as displayName
-      storeName: schema.sellers.storeName,
-    })
-      .from(schema.sellers)
-      .where(
-        or(
-          like(schema.sellers.storeName, `%${query}%`),
-          like(schema.sellers.storeName, `%${query}%`)
-        )
-      )
-      .limit(limit / 3);
-    
-    // Combine and deduplicate suggestions
-    const suggestions = [
-      ...titleSuggestions.map((s: any) => s.title),
-      ...categorySuggestions.map((s: any) => s.name),
-      ...tagSuggestions.map((s: any) => s.tag),
-      ...sellerSuggestions.map((s: any) => s.displayName || s.storeName),
-    ];
-    
-    const uniqueSuggestions = [...new Set(suggestions)]
-      .slice(0, limit)
-      .sort((a, b) => {
-        // Prioritize exact matches and shorter strings
-        const aExact = a.toLowerCase().includes(query.toLowerCase());
-        const bExact = b.toLowerCase().includes(query.toLowerCase());
-        if (aExact && !bExact) return -1;
-        if (!aExact && bExact) return 1;
-        return a.length - b.length;
-      });
-
-    // Cache the result
-    await this.redisService.set(cacheKey, JSON.stringify(uniqueSuggestions), this.CACHE_TTL);
-    
-    return uniqueSuggestions;
   }
 
   /**

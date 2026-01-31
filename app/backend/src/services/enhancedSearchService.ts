@@ -275,14 +275,20 @@ export class EnhancedSearchService {
     // Mock data generation methods
     private generateMockPosts(query: string, count: number): any[] {
         const posts = [];
-        for (let i = 0; i < count; i++) {
+        const safeCount = Math.max(0, Math.floor(count || 0));
+        for (let i = 0; i < safeCount; i++) {
+            const id = Math.random().toString(36).substring(2, 15);
+            const walletAddress = `0x${Math.random().toString(16).substring(2, 42)}`;
             posts.push({
-                id: Math.random().toString(36).substring(2, 15),
+                id,
+                authorId: id,
+                walletAddress,
                 author: `user${i + 1}`,
                 parentId: null,
-                contentCid: `This is a mock post about ${query}. It contains relevant information and engaging content.`,
-                mediaCids: [],
-                tags: [query.toLowerCase(), 'discussion', 'community'],
+                content: `This is a mock post about ${query}. It contains relevant information and engaging content.`,
+                contentCid: `Qm${Math.random().toString(36).substring(2, 42)}`,
+                mediaCids: '[]',
+                tags: JSON.stringify([query.toLowerCase(), 'discussion', 'community']),
                 createdAt: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000),
                 onchainRef: '',
 
@@ -320,16 +326,25 @@ export class EnhancedSearchService {
                 communityInfo: Math.random() > 0.5 ? {
                     name: `${query}Community`,
                     displayName: `${query} Community`,
-                    avatar: null // Will be handled by frontend placeholder service
+                    avatar: null
                 } : undefined,
 
                 authorInfo: {
                     handle: `user${i + 1}`,
-                    avatar: null, // Will be handled by frontend placeholder service
+                    avatar: null,
                     reputation: Math.floor(Math.random() * 1000) + 100,
                     badges: ['Expert'],
                     verified: Math.random() > 0.8
-                }
+                },
+                
+                // Fields for convertBackendPostToPost
+                avatarCid: null,
+                displayName: `User ${i + 1}`,
+                handle: `user${i + 1}`,
+                commentsCount: Math.floor(Math.random() * 50),
+                reactionCount: Math.floor(Math.random() * 100),
+                isStatus: false,
+                isRepost: false
             });
         }
         return posts;
@@ -337,28 +352,29 @@ export class EnhancedSearchService {
 
     private generateMockCommunities(query: string, count: number): any[] {
         const communities = [];
-        for (let i = 0; i < count; i++) {
+        const safeCount = Math.max(0, Math.floor(count || 0));
+        for (let i = 0; i < safeCount; i++) {
             communities.push({
                 id: Math.random().toString(36).substring(2, 15),
                 name: `${query}community${i + 1}`,
                 displayName: `${query} Community ${i + 1}`,
                 description: `A community dedicated to discussing ${query} and related topics.`,
-                rules: [],
+                rules: '[]',
                 memberCount: Math.floor(Math.random() * 10000) + 1000,
                 createdAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000),
                 updatedAt: new Date(),
-                avatar: null, // Will be handled by frontend placeholder service
-                banner: null, // Will be handled by frontend placeholder service
+                avatar: null,
+                banner: null,
                 category: 'Technology',
-                tags: [query.toLowerCase(), 'discussion', 'community'],
+                tags: JSON.stringify([query.toLowerCase(), 'discussion', 'community']),
                 isPublic: true,
-                moderators: [],
-                settings: {
+                moderators: '[]',
+                settings: JSON.stringify({
                     allowedPostTypes: [],
                     requireApproval: false,
                     minimumReputation: 0,
                     stakingRequirements: []
-                },
+                }),
 
                 // Enhanced fields
                 engagementMetrics: {
@@ -375,7 +391,7 @@ export class EnhancedSearchService {
                         type: 'post',
                         timestamp: new Date(),
                         description: 'New post about latest developments',
-                        user: { handle: 'user1', avatar: null } // Will be handled by frontend placeholder service
+                        user: { handle: 'user1', avatar: null }
                     }
                 ],
 

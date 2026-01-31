@@ -6,11 +6,11 @@ const router = Router();
 const enhancedSearchController = new EnhancedSearchController();
 
 // Enhanced search endpoints
-router.get('/enhanced', enhancedSearchController.enhancedSearch.bind(enhancedSearchController));
-router.get('/suggestions/enhanced', enhancedSearchController.getEnhancedSuggestions.bind(enhancedSearchController));
+router.get('/search/enhanced', enhancedSearchController.enhancedSearch.bind(enhancedSearchController));
+router.get('/search/suggestions/enhanced', enhancedSearchController.getEnhancedSuggestions.bind(enhancedSearchController));
 
 // Discovery endpoints
-router.get('/discovery', enhancedSearchController.getDiscoveryContent.bind(enhancedSearchController));
+router.get('/search/enhanced/discovery', enhancedSearchController.getDiscoveryContent.bind(enhancedSearchController));
 
 // Hashtag discovery
 router.get('/hashtags/:hashtag/discovery', enhancedSearchController.getHashtagDiscovery.bind(enhancedSearchController));
