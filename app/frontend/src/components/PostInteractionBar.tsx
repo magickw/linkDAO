@@ -5,7 +5,7 @@ import TokenReactionSystem from './TokenReactionSystem/TokenReactionSystem';
 import SharePostModal from './SharePostModal';
 import RepostModal from './RepostModal';
 import CommunityTipButton from './CommunityTipButton';
-import AwardSelectionModal from './TokenReactionSystem/AwardSelectionModal';
+import AwardSelectionModal, { AWARDS } from './TokenReactionSystem/AwardSelectionModal';
 import { bookmarkService } from '@/services/bookmarkService';
 import { getUserAddress } from '@/utils/userDisplay';
 
@@ -112,6 +112,34 @@ export default function PostInteractionBar({
   const [showShareModal, setShowShareModal] = useState(false);
   const [showRepostModal, setShowRepostModal] = useState(false);
   const [showAwardModal, setShowAwardModal] = useState(false);
+  const [userGemBalance, setUserGemBalance] = useState(0);
+
+  // Fetch gem balance when modal is opened
+  useEffect(() => {
+    if (showAwardModal && isConnected) {
+      const fetchBalance = async () => {
+        try {
+          const sessionToken = typeof window !== 'undefined' ? sessionStorage.getItem('linkdao_access_token') : null;
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io';
+          
+          const response = await fetch(`${apiUrl}/api/gems/balance`, {
+            headers: {
+              'Authorization': sessionToken ? `Bearer ${sessionToken}` : ''
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            setUserGemBalance(data.balance || 0);
+          }
+        } catch (error) {
+          console.error('Error fetching gem balance:', error);
+        }
+      };
+      
+      fetchBalance();
+    }
+  }, [showAwardModal, isConnected]);
 
   // Handle comment button click
   const handleCommentClick = () => {
@@ -454,8 +482,14 @@ export default function PostInteractionBar({
       <AwardSelectionModal
         isOpen={showAwardModal}
         postId={post.id}
-        userGoldBalance={0} // TODO: Fetch user's actual gold balance
+        userGemBalance={userGemBalance}
         onAwardGiven={async (awardId: string) => {
+          // Refresh balance after giving award
+          setUserGemBalance(prev => {
+            const award = (AWARDS as any[]).find(a => a.id === awardId);
+            return prev - (award?.cost || 0);
+          });
+          
           if (onAward) {
             await onAward(post.id);
           }

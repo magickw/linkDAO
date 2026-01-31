@@ -133,10 +133,33 @@ class BookmarkService {
   /**
    * Get all bookmarks for the current user
    */
-  async getUserBookmarks(page: number = 1, limit: number = 20): Promise<GetBookmarksResponse> {
+  async getUserBookmarks(
+    page: number = 1,
+    limit: number = 20,
+    contentType?: string,
+    sortBy: string = 'newest',
+    search?: string
+  ): Promise<GetBookmarksResponse> {
     try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+
+      if (contentType && contentType !== 'all') {
+        params.append('contentType', contentType);
+      }
+
+      if (sortBy && sortBy !== 'newest') {
+        params.append('sortBy', sortBy);
+      }
+
+      if (search && search.trim()) {
+        params.append('search', search.trim());
+      }
+
       const response = await fetch(
-        `${this.baseUrl}/api/bookmarks?page=${page}&limit=${limit}`,
+        `${this.baseUrl}/api/bookmarks?${params.toString()}`,
         {
           method: 'GET',
           headers: this.getAuthHeaders(),

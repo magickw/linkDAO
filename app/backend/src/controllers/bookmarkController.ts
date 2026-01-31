@@ -8,6 +8,7 @@ import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
 import { bookmarkService } from '../services/bookmarkService';
+import { validateUUID } from '../utils/validation';
 
 class BookmarkController {
   /**
@@ -25,6 +26,12 @@ class BookmarkController {
 
       if (!postId) {
         return res.status(400).json({ error: 'Post ID is required' });
+      }
+
+      // Validate postId as UUID
+      const isValidUUID = validateUUID(postId);
+      if (!isValidUUID) {
+        return res.status(400).json({ error: 'Invalid post ID format' });
       }
 
       const result = await bookmarkService.toggleBookmark(userId, postId);
@@ -49,13 +56,64 @@ class BookmarkController {
       const userId = (req as any).user?.id;
       const page = parseInt(req.query.page as string) || 1;
       const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+      const contentType = req.query.contentType as string;
+      const sortBy = req.query.sortBy as string || 'newest';
+      const search = req.query.search as string;
+      const format = req.query.format as string || 'default'; // 'default' or 'mobile'
 
       if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
       }
 
-      const result = await bookmarkService.getUserBookmarks(userId, page, limit);
+      const result = await bookmarkService.getUserBookmarks(userId, page, limit, contentType, sortBy, search);
 
+      // Support mobile API format
+      if (format === 'mobile') {
+        // Transform bookmarks to mobile-expected format
+        const posts = result.bookmarks
+          .filter(b => b.contentType === 'post')
+          .map(b => ({
+            id: b.post.id,
+            content: b.post.content || '',
+            author: {
+              id: b.post.authorAddress,
+              name: b.post.authorAddress?.substring(0, 8) || 'Anonymous',
+              avatar: '#3b82f6'
+            },
+            timestamp: b.post.createdAt || new Date().toISOString(),
+            likes: b.post.upvotes || 0,
+            comments: b.post.commentsCount || 0,
+            bookmarkedAt: b.bookmarkedAt || new Date().toISOString()
+          }));
+
+        const statuses = result.bookmarks
+          .filter(b => b.contentType === 'status')
+          .map(b => ({
+            id: b.post.id,
+            content: b.post.content || '',
+            author: {
+              id: b.post.authorAddress,
+              name: b.post.authorAddress?.substring(0, 8) || 'Anonymous',
+              avatar: '#3b82f6'
+            },
+            timestamp: b.post.createdAt || new Date().toISOString(),
+            likes: b.post.upvotes || 0,
+            comments: b.post.commentsCount || 0,
+            bookmarkedAt: b.bookmarkedAt || new Date().toISOString()
+          }));
+
+        return res.json({
+          success: true,
+          data: {
+            posts,
+            communities: [], // Currently not supported
+            users: [] // Currently not supported
+          },
+          pagination: result.pagination
+        });
+      }
+
+      // Default API format
       res.json(result);
     } catch (error) {
       safeLogger.error('Error in getUserBookmarks:', error);
@@ -76,6 +134,12 @@ class BookmarkController {
         return res.status(401).json({ error: 'Authentication required' });
       }
 
+      // Validate postId as UUID
+      const isValidUUID = validateUUID(postId);
+      if (!isValidUUID) {
+        return res.status(400).json({ error: 'Invalid post ID format' });
+      }
+
       const bookmarked = await bookmarkService.isBookmarked(userId, postId);
 
       res.json({ postId, bookmarked });
@@ -92,6 +156,12 @@ class BookmarkController {
   async getBookmarkCount(req: Request, res: Response) {
     try {
       const postId = req.params.postId;
+
+      // Validate postId as UUID
+      const isValidUUID = validateUUID(postId);
+      if (!isValidUUID) {
+        return res.status(400).json({ error: 'Invalid post ID format' });
+      }
 
       const count = await bookmarkService.getBookmarkCount(postId);
 

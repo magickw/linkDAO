@@ -20,14 +20,14 @@ interface Award {
 interface AwardSelectionModalProps {
   isOpen: boolean;
   postId: string;
-  userGoldBalance: number;
+  userGemBalance: number;
   onAwardGiven: (awardId: string) => Promise<void>;
   onClose: () => void;
   awardsToUnlock?: number;
   totalAwardsToUnlock?: number;
 }
 
-const AWARDS: Award[] = [
+export const AWARDS: Award[] = [
   {
     id: 'hooray',
     name: 'Hooray',
@@ -185,7 +185,7 @@ const AWARDS: Award[] = [
 const AwardSelectionModal: React.FC<AwardSelectionModalProps> = ({
   isOpen,
   postId,
-  userGoldBalance,
+  userGemBalance,
   onAwardGiven,
   onClose,
   awardsToUnlock = 5,
@@ -195,15 +195,15 @@ const AwardSelectionModal: React.FC<AwardSelectionModalProps> = ({
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [isGiving, setIsGiving] = useState(false);
 
-  const progress = Math.min((userGoldBalance / totalAwardsToUnlock) * 100, 100);
+  const progress = Math.min((userGemBalance / totalAwardsToUnlock) * 100, 100);
   const remainingAwards = Math.max(0, awardsToUnlock);
 
   const handleAwardSelect = (award: Award) => {
-    if (userGoldBalance >= award.cost) {
-      // User has enough gold, give the award directly
+    if (userGemBalance >= award.cost) {
+      // User has enough gems, give the award directly
       giveAward(award);
     } else {
-      // User needs more gold, show purchase modal
+      // User needs more gems, show purchase modal
       setSelectedAward(award);
       setShowPurchaseModal(true);
     }
@@ -212,10 +212,32 @@ const AwardSelectionModal: React.FC<AwardSelectionModalProps> = ({
   const giveAward = async (award: Award) => {
     setIsGiving(true);
     try {
+      const sessionToken = typeof window !== 'undefined' ? sessionStorage.getItem('linkdao_access_token') : null;
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io';
+
+      const response = await fetch(`${apiUrl}/api/gems/spend`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': sessionToken ? `Bearer ${sessionToken}` : ''
+        },
+        body: JSON.stringify({
+          postId,
+          awardId: award.id,
+          amount: award.cost
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to give award');
+      }
+
       await onAwardGiven(award.id);
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to give award:', error);
+      alert(error.message || 'Failed to give award. Please try again.');
     } finally {
       setIsGiving(false);
     }
@@ -276,7 +298,7 @@ const AwardSelectionModal: React.FC<AwardSelectionModalProps> = ({
           <div className="p-6">
             <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
               {AWARDS.map((award) => {
-                const canAfford = userGoldBalance >= award.cost;
+                const canAfford = userGemBalance >= award.cost;
                 const isSelected = selectedAward?.id === award.id;
 
                 return (
@@ -326,9 +348,9 @@ const AwardSelectionModal: React.FC<AwardSelectionModalProps> = ({
                       <span className="text-sm font-medium text-gray-900">
                         {selectedAward.cost} gems
                       </span>
-                      {userGoldBalance < selectedAward.cost && (
+                      {userGemBalance < selectedAward.cost && (
                         <span className="text-sm text-red-600">
-                          (You need {selectedAward.cost - userGoldBalance} more gems)
+                          (You need {selectedAward.cost - userGemBalance} more gems)
                         </span>
                       )}
                     </div>
@@ -351,7 +373,7 @@ const AwardSelectionModal: React.FC<AwardSelectionModalProps> = ({
                 >
                   Cancel
                 </button>
-                {selectedAward && userGoldBalance >= selectedAward.cost && (
+                {selectedAward && userGemBalance >= selectedAward.cost && (
                   <button
                     onClick={() => giveAward(selectedAward)}
                     disabled={isGiving}
@@ -378,7 +400,7 @@ const AwardSelectionModal: React.FC<AwardSelectionModalProps> = ({
         <GemPurchaseModal
           isOpen={showPurchaseModal}
           awardCost={selectedAward.cost}
-          currentGems={userGoldBalance}
+          currentGems={userGemBalance}
           onPurchase={handlePurchaseComplete}
           onClose={() => {
             setShowPurchaseModal(false);

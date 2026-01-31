@@ -179,10 +179,49 @@ export class BlueskyOAuthProvider extends BaseOAuthProvider {
   }
 
   /**
-   * Refresh an expired access token using AT Protocol refresh token
+   * Refresh an expired access token
+   * Handles both standard OAuth refresh and AT Protocol session refresh (for App Passwords)
    */
   async refreshAccessToken(refreshToken: string): Promise<OAuthTokens> {
     try {
+      // 1. Try AT Protocol session refresh FIRST
+      // This is the standard way to refresh sessions created via App Passwords
+      try {
+        safeLogger.info('Attempting AT Protocol session refresh for Bluesky');
+        const agent = new AtpAgent({ service: BSKY_SERVICE_URL });
+        
+        // We need to decode the DID from the refresh token JWT
+        const payload = JSON.parse(Buffer.from(refreshToken.split('.')[1], 'base64').toString());
+        const did = payload.sub;
+        
+        if (did) {
+          await agent.resumeSession({
+            did: did,
+            handle: '',
+            accessJwt: '', // We don't have a valid one, but resumeSession needs it
+            refreshJwt: refreshToken
+          });
+          
+          const refreshResponse = await agent.refreshSession();
+          
+          if (refreshResponse.success) {
+            safeLogger.info('Successfully refreshed Bluesky session via AT Protocol RPC');
+            return {
+              accessToken: refreshResponse.data.accessJwt,
+              refreshToken: refreshResponse.data.refreshJwt,
+              expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000), // ~2 hours
+              tokenType: 'Bearer',
+              scopes: this.config.scopes,
+            };
+          }
+        }
+      } catch (atprotoError: any) {
+        // If it's a 400 Bad Request, it might be an OAuth token instead of a session token
+        safeLogger.warn('AT Protocol session refresh failed, will attempt standard OAuth refresh:', atprotoError.message);
+      }
+
+      // 2. Fallback to standard OAuth 2.0 refresh
+      safeLogger.info('Attempting standard OAuth 2.0 refresh for Bluesky');
       const body = new URLSearchParams({
         grant_type: 'refresh_token',
         refresh_token: refreshToken,
@@ -198,10 +237,13 @@ export class BlueskyOAuthProvider extends BaseOAuthProvider {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        safeLogger.error('Bluesky OAuth refresh failed:', { status: response.status, body: errorText });
         throw new Error(`Token refresh failed: ${response.statusText}`);
       }
 
       const data = await response.json();
+      safeLogger.info('Successfully refreshed Bluesky token via OAuth endpoint');
 
       return {
         accessToken: data.access_token,

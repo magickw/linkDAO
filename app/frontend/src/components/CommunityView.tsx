@@ -25,6 +25,7 @@ import { CommunityService } from '@/services/communityService';
 import { PostService } from '@/services/postService';
 import enhancedUserService from '@/services/enhancedUserService';
 import { useWeb3 } from '@/context/Web3Context';
+import { useAuth } from '@/context/AuthContext';
 import { Community } from '@/models/Community';
 import CommunitySettingsModal from './CommunityManagement/CommunitySettingsModal';
 import CommunityPostCreator from './Community/CommunityPostCreator';
@@ -47,6 +48,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
   const { isMobile } = useMobileOptimization();
   const router = useRouter();
   const { address, isConnected } = useWeb3();
+  const { isAuthenticated } = useAuth();
   const [communityData, setCommunityData] = useState<Community | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [proposals, setProposals] = useState<CommunityGovernanceProposal[]>([]);
@@ -179,7 +181,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
     if (communitySlug) {
       fetchCommunityData();
     }
-  }, [communitySlug, address, isConnected]);
+  }, [communitySlug, address, isConnected, isAuthenticated]);
 
   // Fetch moderator profiles when community data changes
   useEffect(() => {
@@ -369,7 +371,8 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
                       }
 
                       try {
-                        if (isJoined) {
+                        const effectiveIsJoined = isJoined || isModerator;
+                        if (effectiveIsJoined) {
                           const success = await CommunityService.leaveCommunity(communityData.id);
                           if (success) {
                             setIsJoined(false);
@@ -391,12 +394,12 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
                         alert('An error occurred. Please try again.');
                       }
                     }}
-                    className={`px-4 py-1.5 rounded-full font-medium text-sm transition-colors ${isJoined
+                    className={`px-4 py-1.5 rounded-full font-medium text-sm transition-colors ${(isJoined || isModerator)
                       ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                       : 'bg-blue-600 text-white hover:bg-blue-700'
                       }`}
                   >
-                    {isJoined ? 'Joined' : 'Join'}
+                    {(isJoined || isModerator) ? 'Joined' : 'Join'}
                   </button>
                 )}
                 {/* Show edit button if user is admin */}
@@ -509,7 +512,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
         <PinnedPostsSection
           communityId={communityData.id}
           community={communityData}
-          userMembership={isJoined ? {
+          userMembership={(isJoined || isModerator) ? {
             id: 'temp-membership-id',
             userId: address || '',
             communityId: communityData.id,
@@ -562,7 +565,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
                   isStatus: false
                 }}
                 community={communityData}
-                userMembership={isJoined ? {
+                userMembership={(isJoined || isModerator) ? {
                   id: 'temp-membership-id',
                   userId: address || '',
                   communityId: communityData.id,
@@ -772,19 +775,19 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-400">Reputation</span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {isJoined ? (communityData.memberReputation || 1247) : 0}
+                  {(isJoined || isModerator) ? (communityData.memberReputation || 1247) : 0}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-400">Posts Created</span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {isJoined ? (communityData.memberContributions || 23) : 0}
+                  {(isJoined || isModerator) ? (communityData.memberContributions || 23) : 0}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-400">Comments</span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {isJoined ? 156 : 0}
+                  {(isJoined || isModerator) ? 156 : 0}
                 </span>
               </div>
             </div>

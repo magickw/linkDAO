@@ -7,6 +7,7 @@ import { eq, sql } from 'drizzle-orm';
 import Stripe from 'stripe';
 import { emailService } from '../services/emailService';
 import { safeLogger } from '../utils/safeLogger';
+import tokenReactionService from '../services/tokenReactionService';
 
 const router = Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -187,6 +188,35 @@ router.post('/complete', authenticateToken, csrfProtection, async (req, res) => 
   }
 });
 
+// Spend gems on an award
+router.post('/spend', authenticateToken, csrfProtection, async (req, res) => {
+  try {
+    const { postId, awardId, amount } = req.body;
+    const userId = req.user?.walletAddress; // Use walletAddress as the internal ID for balance tracking
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    if (!postId || !awardId || !amount) {
+      return res.status(400).json({ error: 'Missing required fields: postId, awardId, amount' });
+    }
+
+    // Call tokenReactionService to handle the spending and awarding logic
+    const result = await tokenReactionService.purchaseReactionWithGems({
+      postId,
+      userId,
+      reactionType: awardId,
+      amount: parseInt(amount)
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    safeLogger.error('Error spending gems:', error);
+    res.status(400).json({ error: error.message || 'Failed to spend gems' });
+  }
+});
+
 // Get user's gem balance
 router.get('/balance', authenticateToken, async (req, res) => {
   try {
@@ -206,6 +236,63 @@ router.get('/balance', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching gem balance:', error);
     res.status(500).json({ error: 'Failed to fetch gem balance' });
+  }
+});
+
+// Claim earned gems
+router.post('/claim', authenticateToken, csrfProtection, async (req, res) => {
+  try {
+    const { amount } = req.body;
+    const userId = req.user?.walletAddress;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    if (!amount || parseInt(amount) <= 0) {
+      return res.status(400).json({ error: 'Invalid claim amount' });
+    }
+
+    // Verify user has enough gems to claim
+    const [userBalance] = await db.select().from(userGemBalance).where(eq(userGemBalance.userId, userId)).limit(1);
+    if (!userBalance || userBalance.balance < parseInt(amount)) {
+      return res.status(400).json({ error: 'Insufficient gem balance to claim' });
+    }
+
+    // Perform database operations in a transaction
+    const result = await db.transaction(async (tx) => {
+      // Deduct gems from balance
+      const [updatedBalance] = await tx.update(userGemBalance)
+        .set({
+          balance: sql`${userGemBalance.balance} - ${parseInt(amount)}`,
+          updatedAt: new Date()
+        })
+        .where(eq(userGemBalance.userId, userId))
+        .returning();
+
+      // Record claim transaction
+      await tx.insert(gemTransaction).values({
+        userId,
+        amount: -parseInt(amount),
+        type: 'claim',
+        status: 'pending', // Mark as pending until payout is processed
+        metadata: {
+          requestedAt: new Date(),
+          payoutMethod: 'manual' // Default to manual for now
+        }
+      });
+
+      return {
+        success: true,
+        newBalance: updatedBalance.balance,
+        claimedAmount: parseInt(amount)
+      };
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    safeLogger.error('Error claiming gems:', error);
+    res.status(500).json({ error: 'Failed to claim gems' });
   }
 });
 

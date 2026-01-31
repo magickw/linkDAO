@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -7,7 +7,7 @@ import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
 import { bookmarkService, BookmarkedPost } from '@/services/bookmarkService';
 import { getProxiedIPFSUrl } from '@/utils/ipfsProxy';
-import { Bookmark, Clock, MessageCircle, Eye, ArrowUp, ArrowDown, Trash2, RefreshCw } from 'lucide-react';
+import { Bookmark, Clock, MessageCircle, Eye, ArrowUp, ArrowDown, Trash2, RefreshCw, Search, Filter, ChevronDown } from 'lucide-react';
 
 // Loading skeleton for bookmarked posts
 const BookmarkSkeleton = () => (
@@ -180,6 +180,32 @@ export default function BookmarksPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  
+  // New state for filtering, sorting, and search
+  const [contentType, setContentType] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('newest');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+
+  // Ref for dropdown click outside handler
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
+        setShowFilterDropdown(false);
+      }
+    };
+
+    if (showFilterDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showFilterDropdown]);
 
   const fetchBookmarks = useCallback(async (pageNum: number = 1, append: boolean = false) => {
     if (!isConnected || !address) {
@@ -192,7 +218,13 @@ export default function BookmarksPage() {
         setLoading(true);
       }
 
-      const response = await bookmarkService.getUserBookmarks(pageNum, 10);
+      const response = await bookmarkService.getUserBookmarks(
+        pageNum, 
+        10,
+        contentType,
+        sortBy,
+        searchQuery
+      );
 
       if (append) {
         setBookmarks(prev => [...prev, ...response.bookmarks]);
@@ -210,7 +242,7 @@ export default function BookmarksPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [isConnected, address, addToast]);
+  }, [isConnected, address, addToast, contentType, sortBy, searchQuery]);
 
   useEffect(() => {
     fetchBookmarks(1);
@@ -271,9 +303,9 @@ export default function BookmarksPage() {
         <meta name="description" content="View your saved posts and content on LinkDAO" />
       </Head>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="w-full px-4 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
               <Bookmark className="w-8 h-8 mr-3 text-primary-600" />
@@ -296,6 +328,109 @@ export default function BookmarksPage() {
           >
             <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
+        </div>
+
+        {/* Search and Filters */}
+        <div className="mb-6 space-y-3">
+          {/* Search bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search bookmarks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-400"
+            />
+          </div>
+
+          {/* Filter bar */}
+          <div className="flex items-center justify-between gap-3">
+            {/* Content type filter */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setContentType('all')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  contentType === 'all'
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setContentType('post')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  contentType === 'post'
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                Posts
+              </button>
+              <button
+                onClick={() => setContentType('status')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  contentType === 'status'
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                Statuses
+              </button>
+            </div>
+
+            {/* Sort dropdown */}
+            <div className="relative" ref={filterDropdownRef}>
+              <button
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
+              >
+                <Filter className="w-4 h-4" />
+                <span>
+                  {sortBy === 'newest' && 'Newest'}
+                  {sortBy === 'oldest' && 'Oldest'}
+                  {sortBy === 'title' && 'Title'}
+                </span>
+                <ChevronDown className="w-4 h-4" />
+              </button>
+
+              {showFilterDropdown && (
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10">
+                  <button
+                    onClick={() => {
+                      setSortBy('newest');
+                      setShowFilterDropdown(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center justify-between"
+                  >
+                    <span>Newest</span>
+                    {sortBy === 'newest' && <span className="text-primary-600">✓</span>}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSortBy('oldest');
+                      setShowFilterDropdown(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center justify-between"
+                  >
+                    <span>Oldest</span>
+                    {sortBy === 'oldest' && <span className="text-primary-600">✓</span>}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSortBy('title');
+                      setShowFilterDropdown(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center justify-between"
+                  >
+                    <span>Title</span>
+                    {sortBy === 'title' && <span className="text-primary-600">✓</span>}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Content */}

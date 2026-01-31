@@ -2469,87 +2469,24 @@ export class FeedService {
 
   // Toggle bookmark
   async toggleBookmark(data: { postId: string; userAddress: string }) {
-    const { postId, userAddress } = data;
-
-    try {
-      // Get user
-      const normalizedAddress = userAddress.toLowerCase();
-      const user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
-      if (user.length === 0) {
-        throw new Error('User not found');
-      }
-
-      // Check if postId is an integer (regular post) or UUID (quick post)
-      const isIntegerId = /^\d+$/.test(postId);
-
-      let result;
-
-      if (isIntegerId) {
-        // Regular post bookmark logic
-
-
-        // Check if bookmark already exists
-        const existingBookmark = await db
-          .select()
-          .from(bookmarks)
-          .where(and(
-            eq(bookmarks.postId, postId),
-            eq(bookmarks.userId, user[0].id)
-          ))
-          .limit(1);
-
-        if (existingBookmark.length > 0) {
-          // Remove bookmark
-          await db.delete(bookmarks).where(and(
-            eq(bookmarks.postId, postId),
-            eq(bookmarks.userId, user[0].id)
-          ));
-          result = { bookmarked: false };
-        } else {
-          // Add bookmark
-          await db.insert(bookmarks).values({
-            postId: postId,
-            userId: user[0].id,
-            createdAt: new Date()
-          });
-          result = { bookmarked: true };
+      const { postId, userAddress } = data;
+  
+      try {
+        // Get user
+        const normalizedAddress = userAddress.toLowerCase();
+        const user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
+        if (user.length === 0) {
+          throw new Error('User not found');
         }
-      } else {
-        // Status bookmark logic
-        // Check if bookmark already exists
-        const existingBookmark = await db
-          .select()
-          .from(statusBookmarks)
-          .where(and(
-            eq(statusBookmarks.statusId, postId),
-            eq(statusBookmarks.userId, user[0].id)
-          ))
-          .limit(1);
-
-        if (existingBookmark.length > 0) {
-          // Remove bookmark
-          await db.delete(statusBookmarks).where(and(
-            eq(statusBookmarks.statusId, postId),
-            eq(statusBookmarks.userId, user[0].id)
-          ));
-          result = { bookmarked: false };
-        } else {
-          // Add bookmark
-          await db.insert(statusBookmarks).values({
-            statusId: postId,
-            userId: user[0].id,
-            createdAt: new Date()
-          });
-          result = { bookmarked: true };
-        }
+  
+        // Use the centralized bookmarkService
+        const { bookmarkService } = await import('./bookmarkService');
+        return await bookmarkService.toggleBookmark(user[0].id, postId);
+      } catch (error) {
+        safeLogger.error('Error toggling bookmark:', error);
+        throw new Error('Failed to toggle bookmark');
       }
-
-      return result;
-    } catch (error) {
-      safeLogger.error('Error toggling bookmark:', error);
-      throw new Error('Failed to toggle bookmark');
     }
-  }
 
   // Helper methods
   private buildTimeFilter(timeRange: string, table: any = posts) {

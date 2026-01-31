@@ -34,6 +34,7 @@ import { VerificationModal } from '@/components/Verification/VerificationModal';
 import { useVerification } from '@/hooks/useVerification';
 import { ProfilePostItem } from '@/components/ProfilePostItem';
 import { SendTokenForm } from '@/components/Wallet/SendTokenForm';
+import GemClaimModal from '@/components/TokenReactionSystem/GemClaimModal';
 import { DollarSign } from 'lucide-react';
 
 const BottomSheet = React.lazy(() => import('@/components/BottomSheet'));
@@ -93,9 +94,38 @@ export default function Profile() {
   });
   const [activeTab, setActiveTab] = useState<'posts' | 'proposals' | 'activity' | 'wallet' | 'reputation' | 'tips' | 'followers' | 'following' | 'edit' | 'social'>('posts');
   const [isEditing, setIsEditing] = useState(false);
+  const [userGemBalance, setUserGemBalance] = useState(0);
+  const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
 
 
 
+
+  // Fetch gem balance
+  useEffect(() => {
+    if (isAuthenticated && currentUserAddress) {
+      const fetchGemBalance = async () => {
+        try {
+          const sessionToken = typeof window !== 'undefined' ? sessionStorage.getItem('linkdao_access_token') : null;
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io';
+          
+          const response = await fetch(`${apiUrl}/api/gems/balance`, {
+            headers: {
+              'Authorization': sessionToken ? `Bearer ${sessionToken}` : ''
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            setUserGemBalance(data.balance || 0);
+          }
+        } catch (error) {
+          console.error('Error fetching gem balance:', error);
+        }
+      };
+      
+      fetchGemBalance();
+    }
+  }, [isAuthenticated, currentUserAddress]);
 
   // Follow/unfollow functionality
   const { follow, unfollow, isLoading: isFollowLoading } = useFollow();
@@ -1602,6 +1632,39 @@ export default function Profile() {
                     </div>
                   ) : (
                     <>
+                      {/* Gems & Awards Section */}
+                      <div className="mb-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-2xl">💎</span>
+                              <h4 className="text-lg font-semibold opacity-90">Gem Balance</h4>
+                            </div>
+                            <div className="text-4xl font-bold">
+                              {userGemBalance.toLocaleString()} <span className="text-xl font-normal opacity-80">gems</span>
+                            </div>
+                            <p className="mt-2 text-sm opacity-80 max-w-md">
+                              Earn gems from awards on your posts and comments. Each award gives you 70% of its value.
+                            </p>
+                          </div>
+                          <div className="flex flex-col sm:flex-row gap-3">
+                            <button
+                              onClick={() => router.push('/gems/buy')}
+                              className="px-6 py-2.5 bg-white text-indigo-600 rounded-xl font-bold hover:bg-opacity-90 transition-all shadow-lg text-center"
+                            >
+                              Buy Gems
+                            </button>
+                            <button
+                              onClick={() => setIsClaimModalOpen(true)}
+                              disabled={userGemBalance < 100}
+                              className="px-6 py-2.5 bg-indigo-400 bg-opacity-30 border border-white border-opacity-40 text-white rounded-xl font-bold hover:bg-opacity-40 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-center"
+                            >
+                              Claim Earnings
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-xl p-4">
                           <div className="flex justify-between items-center">
@@ -1689,6 +1752,16 @@ export default function Profile() {
       </div>
       <VerificationModal isOpen={isVerificationModalOpen} onClose={() => setIsVerificationModalOpen(false)} />
       
+      <GemClaimModal 
+        isOpen={isClaimModalOpen} 
+        userGemBalance={userGemBalance}
+        onClaimComplete={(amount) => {
+          setUserGemBalance(prev => prev - amount);
+          addToast(`Successfully claimed ${amount} gems!`, 'success');
+        }}
+        onClose={() => setIsClaimModalOpen(false)}
+      />
+
       {/* Send Money BottomSheet */}
       <React.Suspense fallback={null}>
         <BottomSheet

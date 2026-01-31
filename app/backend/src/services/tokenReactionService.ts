@@ -5,7 +5,7 @@
 
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { reactions, statusReactions, posts, statuses, users, reactionPurchases } from '../db/schema';
+import { reactions, statusReactions, posts, statuses, users, reactionPurchases, userGemBalance, gemTransaction } from '../db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 
 export type ReactionType = '🔥' | '🚀' | '💎';
@@ -117,6 +117,144 @@ export interface PurchaseReactionResponse {
 }
 
 class TokenReactionService {
+  /**
+   * Purchase a reaction with internal Gems
+   */
+  async purchaseReactionWithGems(request: {
+    postId: string;
+    userId: string;
+    reactionType: string;
+    amount: number;
+  }): Promise<{ success: boolean; newBalance: number; authorEarnings: number }> {
+    const { postId, userId, reactionType, amount } = request;
+
+    // 1. Verify giver has enough gems
+    const [userBalance] = await db.select().from(userGemBalance).where(eq(userGemBalance.userId, userId)).limit(1);
+    if (!userBalance || userBalance.balance < amount) {
+      throw new Error('Insufficient gem balance');
+    }
+
+    // 2. Get post/author info
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId);
+    let postAuthor: string;
+
+    if (isUUID) {
+      const [post] = await db.select({ author: statuses.authorId }).from(statuses).where(eq(statuses.id, postId)).limit(1);
+      if (!post) throw new Error('Post not found');
+      postAuthor = post.author;
+    } else {
+      const [post] = await db.select({ author: posts.authorId }).from(posts).where(eq(posts.id, postId)).limit(1);
+      if (!post) throw new Error('Post not found');
+      postAuthor = post.author;
+    }
+
+    if (postAuthor === userId) {
+      throw new Error('You cannot award your own post');
+    }
+
+    // 3. Calculate split (70% to author, 30% to treasury)
+    const authorEarnings = Math.floor(amount * 0.7);
+    const treasuryFee = amount - authorEarnings;
+
+    // 4. Perform database operations in a transaction
+    return await db.transaction(async (tx) => {
+      // Deduct gems from giver
+      const [updatedGiver] = await tx.update(userGemBalance)
+        .set({
+          balance: sql`${userGemBalance.balance} - ${amount}`,
+          totalSpent: sql`${userGemBalance.totalSpent} + ${amount}`,
+          updatedAt: new Date()
+        })
+        .where(eq(userGemBalance.userId, userId))
+        .returning();
+
+      // Credit gems to author (recipient)
+      // Check if author has a balance record
+      const [authorBalance] = await tx.select().from(userGemBalance).where(eq(userGemBalance.userId, postAuthor)).limit(1);
+      if (!authorBalance) {
+        await tx.insert(userGemBalance).values({
+          userId: postAuthor,
+          balance: authorEarnings,
+          totalPurchased: 0,
+          totalSpent: 0
+        });
+      } else {
+        await tx.update(userGemBalance)
+          .set({
+            balance: sql`${userGemBalance.balance} + ${authorEarnings}`,
+            updatedAt: new Date()
+          })
+          .where(eq(userGemBalance.userId, postAuthor));
+      }
+
+      // Record spend transaction for giver
+      await tx.insert(gemTransaction).values({
+        userId,
+        amount: -amount,
+        type: 'spend',
+        referenceId: postId,
+        status: 'completed',
+        metadata: {
+          reactionType,
+          role: 'giver'
+        }
+      });
+
+      // Record earn transaction for recipient
+      await tx.insert(gemTransaction).values({
+        userId: postAuthor,
+        amount: authorEarnings,
+        type: 'earn',
+        referenceId: postId,
+        status: 'completed',
+        metadata: {
+          reactionType,
+          role: 'recipient',
+          giverId: userId
+        }
+      });
+
+      // Record in reaction_purchases for visibility
+      await tx.insert(reactionPurchases).values({
+        postId,
+        userId,
+        userAddress: userId, // Internal system uses userId as address for simplicity or actual address
+        reactionType,
+        price: amount.toString(),
+        authorEarnings: authorEarnings.toString(),
+        treasuryFee: treasuryFee.toString(),
+        postAuthor,
+        purchasedAt: new Date(),
+        metadata: { paymentMethod: 'gems' }
+      });
+
+      // Update legacy tables for counts
+      if (isUUID) {
+        await tx.insert(statusReactions).values({
+          statusId: postId,
+          userId,
+          type: reactionType,
+          amount: '1',
+          rewardsEarned: '0'
+        }).onConflictDoNothing();
+      } else {
+        await tx.insert(reactions).values({
+          postId,
+          userId,
+          type: reactionType,
+          amount: '1',
+          rewardsEarned: '0'
+        }).onConflictDoNothing();
+      }
+
+      return {
+        success: true,
+        newBalance: updatedGiver.balance,
+        authorEarnings
+      };
+    });
+  }
+
   /**
    * Purchase a reaction (simplified system)
    */

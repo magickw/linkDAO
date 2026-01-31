@@ -8,7 +8,8 @@ import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
 import { bookmarks, posts, statuses, users } from '../db/schema';
 import communityNotificationService from './communityNotificationService';
-import { eq, and, sql, or } from 'drizzle-orm';
+import { bookmarkCacheService } from './bookmarkCacheService';
+import { eq, and, sql, or, ilike } from 'drizzle-orm';
 
 type ContentType = 'post' | 'status';
 
@@ -70,6 +71,11 @@ class BookmarkService {
       }
 
       await db.insert(bookmarks).values(insertData);
+
+      // Invalidate caches
+      bookmarkCacheService.invalidateUserBookmarks(userId);
+      bookmarkCacheService.invalidateBookmarkCount(contentId);
+      bookmarkCacheService.invalidateIsBookmarked(userId, contentId);
 
       // Trigger notification
       try {
@@ -181,6 +187,11 @@ class BookmarkService {
             : eq(bookmarks.statusId, contentId)
         ));
 
+      // Invalidate caches
+      bookmarkCacheService.invalidateUserBookmarks(userId);
+      bookmarkCacheService.invalidateBookmarkCount(contentId);
+      bookmarkCacheService.invalidateIsBookmarked(userId, contentId);
+
       return true;
     } catch (error) {
       safeLogger.error('Error removing bookmark:', error);
@@ -251,6 +262,12 @@ class BookmarkService {
    */
   async isBookmarked(userId: string, contentId: string): Promise<boolean> {
     try {
+      // Check cache first
+      const cached = bookmarkCacheService.getIsBookmarked(userId, contentId);
+      if (cached !== null) {
+        return cached;
+      }
+
       // Check both post and status bookmarks
       const result = await db
         .select()
@@ -264,7 +281,12 @@ class BookmarkService {
         ))
         .limit(1);
 
-      return result.length > 0;
+      const isBookmarked = result.length > 0;
+      
+      // Cache result
+      bookmarkCacheService.setIsBookmarked(userId, contentId, isBookmarked);
+      
+      return isBookmarked;
     } catch (error) {
       safeLogger.error('Error checking bookmark:', error);
       return false;
@@ -272,85 +294,147 @@ class BookmarkService {
   }
 
   /**
-   * Get all bookmarks for a user
+   * Get all bookmarks for a user with filtering and sorting
    */
-  async getUserBookmarks(userId: string, page: number = 1, limit: number = 20) {
+  async getUserBookmarks(
+    userId: string, 
+    page: number = 1, 
+    limit: number = 20,
+    contentType?: string,
+    sortBy: string = 'newest',
+    search?: string
+  ) {
     try {
       const offset = (page - 1) * limit;
 
-      // Get post bookmarks
-      const postBookmarks = await db
-        .select({
-          postId: bookmarks.postId,
-          bookmarkedAt: bookmarks.createdAt,
-          contentType: bookmarks.contentType,
-          post: posts
-        })
-        .from(bookmarks)
-        .leftJoin(posts, eq(bookmarks.postId, posts.id))
-        .where(and(
-          eq(bookmarks.userId, userId),
-          eq(bookmarks.contentType, 'post')
-        ))
-        .orderBy(sql`${bookmarks.createdAt} DESC`)
-        .limit(limit)
-        .offset(offset);
+      // Check cache first (only if no search, as search results shouldn't be cached)
+      if (!search) {
+        const cached = bookmarkCacheService.getUserBookmarks(userId, page, limit);
+        if (cached) {
+          return cached;
+        }
+      }
 
-      // Get status bookmarks
-      const statusBookmarks = await db
-        .select({
-          postId: bookmarks.statusId,
-          bookmarkedAt: bookmarks.createdAt,
-          contentType: bookmarks.contentType,
-          post: {
-            id: statuses.id,
-            contentCid: statuses.contentCid,
-            authorAddress: statuses.authorId,
-            title: sql<string>`NULL`,
-            content: statuses.content,
-            media: statuses.mediaCids,
-            createdAt: statuses.createdAt,
-            updatedAt: statuses.updatedAt,
-            communityId: sql<string>`NULL`,
-            upvotes: statuses.upvotes,
-            downvotes: statuses.downvotes,
-            commentsCount: sql<number>`0`,
-            views: statuses.views
-          }
-        })
-        .from(bookmarks)
-        .leftJoin(statuses, eq(bookmarks.statusId, statuses.id))
-        .where(and(
-          eq(bookmarks.userId, userId),
-          eq(bookmarks.contentType, 'status')
-        ))
-        .orderBy(sql`${bookmarks.createdAt} DESC`)
-        .limit(limit)
-        .offset(offset);
+      // Build conditions
+      const conditions = [eq(bookmarks.userId, userId)];
+      
+      if (contentType && contentType !== 'all') {
+        conditions.push(eq(bookmarks.contentType, contentType));
+      }
 
-      // Combine and sort by bookmarkedAt
-      const allBookmarks = [...postBookmarks, ...statusBookmarks]
-        .sort((a, b) => {
-          const dateA = a.bookmarkedAt ? new Date(a.bookmarkedAt).getTime() : 0;
-          const dateB = b.bookmarkedAt ? new Date(b.bookmarkedAt).getTime() : 0;
-          return dateB - dateA;
-        })
-        .slice(0, limit);
+      // Determine sort order
+      let orderByClause = sql`${bookmarks.createdAt} DESC`;
+      if (sortBy === 'oldest') {
+        orderByClause = sql`${bookmarks.createdAt} ASC`;
+      } else if (sortBy === 'title') {
+        orderByClause = sql`CASE 
+          WHEN ${posts.title} IS NOT NULL THEN ${posts.title}
+          ELSE LEFT(${statuses.content}, 1)
+        END ASC`;
+      }
 
-      const totalCount = await db
+      // Use CTE for optimized combined query
+      const query = db.with('combinedBookmarks', db.select({
+        postId: sql`COALESCE(${bookmarks.postId}, ${bookmarks.statusId})`,
+        bookmarkedAt: bookmarks.createdAt,
+        contentType: bookmarks.contentType,
+        postType: sql`CASE WHEN ${bookmarks.postId} IS NOT NULL THEN 'post' ELSE 'status' END`
+      })
+      .from(bookmarks)
+      .leftJoin(posts, eq(bookmarks.postId, posts.id))
+      .leftJoin(statuses, eq(bookmarks.statusId, statuses.id))
+      .where(and(...conditions)));
+
+      // Apply search if provided
+      if (search && search.trim()) {
+        query.where(
+          or(
+            ilike(posts.title, `%${search}%`),
+            ilike(statuses.content, `%${search}%`)
+          )
+        );
+      }
+
+      // Get total count
+      const countResult = await db
         .select({ count: sql<number>`COUNT(*)` })
-        .from(bookmarks)
-        .where(eq(bookmarks.userId, userId));
+        .from('combinedBookmarks')
+        .where(and(...conditions));
 
-      return {
-        bookmarks: allBookmarks,
+      // Get paginated results
+      const bookmarks = await db
+        .select({
+          postId: 'combinedBookmarks.postId',
+          bookmarkedAt: 'combinedBookmarks.bookmarkedAt',
+          contentType: 'combinedBookmarks.contentType',
+          post: sql`
+            CASE 
+              WHEN ${combinedBookmarks.contentType} = 'post' THEN ${posts.id}
+              ELSE ${statuses.id}
+            END
+          `,
+          // Select relevant post/status fields
+          id: sql`CASE 
+            WHEN ${combinedBookmarks.contentType} = 'post' THEN ${posts.id}
+            ELSE ${statuses.id}
+          END`,
+          contentCid: sql`COALESCE(${posts.contentCid}, ${statuses.contentCid})`,
+          authorAddress: sql`COALESCE(${posts.authorAddress}, ${statuses.authorId})`,
+          title: sql`COALESCE(${posts.title}, NULL)`,
+          content: sql`COALESCE(${statuses.content}, ${posts.content})`,
+          media: sql`COALESCE(${posts.mediaCids}, ${statuses.mediaCids})`,
+          createdAt: sql`COALESCE(${posts.createdAt}, ${statuses.createdAt})`,
+          updatedAt: sql`COALESCE(${posts.updatedAt}, ${statuses.updatedAt})`,
+          communityId: sql`COALESCE(${posts.communityId}, NULL)`,
+          upvotes: sql`COALESCE(${posts.upvotes}, ${statuses.upvotes})`,
+          downvotes: sql`COALESCE(${posts.downvotes}, ${statuses.downvotes})`,
+          commentsCount: sql`COALESCE(${posts.commentsCount}, 0)`,
+          views: sql`COALESCE(${posts.views}, ${statuses.views})`
+        })
+        .from('combinedBookmarks')
+        .leftJoin(posts, eq(sql`CASE WHEN ${combinedBookmarks.contentType} = 'post' THEN ${combinedBookmarks.postId} END`, posts.id))
+        .leftJoin(statuses, eq(sql`CASE WHEN ${combinedBookmarks.contentType} = 'status' THEN ${combinedBookmarks.postId} END`, statuses.id))
+        .orderBy(orderByClause)
+        .limit(limit)
+        .offset(offset);
+
+      const total = countResult[0]?.count || 0;
+
+      const result = {
+        bookmarks: bookmarks.map(b => ({
+          postId: b.postId,
+          bookmarkedAt: b.bookmarkedAt,
+          contentType: b.contentType,
+          post: {
+            id: b.id,
+            contentCid: b.contentCid,
+            authorAddress: b.authorAddress,
+            title: b.title,
+            content: b.content,
+            media: b.media,
+            createdAt: b.createdAt,
+            updatedAt: b.updatedAt,
+            communityId: b.communityId,
+            upvotes: b.upvotes,
+            downvotes: b.downvotes,
+            commentsCount: b.commentsCount,
+            views: b.views
+          }
+        })),
         pagination: {
           page,
           limit,
-          total: totalCount[0]?.count || 0,
-          totalPages: Math.ceil((totalCount[0]?.count || 0) / limit)
+          total,
+          totalPages: Math.ceil(total / limit)
         }
       };
+
+      // Cache result if no search
+      if (!search) {
+        bookmarkCacheService.setUserBookmarks(userId, page, limit, result);
+      }
+
+      return result;
     } catch (error) {
       safeLogger.error('Error getting user bookmarks:', error);
       throw new Error('Failed to retrieve bookmarks');
@@ -362,6 +446,12 @@ class BookmarkService {
    */
   async getBookmarkCount(contentId: string): Promise<number> {
     try {
+      // Check cache first
+      const cached = bookmarkCacheService.getBookmarkCount(contentId);
+      if (cached !== null) {
+        return cached;
+      }
+
       const result = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(bookmarks)
@@ -370,7 +460,12 @@ class BookmarkService {
           eq(bookmarks.statusId, contentId)
         ));
 
-      return result[0]?.count || 0;
+      const count = result[0]?.count || 0;
+      
+      // Cache result
+      bookmarkCacheService.setBookmarkCount(contentId, count);
+      
+      return count;
     } catch (error) {
       safeLogger.error('Error getting bookmark count:', error);
       return 0;
