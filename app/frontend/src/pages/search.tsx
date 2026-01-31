@@ -5,11 +5,12 @@ import { useWeb3 } from '@/context/Web3Context';
 import { EnhancedSearchInterface } from '@/components/EnhancedSearch/EnhancedSearchInterface';
 import TrendingContent from '@/components/TrendingContent';
 import RecommendationSystem from '@/components/RecommendationSystem';
+import HashtagDiscovery from '@/components/HashtagDiscovery';
 
 export default function SearchPage() {
   const router = useRouter();
   const { isConnected } = useWeb3();
-  const [activeTab, setActiveTab] = useState<'search' | 'trending' | 'recommendations'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'trending' | 'hashtags' | 'recommendations'>('search');
 
   // Get initial query from URL
   const initialQuery = typeof router.query.q === 'string' ? router.query.q : '';
@@ -21,6 +22,8 @@ export default function SearchPage() {
       setActiveTab('search');
     } else if (router.pathname === '/recommendations') {
       setActiveTab('recommendations');
+    } else if (router.pathname.startsWith('/hashtags')) {
+      setActiveTab('hashtags');
     }
   }, [initialQuery, router.pathname]);
 
@@ -54,6 +57,10 @@ export default function SearchPage() {
         router.push(`/?post=${item.id}`);
         break;
     }
+  };
+
+  const handleHashtagSelect = (tag: string) => {
+    router.push(`/hashtags/${tag}`);
   };
 
   return (
@@ -110,6 +117,7 @@ export default function SearchPage() {
                 {[
                   { id: 'search', label: 'Search', icon: '🔍', description: 'Search everything' },
                   { id: 'trending', label: 'Trending', icon: '🔥', description: 'What\'s hot now' },
+                  { id: 'hashtags', label: 'Hashtags', icon: '#️⃣', description: 'Explore topics' },
                   { id: 'recommendations', label: 'For You', icon: '💡', description: 'Personalized picks' }
                 ].map((tab) => (
                   <button
@@ -171,6 +179,13 @@ export default function SearchPage() {
                       />
                     </div>
                   </div>
+                )}
+
+                {activeTab === 'hashtags' && (
+                  <HashtagDiscovery
+                    onHashtagSelect={handleHashtagSelect}
+                    className="min-h-screen"
+                  />
                 )}
 
                 {activeTab === 'recommendations' && (

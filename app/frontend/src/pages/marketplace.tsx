@@ -825,8 +825,18 @@ const MarketplaceContent: React.FC = () => {
                                         safetyScore: enhanced?.trust?.safetyScore ?? 85,
                                       },
                                     };
-                                    cart.actions.addItem(cartProduct);
-                                    addToast('Added to cart! 🛒', 'success');
+                                    try {
+                                      cart.actions.addItem(cartProduct);
+                                      addToast('Added to cart! 🛒', 'success');
+                                    } catch (error) {
+                                      console.error('Error adding to cart:', error);
+                                      const errorMessage = error instanceof Error ? error.message : 'Failed to add item to cart. Please try again.';
+                                      if (errorMessage.includes('stock') || errorMessage.includes('inventory')) {
+                                        addToast(errorMessage, 'error');
+                                      } else {
+                                        addToast('Failed to add item to cart. Please try again.', 'error');
+                                      }
+                                    }
                                   }}
                                   onBidClick={(id) => {
                                     if (!isConnected) {

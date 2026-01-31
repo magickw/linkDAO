@@ -197,7 +197,17 @@ const CartPage: React.FC = () => {
       return;
     }
 
-    cartService.updateQuantity(itemId, quantity);
+    try {
+      cartService.updateQuantity(itemId, quantity);
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update quantity. Please try again.';
+      if (errorMessage.includes('stock') || errorMessage.includes('inventory')) {
+        addToast(errorMessage, 'error');
+      } else {
+        addToast('Failed to update quantity. Please try again.', 'error');
+      }
+    }
   };
 
   const handleQuantityInputChange = (itemId: string, value: string) => {

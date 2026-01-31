@@ -462,7 +462,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       addToast(`Added "${product.title}" to cart! 🛒`, 'success');
     } catch (error) {
       console.error('Error adding to cart:', error);
-      addToast('Failed to add item to cart. Please try again.', 'error');
+      // Check if the error is related to inventory
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add item to cart. Please try again.';
+      if (errorMessage.includes('stock') || errorMessage.includes('inventory')) {
+        addToast(errorMessage, 'error');
+      } else {
+        addToast('Failed to add item to cart. Please try again.', 'error');
+      }
     } finally {
       // Add a small delay to prevent rapid clicks (500ms)
       setTimeout(() => setIsAddingToCart(false), 500);

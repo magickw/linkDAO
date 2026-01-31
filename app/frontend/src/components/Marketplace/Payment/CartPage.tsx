@@ -1,38 +1,22 @@
 import React, { useState } from 'react';
 import { X, Plus, Minus, ShoppingCart, Shield, Vote } from 'lucide-react';
 
-// Sample cart data
-const cartItems = [
-  {
-    id: '1',
-    title: 'Handcrafted Wooden Watch',
-    price: '45.99',
-    currency: 'USDC',
-    fiatPrice: '$45.99',
-    image: '/images/sample-product-1.jpg',
-    quantity: 1,
-    seller: 'EcoCrafts',
-    badges: ['DAO-approved', 'Escrow-protected']
-  },
-  {
-    id: '2',
-    title: 'Premium Coffee Subscription',
-    price: '29.99',
-    currency: 'USDC',
-    fiatPrice: '$29.99',
-    image: '/images/sample-product-4.jpg',
-    quantity: 2,
-    seller: 'CoffeeRoasters',
-    badges: ['Subscription', 'DAO-approved']
-  }
-];
-
 const CartPage = () => {
-  const [items, setItems] = useState(cartItems);
+  const [items, setItems] = useState<any[]>([]);
   
   const updateQuantity = (id: string, quantity: number) => {
     if (quantity < 1) return;
-    setItems(items.map(item => 
+
+    const itemToUpdate = items.find(item => item.id === id);
+    if (itemToUpdate) {
+      const availableStock = itemToUpdate.inventory ?? 1;
+      if (quantity > availableStock) {
+        alert(`Cannot update quantity to ${quantity}. Only ${availableStock} in stock.`);
+        return;
+      }
+    }
+
+    setItems(items.map(item =>
       item.id === id ? { ...item, quantity } : item
     ));
   };

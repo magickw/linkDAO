@@ -120,23 +120,39 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
     case 'ADD_ITEM': {
       const { product, quantity = 1, options = {} } = action.payload;
-      
+
       // Check if item already exists
       const existingItemIndex = state.items.findIndex(
-        item => item.id === product.id && 
+        item => item.id === product.id &&
         JSON.stringify(item.selectedOptions) === JSON.stringify(options)
       );
 
       let newItems: CartItem[];
-      
+      let newQuantity = quantity;
+
       if (existingItemIndex >= 0) {
         // Update existing item quantity
+        const existingItem = state.items[existingItemIndex];
+        newQuantity = existingItem.quantity + quantity;
+
+        // Validate inventory before adding
+        const availableStock = product.inventory ?? existingItem.inventory ?? 1;
+        if (newQuantity > availableStock) {
+          throw new Error(`Cannot add ${quantity} more item(s). Only ${availableStock - existingItem.quantity} in stock. Requested: ${newQuantity}, Available: ${availableStock}`);
+        }
+
         newItems = state.items.map((item, index) =>
           index === existingItemIndex
-            ? { ...item, quantity: item.quantity + quantity }
+            ? { ...item, quantity: newQuantity }
             : item
         );
       } else {
+        // Validate inventory for new item
+        const availableStock = product.inventory ?? 1;
+        if (quantity > availableStock) {
+          throw new Error(`Cannot add ${quantity} item(s) to cart. Only ${availableStock} in stock.`);
+        }
+
         // Add new item
         const newItem: CartItem = {
           ...product,
@@ -176,9 +192,18 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
 
     case 'UPDATE_QUANTITY': {
       const { productId, quantity } = action.payload;
-      
+
       if (quantity <= 0) {
         return cartReducer(state, { type: 'REMOVE_ITEM', payload: { productId } });
+      }
+
+      // Validate inventory before updating quantity
+      const itemToUpdate = state.items.find(item => item.id === productId);
+      if (itemToUpdate) {
+        const availableStock = itemToUpdate.inventory ?? 1;
+        if (quantity > availableStock) {
+          throw new Error(`Cannot update quantity to ${quantity}. Only ${availableStock} in stock.`);
+        }
       }
 
       const newItems = state.items.map(item =>
