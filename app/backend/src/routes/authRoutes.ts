@@ -394,10 +394,17 @@ router.put('/profile', csrfProtection,  authMiddleware, profileUpdateValidation,
 
 /**
  * @route POST /api/auth/logout
- * @desc Logout user and invalidate session
+ * @desc Logout user and revoke current session
  * @access Private
  */
 router.post('/logout', csrfProtection,  authMiddleware, authController.logout);
+
+/**
+ * @route POST /api/auth/logout-all
+ * @desc Logout user from all devices and revoke all active sessions
+ * @access Private
+ */
+router.post('/logout-all', csrfProtection, authMiddleware, authController.logoutAll);
 
 // Admin credentials login validation
 const adminLoginValidation = [

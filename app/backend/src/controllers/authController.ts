@@ -15,6 +15,7 @@ import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { referralService } from '../services/referralService';
 import { securityMonitoringService } from '../services/securityMonitoringService';
 import { SiweMessage } from 'siwe';
+import { contractWalletService } from '../services/contractWalletService';
 
 // Initialize database connection
 import { db } from '../db'; // Use the shared database connection instead of creating a new one
@@ -56,8 +57,27 @@ class AuthController {
       let siweMessage: SiweMessage;
       try {
         siweMessage = new SiweMessage(message);
-        await siweMessage.validate(signature);
         
+        // Verify the signature using contract wallet service (supports both EOA and EIP-1271)
+        const isValid = await contractWalletService.verifySignature(
+          walletAddress,
+          message,
+          signature
+        );
+
+        if (!isValid) {
+          safeLogger.warn('Signature verification failed', { walletAddress });
+          await securityMonitoringService.logEvent({
+            type: 'login_failure',
+            walletAddress: walletAddress,
+            ipAddress: (req as any).ip || (req as any).socket?.remoteAddress,
+            userAgent: req.headers['user-agent'],
+            details: { reason: 'signature_verification_failed' },
+            timestamp: new Date()
+          });
+          return errorResponse(res, 'INVALID_SIGNATURE', 'Signature verification failed', 401);
+        }
+
         // Verify the address matches
         if (siweMessage.address.toLowerCase() !== walletAddress.toLowerCase()) {
           safeLogger.warn('SIWE address mismatch', { 
@@ -932,6 +952,57 @@ class AuthController {
     } catch (error) {
       safeLogger.error('Logout error:', error);
       errorResponse(res, 'LOGOUT_ERROR', 'Failed to logout', 500);
+    }
+  }
+
+  /**
+   * Logout from all devices
+   * POST /api/auth/logout-all
+   */
+  async logoutAll(req: AuthenticatedRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return errorResponse(res, 'UNAUTHORIZED', 'Authentication required', 401);
+      }
+
+      // Mark all active sessions as inactive for this user
+      const result = await db.update(authSessions)
+        .set({ 
+          isActive: false,
+          updatedAt: new Date()
+        })
+        .where(
+          and(
+            eq(authSessions.walletAddress, req.user.walletAddress),
+            eq(authSessions.isActive, true)
+          )
+        )
+        .returning();
+
+      const revokedCount = result.length || 0;
+
+      safeLogger.info(`All sessions revoked for user: ${req.user.walletAddress}`, {
+        revokedCount
+      });
+
+      // Log bulk session revocation security event
+      await securityMonitoringService.logEvent({
+        type: 'all_sessions_revoked',
+        walletAddress: req.user.walletAddress,
+        ipAddress: (req as any).ip || (req as any).socket?.remoteAddress,
+        userAgent: req.headers['user-agent'],
+        details: { revokedCount },
+        timestamp: new Date()
+      });
+
+      successResponse(res, {
+        message: 'Successfully logged out from all devices',
+        revokedCount
+      });
+
+    } catch (error) {
+      safeLogger.error('Logout all error:', error);
+      errorResponse(res, 'LOGOUT_ALL_ERROR', 'Failed to logout from all devices', 500);
     }
   }
 
