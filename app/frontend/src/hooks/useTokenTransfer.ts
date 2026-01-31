@@ -3,6 +3,7 @@ import { useSendTransaction, useWriteContract, useChainId, useAccount, useConfig
 import { parseUnits, encodeFunctionData } from 'viem';
 import { SecureKeyStorage } from '../security/secureKeyStorage';
 import { localWalletTransactionService } from '../services/localWalletTransactionService';
+import { pendingTransactionService } from '../services/pendingTransactionService';
 
 const ERC20_TRANSFER_ABI = [
     {
@@ -19,6 +20,7 @@ const ERC20_TRANSFER_ABI = [
 
 interface TransferOptions {
     tokenAddress?: string; // If undefined/null/empty, assumes Native Token (ETH)
+    tokenSymbol?: string; // Optional symbol for display/tracking
     recipient: string;
     amount: string;
     decimals?: number;
@@ -98,6 +100,18 @@ export function useTokenTransfer() {
 
                 const hash = result.hash as `0x${string}`;
                 setTxHash(hash);
+
+                // Register pending transaction
+                pendingTransactionService.addTransaction({
+                    hash,
+                    type: 'send',
+                    amount,
+                    token: tokenSymbol || (isNative ? 'ETH' : 'ERC20'),
+                    from: activeLocalWallet,
+                    to: recipient,
+                    chainId: targetChainId
+                });
+
                 return hash;
             }
 
@@ -125,6 +139,20 @@ export function useTokenTransfer() {
             }
 
             setTxHash(hash);
+
+            // Register pending transaction
+            if (address) {
+                pendingTransactionService.addTransaction({
+                    hash,
+                    type: 'send',
+                    amount,
+                    token: tokenSymbol || (isNative ? 'ETH' : 'ERC20'),
+                    from: address,
+                    to: recipient,
+                    chainId: chainId || currentChainId
+                });
+            }
+
             return hash;
         } catch (error) {
             console.error('Transfer failed:', error);

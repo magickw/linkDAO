@@ -4,6 +4,7 @@ import { walletService, WalletService, TokenBalance as ServiceTokenBalance } fro
 import { EnhancedWalletData, TokenBalance } from '../types/wallet';
 import { dexService } from '../services/dexService';
 import { cryptoPriceService } from '../services/cryptoPriceService';
+import { pendingTransactionService } from '../services/pendingTransactionService';
 
 // Simple in-memory cache for recent transactions to reduce API calls
 const txCache = new Map<string, { data: any[]; timestamp: number }>();
@@ -424,6 +425,22 @@ export function useWalletData({
     }
   }, [address, fetchWalletData, chainId, providedChainId, connectedChainId]);
 
+  // Subscribe to pending transactions
+  useEffect(() => {
+    if (!address) return;
+    
+    const unsubscribe = pendingTransactionService.subscribe(() => {
+      // Trigger a re-calculation of the transactions list
+      // For now, we'll just manually trigger a state update if needed,
+      // but since transactions are computed from walletData, 
+      // we might need to update walletData or have a separate state for them.
+      // Simplest is to just call fetchWalletData or refresh
+      fetchWalletData();
+    });
+    
+    return unsubscribe;
+  }, [address, fetchWalletData]);
+
   // Subscribe to price updates for real-time wallet value updates
   useEffect(() => {
     if (!walletData?.balances || walletData.balances.length === 0) {
@@ -728,16 +745,38 @@ export function useWalletData({
     change24h: balance.change24h
   })) || [];
 
-  const transactions = walletData?.recentTransactions.map((tx: any) => ({
-    id: tx.id,
-    type: tx.type,
-    amount: Number(tx.amount || 0),
-    token: { symbol: typeof tx.token === 'string' ? tx.token : tx.token?.symbol || '' },
-    valueUSD: String(tx.valueUSD ?? '0'),
-    timestamp: (tx.timestamp instanceof Date ? tx.timestamp : new Date(tx.timestamp)).toISOString(),
-    status: tx.status,
-    hash: tx.hash
-  })) || [];
+  const transactions = useMemo(() => {
+    if (!address) return [];
+    
+    // Get fetched transactions
+    const fetchedTxs = walletData?.recentTransactions.map((tx: any) => ({
+      id: tx.id,
+      type: tx.type,
+      amount: Number(tx.amount || 0),
+      token: { symbol: typeof tx.token === 'string' ? tx.token : tx.token?.symbol || '' },
+      valueUSD: String(tx.valueUSD ?? '0'),
+      timestamp: (tx.timestamp instanceof Date ? tx.timestamp : new Date(tx.timestamp)).toISOString(),
+      status: tx.status,
+      hash: tx.hash
+    })) || [];
+
+    // Get local pending transactions
+    const localPendingTxs = pendingTransactionService.getTransactions(address, chainId).map(tx => ({
+      ...tx,
+      token: { symbol: tx.token },
+      valueUSD: String(tx.valueUSD || '0')
+    }));
+
+    // Filter out local pending transactions that have already appeared in fetched results
+    const filteredLocalPending = localPendingTxs.filter(
+      local => !fetchedTxs.some(fetched => fetched.hash.toLowerCase() === local.hash.toLowerCase())
+    );
+
+    // Combine and sort by timestamp
+    return [...filteredLocalPending, ...fetchedTxs].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+  }, [walletData?.recentTransactions, address, chainId]);
 
   const clearError = useCallback(() => {
     setError(null);

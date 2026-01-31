@@ -182,10 +182,17 @@ export class EnhancedSearchService {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        // Fail silently for suggestions
+        // Fail silently for suggestions but log the status
+        console.warn(`Search suggestions backend returned status ${response.status}`);
         return [];
       }
       
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.warn('Search suggestions backend returned non-JSON response');
+        return [];
+      }
+
       const suggestions = await response.json();
       
       // Cache the result
@@ -193,6 +200,11 @@ export class EnhancedSearchService {
       
       return suggestions;
     } catch (error) {
+      // Ensure timeout is cleared even on error
+      if (typeof timeoutId !== 'undefined') {
+        clearTimeout(timeoutId);
+      }
+      
       // Fail silently for suggestions
       console.warn('Search suggestions failed:', error);
       return [];
@@ -577,11 +589,14 @@ export class EnhancedSearchService {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        const error = await response.json();
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to fetch discovery content');
+      }
+      
       const result = await response.json();
       
-      // Convert backend posts to frontend models in different sections
-      const convertPosts = (posts: any[]) => {
+      // Helper function to convert backend posts to frontend models
+      const convertPostList = (posts: any[]) => {
         if (!Array.isArray(posts)) return [];
         return posts.map((post: any) => {
           if (post.isStatus === true) {
@@ -592,20 +607,23 @@ export class EnhancedSearchService {
         });
       };
 
+      // Convert backend posts to frontend models in different sections
       if (result.trending?.posts) {
-        result.trending.posts = convertPosts(result.trending.posts);
+        result.trending.posts = convertPostList(result.trending.posts);
       }
       if (result.recommendations?.posts) {
-        result.recommendations.posts = convertPosts(result.recommendations.posts);
+        result.recommendations.posts = convertPostList(result.recommendations.posts);
       }
-      if (result.personalized?.forYou) {
-        result.personalized.forYou = convertPosts(result.personalized.forYou);
-      }
-      if (result.personalized?.basedOnActivity) {
-        result.personalized.basedOnActivity = convertPosts(result.personalized.basedOnActivity);
-      }
-      if (result.personalized?.fromNetwork) {
-        result.personalized.fromNetwork = convertPosts(result.personalized.fromNetwork);
+      if (result.personalized) {
+        if (result.personalized.forYou) {
+          result.personalized.forYou = convertPostList(result.personalized.forYou);
+        }
+        if (result.personalized.basedOnActivity) {
+          result.personalized.basedOnActivity = convertPostList(result.personalized.basedOnActivity);
+        }
+        if (result.personalized.fromNetwork) {
+          result.personalized.fromNetwork = convertPostList(result.personalized.fromNetwork);
+        }
       }
       
       // Cache the result

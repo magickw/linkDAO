@@ -241,6 +241,7 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
     try {
       const hash = await transfer({
         tokenAddress: selectedToken?.contractAddress,
+        tokenSymbol: selectedTokenSymbol,
         recipient,
         amount,
         decimals: selectedTokenSymbol === 'USDC' ? 6 : 18, // Simple heuristic

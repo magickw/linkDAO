@@ -492,6 +492,9 @@ export default function WalletTransactions() {
                             }`}>
                               {tx.status === 'confirmed' ? 'Confirmed' : tx.status === 'failed' ? 'Failed' : 'Pending'}
                             </span>
+                            {tx.id.startsWith('local_') && (
+                              <span className="ml-2 text-[10px] text-gray-400 italic">(Local)</span>
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             <a
