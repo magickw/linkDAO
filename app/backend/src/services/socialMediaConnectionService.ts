@@ -148,8 +148,28 @@ class SocialMediaConnectionService {
       };
 
     } catch (error) {
-      safeLogger.error('Bluesky direct connection error:', error);
-      throw new Error('Failed to connect to Bluesky. Please check your handle and app password.');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      safeLogger.error('Bluesky direct connection error:', {
+        message: errorMessage,
+        userId,
+        platform: 'bluesky',
+        originalError: error
+      });
+
+      // Re-throw with the original error message if it's more specific
+      if (errorMessage.includes('Invalid handle') ||
+          errorMessage.includes('Invalid credentials') ||
+          errorMessage.includes('Invalid identifier') ||
+          errorMessage.includes('Invalid app password')) {
+        throw new Error('Invalid Bluesky handle or app password. Please verify your credentials.');
+      }
+
+      // Pass along specific error messages from the provider
+      if (errorMessage.startsWith('Bluesky authentication failed:')) {
+        throw error; // Already has good error details from provider
+      }
+
+      throw new Error(`Failed to connect to Bluesky: ${errorMessage}`);
     }
   }
 

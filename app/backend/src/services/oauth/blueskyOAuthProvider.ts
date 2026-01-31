@@ -5,7 +5,7 @@
  * Fallback to direct authentication (app password) is still supported via login() method
  */
 
-import { BskyAgent, RichText } from '@atproto/api';
+import { AtpAgent, RichText } from '@atproto/api';
 import { BaseOAuthProvider, OAuthConfig, OAuthTokens, OAuthUserInfo, SocialMediaContent, PostResult } from './baseOAuthProvider';
 import { safeLogger } from '../../utils/safeLogger';
 
@@ -109,16 +109,47 @@ export class BlueskyOAuthProvider extends BaseOAuthProvider {
       safeLogger.warn('Using deprecated app password authentication for Bluesky. OAuth is recommended.');
 
       const agent = new BskyAgent({ service: BSKY_SERVICE_URL });
-      const loginResponse = await agent.login({ identifier: handle, password: appPassword });
+
+      let loginResponse;
+      try {
+        loginResponse = await agent.login({ identifier: handle, password: appPassword });
+      } catch (loginError) {
+        // Capture specific error from BskyAgent
+        const errorMessage = loginError instanceof Error ? loginError.message : String(loginError);
+        safeLogger.error('BskyAgent.login threw error:', {
+          message: errorMessage,
+          handle,
+          service: BSKY_SERVICE_URL
+        });
+
+        // Check if it's an authentication error
+        if (errorMessage.includes('Invalid credentials') ||
+            errorMessage.includes('Invalid identifier') ||
+            errorMessage.includes('Unauthorized') ||
+            errorMessage.includes('401')) {
+          throw new Error('Invalid handle or app password');
+        }
+
+        throw new Error(`Bluesky authentication failed: ${errorMessage}`);
+      }
 
       if (!loginResponse.success) {
+        safeLogger.error('Bluesky login returned unsuccessful response:', loginResponse);
         throw new Error('Failed to login to Bluesky');
       }
 
       const { accessJwt, refreshJwt, did, handle: userHandle } = loginResponse.data;
 
       // Get profile for extra details
-      const profile = await agent.getProfile({ actor: did });
+      let profile;
+      try {
+        profile = await agent.getProfile({ actor: did });
+      } catch (profileError) {
+        const errorMessage = profileError instanceof Error ? profileError.message : String(profileError);
+        safeLogger.error('Failed to fetch Bluesky profile:', { did, error: errorMessage });
+        // Continue without profile data if it fails
+        profile = { data: { displayName: null, avatar: null } };
+      }
 
       const tokens: OAuthTokens = {
         accessToken: accessJwt,
@@ -131,13 +162,18 @@ export class BlueskyOAuthProvider extends BaseOAuthProvider {
       const userInfo: OAuthUserInfo = {
         platformUserId: did,
         username: userHandle,
-        displayName: profile.data.displayName,
-        avatarUrl: profile.data.avatar,
+        displayName: profile.data?.displayName || userHandle,
+        avatarUrl: profile.data?.avatar,
       };
 
       return { tokens, userInfo };
     } catch (error) {
-      safeLogger.error('Bluesky login error:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      safeLogger.error('Bluesky login error:', {
+        message: errorMessage,
+        handle,
+        timestamp: new Date().toISOString()
+      });
       throw error;
     }
   }
@@ -185,14 +221,20 @@ export class BlueskyOAuthProvider extends BaseOAuthProvider {
    */
   async getUserInfo(accessToken: string): Promise<OAuthUserInfo> {
     try {
-      const agent = new BskyAgent({ service: BSKY_SERVICE_URL });
+      const agent = new AtpAgent({ service: BSKY_SERVICE_URL });
 
-      // Set auth header
-      agent.api.xrpc.headers.authorization = `Bearer ${accessToken}`;
-
-      // Decode JWT to get the DID (sub claim)
+      // Restore session with the access token
+      // The agent will use this token for subsequent API calls
       const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString());
       const did = payload.sub;
+
+      // Set the access token directly on the agent by creating a synthetic session
+      agent.session = {
+        accessJwt: accessToken,
+        refreshJwt: undefined,
+        did: did,
+        handle: '',
+      };
 
       const profile = await agent.getProfile({ actor: did });
 
@@ -213,9 +255,20 @@ export class BlueskyOAuthProvider extends BaseOAuthProvider {
    */
   async revokeToken(accessToken: string): Promise<void> {
     try {
-      const agent = new BskyAgent({ service: BSKY_SERVICE_URL });
-      agent.api.xrpc.headers.authorization = `Bearer ${accessToken}`;
-      await agent.api.com.atproto.server.deleteSession();
+      const agent = new AtpAgent({ service: BSKY_SERVICE_URL });
+
+      // Restore session with the access token
+      const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString());
+      const did = payload.sub;
+
+      agent.session = {
+        accessJwt: accessToken,
+        refreshJwt: undefined,
+        did: did,
+        handle: '',
+      };
+
+      await agent.com.atproto.server.deleteSession();
     } catch (error) {
       // Ignore errors during revocation
       safeLogger.warn('Bluesky revoke token warning:', error);
@@ -228,14 +281,18 @@ export class BlueskyOAuthProvider extends BaseOAuthProvider {
   async postContent(accessToken: string, content: SocialMediaContent): Promise<PostResult> {
     try {
       const adaptedContent = this.adaptContent(content);
-      const agent = new BskyAgent({ service: BSKY_SERVICE_URL });
+      const agent = new AtpAgent({ service: BSKY_SERVICE_URL });
 
-      // Set auth header directly
-      agent.api.xrpc.headers.authorization = `Bearer ${accessToken}`;
-
-      // Parse JWT for DID
+      // Parse JWT for DID and restore session
       const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString());
       const did = payload.sub;
+
+      agent.session = {
+        accessJwt: accessToken,
+        refreshJwt: undefined,
+        did: did,
+        handle: '',
+      };
 
       const rt = new RichText({ text: adaptedContent.text });
       await rt.detectFacets(agent);
@@ -277,7 +334,7 @@ export class BlueskyOAuthProvider extends BaseOAuthProvider {
   /**
    * Upload media to Bluesky
    */
-  private async uploadMedia(agent: BskyAgent, mediaUrls: string[]): Promise<any[]> {
+  private async uploadMedia(agent: AtpAgent, mediaUrls: string[]): Promise<any[]> {
     const images: any[] = [];
 
     for (const url of mediaUrls) {
