@@ -297,6 +297,22 @@ export class CryptoPaymentService {
   }
 
   /**
+   * Process a gasless payment using Account Abstraction (ERC-4337)
+   * This is a placeholder for Phase 2 implementation with a real Paymaster
+   */
+  async processGaslessPayment(request: PaymentRequest): Promise<PaymentTransaction> {
+    console.info('💎 [Gasless] Initiating Account Abstraction payment flow...', request.orderId);
+    
+    // In a real implementation, this would:
+    // 1. Create a UserOperation
+    // 2. Get a Paymaster signature
+    // 3. Send to a Bundler
+    
+    // For now, we fallback to standard escrow but log the intent
+    return this.processEscrowPayment(request);
+  }
+
+  /**
    * Execute the actual payment transaction
    */
   private async executePayment(

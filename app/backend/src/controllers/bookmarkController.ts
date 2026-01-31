@@ -5,10 +5,9 @@
  */
 
 import { Request, Response } from 'express';
-import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber, validateUUID } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
 import { bookmarkService } from '../services/bookmarkService';
-import { validateUUID } from '../utils/validation';
 
 class BookmarkController {
   /**

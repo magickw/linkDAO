@@ -335,6 +335,8 @@ export interface TrackingUpdate {
   description: string;
 }
 
+import { parseProductMetadata } from '../utils/marketplaceMetadata';
+
 export class UnifiedMarketplaceService {
   // Primary and fallback API base URLs
   private primaryBaseUrl = this.getPrimaryBaseUrl();
@@ -430,7 +432,16 @@ export class UnifiedMarketplaceService {
 
       const result = await response.json();
       if (result.success) {
-        return result.data;
+        const listing = result.data;
+        const metadata = parseProductMetadata(listing.metadata || listing.metadataURI, `Product ${listing.id}`);
+        
+        return {
+          ...listing,
+          title: metadata.title,
+          description: metadata.description,
+          images: metadata.images.length > 0 ? metadata.images : listing.images,
+          metadata: metadata
+        };
       } else {
         throw new Error(result.message || 'Failed to fetch product');
       }

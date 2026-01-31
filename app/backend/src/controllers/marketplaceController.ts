@@ -9,6 +9,7 @@ import * as schema from '../db/schema';
 import { Product, ProductSortOptions } from '../models/Product';
 import { BlockchainMarketplaceService } from '../services/marketplaceService';
 import { MarketplaceListingsService } from '../services/marketplaceListingsService';
+import { MarketplaceMetadataService } from '../services/marketplace/marketplaceMetadataService';
 const productService = new ProductService();
 const marketplaceService = new BlockchainMarketplaceService();
 
@@ -56,23 +57,26 @@ export class MarketplaceController {
         // Continue without seller profile data
       }
 
+      // Parse metadata using standardized service
+      const metadata = MarketplaceMetadataService.parseMetadata(listing.metadataURI, `Listing ${listing.id}`);
+
       // Map the marketplace listing to the expected product format
       const product = {
         id: listing.id,
         sellerId: listing.sellerWalletAddress,
-        title: `Listing ${listing.id}`, // Need to get from metadata
-        description: `Description for listing ${listing.id}`, // Need to get from metadata
+        title: metadata.title,
+        description: metadata.description,
         priceAmount: Number(listing.price),
-        priceCurrency: 'USD', // Default currency
+        priceCurrency: listing.currency || 'USD',
         category: {
-          id: listing.itemType.toLowerCase(),
-          name: listing.itemType,
-          slug: listing.itemType.toLowerCase()
+          id: metadata.category,
+          name: metadata.category.charAt(0).toUpperCase() + metadata.category.slice(1),
+          slug: metadata.category.toLowerCase()
         },
-        images: [], // Extract from metadata
+        images: metadata.images,
         inventory: listing.inventory,
         status: listing.status.toLowerCase(),
-        tags: [listing.itemType],
+        tags: metadata.tags.length > 0 ? metadata.tags : [listing.itemType],
         shipping: {
           freeShipping: true,
           estimatedDays: '3-5',
@@ -111,10 +115,11 @@ export class MarketplaceController {
           safetyScore: 85 // Would come from reputation service
         },
         metadata: {
-          condition: 'new', // Would come from listing metadata
-          brand: 'Unknown' // Would come from listing metadata
+          condition: metadata.condition,
+          brand: metadata.brand,
+          sku: metadata.sku
         },
-        specifications: {} // Would come from listing metadata
+        specifications: metadata.specifications
       };
 
       return res.json({
@@ -637,68 +642,71 @@ export class MarketplaceController {
       const totalPages = Math.ceil(total / paginationOptions.limit);
       const startIndex = (paginationOptions.page - 1) * paginationOptions.limit;
       const endIndex = startIndex + paginationOptions.limit;
-      const paginatedListings = filteredListings.slice(startIndex, endIndex);
-
       // Map listings to the expected product format
-      const mappedListings = paginatedListings.map(listing => ({
-        id: listing.id,
-        sellerId: listing.sellerWalletAddress,
-        title: `Listing ${listing.id}`,
-        description: `Description for listing ${listing.id}`,
-        priceAmount: Number(listing.price),
-        priceCurrency: 'USD',
-        category: {
-          id: listing.itemType.toLowerCase(),
-          name: listing.itemType,
-          slug: listing.itemType.toLowerCase()
-        },
-        images: [],
-        inventory: listing.inventory,
-        status: listing.status.toLowerCase(),
-        tags: [listing.itemType],
-        shipping: {
-          freeShipping: true,
-          estimatedDays: '3-5',
-          methods: ['standard'],
-          handlingTime: '1-2',
-          shipsFrom: {
-            country: 'US'
-          }
-        },
-        nft: listing.nftStandard ? {
-          standard: listing.nftStandard,
-          tokenId: listing.tokenId
-        } : null,
-        views: listing.views || 0,
-        favorites: listing.favorites || 0,
-        listingStatus: listing.status.toLowerCase(),
-        publishedAt: listing.createdAt,
-        createdAt: listing.createdAt,
-        updatedAt: listing.updatedAt,
-        seller: {
-          id: listing.sellerWalletAddress,
-          walletAddress: listing.sellerWalletAddress,
-          displayName: `Seller ${listing.sellerWalletAddress.substring(0, 6)}`,
-          storeName: `Store ${listing.sellerWalletAddress.substring(0, 6)}`,
-          rating: 4.5,
-          reputation: 85,
-          verified: true,
-          daoApproved: false,
-          profileImageUrl: '/images/default-avatar.png',
-          isOnline: true
-        },
-        trust: {
-          verified: true,
-          escrowProtected: listing.isEscrowed,
-          onChainCertified: false,
-          safetyScore: 85
-        },
-        metadata: {
-          condition: 'new',
-          brand: 'Unknown'
-        },
-        specifications: {}
-      }));
+      const mappedListings = paginatedListings.map(listing => {
+        const metadata = MarketplaceMetadataService.parseMetadata(listing.metadataURI, `Listing ${listing.id}`);
+        
+        return {
+          id: listing.id,
+          sellerId: listing.sellerWalletAddress,
+          title: metadata.title,
+          description: metadata.description,
+          priceAmount: Number(listing.price),
+          priceCurrency: listing.currency || 'USD',
+          category: {
+            id: metadata.category,
+            name: metadata.category.charAt(0).toUpperCase() + metadata.category.slice(1),
+            slug: metadata.category.toLowerCase()
+          },
+          images: metadata.images,
+          inventory: listing.inventory,
+          status: listing.status.toLowerCase(),
+          tags: metadata.tags.length > 0 ? metadata.tags : [listing.itemType],
+          shipping: {
+            freeShipping: true,
+            estimatedDays: '3-5',
+            methods: ['standard'],
+            handlingTime: '1-2',
+            shipsFrom: {
+              country: 'US'
+            }
+          },
+          nft: listing.nftStandard ? {
+            standard: listing.nftStandard,
+            tokenId: listing.tokenId
+          } : null,
+          views: listing.views || 0,
+          favorites: listing.favorites || 0,
+          listingStatus: listing.status.toLowerCase(),
+          publishedAt: listing.createdAt,
+          createdAt: listing.createdAt,
+          updatedAt: listing.updatedAt,
+          seller: {
+            id: listing.sellerWalletAddress,
+            walletAddress: listing.sellerWalletAddress,
+            displayName: `Seller ${listing.sellerWalletAddress.substring(0, 6)}`,
+            storeName: `Store ${listing.sellerWalletAddress.substring(0, 6)}`,
+            rating: 4.5,
+            reputation: 85,
+            verified: true,
+            daoApproved: false,
+            profileImageUrl: '/images/default-avatar.png',
+            isOnline: true
+          },
+          trust: {
+            verified: true,
+            escrowProtected: listing.isEscrowed,
+            onChainCertified: false,
+            safetyScore: 85
+          },
+          metadata: {
+            condition: metadata.condition,
+            brand: metadata.brand,
+            sku: metadata.sku
+          },
+          specifications: metadata.specifications
+        };
+      });
 
       // For seller search, we would need to implement seller search functionality
       // For now, we'll just return empty sellers array

@@ -34,6 +34,7 @@ import { Button } from '@/design-system/components/Button';
 import { useToast } from '@/context/ToastContext';
 import { DisputeOverview, EvidencePanel, getStatusColor, getStatusIcon, getVerdictColor } from './components';
 import { VotingPanel, CreateDisputeModal } from './VotingComponents';
+import { DAOJuryPanel } from './DAOJuryPanel';
 
 interface Dispute {
   id: number;
@@ -366,13 +367,21 @@ export const DisputeResolutionPanel: React.FC<DisputeResolutionPanelProps> = ({
       )}
 
       {activeTab === 'voting' && selectedDispute && (
-        <VotingPanel
-          dispute={selectedDispute}
-          onCastVote={() => handleCastVote(selectedDispute.id)}
-          votingForm={votingForm}
-          setVotingForm={setVotingForm}
-          userRole={userRole}
-        />
+        <div className="space-y-6">
+          {selectedDispute.status === 'dao_escalation' && (
+            <DAOJuryPanel 
+              disputeId={selectedDispute.id.toString()} 
+              onVoteCast={() => loadDisputes()}
+            />
+          )}
+          <VotingPanel
+            dispute={selectedDispute}
+            onCastVote={() => handleCastVote(selectedDispute.id)}
+            votingForm={votingForm}
+            setVotingForm={setVotingForm}
+            userRole={userRole}
+          />
+        </div>
       )}
 
       {/* Create Dispute Modal */}

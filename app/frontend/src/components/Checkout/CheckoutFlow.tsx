@@ -1520,6 +1520,27 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
     if (validateShippingAddress()) {
       // Calculate tax and verify address before proceeding
       await calculateOrderTax(shippingAddress);
+      
+      // Place inventory holds for items in cart to prevent sell-outs during payment
+      try {
+        setLoading(true);
+        const holdPromises = cartState.items.map(item => 
+          fetch(`${API_BASE_URL}/api/marketplace/listings/${item.id}/hold`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ quantity: item.quantity })
+          })
+        );
+        
+        await Promise.all(holdPromises);
+        console.log('✅ Inventory holds placed for items in cart');
+      } catch (holdError) {
+        console.warn('Failed to place inventory holds:', holdError);
+        // Don't block checkout if hold fails, but log it
+      } finally {
+        setLoading(false);
+      }
+
       setCurrentStep('payment-method');
     } else {
       addToast('Please fill in all required fields correctly', 'error');

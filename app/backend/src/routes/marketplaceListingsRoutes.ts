@@ -99,4 +99,16 @@ router.delete('/:id', csrfProtection, controller.deleteListing);
  */
 router.post('/:id/view', controller.trackView);
 
+/**
+ * @route POST /marketplace/listings/:id/hold
+ * @desc Place a temporary hold on inventory
+ */
+router.post('/:id/hold', controller.holdInventory);
+
+/**
+ * @route DELETE /marketplace/listings/:id/hold
+ * @desc Release a temporary hold on inventory
+ */
+router.delete('/:id/hold', controller.releaseInventory);
+
 export default router;

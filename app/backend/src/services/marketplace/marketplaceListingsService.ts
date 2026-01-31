@@ -823,6 +823,91 @@ export class MarketplaceListingsService {
       return false;
     }
   }
+
+  /**
+   * Place a temporary hold on inventory during checkout
+   * @param productId Product ID
+   * @param quantity Number of items to hold
+   * @returns Success status
+   */
+  async placeInventoryHold(productId: string, quantity: number = 1): Promise<boolean> {
+    try {
+      // Check available inventory (inventory - inventoryHolds)
+      const result = await db
+        .update(products)
+        .set({
+          inventoryHolds: sql`${products.inventoryHolds} + ${quantity}`,
+          updatedAt: new Date()
+        })
+        .where(and(
+          eq(products.id, productId),
+          sql`${products.inventory} - ${products.inventoryHolds} >= ${quantity}`
+        ))
+        .returning();
+
+      if (result.length > 0) {
+        safeLogger.info(`Placed hold on ${quantity} items for product ${productId}`);
+        
+        // Auto-release hold after 15 minutes if not completed
+        setTimeout(() => {
+          this.releaseInventoryHold(productId, quantity).catch(err => 
+            safeLogger.error('Failed to auto-release inventory hold:', err)
+          );
+        }, 15 * 60 * 1000);
+        
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      safeLogger.error('Error placing inventory hold:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Release a temporary hold on inventory
+   */
+  async releaseInventoryHold(productId: string, quantity: number = 1): Promise<boolean> {
+    try {
+      const result = await db
+        .update(products)
+        .set({
+          inventoryHolds: sql`GREATEST(0, ${products.inventoryHolds} - ${quantity})`,
+          updatedAt: new Date()
+        })
+        .where(eq(products.id, productId))
+        .returning();
+
+      return result.length > 0;
+    } catch (error) {
+      safeLogger.error('Error releasing inventory hold:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Finalize inventory reduction after successful purchase
+   */
+  async commitInventoryReduction(productId: string, quantity: number = 1): Promise<boolean> {
+    try {
+      const result = await db
+        .update(products)
+        .set({
+          inventory: sql`GREATEST(0, ${products.inventory} - ${quantity})`,
+          inventoryHolds: sql`GREATEST(0, ${products.inventoryHolds} - ${quantity})`,
+          salesCount: sql`${products.salesCount} + ${quantity}`,
+          updatedAt: new Date()
+        })
+        .where(eq(products.id, productId))
+        .returning();
+
+      return result.length > 0;
+    } catch (error) {
+      safeLogger.error('Error committing inventory reduction:', error);
+      return false;
+    }
+  }
 }
 
 // Export singleton instance

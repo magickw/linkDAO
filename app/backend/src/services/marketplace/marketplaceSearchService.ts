@@ -68,12 +68,16 @@ class MarketplaceSearchService {
       // Build query conditions
       const conditions = [];
 
-      // Add search condition - search in title and description
+      // Optimized Full-Text Search using PostgreSQL tsvector
       if (searchQuery) {
+        // Create a tsquery from the search query
+        // We use plainto_tsquery for natural language, or custom formatting
+        const formattedQuery = searchQuery.split(/\s+/).join(' & ');
+        
         conditions.push(
           or(
-            sql`${products.title} ILIKE ${`%${searchQuery}%`}`,
-            sql`${products.description} ILIKE ${`%${searchQuery}%`}`
+            sql`to_tsvector('english', ${products.title} || ' ' || ${products.description}) @@ to_tsquery('english', ${formattedQuery})`,
+            sql`${products.title} ILIKE ${`%${searchQuery}%`}` // Fallback for partial matches
           )
         );
       }
@@ -125,12 +129,13 @@ class MarketplaceSearchService {
           break;
         case 'relevance':
         default:
-          // For relevance, prioritize title matches over description matches
-          orderBy = sql`CASE
-            WHEN ${products.title} ILIKE ${`%${searchQuery}%`} THEN 0
-            WHEN ${products.description} ILIKE ${`%${searchQuery}%`} THEN 1
-            ELSE 2
-          END, ${desc(products.createdAt)}`;
+          if (searchQuery) {
+            // Rank results by relevance score
+            const formattedQuery = searchQuery.split(/\s+/).join(' & ');
+            orderBy = desc(sql`ts_rank(to_tsvector('english', ${products.title} || ' ' || ${products.description}), to_tsquery('english', ${formattedQuery}))`);
+          } else {
+            orderBy = desc(products.createdAt);
+          }
           break;
       }
 

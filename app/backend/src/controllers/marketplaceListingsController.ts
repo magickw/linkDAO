@@ -643,4 +643,58 @@ export class MarketplaceListingsController {
       ));
     }
   };
+
+  /**
+   * POST /marketplace/listings/:id/hold
+   * Place a temporary hold on inventory during checkout
+   */
+  holdInventory = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const { quantity = 1 } = req.body;
+
+      if (!id) {
+        res.status(400).json(createErrorResponse('INVALID_ID', 'Listing ID is required'));
+        return;
+      }
+
+      const success = await this.listingsService.placeInventoryHold(id, Number(quantity));
+
+      if (success) {
+        res.json(createSuccessResponse({ message: 'Inventory hold placed successfully' }));
+      } else {
+        res.status(400).json(createErrorResponse('INSUFFICIENT_INVENTORY', 'Not enough inventory available to place hold'));
+      }
+    } catch (error) {
+      safeLogger.error('Error in holdInventory:', error);
+      res.status(500).json(createErrorResponse('HOLD_ERROR', 'Failed to place inventory hold'));
+    }
+  };
+
+  /**
+   * DELETE /marketplace/listings/:id/hold
+   * Release a temporary hold on inventory
+   */
+  releaseInventory = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const { quantity = 1 } = req.body;
+
+      if (!id) {
+        res.status(400).json(createErrorResponse('INVALID_ID', 'Listing ID is required'));
+        return;
+      }
+
+      const success = await this.listingsService.releaseInventoryHold(id, Number(quantity));
+
+      if (success) {
+        res.json(createSuccessResponse({ message: 'Inventory hold released successfully' }));
+      } else {
+        res.status(404).json(createErrorResponse('HOLD_NOT_FOUND', 'Inventory hold not found or already released'));
+      }
+    } catch (error) {
+      safeLogger.error('Error in releaseInventory:', error);
+      res.status(500).json(createErrorResponse('RELEASE_ERROR', 'Failed to release inventory hold'));
+    }
+  };
 }
