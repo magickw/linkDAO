@@ -1,497 +1,333 @@
-/**
- * CAPTCHA Integration Service
- * Handles CAPTCHA verification for suspicious activity prevention
- */
-
-import axios from 'axios';
 import { safeLogger } from '../utils/safeLogger';
-import crypto from 'crypto';
-import { Request } from 'express';
+import { ModerationErrorHandler, ModerationErrorType } from '../utils/moderationErrorHandler';
 
-export interface CaptchaVerificationResult {
-  success: boolean;
-  score?: number;
-  action?: string;
-  challengeTs?: string;
-  hostname?: string;
-  errorCodes?: string[];
-}
-
-export interface CaptchaChallenge {
-  id: string;
-  challenge: string;
-  solution: string;
-  expiresAt: Date;
-  attempts: number;
-  maxAttempts: number;
-}
-
-export interface SimpleCaptchaOptions {
-  width: number;
-  height: number;
-  length: number;
-  noise: boolean;
-  color: boolean;
-}
-
+/**
+ * CAPTCHA verification service
+ * Supports multiple CAPTCHA providers (reCAPTCHA, hCaptcha, Turnstile, etc.)
+ */
 export class CaptchaService {
-  private static readonly RECAPTCHA_VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify';
-  private static readonly HCAPTCHA_VERIFY_URL = 'https://hcaptcha.com/siteverify';
-  
-  private static challenges: Map<string, CaptchaChallenge> = new Map();
+  private provider: 'recaptcha' | 'hcaptcha' | 'turnstile' | 'custom';
+  private secretKey: string;
+  private verificationEndpoint: string;
+  private scoreThreshold: number;
 
-  /**
-   * Verify Google reCAPTCHA v2/v3 response
-   */
-  static async verifyRecaptcha(
-    token: string,
-    remoteIp?: string,
-    expectedAction?: string
-  ): Promise<CaptchaVerificationResult> {
-    try {
-      const secretKey = process.env.RECAPTCHA_SECRET_KEY;
-      if (!secretKey) {
-        throw new Error('reCAPTCHA secret key not configured');
-      }
-
-      const response = await axios.post(this.RECAPTCHA_VERIFY_URL, null, {
-        params: {
-          secret: secretKey,
-          response: token,
-          remoteip: remoteIp
-        },
-        timeout: 10000
-      });
-
-      const result = response.data;
-
-      // For reCAPTCHA v3, check score and action
-      if (result.success && result.score !== undefined) {
-        // reCAPTCHA v3 verification
-        const scoreThreshold = parseFloat(process.env.RECAPTCHA_SCORE_THRESHOLD || '0.5');
-        
-        if (result.score < scoreThreshold) {
-          return {
-            success: false,
-            score: result.score,
-            action: result.action,
-            errorCodes: ['low-score']
-          };
-        }
-
-        if (expectedAction && result.action !== expectedAction) {
-          return {
-            success: false,
-            score: result.score,
-            action: result.action,
-            errorCodes: ['action-mismatch']
-          };
-        }
-      }
-
-      return {
-        success: result.success,
-        score: result.score,
-        action: result.action,
-        challengeTs: result.challenge_ts,
-        hostname: result.hostname,
-        errorCodes: result['error-codes'] || []
-      };
-
-    } catch (error) {
-      safeLogger.error('reCAPTCHA verification error:', error);
-      return {
-        success: false,
-        errorCodes: ['network-error']
-      };
-    }
-  }
-
-  /**
-   * Verify hCaptcha response
-   */
-  static async verifyHcaptcha(
-    token: string,
-    remoteIp?: string
-  ): Promise<CaptchaVerificationResult> {
-    try {
-      const secretKey = process.env.HCAPTCHA_SECRET_KEY;
-      if (!secretKey) {
-        throw new Error('hCaptcha secret key not configured');
-      }
-
-      const response = await axios.post(this.HCAPTCHA_VERIFY_URL, null, {
-        params: {
-          secret: secretKey,
-          response: token,
-          remoteip: remoteIp
-        },
-        timeout: 10000
-      });
-
-      const result = response.data;
-
-      return {
-        success: result.success,
-        challengeTs: result.challenge_ts,
-        hostname: result.hostname,
-        errorCodes: result['error-codes'] || []
-      };
-
-    } catch (error) {
-      safeLogger.error('hCaptcha verification error:', error);
-      return {
-        success: false,
-        errorCodes: ['network-error']
-      };
-    }
-  }
-
-  /**
-   * Generate simple text-based CAPTCHA
-   */
-  static generateSimpleCaptcha(options: Partial<SimpleCaptchaOptions> = {}): CaptchaChallenge {
-    const opts: SimpleCaptchaOptions = {
-      width: 200,
-      height: 80,
-      length: 5,
-      noise: true,
-      color: false,
-      ...options
-    };
-
-    // Generate random text
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let solution = '';
-    for (let i = 0; i < opts.length; i++) {
-      solution += characters.charAt(Math.floor(Math.random() * characters.length));
-    }
-
-    // Create challenge ID
-    const challengeId = crypto.randomBytes(16).toString('hex');
-
-    // Generate SVG CAPTCHA
-    const challenge = this.generateSVGCaptcha(solution, opts);
-
-    const captchaChallenge: CaptchaChallenge = {
-      id: challengeId,
-      challenge,
-      solution,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
-      attempts: 0,
-      maxAttempts: 3
-    };
-
-    // Store challenge
-    this.challenges.set(challengeId, captchaChallenge);
-
-    // Clean up expired challenges
-    this.cleanupExpiredChallenges();
-
-    return captchaChallenge;
-  }
-
-  /**
-   * Verify simple CAPTCHA solution
-   */
-  static verifySimpleCaptcha(challengeId: string, solution: string): CaptchaVerificationResult {
-    const challenge = this.challenges.get(challengeId);
+  constructor() {
+    // Configure based on environment variables
+    const providerEnv = process.env.CAPTCHA_PROVIDER || 'recaptcha';
+    this.provider = providerEnv as any;
     
-    if (!challenge) {
-      return {
-        success: false,
-        errorCodes: ['challenge-not-found']
-      };
-    }
-
-    // Check if expired
-    if (new Date() > challenge.expiresAt) {
-      this.challenges.delete(challengeId);
-      return {
-        success: false,
-        errorCodes: ['challenge-expired']
-      };
-    }
-
-    // Check attempts
-    challenge.attempts++;
-    if (challenge.attempts > challenge.maxAttempts) {
-      this.challenges.delete(challengeId);
-      return {
-        success: false,
-        errorCodes: ['too-many-attempts']
-      };
-    }
-
-    // Verify solution (case-insensitive)
-    const isCorrect = challenge.solution.toLowerCase() === solution.toLowerCase();
-    
-    if (isCorrect) {
-      this.challenges.delete(challengeId);
-      return { success: true };
-    } else {
-      return {
-        success: false,
-        errorCodes: ['incorrect-solution']
-      };
-    }
-  }
-
-  /**
-   * Generate mathematical CAPTCHA
-   */
-  static generateMathCaptcha(): CaptchaChallenge {
-    const operations = ['+', '-', '*'];
-    const operation = operations[Math.floor(Math.random() * operations.length)];
-    
-    let num1: number, num2: number, solution: number, question: string;
-
-    switch (operation) {
-      case '+':
-        num1 = Math.floor(Math.random() * 50) + 1;
-        num2 = Math.floor(Math.random() * 50) + 1;
-        solution = num1 + num2;
-        question = `${num1} + ${num2} = ?`;
+    // Set provider-specific configuration
+    switch (this.provider) {
+      case 'recaptcha':
+        this.secretKey = process.env.RECAPTCHA_SECRET_KEY || '';
+        this.verificationEndpoint = 'https://www.google.com/recaptcha/api/siteverify';
+        this.scoreThreshold = parseFloat(process.env.RECAPTCHA_SCORE_THRESHOLD || '0.5');
         break;
-      case '-':
-        num1 = Math.floor(Math.random() * 50) + 25;
-        num2 = Math.floor(Math.random() * 25) + 1;
-        solution = num1 - num2;
-        question = `${num1} - ${num2} = ?`;
+      
+      case 'hcaptcha':
+        this.secretKey = process.env.HCAPTCHA_SECRET_KEY || '';
+        this.verificationEndpoint = 'https://hcaptcha.com/siteverify';
+        this.scoreThreshold = parseFloat(process.env.HCAPTCHA_SCORE_THRESHOLD || '0.5');
         break;
-      case '*':
-        num1 = Math.floor(Math.random() * 10) + 1;
-        num2 = Math.floor(Math.random() * 10) + 1;
-        solution = num1 * num2;
-        question = `${num1} × ${num2} = ?`;
+      
+      case 'turnstile':
+        this.secretKey = process.env.TURNSTILE_SECRET_KEY || '';
+        this.verificationEndpoint = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+        this.scoreThreshold = parseFloat(process.env.TURNSTILE_SCORE_THRESHOLD || '0.5');
         break;
+      
+      case 'custom':
+        this.secretKey = process.env.CUSTOM_CAPTCHA_SECRET_KEY || '';
+        this.verificationEndpoint = process.env.CUSTOM_CAPTCHA_ENDPOINT || '';
+        this.scoreThreshold = parseFloat(process.env.CUSTOM_CAPTCHA_THRESHOLD || '0.5');
+        break;
+      
       default:
-        throw new Error('Invalid operation');
+        this.provider = 'recaptcha';
+        this.secretKey = '';
+        this.verificationEndpoint = 'https://www.google.com/recaptcha/api/siteverify';
+        this.scoreThreshold = 0.5;
     }
 
-    const challengeId = crypto.randomBytes(16).toString('hex');
-
-    const captchaChallenge: CaptchaChallenge = {
-      id: challengeId,
-      challenge: question,
-      solution: solution.toString(),
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
-      attempts: 0,
-      maxAttempts: 3
-    };
-
-    this.challenges.set(challengeId, captchaChallenge);
-    this.cleanupExpiredChallenges();
-
-    return captchaChallenge;
+    if (!this.secretKey) {
+      safeLogger.warn('CAPTCHA secret key not configured. CAPTCHA verification will be skipped in development mode.');
+    }
   }
 
   /**
-   * Generate word-based CAPTCHA
+   * Verify CAPTCHA token
    */
-  static generateWordCaptcha(): CaptchaChallenge {
-    const words = [
-      'apple', 'banana', 'cherry', 'dragon', 'elephant', 'forest', 'guitar', 'house',
-      'island', 'jungle', 'kitten', 'lemon', 'mountain', 'ocean', 'piano', 'queen',
-      'rainbow', 'sunset', 'tiger', 'umbrella', 'village', 'water', 'yellow', 'zebra'
-    ];
+  async verifyToken(token: string, remoteIp?: string): Promise<{
+    success: boolean;
+    score?: number;
+    challengeTs?: string;
+    hostname?: string;
+    errorCodes?: string[];
+  }> {
+    // Skip verification in development mode if no secret key is configured
+    if (!this.secretKey && process.env.NODE_ENV !== 'production') {
+      safeLogger.warn('CAPTCHA verification skipped (no secret key configured in development)');
+      return {
+        success: true,
+        score: 1.0,
+        challengeTs: new Date().toISOString(),
+        hostname: 'localhost'
+      };
+    }
 
-    const word = words[Math.floor(Math.random() * words.length)];
-    const challengeId = crypto.randomBytes(16).toString('hex');
+    if (!this.secretKey) {
+      throw ModerationErrorHandler.handleBusinessLogicError(
+        ModerationErrorType.CAPTCHA_VERIFICATION_FAILED,
+        'CAPTCHA service not configured',
+        { provider: this.provider }
+      );
+    }
 
-    // Create a simple word puzzle
-    const scrambled = word.split('').sort(() => Math.random() - 0.5).join('');
-    const question = `Unscramble this word: ${scrambled.toUpperCase()}`;
+    if (!token) {
+      throw ModerationErrorHandler.handleCaptchaError(new Error('Token is required'));
+    }
 
-    const captchaChallenge: CaptchaChallenge = {
-      id: challengeId,
-      challenge: question,
-      solution: word,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
-      attempts: 0,
-      maxAttempts: 3
-    };
+    try {
+      const response = await fetch(this.verificationEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          secret: this.secretKey,
+          response: token,
+          ...(remoteIp && { remoteip: remoteIp })
+        }),
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      });
 
-    this.challenges.set(challengeId, captchaChallenge);
-    this.cleanupExpiredChallenges();
+      if (!response.ok) {
+        throw new Error(`CAPTCHA verification failed: ${response.status} ${response.statusText}`);
+      }
 
-    return captchaChallenge;
+      const result = await response.json();
+
+      if (!result.success) {
+        safeLogger.warn('CAPTCHA verification failed:', result['error-codes']);
+        
+        // Map error codes to specific error types
+        if (result['error-codes']?.includes('invalid-input-response')) {
+          throw ModerationErrorHandler.handleCaptchaError(
+            new Error('Invalid CAPTCHA token')
+          );
+        }
+        
+        if (result['error-codes']?.includes('timeout-or-duplicate')) {
+          throw ModerationErrorHandler.handleCaptchaError(
+            new Error('CAPTCHA token expired')
+          );
+        }
+        
+        throw ModerationErrorHandler.handleCaptchaError(
+          new Error('CAPTCHA verification failed')
+        );
+      }
+
+      // Check score for reCAPTCHA v3 and Turnstile
+      if (result.score !== undefined && result.score < this.scoreThreshold) {
+        safeLogger.warn('CAPTCHA score below threshold:', {
+          score: result.score,
+          threshold: this.scoreThreshold
+        });
+        
+        return {
+          success: false,
+          score: result.score,
+          challengeTs: result.challenge_ts,
+          hostname: result.hostname,
+          errorCodes: ['score-below-threshold']
+        };
+      }
+
+      safeLogger.info('CAPTCHA verified successfully:', {
+        score: result.score,
+        hostname: result.hostname
+      });
+
+      return {
+        success: true,
+        score: result.score,
+        challengeTs: result.challenge_ts,
+        hostname: result.hostname
+      };
+
+    } catch (error) {
+      safeLogger.error('CAPTCHA verification error:', error);
+      
+      if (error instanceof ModerationErrorHandler || error.name === 'ModerationError') {
+        throw error;
+      }
+      
+      throw ModerationErrorHandler.wrapError(error, 'verifyCaptchaToken');
+    }
   }
 
   /**
-   * Determine if CAPTCHA is required based on request
+   * Verify CAPTCHA with enhanced validation
    */
-  static shouldRequireCaptcha(req: Request, riskScore: number = 0): boolean {
-    // Always require CAPTCHA for high risk scores
-    if (riskScore >= 80) return true;
+  async verifyWithValidation(
+    token: string,
+    options: {
+      remoteIp?: string;
+      expectedHostname?: string;
+      maxTokenAge?: number; // in milliseconds
+      requireScore?: boolean;
+    } = {}
+  ): Promise<{
+    success: boolean;
+    score?: number;
+    error?: string;
+  }> {
+    try {
+      // Verify token
+      const result = await this.verifyToken(token, options.remoteIp);
 
-    // Check for suspicious patterns
-    const userAgent = req.get('User-Agent') || '';
-    const suspiciousPatterns = [
-      /bot/i, /crawler/i, /spider/i, /scraper/i,
-      /curl/i, /wget/i, /python/i, /requests/i
-    ];
+      if (!result.success) {
+        return {
+          success: false,
+          score: result.score,
+          error: result.errorCodes?.join(', ') || 'Verification failed'
+        };
+      }
 
-    for (const pattern of suspiciousPatterns) {
-      if (pattern.test(userAgent)) return true;
+      // Validate hostname if provided
+      if (options.expectedHostname && result.hostname !== options.expectedHostname) {
+        safeLogger.warn('CAPTCHA hostname mismatch:', {
+          expected: options.expectedHostname,
+          actual: result.hostname
+        });
+        
+        return {
+          success: false,
+          score: result.score,
+          error: 'Hostname mismatch'
+        };
+      }
+
+      // Validate token age if provided
+      if (options.maxTokenAge && result.challengeTs) {
+        const tokenAge = Date.now() - new Date(result.challengeTs).getTime();
+        
+        if (tokenAge > options.maxTokenAge) {
+          safeLogger.warn('CAPTCHA token expired:', {
+            age: tokenAge,
+            maxAge: options.maxTokenAge
+          });
+          
+          return {
+            success: false,
+            score: result.score,
+            error: 'Token expired'
+          };
+        }
+      }
+
+      // Check score if required
+      if (options.requireScore && result.score === undefined) {
+        return {
+          success: false,
+          error: 'Score not available'
+        };
+      }
+
+      return {
+        success: true,
+        score: result.score
+      };
+
+    } catch (error) {
+      safeLogger.error('CAPTCHA validation error:', error);
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
+  }
 
-    // Check for missing common headers
-    if (!req.get('Accept-Language') || !req.get('Accept-Encoding')) {
-      return riskScore >= 50;
-    }
-
-    // Require CAPTCHA for medium risk scores during peak hours
-    const hour = new Date().getHours();
-    const isPeakHours = hour >= 9 && hour <= 17; // 9 AM to 5 PM
+  /**
+   * Generate a simple math-based CAPTCHA (for development/testing)
+   */
+  generateMathCaptcha(): {
+    question: string;
+    answer: number;
+    token: string;
+    expiresAt: Date;
+  } {
+    const num1 = Math.floor(Math.random() * 10) + 1;
+    const num2 = Math.floor(Math.random() * 10) + 1;
+    const answer = num1 + num2;
     
-    if (isPeakHours && riskScore >= 60) return true;
-    if (!isPeakHours && riskScore >= 70) return true;
+    // Generate a simple token
+    const token = Buffer.from(`${num1}:${num2}:${Date.now()}`).toString('base64');
+    
+    return {
+      question: `${num1} + ${num2} = ?`,
+      answer,
+      token,
+      expiresAt: new Date(Date.now() + 300000) // 5 minutes
+    };
+  }
 
-    return false;
+  /**
+   * Verify math-based CAPTCHA
+   */
+  verifyMathCaptcha(token: string, answer: number): boolean {
+    try {
+      const decoded = Buffer.from(token, 'base64').toString('utf-8');
+      const [num1, num2, timestamp] = decoded.split(':');
+      
+      // Check if expired (5 minutes)
+      if (Date.now() - parseInt(timestamp) > 300000) {
+        return false;
+      }
+      
+      const expectedAnswer = parseInt(num1) + parseInt(num2);
+      return answer === expectedAnswer;
+      
+    } catch (error) {
+      safeLogger.error('Math CAPTCHA verification error:', error);
+      return false;
+    }
   }
 
   /**
    * Get CAPTCHA configuration for frontend
    */
-  static getCaptchaConfig(): {
-    recaptcha?: {
-      siteKey: string;
-      version: string;
-    };
-    hcaptcha?: {
-      siteKey: string;
-    };
-    simple: boolean;
+  getFrontendConfig(): {
+    provider: string;
+    siteKey: string;
+    scoreThreshold: number;
+    version: 'v2' | 'v3';
   } {
-    const config: any = {
-      simple: true
-    };
-
-    if (process.env.RECAPTCHA_SITE_KEY) {
-      config.recaptcha = {
-        siteKey: process.env.RECAPTCHA_SITE_KEY,
-        version: process.env.RECAPTCHA_VERSION || 'v2'
-      };
-    }
-
-    if (process.env.HCAPTCHA_SITE_KEY) {
-      config.hcaptcha = {
-        siteKey: process.env.HCAPTCHA_SITE_KEY
-      };
-    }
-
-    return config;
-  }
-
-  /**
-   * Generate SVG CAPTCHA image
-   */
-  private static generateSVGCaptcha(text: string, options: SimpleCaptchaOptions): string {
-    const { width, height, noise, color } = options;
+    const siteKey = process.env.CAPTCHA_SITE_KEY || '';
     
-    // Generate random colors
-    const textColor = color ? this.randomColor() : '#000000';
-    const bgColor = color ? this.randomLightColor() : '#ffffff';
-    
-    let svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">`;
-    svg += `<rect width="100%" height="100%" fill="${bgColor}"/>`;
-    
-    // Add noise lines if enabled
-    if (noise) {
-      for (let i = 0; i < 5; i++) {
-        const x1 = Math.random() * width;
-        const y1 = Math.random() * height;
-        const x2 = Math.random() * width;
-        const y2 = Math.random() * height;
-        const lineColor = color ? this.randomColor() : '#cccccc';
-        svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${lineColor}" stroke-width="1"/>`;
-      }
-    }
-    
-    // Add text
-    const fontSize = Math.floor(height * 0.6);
-    const letterSpacing = width / (text.length + 1);
-    
-    for (let i = 0; i < text.length; i++) {
-      const x = letterSpacing * (i + 1);
-      const y = height / 2 + fontSize / 3;
-      const rotation = (Math.random() - 0.5) * 30; // Random rotation -15 to 15 degrees
-      const charColor = color ? this.randomColor() : textColor;
-      
-      svg += `<text x="${x}" y="${y}" font-family="Arial, sans-serif" font-size="${fontSize}" `;
-      svg += `font-weight="bold" fill="${charColor}" text-anchor="middle" `;
-      svg += `transform="rotate(${rotation} ${x} ${y})">${text[i]}</text>`;
-    }
-    
-    svg += '</svg>';
-    
-    // Convert to base64 data URL
-    const base64 = Buffer.from(svg).toString('base64');
-    return `data:image/svg+xml;base64,${base64}`;
-  }
-
-  /**
-   * Generate random color
-   */
-  private static randomColor(): string {
-    const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
-    return colors[Math.floor(Math.random() * colors.length)];
-  }
-
-  /**
-   * Generate random light color for background
-   */
-  private static randomLightColor(): string {
-    const colors = ['#F8F9FA', '#E9ECEF', '#DEE2E6', '#CED4DA', '#ADB5BD'];
-    return colors[Math.floor(Math.random() * colors.length)];
-  }
-
-  /**
-   * Clean up expired challenges
-   */
-  private static cleanupExpiredChallenges(): void {
-    const now = new Date();
-    for (const [id, challenge] of this.challenges.entries()) {
-      if (now > challenge.expiresAt) {
-        this.challenges.delete(id);
-      }
-    }
-  }
-
-  /**
-   * Get CAPTCHA statistics
-   */
-  static getCaptchaStats(): {
-    activeChallenges: number;
-    totalGenerated: number;
-    successRate: number;
-  } {
-    // This would be enhanced with persistent storage in production
     return {
-      activeChallenges: this.challenges.size,
-      totalGenerated: 0, // Would track this with persistent storage
-      successRate: 0 // Would calculate from historical data
+      provider: this.provider,
+      siteKey,
+      scoreThreshold: this.scoreThreshold,
+      version: this.provider === 'recaptcha' ? 'v3' : 'v2'
     };
   }
 
   /**
-   * Refresh CAPTCHA challenge
+   * Check if CAPTCHA is enabled
    */
-  static refreshChallenge(challengeId: string, type: 'simple' | 'math' | 'word' = 'simple'): CaptchaChallenge | null {
-    // Remove old challenge
-    this.challenges.delete(challengeId);
-    
-    // Generate new challenge
-    switch (type) {
-      case 'math':
-        return this.generateMathCaptcha();
-      case 'word':
-        return this.generateWordCaptcha();
-      default:
-        return this.generateSimpleCaptcha();
-    }
+  isEnabled(): boolean {
+    return !!this.secretKey || process.env.NODE_ENV !== 'production';
+  }
+
+  /**
+   * Get current provider
+   */
+  getProvider(): string {
+    return this.provider;
   }
 }
 
-export default CaptchaService;
+export const captchaService = new CaptchaService();
