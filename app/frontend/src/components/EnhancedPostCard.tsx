@@ -396,9 +396,9 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
         {/* Post Actions */}
         {showActions && (
           <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-4">
               {/* Left Actions */}
-              <div className="flex items-center space-x-6">
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6">
                 {/* Vote Buttons */}
                 <div className="flex items-center space-x-2">
                   <button
@@ -467,7 +467,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
               </div>
 
               {/* Right Info */}
-              <div className="flex items-center space-x-4">
+              <div className="flex flex-wrap items-center gap-4">
                 {/* Views */}
                 <div className="flex items-center space-x-1 text-gray-500 dark:text-gray-400">
                   <Eye className="w-5 h-5" />

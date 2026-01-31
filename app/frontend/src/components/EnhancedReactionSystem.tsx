@@ -281,11 +281,13 @@ export default function EnhancedReactionSystem({
     }
   };
 
-  // Show all reactions for the post type, not just those with activity
-  const allReactions = reactions;
+  // Only show reactions that have engagement or user interaction
+  const activeReactions = reactions.filter(r => 
+    r.count > 0 || r.totalStaked > 0 || r.userStaked > 0
+  );
 
   // Show loading state or withhold rendering during initial fetch to prevent stale UI flash
-  if (isFetchingReactions && allReactions.length === 0) {
+  if (isFetchingReactions && reactions.length === 0) {
     return (
       <div className={`relative ${className}`}>
         <div className="flex gap-2 mb-3">
@@ -300,13 +302,13 @@ export default function EnhancedReactionSystem({
   return (
     <div className={`relative ${className}`}>
       {/* Reaction Display */}
-      <div className="flex flex-wrap gap-2 mb-3">
-        {allReactions.map((reaction) => (
+      <div className="flex flex-wrap gap-2 items-center">
+        {activeReactions.map((reaction) => (
           <button
             key={reaction.type}
             onClick={() => handleReactionClick(reaction.type)}
             className={`flex items-center space-x-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 transform hover:scale-105 ${(postType === 'community' || postType === 'enhanced' ? reaction.userStaked > 0 : reaction.userStaked > 0)
-              ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow-md animate-pulse'
+              ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow-md'
               : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
           >
@@ -319,7 +321,7 @@ export default function EnhancedReactionSystem({
                 +{reaction.userStaked}
               </span>
             )}
-            {postType === 'community' && (
+            {postType === 'community' && reaction.rewardsEarned > 0 && (
               <span className="text-xs bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 rounded-full px-2 py-0.5">
                 {reaction.rewardsEarned.toFixed(1)}★
               </span>
@@ -330,11 +332,13 @@ export default function EnhancedReactionSystem({
         {/* Add Reaction Button */}
         <button
           onClick={() => setShowReactionPicker(!showReactionPicker)}
-          className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200"
+          className={`flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 ${activeReactions.length === 0 ? 'px-4 py-1.5 space-x-2' : 'w-8 h-8'}`}
+          title="Add reaction"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
+          {activeReactions.length === 0 && <span className="text-sm font-medium">React</span>}
         </button>
       </div>
 

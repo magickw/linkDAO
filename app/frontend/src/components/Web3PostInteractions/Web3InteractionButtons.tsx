@@ -306,9 +306,9 @@ const Web3InteractionButtons: React.FC<Web3InteractionButtonsProps> = ({
   };
 
   return (
-    <div className={`flex items-center justify-between ${className}`}>
+    <div className={`flex flex-wrap items-center justify-between gap-3 ${className}`}>
       {/* Web3 Reaction Buttons */}
-      <div className={`flex items-center ${compact ? 'space-x-2' : 'space-x-3'}`}>
+      <div className={`flex flex-wrap items-center ${compact ? 'gap-2' : 'gap-3'}`}>
         {Object.keys(WEB3_REACTIONS).map((reactionType) => (
           <ReactionButton
             key={reactionType}
@@ -318,7 +318,7 @@ const Web3InteractionButtons: React.FC<Web3InteractionButtonsProps> = ({
       </div>
 
       {/* Additional Action Buttons */}
-      <div className={`flex items-center ${compact ? 'space-x-2' : 'space-x-3'}`}>
+      <div className={`flex flex-wrap items-center ${compact ? 'gap-2' : 'gap-3'}`}>
         {/* Share Button */}
         <motion.button
           onClick={handleShare}

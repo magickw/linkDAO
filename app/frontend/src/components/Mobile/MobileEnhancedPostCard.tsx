@@ -445,7 +445,7 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={() => onComment(post.id)}
             className={`

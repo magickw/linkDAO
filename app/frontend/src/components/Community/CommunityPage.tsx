@@ -146,15 +146,16 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
           .catch(error => console.warn('Failed to get community metrics:', error));
       }
 
-      // Check membership status if user is authenticated
+      // Set membership status from community data (already included in the response)
+      // The backend already includes isMember and memberRole in the community data
       if (isAuthenticated && user) {
-        const membership = await Promise.race([
-          checkMembershipStatus(communityId, user.address),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Membership request timeout')), 3000)
-          )
-        ]) as any;
-        setMembershipStatus(membership);
+        setMembershipStatus({
+          isMember: communityData.isMember || false,
+          role: communityData.memberRole,
+          joinedAt: undefined, // Not provided in community data
+          canPost: communityData.isMember || false,
+          canModerate: ['admin', 'moderator', 'owner'].includes(communityData.memberRole || '')
+        });
       }
     } catch (err) {
       console.error('Error loading community:', err);

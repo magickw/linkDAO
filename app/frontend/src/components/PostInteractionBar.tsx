@@ -213,14 +213,14 @@ export default function PostInteractionBar({
 
       {/* Action Buttons */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
-        <div className="flex items-center space-x-1 sm:space-x-4">
+        <div className="flex flex-wrap items-center gap-1 sm:gap-4">
 
           {/* Voting Buttons - Integrated */}
-          <div className="flex items-center space-x-1 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-1 mr-2">
+          <div className="flex items-center space-x-1 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-1">
             <button
               onClick={handleUpvoteClick}
               disabled={!onUpvote}
-              className={`flex items-center space-x-1 p-3 rounded-md transition-colors min-h-[44px] min-w-[44px] ${userVote === 'upvote'
+              className={`flex items-center space-x-1 p-2 rounded-md transition-colors min-h-[40px] min-w-[40px] ${userVote === 'upvote'
                 ? 'text-green-600 bg-green-50 dark:bg-green-900/20'
                 : onUpvote
                   ? 'text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
@@ -237,7 +237,7 @@ export default function PostInteractionBar({
             <button
               onClick={handleDownvoteClick}
               disabled={!onDownvote}
-              className={`flex items-center space-x-1 p-3 rounded-md transition-colors min-h-[44px] min-w-[44px] ${userVote === 'downvote'
+              className={`flex items-center space-x-1 p-2 rounded-md transition-colors min-h-[40px] min-w-[40px] ${userVote === 'downvote'
                 ? 'text-red-600 bg-red-50 dark:bg-red-900/20'
                 : onDownvote
                   ? 'text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
@@ -255,7 +255,7 @@ export default function PostInteractionBar({
           {/* Comment Button */}
           <button
             onClick={handleCommentClick}
-            className="flex items-center space-x-2 p-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium transition-colors duration-200 hover:scale-105 min-h-[44px] min-w-[44px]"
+            className="flex items-center space-x-2 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium transition-colors duration-200 hover:scale-105 min-h-[40px]"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -277,7 +277,7 @@ export default function PostInteractionBar({
                   e.stopPropagation();
                   setShowRepostMenu(!showRepostMenu);
                 }}
-                className={`flex items-center space-x-2 p-3 text-sm font-medium transition-colors duration-200 hover:scale-105 min-h-[44px] min-w-[44px] ${post.isRepostedByMe
+                className={`flex items-center space-x-2 p-2 text-sm font-medium transition-colors duration-200 hover:scale-105 min-h-[40px] ${post.isRepostedByMe
                   ? 'text-green-600 dark:text-green-400'
                   : 'text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400'
                   }`}
@@ -362,7 +362,7 @@ export default function PostInteractionBar({
           {/* Share Button */}
           <button
             onClick={handleShareClick}
-            className="flex items-center space-x-2 p-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium transition-colors duration-200 hover:scale-105 min-h-[44px] min-w-[44px]"
+            className="flex items-center space-x-2 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium transition-colors duration-200 hover:scale-105 min-h-[40px]"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
@@ -372,7 +372,7 @@ export default function PostInteractionBar({
 
           {/* View Count - moved to right side for balance or keep here? Let's keep it here but visible */}
           {!zenMode && (
-            <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400 text-sm font-medium" title={`${post.views || 0} Views`}>
+            <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400 text-sm font-medium p-2 min-h-[40px]" title={`${post.views || 0} Views`}>
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -393,7 +393,7 @@ export default function PostInteractionBar({
           {/* Award Button */}
           <button
             onClick={() => setShowAwardModal(true)}
-            className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium transition-colors duration-200 hover:scale-105"
+            className="flex items-center space-x-2 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium transition-colors duration-200 hover:scale-105 min-h-[40px]"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
@@ -405,7 +405,7 @@ export default function PostInteractionBar({
           <button
             onClick={handleSavePost}
             disabled={isBookmarkLoading}
-            className={`flex items-center space-x-2 text-sm font-medium transition-colors duration-200 hover:scale-105 ${isBookmarked
+            className={`flex items-center space-x-2 p-2 text-sm font-medium transition-colors duration-200 hover:scale-105 min-h-[40px] ${isBookmarked
                 ? 'text-primary-600 dark:text-primary-400'
                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
               } ${isBookmarkLoading ? 'opacity-50 cursor-wait' : ''}`}
