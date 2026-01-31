@@ -40,6 +40,40 @@ class SocialMediaOAuthController {
   }
 
   /**
+   * Connect Bluesky directly (App Password)
+   * POST /api/social-media/connect/bluesky/direct
+   */
+  async connectBlueskyDirect(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = (req as any).user?.id || (req as any).userId;
+      const { handle, appPassword } = req.body;
+
+      if (!userId) {
+        return ApiResponse.unauthorized(res, 'Authentication required');
+      }
+
+      if (!handle || !appPassword) {
+        return ApiResponse.badRequest(res, 'Handle and App Password are required');
+      }
+
+      const connection = await socialMediaConnectionService.connectBlueskyDirect(userId, handle, appPassword);
+
+      return ApiResponse.success(res, {
+        success: true,
+        data: {
+          id: connection.id,
+          platform: connection.platform,
+          username: connection.platformUsername,
+          displayName: connection.platformDisplayName,
+        }
+      });
+    } catch (error) {
+      safeLogger.error('Bluesky direct connection error:', error);
+      return ApiResponse.serverError(res, error instanceof Error ? error.message : 'Failed to connect to Bluesky');
+    }
+  }
+
+  /**
    * Initiate OAuth flow for a platform
    * POST /api/social-media/connect/:platform
    */

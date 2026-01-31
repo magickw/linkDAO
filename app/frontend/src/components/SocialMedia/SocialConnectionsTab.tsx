@@ -9,6 +9,7 @@ import {
   initiateOAuth, 
   disconnectPlatform, 
   refreshToken,
+  connectBlueskyDirect,
   SocialMediaConnection,
   SocialPlatform,
   PLATFORM_CONFIG,
@@ -26,6 +27,12 @@ const SocialConnectionsTab: React.FC<SocialConnectionsTabProps> = ({ onToast }) 
   const [connectingPlatform, setConnectingPlatform] = useState<SocialPlatform | null>(null);
   const [disconnectingPlatform, setDisconnectingPlatform] = useState<SocialPlatform | null>(null);
   const [refreshingPlatform, setRefreshingPlatform] = useState<SocialPlatform | null>(null);
+
+  // Bluesky Direct Login State
+  const [showBlueskyModal, setShowBlueskyModal] = useState(false);
+  const [blueskyHandle, setBlueskyHandle] = useState('');
+  const [blueskyPassword, setBlueskyPassword] = useState('');
+  const [isBlueskyConnecting, setIsBlueskyConnecting] = useState(false);
 
   // Load connections on mount
   useEffect(() => {
@@ -50,6 +57,12 @@ const SocialConnectionsTab: React.FC<SocialConnectionsTabProps> = ({ onToast }) 
   };
 
   const handleConnect = async (platform: SocialPlatform) => {
+    // Intercept Bluesky to use direct login modal
+    if (platform === 'bluesky') {
+      setShowBlueskyModal(true);
+      return;
+    }
+
     setConnectingPlatform(platform);
     try {
       const response = await initiateOAuth(platform);
@@ -85,6 +98,34 @@ const SocialConnectionsTab: React.FC<SocialConnectionsTabProps> = ({ onToast }) 
       onToast?.('Failed to connect to platform', 'error');
     } finally {
       setConnectingPlatform(null);
+    }
+  };
+
+  const handleBlueskyLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!blueskyHandle || !blueskyPassword) {
+      onToast?.('Please enter both handle and app password', 'error');
+      return;
+    }
+
+    setIsBlueskyConnecting(true);
+    try {
+      const response = await connectBlueskyDirect(blueskyHandle, blueskyPassword);
+      
+      if (response.success) {
+        setShowBlueskyModal(false);
+        setBlueskyHandle('');
+        setBlueskyPassword('');
+        await loadConnections();
+        onToast?.('Bluesky connected successfully!', 'success');
+      } else {
+        onToast?.(response.message || 'Failed to connect to Bluesky', 'error');
+      }
+    } catch (error) {
+      console.error('Error connecting to Bluesky:', error);
+      onToast?.('Failed to connect to Bluesky', 'error');
+    } finally {
+      setIsBlueskyConnecting(false);
     }
   };
 
@@ -297,6 +338,83 @@ const SocialConnectionsTab: React.FC<SocialConnectionsTabProps> = ({ onToast }) 
           </div>
         </div>
       </div>
+      {/* Bluesky Connection Modal */}
+      {showBlueskyModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="text-lg font-medium text-gray-900">Connect Bluesky</h3>
+              <button 
+                onClick={() => setShowBlueskyModal(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <form onSubmit={handleBlueskyLogin} className="p-6 space-y-4">
+              <div className="bg-blue-50 p-4 rounded-md mb-4 text-sm text-blue-700">
+                <p>Bluesky requires an App Password instead of your main login password.</p>
+                <p className="mt-1">
+                  Go to <strong>Settings &gt; Privacy & Security &gt; App Passwords</strong> in your Bluesky app to create one.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Bluesky Handle
+                </label>
+                <input
+                  type="text"
+                  value={blueskyHandle}
+                  onChange={(e) => setBlueskyHandle(e.target.value)}
+                  placeholder="username.bsky.social"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  App Password
+                </label>
+                <input
+                  type="password"
+                  value={blueskyPassword}
+                  onChange={(e) => setBlueskyPassword(e.target.value)}
+                  placeholder="xxxx-xxxx-xxxx-xxxx"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowBlueskyModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isBlueskyConnecting}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-50 flex items-center"
+                >
+                  {isBlueskyConnecting ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></span>
+                      Connecting...
+                    </>
+                  ) : (
+                    'Connect'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -24,6 +24,16 @@ router.get(
   (req, res) => socialMediaOAuthController.getBlueskyMetadata(req, res)
 );
 
+// Connect Bluesky directly (App Password)
+// POST /api/social-media/connect/bluesky/direct
+router.post(
+  '/connect/bluesky/direct',
+  authMiddleware,
+  csrfProtection,
+  oauthRateLimiter,
+  (req, res) => socialMediaOAuthController.connectBlueskyDirect(req, res)
+);
+
 // Initiate OAuth flow
 // POST /api/social-media/connect/:platform
 router.post(

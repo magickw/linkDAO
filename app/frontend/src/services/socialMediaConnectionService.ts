@@ -92,6 +92,37 @@ export const initiateOAuth = async (
 };
 
 /**
+ * Connect to Bluesky directly using handle and app password
+ * @param handle - Bluesky handle (e.g., user.bsky.social)
+ * @param appPassword - App password (not login password)
+ * @returns Connection result
+ */
+export const connectBlueskyDirect = async (
+  handle: string,
+  appPassword: string
+): Promise<OAuthInitiationResponse> => {
+  try {
+    const response = await post<OAuthInitiationResponse>(
+      `${API_BASE_URL}/api/social-media/connect/bluesky/direct`,
+      { handle, appPassword }
+    );
+
+    if (!response.success) {
+      throw new Error(response.error || response.data?.message || 'Failed to connect to Bluesky');
+    }
+
+    return response.data || { success: false, message: 'No data received' };
+  } catch (error) {
+    console.error('Error connecting to Bluesky:', error);
+    return {
+      success: false,
+      message: 'Failed to connect to Bluesky',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+};
+
+/**
  * Get all social media connections for the current user
  * @returns List of connected platforms
  */

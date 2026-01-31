@@ -52,6 +52,108 @@ class SocialMediaConnectionService {
   }
 
   /**
+   * Connect to Bluesky directly (App Password flow)
+   */
+  async connectBlueskyDirect(userId: string, handle: string, appPassword: string): Promise<SocialMediaConnection> {
+    // Verify user exists
+    const userExists = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (userExists.length === 0) {
+      throw new Error('User not found');
+    }
+
+    try {
+      // Use the BlueskyOAuthProvider to handle the specific auth logic
+      const provider = getOAuthProvider('bluesky') as any; // Cast because 'login' is not on BaseOAuthProvider interface
+      if (!provider.login) {
+        throw new Error('Bluesky provider does not support direct login');
+      }
+
+      const { tokens, userInfo } = await provider.login(handle, appPassword);
+      
+      // Encrypt tokens
+      const encryptedAccessToken = await this.encryptToken(tokens.accessToken);
+      const encryptedRefreshToken = tokens.refreshToken
+        ? await this.encryptToken(tokens.refreshToken)
+        : null;
+
+      // Check if connection already exists
+      const existingConnection = await db
+        .select()
+        .from(socialMediaConnections)
+        .where(
+          and(
+            eq(socialMediaConnections.userId, userId),
+            eq(socialMediaConnections.platform, 'bluesky')
+          )
+        )
+        .limit(1);
+
+      let connectionId: string;
+
+      if (existingConnection.length > 0) {
+        // Update existing
+        await db
+          .update(socialMediaConnections)
+          .set({
+            accessToken: encryptedAccessToken,
+            refreshToken: encryptedRefreshToken,
+            tokenExpiry: tokens.expiresAt,
+            platformUserId: userInfo.platformUserId,
+            platformUsername: userInfo.username,
+            platformDisplayName: userInfo.displayName,
+            platformAvatarUrl: userInfo.avatarUrl,
+            status: 'active',
+            lastError: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(socialMediaConnections.id, existingConnection[0].id));
+        
+        connectionId = existingConnection[0].id;
+      } else {
+        // Create new
+        const newConnections = await db
+          .insert(socialMediaConnections)
+          .values({
+            userId,
+            platform: 'bluesky',
+            accessToken: encryptedAccessToken,
+            refreshToken: encryptedRefreshToken,
+            tokenExpiry: tokens.expiresAt,
+            platformUserId: userInfo.platformUserId,
+            platformUsername: userInfo.username,
+            platformDisplayName: userInfo.displayName,
+            platformAvatarUrl: userInfo.avatarUrl,
+            status: 'active',
+          })
+          .returning();
+        
+        connectionId = newConnections[0].id;
+      }
+
+      return {
+        id: connectionId,
+        userId,
+        platform: 'bluesky',
+        platformUserId: userInfo.platformUserId,
+        platformUsername: userInfo.username,
+        platformDisplayName: userInfo.displayName,
+        platformAvatarUrl: userInfo.avatarUrl,
+        status: 'active',
+        connectedAt: new Date(),
+      };
+
+    } catch (error) {
+      safeLogger.error('Bluesky direct connection error:', error);
+      throw new Error('Failed to connect to Bluesky. Please check your handle and app password.');
+    }
+  }
+
+  /**
    * Initiate OAuth flow for a platform
    */
   async initiateOAuth(userId: string, platform: string): Promise<InitiateOAuthResult> {

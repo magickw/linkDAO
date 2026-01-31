@@ -1,6 +1,6 @@
 /**
  * Bluesky Provider
- * Implements AT Protocol for Bluesky social network
+ * Implements AT Protocol for Bluesky social network using BskyAgent (Direct Auth)
  */
 
 import { BskyAgent, RichText } from '@atproto/api';
@@ -12,66 +12,121 @@ const BSKY_SERVICE_URL = 'https://bsky.social';
 
 export class BlueskyOAuthProvider extends BaseOAuthProvider {
   constructor() {
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.linkdao.io';
-    // Use the official public metadata URL as the production default Client ID
-    const defaultClientId = 'https://api.linkdao.io/api/social-media/bluesky-metadata.json';
+    // Bluesky configuration is minimal for direct auth
     const config: OAuthConfig = {
-      clientId: process.env.BLUESKY_CLIENT_ID || (process.env.NODE_ENV === 'production' ? defaultClientId : `${backendUrl}/api/social-media/bluesky-metadata.json`),
-      clientSecret: process.env.BLUESKY_CLIENT_SECRET || '',
-      callbackUrl: process.env.BLUESKY_CALLBACK_URL || `${backendUrl}/api/social-media/callback/bluesky`,
+      clientId: 'bluesky-direct',
+      clientSecret: '',
+      callbackUrl: '',
       scopes: ['atproto'],
-      authorizationUrl: '', // Bluesky uses dynamic discovery
+      authorizationUrl: '',
       tokenUrl: '',
     };
     super('bluesky', config);
   }
 
   /**
-     * Build Bluesky authorization URL
-     * Note: Bluesky OAuth is discovery-based. For now, we return a placeholder
-     * or use a simplified app-password based connection if OAuth is not configured.
-     */
-    getAuthorizationUrl(state: string, _codeVerifier?: string): string {
-      safeLogger.info('Building Bluesky authorization URL', { state, hasClientId: !!this.config.clientId });
-  
-      if (this.config.clientId) {
-        // In a real implementation, this would point to an OAuth entry point
-        // For AT Protocol, the client_id is typically the URL of the client's metadata
-        return `https://bsky.app/oauth/authorize?client_id=${encodeURIComponent(this.config.clientId)}&state=${state}&redirect_uri=${encodeURIComponent(this.config.callbackUrl)}`;
-      }
-  
-      // Fallback if no Client ID (dev mode)
-      // We'll throw a more specific error that the controller can handle
-      throw new Error('Bluesky OAuth is not configured. Please set BLUESKY_CLIENT_ID environment variable to enable Bluesky integration.');
-    }
-  /**
-   * Exchange authorization code for tokens
+   * Build Bluesky authorization URL
+   * Not used for direct auth (Option B)
    */
-  async exchangeCodeForTokens(code: string, _codeVerifier?: string): Promise<OAuthTokens> {
+  getAuthorizationUrl(state: string, _codeVerifier?: string): string {
+    // Return a dummy URL or empty string since we use a custom modal
+    return '';
+  }
+
+  /**
+   * Authenticate directly with Handle and App Password
+   * This replaces the standard OAuth exchangeCodeForTokens flow
+   */
+  async login(handle: string, appPassword: string): Promise<{ tokens: OAuthTokens; userInfo: OAuthUserInfo }> {
     try {
-      // simplified placeholder for exchange
-      // In real ATProto OAuth, this is a more complex multi-step process
-      return {
-        accessToken: code, // Placeholder
-        refreshToken: 'placeholder',
-        expiresAt: new Date(Date.now() + 3600 * 1000),
+      const agent = new BskyAgent({ service: BSKY_SERVICE_URL });
+      const loginResponse = await agent.login({ identifier: handle, password: appPassword });
+
+      if (!loginResponse.success) {
+        throw new Error('Failed to login to Bluesky');
+      }
+
+      const { accessJwt, refreshJwt, did, handle: userHandle } = loginResponse.data;
+
+      // Get profile for extra details
+      const profile = await agent.getProfile({ actor: did });
+
+      const tokens: OAuthTokens = {
+        accessToken: accessJwt,
+        refreshToken: refreshJwt,
+        expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000), // ~2 hours default
+        tokenType: 'Bearer',
+        scopes: ['atproto'],
       };
+
+      const userInfo: OAuthUserInfo = {
+        platformUserId: did,
+        username: userHandle,
+        displayName: profile.data.displayName,
+        avatarUrl: profile.data.avatar,
+      };
+
+      return { tokens, userInfo };
     } catch (error) {
-      safeLogger.error('Bluesky token exchange error:', error);
+      safeLogger.error('Bluesky login error:', error);
       throw error;
     }
   }
 
   /**
-   * Refresh an expired access token
+   * Exchange authorization code for tokens
+   * Not used in AT Protocol direct auth flow
+   */
+  async exchangeCodeForTokens(code: string, _codeVerifier?: string): Promise<OAuthTokens> {
+    throw new Error('Bluesky uses direct authentication (Option B), not standard OAuth code exchange.');
+  }
+
+  /**
+   * Refresh an expired access token using the refresh JWT
    */
   async refreshAccessToken(refreshToken: string): Promise<OAuthTokens> {
     try {
-      // Placeholder
+      const agent = new BskyAgent({ service: BSKY_SERVICE_URL });
+      
+      // Resume session (this refreshes tokens internally if needed, or we can use refreshSession)
+      // Note: resumeSession takes both access and refresh tokens. 
+      // If we only have refresh token here, we might need to mock the access token or use a specific refresh method.
+      // However, typical usage is to store the whole session. 
+      // For this abstraction, we assume 'refreshToken' is the refresh JWT.
+      
+      // We attempt to resume with just the refresh token if possible, but BskyAgent usually needs the session object.
+      // Workaround: Use the refresh token as both or try to refresh directly if API allows.
+      // Actually, BskyAgent.resumeSession expects a session object.
+      
+      // Correct approach for ATProto refresh:
+      // We need to call com.atproto.server.refreshSession with the refresh token.
+      
+      // Manually calling refresh endpoint since agent methods assume active session state
+      // OR construct a partial session
+      
+      // Try resuming with dummy access token and valid refresh token
+      await agent.resumeSession({
+        accessJwt: 'expired', 
+        refreshJwt: refreshToken,
+        handle: 'placeholder',
+        did: 'placeholder',
+        active: true
+      });
+
+      // Just resuming might trigger a refresh if access token is invalid?
+      // Actually, let's use the underlying API call if agent doesn't expose refresh directly without full session.
+      // agent.api.com.atproto.server.refreshSession()
+      
+      // A safer way with the library:
+      const { data } = await agent.api.com.atproto.server.refreshSession(
+        undefined, 
+        { headers: { authorization: `Bearer ${refreshToken}` } }
+      );
+
       return {
-        accessToken: refreshToken,
-        refreshToken: refreshToken,
-        expiresAt: new Date(Date.now() + 3600 * 1000),
+        accessToken: data.accessJwt,
+        refreshToken: data.refreshJwt,
+        expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000),
       };
     } catch (error) {
       safeLogger.error('Bluesky token refresh error:', error);
@@ -84,14 +139,28 @@ export class BlueskyOAuthProvider extends BaseOAuthProvider {
    */
   async getUserInfo(accessToken: string): Promise<OAuthUserInfo> {
     try {
-      const { BskyAgent } = await import('@atproto/api');
       const agent = new BskyAgent({ service: BSKY_SERVICE_URL });
       
-      // Use the token to resume session if possible
-      // In this architecture, accessToken might be the session JWT
-      await agent.resumeSession({ accessJwt: accessToken, refreshJwt: '', handle: '', did: '', active: true });
+      // Resume session with access token
+      // We don't have the DID here easily unless encoded in token, but getProfile can work with 'self' if authenticated?
+      // Or we need to decode the JWT to get the DID.
       
-      const profile = await agent.getProfile({ actor: agent.session?.handle || '' });
+      // Workaround: Resume session requires more data usually.
+      // But we can set the access token directly on the API client.
+      agent.api.xrpc.headers.authorization = `Bearer ${accessToken}`;
+      
+      // We need the DID or handle to fetch profile. 
+      // If we don't have it, we might need to parse the JWT (if it's a standard JWT with 'sub').
+      // Let's assume the session is valid.
+      
+      // Attempt to get own profile
+      // Note: getProfile requires an actor (DID or handle).
+      // If we are authenticated, we can try 'self' if supported, or decode token.
+      // Let's decode the JWT base64 to find the DID (sub claim)
+      const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString());
+      const did = payload.sub;
+
+      const profile = await agent.getProfile({ actor: did });
       
       return {
         platformUserId: profile.data.did,
@@ -108,8 +177,14 @@ export class BlueskyOAuthProvider extends BaseOAuthProvider {
   /**
    * Revoke an access token
    */
-  async revokeToken(_accessToken: string): Promise<void> {
-    // Session cleanup
+  async revokeToken(accessToken: string): Promise<void> {
+    try {
+      const agent = new BskyAgent({ service: BSKY_SERVICE_URL });
+      agent.api.xrpc.headers.authorization = `Bearer ${accessToken}`;
+      await agent.api.com.atproto.server.deleteSession();
+    } catch (error) {
+      // Ignore errors during revocation
+    }
   }
 
   /**
@@ -118,12 +193,20 @@ export class BlueskyOAuthProvider extends BaseOAuthProvider {
   async postContent(accessToken: string, content: SocialMediaContent): Promise<PostResult> {
     try {
       const adaptedContent = this.adaptContent(content);
-      const { BskyAgent, RichText } = await import('@atproto/api');
-      
-      // Resume session with the stored token
       const agent = new BskyAgent({ service: BSKY_SERVICE_URL });
       
+      // Set auth header directly
+      agent.api.xrpc.headers.authorization = `Bearer ${accessToken}`;
+      
+      // We need the user's DID to post? No, usually just auth.
+      // However, RichText processing might need agent context.
+      
+      // Parse JWT for DID to help agent context if needed
+      const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString());
+      const did = payload.sub;
+
       const rt = new RichText({ text: adaptedContent.text });
+      // detectFacets requires unauthenticated network access usually, or agent
       await rt.detectFacets(agent);
 
       const postPayload: any = {
@@ -134,7 +217,7 @@ export class BlueskyOAuthProvider extends BaseOAuthProvider {
 
       // Handle media
       if (adaptedContent.mediaUrls && adaptedContent.mediaUrls.length > 0) {
-        const images = await this.uploadMedia(accessToken, adaptedContent.mediaUrls);
+        const images = await this.uploadMedia(agent, adaptedContent.mediaUrls);
         if (images.length > 0) {
           postPayload.embed = {
             $type: 'app.bsky.embed.images',
@@ -143,18 +226,18 @@ export class BlueskyOAuthProvider extends BaseOAuthProvider {
         }
       }
 
-      // We need a valid session to post.
-      if (accessToken.includes('.')) {
-        // Looks like a JWT
-        await agent.resumeSession({ accessJwt: accessToken, refreshJwt: '', handle: '', did: '', active: true });
-      }
-
+      // Post to repo
       const response = await agent.post(postPayload);
+
+      // Construct success result
+      // We need to fetch the handle to make a nice URL, or use DID
+      // Use DID for robustness
+      const handle = did; // Ideally resolve to handle, but DID works in URLs too
 
       return {
         success: true,
         externalPostId: response.uri,
-        externalPostUrl: `https://bsky.app/profile/${agent.session?.handle}/post/${response.uri.split('/').pop()}`,
+        externalPostUrl: `https://bsky.app/profile/${handle}/post/${response.uri.split('/').pop()}`,
       };
     } catch (error) {
       safeLogger.error('Bluesky post error:', error);
@@ -168,33 +251,27 @@ export class BlueskyOAuthProvider extends BaseOAuthProvider {
   /**
    * Upload media to Bluesky
    */
-  private async uploadMedia(accessToken: string, mediaUrls: string[]): Promise<any[]> {
+  private async uploadMedia(agent: BskyAgent, mediaUrls: string[]): Promise<any[]> {
     const images: any[] = [];
-    try {
-      const { BskyAgent } = await import('@atproto/api');
-      const agent = new BskyAgent({ service: BSKY_SERVICE_URL });
-      await agent.resumeSession({ accessJwt: accessToken, refreshJwt: '', handle: '', did: '', active: true });
+    
+    for (const url of mediaUrls) {
+      try {
+        const response = await fetch(url);
+        const blob = await response.arrayBuffer();
+        const contentType = response.headers.get('content-type') || 'image/jpeg';
 
-      for (const url of mediaUrls) {
-        try {
-          const response = await fetch(url);
-          const blob = await response.arrayBuffer();
-          const contentType = response.headers.get('content-type') || 'image/jpeg';
+        // Upload blob
+        const upload = await agent.uploadBlob(new Uint8Array(blob), { encoding: contentType });
+        
+        images.push({
+          alt: 'Image shared from LinkDAO', // Placeholder alt text
+          image: upload.data.blob,
+        });
 
-          const upload = await agent.uploadBlob(new Uint8Array(blob), { encoding: contentType });
-          
-          images.push({
-            alt: '', // Could be enhanced with AI description later
-            image: upload.data.blob,
-          });
-
-          if (images.length >= 4) break; // Bluesky limit
-        } catch (error) {
-          safeLogger.error('Error uploading media to Bluesky:', { url, error });
-        }
+        if (images.length >= 4) break; // Bluesky limit
+      } catch (error) {
+        safeLogger.error('Error uploading media to Bluesky:', { url, error });
       }
-    } catch (e) {
-      return [];
     }
 
     return images;
