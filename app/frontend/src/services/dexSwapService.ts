@@ -7,6 +7,8 @@ import { Hash, PublicClient, WalletClient, parseUnits, formatUnits } from 'viem'
 import { ENV_CONFIG } from '@/config/environment';
 import { enhancedAuthService } from './enhancedAuthService';
 import { csrfService } from './csrfService';
+import { pendingTransactionService } from './pendingTransactionService';
+
 
 export interface Token {
   address: string;
@@ -180,6 +182,21 @@ export class DexSwapService {
         // Let wallet estimate gas or use backend suggestion (optional)
         // gas: tx.gas ? BigInt(tx.gas) : undefined
       });
+
+      // Register pending transaction for immediate visibility
+      try {
+        pendingTransactionService.addTransaction({
+          hash,
+          type: 'swap',
+          amount: params.amountIn,
+          token: params.tokenIn.symbol,
+          from: params.walletAddress,
+          to: tx.to as string,
+          chainId: params.publicClient.chain?.id || 1
+        });
+      } catch (pendingErr) {
+        console.warn('Failed to register pending transaction:', pendingErr);
+      }
 
       // 3. Wait for Receipt
       await params.publicClient.waitForTransactionReceipt({ hash });

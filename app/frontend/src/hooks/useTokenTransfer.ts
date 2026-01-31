@@ -47,7 +47,7 @@ export function useTokenTransfer() {
         isPending: isErc20Pending
     } = useWriteContract();
 
-    const transfer = useCallback(async ({ tokenAddress, recipient, amount, decimals = 18, chainId, password }: TransferOptions & { chainId?: number, password?: string }) => {
+    const transfer = useCallback(async ({ tokenAddress, tokenSymbol, recipient, amount, decimals = 18, chainId, password }: TransferOptions & { chainId?: number, password?: string }) => {
         setIsPending(true);
         setTxHash(null);
 

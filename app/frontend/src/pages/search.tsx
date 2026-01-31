@@ -15,17 +15,20 @@ export default function SearchPage() {
   // Get initial query from URL
   const initialQuery = typeof router.query.q === 'string' ? router.query.q : '';
   const initialType = typeof router.query.type === 'string' ? router.query.type : 'all';
+  const initialTab = typeof router.query.tab === 'string' ? (router.query.tab as any) : undefined;
 
   // Set initial tab based on URL or query presence
   useEffect(() => {
-    if (initialQuery) {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    } else if (initialQuery) {
       setActiveTab('search');
     } else if (router.pathname === '/recommendations') {
       setActiveTab('recommendations');
     } else if (router.pathname.startsWith('/hashtags')) {
       setActiveTab('hashtags');
     }
-  }, [initialQuery, router.pathname]);
+  }, [initialQuery, initialTab, router.pathname]);
 
   const handleResultSelect = (type: 'post' | 'community' | 'user', id: string) => {
     switch (type) {
@@ -48,7 +51,7 @@ export default function SearchPage() {
         router.push(`/?community=${item.id}`);
         break;
       case 'hashtag':
-        router.push(`/hashtags/${item.tag}`);
+        router.push(`/search?q=${encodeURIComponent('#' + item.tag)}`);
         break;
       case 'topic':
         router.push(`/search?q=${encodeURIComponent(item)}&type=all`);
@@ -60,7 +63,7 @@ export default function SearchPage() {
   };
 
   const handleHashtagSelect = (tag: string) => {
-    router.push(`/hashtags/${tag}`);
+    router.push(`/search?q=${encodeURIComponent('#' + tag)}`);
   };
 
   return (
@@ -147,6 +150,7 @@ export default function SearchPage() {
                     onResultSelect={handleResultSelect}
                     showFilters={true}
                     placeholder="Search content..."
+                    autoExecute={initialQuery.startsWith('#')}
                   />
                 )}
 

@@ -866,7 +866,7 @@ const EnhancedPostCard = React.memo(({
                   {post.hashtags.map((tag, index) => (
                     <Link
                       key={index}
-                      href={`/hashtag/${tag}`}
+                      href={`/search?q=${encodeURIComponent('#' + tag)}`}
                       className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 transition-colors duration-200"
                       aria-label={`View posts tagged with ${tag}`}
                     >

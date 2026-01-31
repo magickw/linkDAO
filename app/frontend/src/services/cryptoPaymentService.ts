@@ -21,6 +21,7 @@ import { PaymentError } from './paymentErrorHandler';
 import { GasFeeService } from './gasFeeService';
 import { PAYMENT_CONFIG } from '../config/payment';
 import { enhancedEscrowABI } from '../contracts/EnhancedEscrow';
+import { pendingTransactionService } from './pendingTransactionService';
 
 
 export class CryptoPaymentService {
@@ -61,6 +62,21 @@ export class CryptoPaymentService {
 
       // Execute the payment
       const hash = await this.executePayment(request, gasEstimate);
+
+      // Register with pending transaction service for immediate UI visibility
+      try {
+        pendingTransactionService.addTransaction({
+          hash,
+          type: 'send',
+          amount: formatUnits(request.amount, request.token.decimals),
+          token: request.token.symbol,
+          from: transaction.sender,
+          to: request.recipient,
+          chainId: request.chainId
+        });
+      } catch (pendingErr) {
+        console.warn('Failed to register pending transaction:', pendingErr);
+      }
 
       // Update transaction with hash
       transaction.hash = hash;
@@ -107,6 +123,22 @@ export class CryptoPaymentService {
 
       // Execute the escrow payment
       const hash = await this.executeEscrowPayment(request, gasEstimate);
+
+      // Register with pending transaction service for immediate UI visibility
+      try {
+        const escrowAddress = (PAYMENT_CONFIG.ESCROW_CONTRACT_ADDRESS as Record<number, string>)[request.chainId];
+        pendingTransactionService.addTransaction({
+          hash,
+          type: 'contract_interaction',
+          amount: formatUnits(request.amount, request.token.decimals),
+          token: request.token.symbol,
+          from: transaction.sender,
+          to: escrowAddress || 'Escrow Contract',
+          chainId: request.chainId
+        });
+      } catch (pendingErr) {
+        console.warn('Failed to register pending transaction:', pendingErr);
+      }
 
       // Update transaction with hash
       transaction.hash = hash;

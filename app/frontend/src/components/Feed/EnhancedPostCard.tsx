@@ -642,7 +642,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
         {post.tags && post.tags.length > 0 && (
           <div>
             {post.tags.map((tag: string, index: number) => (
-              <a key={index} href={`/hashtag/${tag}`}>#{tag}</a>
+              <a key={index} href={`/search?q=${encodeURIComponent('#' + tag)}`}>#{tag}</a>
             ))}
           </div>
         )}

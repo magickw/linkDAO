@@ -109,13 +109,13 @@ export default function HashtagDiscovery({
     setSelectedHashtag(cleanTag);
     setPage(0);
     loadHashtagPosts(cleanTag, 0);
-    
+
     if (onHashtagSelect) {
       onHashtagSelect(cleanTag);
     }
-    
-    // Update URL
-    router.push(`/hashtags/${cleanTag}`, undefined, { shallow: true });
+
+    // Update URL to search page with hashtag query
+    router.push(`/search?q=${encodeURIComponent('#' + cleanTag)}`);
   };
 
   // Load more posts

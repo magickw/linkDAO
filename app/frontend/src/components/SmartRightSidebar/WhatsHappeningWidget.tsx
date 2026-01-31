@@ -111,8 +111,8 @@ export default function WhatsHappeningWidget({ className = '' }: WhatsHappeningW
   }, []);
 
   const handleHashtagClick = (hashtagName: string) => {
-    // Navigate to the hashtag page
-    router.push(`/hashtags/${hashtagName.toLowerCase()}`);
+    // Navigate to search page with hashtag query
+    router.push(`/search?q=${encodeURIComponent('#' + hashtagName.toLowerCase())}`);
   };
 
   return (
@@ -169,8 +169,8 @@ export default function WhatsHappeningWidget({ className = '' }: WhatsHappeningW
           </div>
         )}
 
-        <button 
-          onClick={() => router.push('/hashtags')}
+        <button
+          onClick={() => router.push('/search?tab=hashtags')}
           className="w-full mt-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
         >
           Show more

@@ -16,6 +16,7 @@ interface EnhancedSearchInterfaceProps {
   showFilters?: boolean;
   placeholder?: string;
   communityId?: string; // For community-specific search
+  autoExecute?: boolean; // Auto-execute search on mount if initialQuery is provided
 }
 
 export function EnhancedSearchInterface({
@@ -25,7 +26,8 @@ export function EnhancedSearchInterface({
   className = '',
   showFilters = true,
   placeholder = 'Search content...',
-  communityId
+  communityId,
+  autoExecute = false
 }: EnhancedSearchInterfaceProps) {
   const router = useRouter();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -82,6 +84,13 @@ export function EnhancedSearchInterface({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // Auto-execute search when autoExecute is true
+  useEffect(() => {
+    if (autoExecute && initialQuery && query === initialQuery) {
+      handleSearch(initialQuery);
+    }
+  }, [autoExecute, initialQuery]);
 
   // Handle search submission
   const handleSearch = async (searchQuery?: string) => {

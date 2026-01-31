@@ -25,10 +25,10 @@ export default function HashtagPage() {
       </Head>
 
       <DashboardLayout activeView="feed">
-        <HashtagDiscovery 
+        <HashtagDiscovery
           hashtag={hashtagName}
           onHashtagSelect={(tag) => {
-            router.push(`/hashtags/${tag}`);
+            router.push(`/search?q=${encodeURIComponent('#' + tag)}`);
           }}
           className="min-h-screen"
         />

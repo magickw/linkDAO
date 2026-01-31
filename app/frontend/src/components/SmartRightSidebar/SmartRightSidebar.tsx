@@ -7,6 +7,7 @@ import { useToast } from '@/context/ToastContext';
 import { useRouter } from 'next/router';
 import { paymentRouterAddress, useWritePaymentRouterSendEthPayment, useWritePaymentRouterSendTokenPayment } from '@/generated';
 import { dexService } from '@/services/dexService';
+import { pendingTransactionService } from '@/services/pendingTransactionService';
 
 import QuickActions from './QuickActions';
 
@@ -218,12 +219,24 @@ export default function SmartRightSidebar({
         if (!writeSendEthAsync) throw new Error('ETH write hook not available');
         const routerAddress = paymentRouterAddress[chainId as keyof typeof paymentRouterAddress] as `0x${string}` | undefined;
         if (!routerAddress) throw new Error(`Payment router address not configured for chain ID: ${chainId}`);
-        await writeSendEthAsync({
+        const hash = await writeSendEthAsync({
           args: [routerAddress, amountBigInt, `stake:${poolId}`],
           value: amountBigInt,
           gas: 300000n,
           chainId: chainId as keyof typeof paymentRouterAddress
         });
+
+        // Register pending transaction
+        pendingTransactionService.addTransaction({
+          hash,
+          type: 'stake',
+          amount: amount.toString(),
+          token: 'ETH',
+          from: walletData.address,
+          to: routerAddress,
+          chainId: chainId || 1
+        });
+
         addToast('Stake (ETH) submitted', 'success');
         try { router.push('/wallet/transactions'); } catch { }
         return;
@@ -233,11 +246,23 @@ export default function SmartRightSidebar({
       const tokenAddr = paymentToken.address as `0x${string}`;
       const routerAddress = paymentRouterAddress[chainId as keyof typeof paymentRouterAddress] as `0x${string}` | undefined;
       if (!routerAddress) throw new Error(`Payment router address not configured for chain ID: ${chainId}`);
-      await writeSendTokenAsync({
+      const hash = await writeSendTokenAsync({
         args: [tokenAddr, routerAddress, amountBigInt, `stake:${poolId}`],
         gas: 500000n,
         chainId: chainId as keyof typeof paymentRouterAddress
       });
+
+      // Register pending transaction
+      pendingTransactionService.addTransaction({
+        hash,
+        type: 'stake',
+        amount: amount.toString(),
+        token: token,
+        from: walletData.address,
+        to: routerAddress,
+        chainId: chainId || 1
+      });
+
       addToast('Stake submitted', 'success');
       try { router.push('/wallet/transactions'); } catch { }
       return;
