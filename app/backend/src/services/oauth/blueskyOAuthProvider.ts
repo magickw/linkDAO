@@ -108,7 +108,7 @@ export class BlueskyOAuthProvider extends BaseOAuthProvider {
     try {
       safeLogger.warn('Using deprecated app password authentication for Bluesky. OAuth is recommended.');
 
-      const agent = new BskyAgent({ service: BSKY_SERVICE_URL });
+      const agent = new AtpAgent({ service: BSKY_SERVICE_URL });
 
       let loginResponse;
       try {
