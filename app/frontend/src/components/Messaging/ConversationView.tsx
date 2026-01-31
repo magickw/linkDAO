@@ -420,32 +420,34 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
   };
 
   const handleViewOrder = (orderId: number) => {
-    // In a real implementation, this would navigate to the order details page
-    console.log('Viewing order:', orderId);
+    // Navigate to order details page
+    window.location.href = `/marketplace/orders/${orderId}`;
   };
 
   const handleTrackPackage = (trackingNumber: string) => {
-    // In a real implementation, this would open the tracking details
-    console.log('Tracking package:', trackingNumber);
+    // Open tracking in new tab
+    window.open(`https://track.aftership.com/${trackingNumber}`, '_blank');
   };
 
   return (
     <div className="conversation-view h-full flex flex-col relative">
-      {/* Order Context Header */}
-      <OrderConversationHeader
-        conversation={{
-          ...conversation,
-          orderId: (conversation as any).orderId || 12345,
-          contextMetadata: {
-            productName: 'Wireless Headphones',
-            productImage: '',
-            orderStatus: 'shipped',
-            orderId: (conversation as any).orderId || 12345
-          }
-        }}
-        onViewOrder={handleViewOrder}
-        onTrackPackage={handleTrackPackage}
-      />
+      {/* Order Context Header - Only show for order-type conversations */}
+      {conversation.metadata?.type === 'order' && (conversation.metadata as any).relatedOrderId && (
+        <OrderConversationHeader
+          conversation={{
+            ...conversation,
+            orderId: (conversation.metadata as any).relatedOrderId,
+            contextMetadata: {
+              productName: (conversation.metadata as any).contextMetadata?.productName || 'Order Item',
+              productImage: (conversation.metadata as any).contextMetadata?.productImage || '',
+              orderStatus: (conversation.metadata as any).contextMetadata?.orderStatus || 'pending',
+              orderId: (conversation.metadata as any).relatedOrderId
+            }
+          }}
+          onViewOrder={handleViewOrder}
+          onTrackPackage={handleTrackPackage}
+        />
+      )}
 
       {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">

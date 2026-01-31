@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Conversation } from '../../types/messaging';
 import { formatDistanceToNow } from 'date-fns';
+import { MessageCircle, Package, ShoppingBag, Bot } from 'lucide-react';
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -59,6 +60,20 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   const truncateAddress = (address: string) => {
     if (address.length <= 10) return address;
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
+  const getConversationTypeInfo = (conversation: Conversation) => {
+    const type = conversation.metadata?.type || 'general';
+    switch (type) {
+      case 'order':
+        return { icon: Package, label: 'Order', color: 'text-green-500' };
+      case 'product':
+        return { icon: ShoppingBag, label: 'Product Inquiry', color: 'text-purple-500' };
+      case 'automated':
+        return { icon: Bot, label: 'Automated', color: 'text-orange-500' };
+      default:
+        return { icon: MessageCircle, label: 'General', color: 'text-blue-500' };
+    }
   };
 
   return (
@@ -123,9 +138,21 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                 `}
               >
                 <div className="flex items-start space-x-3">
-                  {/* Avatar */}
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium text-sm">
-                    {otherParticipant.slice(2, 4).toUpperCase()}
+                  {/* Avatar with Type Badge */}
+                  <div className="relative">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium text-sm">
+                      {otherParticipant.slice(2, 4).toUpperCase()}
+                    </div>
+                    {/* Conversation Type Badge */}
+                    {conversation.metadata?.type && conversation.metadata.type !== 'general' && (
+                      <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm`}>
+                        {(() => {
+                          const typeInfo = getConversationTypeInfo(conversation);
+                          const TypeIcon = typeInfo.icon;
+                          return <TypeIcon size={12} className={typeInfo.color} />;
+                        })()}
+                      </div>
+                    )}
                   </div>
 
                   {/* Conversation Info */}
@@ -152,15 +179,33 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                       )}
                     </div>
 
-                    {/* Encryption Indicator */}
-                    {conversation.isEncrypted && (
-                      <div className="flex items-center mt-1">
-                        <svg className="w-3 h-3 text-green-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-xs text-green-600 dark:text-green-400">Encrypted</span>
-                      </div>
-                    )}
+                    {/* Status Indicators */}
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      {/* Conversation Type Label */}
+                      {conversation.metadata?.type && conversation.metadata.type !== 'general' && (
+                        <div className="flex items-center">
+                          {(() => {
+                            const typeInfo = getConversationTypeInfo(conversation);
+                            const TypeIcon = typeInfo.icon;
+                            return (
+                              <span className={`inline-flex items-center text-xs ${typeInfo.color}`}>
+                                <TypeIcon size={10} className="mr-1" />
+                                {typeInfo.label}
+                              </span>
+                            );
+                          })()}
+                        </div>
+                      )}
+                      {/* Encryption Indicator */}
+                      {conversation.isEncrypted && (
+                        <div className="flex items-center">
+                          <svg className="w-3 h-3 text-green-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-xs text-green-600 dark:text-green-400">Encrypted</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
