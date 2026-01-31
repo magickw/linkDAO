@@ -124,9 +124,13 @@ export function useConsolidatedWebSocket(options: UseConsolidatedWebSocketOption
     updateConnectionState('connecting');
 
     try {
-      globalSocket = io(ENV_CONFIG.WS_URL, {
+      // Use BACKEND_URL (HTTP/HTTPS) - Socket.IO will handle protocol upgrade
+      const socketUrl = ENV_CONFIG.BACKEND_URL;
+      
+      globalSocket = io(socketUrl, {
         path: '/socket.io/',
-        transports: ['websocket', 'polling'],
+        // Remove restrictive transports to allow polling fallback if WebSocket fails
+        // transports: ['websocket', 'polling'], 
         auth: {
           address,
           type: 'consolidated'

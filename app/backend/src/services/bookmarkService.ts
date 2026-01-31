@@ -322,105 +322,119 @@ class BookmarkService {
         conditions.push(eq(bookmarks.contentType, contentType));
       }
 
-      // Determine sort order
-      let orderByClause = sql`${bookmarks.createdAt} DESC`;
-      if (sortBy === 'oldest') {
-        orderByClause = sql`${bookmarks.createdAt} ASC`;
-      } else if (sortBy === 'title') {
-        orderByClause = sql`CASE 
-          WHEN ${posts.title} IS NOT NULL THEN ${posts.title}
-          ELSE LEFT(${statuses.content}, 1)
-        END ASC`;
-      }
-
-      // Use CTE for optimized combined query
-      const query = db.with('combinedBookmarks', db.select({
-        postId: sql`COALESCE(${bookmarks.postId}, ${bookmarks.statusId})`,
-        bookmarkedAt: bookmarks.createdAt,
-        contentType: bookmarks.contentType,
-        postType: sql`CASE WHEN ${bookmarks.postId} IS NOT NULL THEN 'post' ELSE 'status' END`
-      })
-      .from(bookmarks)
-      .leftJoin(posts, eq(bookmarks.postId, posts.id))
-      .leftJoin(statuses, eq(bookmarks.statusId, statuses.id))
-      .where(and(...conditions)));
-
-      // Apply search if provided
-      if (search && search.trim()) {
-        query.where(
-          or(
-            ilike(posts.title, `%${search}%`),
-            ilike(statuses.content, `%${search}%`)
-          )
-        );
-      }
-
       // Get total count
       const countResult = await db
         .select({ count: sql<number>`COUNT(*)` })
-        .from('combinedBookmarks')
+        .from(bookmarks)
         .where(and(...conditions));
+      
+      const total = Number(countResult[0]?.count || 0);
 
-      // Get paginated results
-      const bookmarks = await db
-        .select({
-          postId: 'combinedBookmarks.postId',
-          bookmarkedAt: 'combinedBookmarks.bookmarkedAt',
-          contentType: 'combinedBookmarks.contentType',
-          post: sql`
-            CASE 
-              WHEN ${combinedBookmarks.contentType} = 'post' THEN ${posts.id}
-              ELSE ${statuses.id}
-            END
-          `,
-          // Select relevant post/status fields
-          id: sql`CASE 
-            WHEN ${combinedBookmarks.contentType} = 'post' THEN ${posts.id}
-            ELSE ${statuses.id}
-          END`,
-          contentCid: sql`COALESCE(${posts.contentCid}, ${statuses.contentCid})`,
-          authorAddress: sql`COALESCE(${posts.authorAddress}, ${statuses.authorId})`,
-          title: sql`COALESCE(${posts.title}, NULL)`,
-          content: sql`COALESCE(${statuses.content}, ${posts.content})`,
-          media: sql`COALESCE(${posts.mediaCids}, ${statuses.mediaCids})`,
-          createdAt: sql`COALESCE(${posts.createdAt}, ${statuses.createdAt})`,
-          updatedAt: sql`COALESCE(${posts.updatedAt}, ${statuses.updatedAt})`,
-          communityId: sql`COALESCE(${posts.communityId}, NULL)`,
-          upvotes: sql`COALESCE(${posts.upvotes}, ${statuses.upvotes})`,
-          downvotes: sql`COALESCE(${posts.downvotes}, ${statuses.downvotes})`,
-          commentsCount: sql`COALESCE(${posts.commentsCount}, 0)`,
-          views: sql`COALESCE(${posts.views}, ${statuses.views})`
-        })
-        .from('combinedBookmarks')
-        .leftJoin(posts, eq(sql`CASE WHEN ${combinedBookmarks.contentType} = 'post' THEN ${combinedBookmarks.postId} END`, posts.id))
-        .leftJoin(statuses, eq(sql`CASE WHEN ${combinedBookmarks.contentType} = 'status' THEN ${combinedBookmarks.postId} END`, statuses.id))
-        .orderBy(orderByClause)
+      // Determine sort order for the main query
+      let orderBy;
+      if (sortBy === 'oldest') {
+        orderBy = [bookmarks.createdAt];
+      } else {
+        orderBy = [desc(bookmarks.createdAt)];
+      }
+
+      // Get bookmark entries
+      const bookmarkEntries = await db
+        .select()
+        .from(bookmarks)
+        .where(and(...conditions))
+        .orderBy(...orderBy)
         .limit(limit)
         .offset(offset);
 
-      const total = countResult[0]?.count || 0;
+      // Populate content for each bookmark
+      const populatedBookmarks = await Promise.all(bookmarkEntries.map(async (bookmark) => {
+        let contentData: any = null;
+
+        if (bookmark.contentType === 'post' && bookmark.postId) {
+          const postResult = await db
+            .select({
+              id: posts.id,
+              contentCid: posts.contentCid,
+              authorId: posts.authorId,
+              title: posts.title,
+              content: posts.content,
+              media: posts.mediaCids,
+              createdAt: posts.createdAt,
+              updatedAt: posts.updatedAt,
+              communityId: posts.communityId,
+              upvotes: posts.upvotes,
+              downvotes: posts.downvotes,
+              views: posts.views,
+              authorAddress: users.walletAddress,
+              authorHandle: users.handle
+            })
+            .from(posts)
+            .leftJoin(users, eq(posts.authorId, users.id))
+            .where(eq(posts.id, bookmark.postId))
+            .limit(1);
+          
+          if (postResult[0]) {
+            contentData = {
+              ...postResult[0],
+              commentsCount: 0 // Default or fetch if needed
+            };
+          }
+        } else if (bookmark.contentType === 'status' && bookmark.statusId) {
+          const statusResult = await db
+            .select({
+              id: statuses.id,
+              contentCid: statuses.contentCid,
+              authorId: statuses.authorId,
+              content: statuses.content,
+              media: statuses.mediaCids,
+              createdAt: statuses.createdAt,
+              updatedAt: statuses.updatedAt,
+              upvotes: statuses.upvotes,
+              downvotes: statuses.downvotes,
+              views: statuses.views,
+              authorAddress: users.walletAddress,
+              authorHandle: users.handle
+            })
+            .from(statuses)
+            .leftJoin(users, eq(statuses.authorId, users.id))
+            .where(eq(statuses.id, bookmark.statusId))
+            .limit(1);
+          
+          if (statusResult[0]) {
+            contentData = {
+              ...statusResult[0],
+              title: null,
+              communityId: null,
+              commentsCount: 0 // Default
+            };
+          }
+        }
+
+        return {
+          postId: bookmark.postId || bookmark.statusId,
+          bookmarkedAt: bookmark.createdAt,
+          contentType: bookmark.contentType,
+          post: contentData
+        };
+      }));
+
+      // Filter out bookmarks where content might have been deleted
+      const validBookmarks = populatedBookmarks.filter(b => b.post !== null);
+
+      // Apply search in-memory if provided (since it's a small paginated set)
+      // Note: Ideally search should be done in SQL, but with two different tables it's complex
+      let finalBookmarks = validBookmarks;
+      if (search && search.trim()) {
+        const searchLower = search.toLowerCase();
+        finalBookmarks = validBookmarks.filter(b => 
+          (b.post.title && b.post.title.toLowerCase().includes(searchLower)) ||
+          (b.post.content && b.post.content.toLowerCase().includes(searchLower))
+        );
+      }
 
       const result = {
-        bookmarks: bookmarks.map(b => ({
-          postId: b.postId,
-          bookmarkedAt: b.bookmarkedAt,
-          contentType: b.contentType,
-          post: {
-            id: b.id,
-            contentCid: b.contentCid,
-            authorAddress: b.authorAddress,
-            title: b.title,
-            content: b.content,
-            media: b.media,
-            createdAt: b.createdAt,
-            updatedAt: b.updatedAt,
-            communityId: b.communityId,
-            upvotes: b.upvotes,
-            downvotes: b.downvotes,
-            commentsCount: b.commentsCount,
-            views: b.views
-          }
-        })),
+        bookmarks: finalBookmarks,
         pagination: {
           page,
           limit,

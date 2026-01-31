@@ -99,6 +99,9 @@ export const users = pgTable("users", {
   // Verification status (explicit)
   isVerified: boolean("is_verified").default(false),
 
+  // Session management
+  maxSessions: integer("max_sessions").default(5), // Maximum concurrent sessions allowed
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow()
 });

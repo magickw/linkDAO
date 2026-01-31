@@ -654,6 +654,55 @@ export class MessagingController {
     }
   }
 
+  // Advanced search messages with full-text and filters
+  async advancedSearchMessages(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = req.user?.walletAddress;
+      if (!userAddress) {
+        res.status(401).json(apiResponse.error('Authentication required', 401));
+        return;
+      }
+
+      const {
+        q,
+        conversationId,
+        senderAddress,
+        messageType,
+        hasAttachments,
+        startDate,
+        endDate,
+        sortBy = 'relevance',
+        sortOrder = 'desc',
+        page = 1,
+        limit = 20
+      } = req.query;
+
+      const searchResults = await messagingService.advancedSearchMessages({
+        userAddress,
+        query: q as string,
+        conversationId: conversationId as string,
+        senderAddress: senderAddress as string,
+        messageType: messageType as string,
+        hasAttachments: hasAttachments === 'true',
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+        sortBy: sortBy as 'relevance' | 'date' | 'sender',
+        sortOrder: sortOrder as 'asc' | 'desc',
+        page: Number(page),
+        limit: Number(limit)
+      });
+
+      res.json(apiResponse.success(searchResults, 'Advanced search completed successfully'));
+    } catch (error) {
+      safeLogger.error('Error in advanced search:', error);
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to perform advanced search'));
+      }
+    }
+  }
+
   // Get message thread (replies)
   async getMessageThread(req: Request, res: Response): Promise<void> {
     try {

@@ -130,7 +130,7 @@ class RealTimeNotificationService {
 
         this.socket = io(wsUrl, {
           path: '/socket.io/',
-          transports: ['websocket', 'polling'],
+          // Removed restrictive transports to allow for polling fallback
           auth: {
             userId,
             token

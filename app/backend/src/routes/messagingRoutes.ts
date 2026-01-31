@@ -177,7 +177,7 @@ router.delete('/messages/:id', csrfProtection,
   messagingController.deleteMessage
 );
 
-// Search messages
+// Search messages (basic)
 router.get('/search',
   validateRequest({
     query: {
@@ -188,6 +188,26 @@ router.get('/search',
     }
   }),
   messagingController.searchMessages
+);
+
+// Advanced search messages with full-text capabilities
+router.get('/search/advanced',
+  validateRequest({
+    query: {
+      q: { type: 'string', required: true, minLength: 2 },
+      conversationId: { type: 'string', optional: true },
+      senderAddress: { type: 'string', optional: true },
+      messageType: { type: 'string', optional: true, enum: ['text', 'image', 'file', 'voice', 'post_share'] },
+      hasAttachments: { type: 'boolean', optional: true },
+      startDate: { type: 'string', optional: true }, // ISO date string
+      endDate: { type: 'string', optional: true }, // ISO date string
+      sortBy: { type: 'string', optional: true, enum: ['relevance', 'date', 'sender'] },
+      sortOrder: { type: 'string', optional: true, enum: ['asc', 'desc'] },
+      page: { type: 'number', optional: true, min: 1 },
+      limit: { type: 'number', optional: true, min: 1, max: 100 }
+    }
+  }),
+  messagingController.advancedSearchMessages
 );
 
 // Get message thread (replies)

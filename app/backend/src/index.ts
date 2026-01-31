@@ -1670,6 +1670,16 @@ httpServer.listen(PORT, () => {
         } catch (error) {
           console.warn('⚠️ Cron jobs failed to initialize:', error);
         }
+
+        // Initialize message retention scheduler for automated cleanup
+        try {
+          const { messageRetentionService } = await import('./services/messageRetentionService');
+          messageRetentionService.startScheduler();
+          console.log('✅ Message retention scheduler started');
+          console.log('🗑️ Automated message cleanup running on schedule');
+        } catch (error) {
+          console.warn('⚠️ Message retention scheduler failed to start:', error);
+        }
       } else {
         console.log('⚠️ Order event listener disabled to save resources');
       }
@@ -1749,6 +1759,15 @@ const gracefulShutdown = async (signal: string) => {
       console.log('✅ Cron jobs stopped');
     } catch (error) {
       console.warn('⚠️ Error stopping cron jobs:', error);
+    }
+
+    // Stop message retention scheduler
+    try {
+      const { messageRetentionService } = await import('./services/messageRetentionService');
+      messageRetentionService.stopScheduler();
+      console.log('✅ Message retention scheduler stopped');
+    } catch (error) {
+      console.warn('⚠️ Error stopping message retention scheduler:', error);
     }
 
     try {

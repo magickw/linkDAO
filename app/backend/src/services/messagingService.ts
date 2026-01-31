@@ -7,6 +7,8 @@ import communityNotificationService from './communityNotificationService';
 import { sanitizeMessage, sanitizeConversation, sanitizeSearchQuery } from '../utils/sanitization';
 import { cacheService } from './cacheService';
 import { getWebSocketService } from './webSocketService';
+import { checkForDuplicate, registerSentMessage, checkIdempotencyKey, registerIdempotencyKey } from './messageDeduplicationService';
+import { compressForStorage, decompressFromStorage, shouldCompress } from '../utils/messageCompression';
 
 // MEMORY OPTIMIZATION: Constants for limits and cleanup
 const MAX_CONVERSATIONS_PER_USER = 50;
@@ -564,14 +566,31 @@ export class MessagingService {
         return messages;
       });
 
+      // DECOMPRESSION: Decompress any compressed messages
+      const decompressedMessages = await Promise.all(
+        conversationMessages.map(async (msg) => {
+          const metadata = msg.metadata as any;
+          if (metadata?.isCompressed && msg.content) {
+            try {
+              const decompressedContent = await decompressFromStorage(msg.content);
+              return { ...msg, content: decompressedContent };
+            } catch (decompressError) {
+              safeLogger.warn(`[MessagingService] Failed to decompress message ${msg.id}:`, decompressError);
+              return msg; // Return original if decompression fails
+            }
+          }
+          return msg;
+        })
+      );
+
       const result = {
         success: true,
         data: {
-          messages: conversationMessages,
+          messages: decompressedMessages,
           pagination: {
             page,
             limit: actualLimit,
-            total: conversationMessages.length
+            total: decompressedMessages.length
           }
         }
       };
@@ -653,6 +672,38 @@ export class MessagingService {
         };
       }
 
+      // DEDUPLICATION: Check for idempotency key in metadata (client-provided)
+      const idempotencyKey = data.metadata?.idempotencyKey;
+      if (idempotencyKey) {
+        const idempotencyResult = await checkIdempotencyKey(idempotencyKey);
+        if (idempotencyResult.exists) {
+          safeLogger.info(`[MessagingService] Idempotent request detected, returning existing message ${idempotencyResult.messageId}`);
+          // Return the existing message
+          const existingMsg = await db.select().from(chatMessages).where(eq(chatMessages.id, idempotencyResult.messageId!)).limit(1);
+          if (existingMsg.length > 0) {
+            return {
+              success: true,
+              message: existingMsg[0],
+              isDuplicate: true
+            };
+          }
+        }
+      }
+
+      // DEDUPLICATION: Check for content-based duplicates
+      const dedupResult = await checkForDuplicate(conversationId, fromAddress, content, data.attachments);
+      if (dedupResult.isDuplicate && dedupResult.existingMessageId) {
+        safeLogger.info(`[MessagingService] Duplicate message detected for conversation ${conversationId}`);
+        const existingMsg = await db.select().from(chatMessages).where(eq(chatMessages.id, dedupResult.existingMessageId)).limit(1);
+        if (existingMsg.length > 0) {
+          return {
+            success: true,
+            message: existingMsg[0],
+            isDuplicate: true
+          };
+        }
+      }
+
       // Sanitize message content to prevent XSS attacks
       // Note: Encrypted content should NOT be sanitized as it would break decryption
       const sanitizedMessage = encryptedContent
@@ -663,7 +714,7 @@ export class MessagingService {
           attachments: data.attachments
         });
 
-      const messageContent = sanitizedMessage.content || '';
+      let messageContent = sanitizedMessage.content || '';
 
       // Validate message size (10KB limit)
       // Use Buffer.byteLength instead of Buffer to ensure compatibility with all Node.js environments
@@ -673,6 +724,19 @@ export class MessagingService {
           success: false,
           message: 'Message content exceeds 10KB limit'
         };
+      }
+
+      // COMPRESSION: Compress large messages for storage efficiency
+      let isCompressed = false;
+      if (!encryptedContent && shouldCompress(messageContent)) {
+        try {
+          messageContent = await compressForStorage(messageContent);
+          isCompressed = true;
+          safeLogger.debug(`[MessagingService] Compressed message from ${contentSize} bytes`);
+        } catch (compressError) {
+          safeLogger.warn('[MessagingService] Compression failed, storing uncompressed:', compressError);
+          // Continue with uncompressed content
+        }
       }
 
       // DB OPERATION: Insert Message
@@ -688,7 +752,7 @@ export class MessagingService {
             encryptionMetadata: data.encryptionMetadata || null,
             replyToId: data.replyToId,
             quotedMessageId: data.quotedMessageId || (data.metadata?.quotedMessageId),
-            metadata: data.metadata || {},
+            metadata: { ...(data.metadata || {}), isCompressed },
             attachments: sanitizedMessage.attachments || [], // Default to empty array for JSONB
             sentAt: new Date()
           })
@@ -696,6 +760,23 @@ export class MessagingService {
       } catch (dbError) {
         safeLogger.error(`[MessagingService] Database error inserting message into ${conversationId} for sender ${fromAddress}:`, dbError);
         throw new Error('Failed to save message to database');
+      }
+
+      // DEDUPLICATION: Register sent message for future duplicate detection
+      try {
+        await registerSentMessage(
+          newMessage[0].id,
+          conversationId,
+          fromAddress,
+          content, // Use original content for fingerprinting
+          data.attachments
+        );
+        if (idempotencyKey) {
+          await registerIdempotencyKey(idempotencyKey, newMessage[0].id);
+        }
+      } catch (dedupRegError) {
+        safeLogger.warn('[MessagingService] Failed to register message for deduplication:', dedupRegError);
+        // Continue - non-critical error
       }
 
       // DB OPERATION: Update Conversation
@@ -1135,6 +1216,148 @@ export class MessagingService {
         throw new Error('Messaging service temporarily unavailable. Database connection error.');
       }
       throw new Error('Failed to search messages');
+    }
+  }
+
+  // Advanced search messages with full filters
+  async advancedSearchMessages(data: {
+    userAddress: string;
+    query: string;
+    conversationId?: string;
+    senderAddress?: string;
+    messageType?: string;
+    hasAttachments?: boolean;
+    startDate?: Date;
+    endDate?: Date;
+    sortBy: 'relevance' | 'date' | 'sender';
+    sortOrder: 'asc' | 'desc';
+    page: number;
+    limit: number;
+  }) {
+    const {
+      userAddress, query, conversationId, senderAddress, messageType,
+      hasAttachments, startDate, endDate, sortBy, sortOrder, page, limit
+    } = data;
+    const offset = (page - 1) * limit;
+
+    try {
+      this.validateAddress(userAddress);
+
+      // Build WHERE conditions
+      let whereConditions: any[] = [
+        sql`search_vector @@ plainto_tsquery('english', ${query})`
+      ];
+
+      // Optional filters
+      if (conversationId) {
+        whereConditions.push(eq(chatMessages.conversationId, conversationId));
+      }
+
+      if (senderAddress) {
+        whereConditions.push(eq(chatMessages.senderAddress, senderAddress.toLowerCase()));
+      }
+
+      if (messageType) {
+        whereConditions.push(eq(chatMessages.messageType, messageType));
+      }
+
+      if (hasAttachments !== undefined) {
+        if (hasAttachments) {
+          whereConditions.push(sql`jsonb_array_length(${chatMessages.attachments}) > 0`);
+        } else {
+          whereConditions.push(sql`jsonb_array_length(${chatMessages.attachments}) = 0`);
+        }
+      }
+
+      if (startDate) {
+        whereConditions.push(sql`${chatMessages.sentAt} >= ${startDate}`);
+      }
+
+      if (endDate) {
+        whereConditions.push(sql`${chatMessages.sentAt} <= ${endDate}`);
+      }
+
+      // Determine sort order
+      let orderByClause;
+      switch (sortBy) {
+        case 'relevance':
+          orderByClause = sql`ts_rank(search_vector, plainto_tsquery('english', ${query})) ${sortOrder === 'desc' ? sql`DESC` : sql`ASC`}`;
+          break;
+        case 'date':
+          orderByClause = sortOrder === 'desc' ? desc(chatMessages.sentAt) : asc(chatMessages.sentAt);
+          break;
+        case 'sender':
+          orderByClause = sortOrder === 'desc' ? desc(chatMessages.senderAddress) : asc(chatMessages.senderAddress);
+          break;
+        default:
+          orderByClause = desc(chatMessages.sentAt);
+      }
+
+      // Execute search query
+      const searchResults = await db
+        .select({
+          id: chatMessages.id,
+          conversationId: chatMessages.conversationId,
+          senderAddress: chatMessages.senderAddress,
+          content: chatMessages.content,
+          messageType: chatMessages.messageType,
+          attachments: chatMessages.attachments,
+          sentAt: chatMessages.sentAt,
+          // Include relevance score when sorting by relevance
+          relevanceScore: sortBy === 'relevance'
+            ? sql`ts_rank(search_vector, plainto_tsquery('english', ${query}))`
+            : sql`1`
+        })
+        .from(chatMessages)
+        .innerJoin(conversations, eq(chatMessages.conversationId, conversations.id))
+        .where(
+          and(
+            ...whereConditions,
+            sql`${conversations.participants} ? ${userAddress}`
+          )
+        )
+        .orderBy(orderByClause)
+        .limit(limit)
+        .offset(offset);
+
+      // Get total count for pagination
+      const countResult = await db
+        .select({ count: sql`COUNT(*)` })
+        .from(chatMessages)
+        .innerJoin(conversations, eq(chatMessages.conversationId, conversations.id))
+        .where(
+          and(
+            ...whereConditions,
+            sql`${conversations.participants} ? ${userAddress}`
+          )
+        );
+
+      const totalCount = Number(countResult[0]?.count || 0);
+
+      return {
+        messages: searchResults,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / limit)
+        },
+        filters: {
+          query,
+          conversationId,
+          senderAddress,
+          messageType,
+          hasAttachments,
+          startDate,
+          endDate
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error in advanced search:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
+      throw new Error('Failed to perform advanced search');
     }
   }
 

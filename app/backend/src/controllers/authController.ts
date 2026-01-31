@@ -7,13 +7,14 @@ import jwt from 'jsonwebtoken';
 import { ethers } from 'ethers';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { eq } from 'drizzle-orm';
-import { users, authSessions } from '../db/schema';
+import { eq, and, lt, gte } from 'drizzle-orm';
+import { users, authSessions, walletNonces } from '../db/schema';
 import { twoFactorAuth } from '../db/schema/securitySchema';
 import { successResponse, errorResponse, validationErrorResponse } from '../utils/apiResponse';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { referralService } from '../services/referralService';
 import { securityMonitoringService } from '../services/securityMonitoringService';
+import { SiweMessage } from 'siwe';
 
 // Initialize database connection
 import { db } from '../db'; // Use the shared database connection instead of creating a new one
@@ -50,6 +51,78 @@ class AuthController {
 
       const { walletAddress, signature, message, referralCode }: WalletConnectRequest & { referralCode?: string } = req.body;
       safeLogger.info('Processing wallet connect for address', { walletAddress });
+
+      // Parse and validate SIWE message
+      let siweMessage: SiweMessage;
+      try {
+        siweMessage = new SiweMessage(message);
+        await siweMessage.validate(signature);
+        
+        // Verify the address matches
+        if (siweMessage.address.toLowerCase() !== walletAddress.toLowerCase()) {
+          safeLogger.warn('SIWE address mismatch', { 
+            messageAddress: siweMessage.address, 
+            providedAddress: walletAddress 
+          });
+          return errorResponse(res, 'ADDRESS_MISMATCH', 'Wallet address mismatch', 401);
+        }
+        
+        // Verify expiration
+        if (new Date(siweMessage.expirationTime || '') < new Date()) {
+          safeLogger.warn('SIWE message expired', { 
+            expirationTime: siweMessage.expirationTime 
+          });
+          return errorResponse(res, 'MESSAGE_EXPIRED', 'Message has expired, please request a new nonce', 400);
+        }
+
+        // Extract nonce from SIWE message
+        const nonce = siweMessage.nonce;
+
+        // Validate nonce from database
+        const existingNonces = await db
+          .select()
+          .from(walletNonces)
+          .where(
+            and(
+              eq(walletNonces.nonce, nonce),
+              eq(walletNonces.walletAddress, walletAddress.toLowerCase()),
+              eq(walletNonces.used, false),
+              gte(walletNonces.expiresAt, new Date())
+            )
+          )
+          .limit(1);
+
+        if (existingNonces.length === 0) {
+          safeLogger.warn('Invalid or expired SIWE nonce', { walletAddress, nonce });
+          await securityMonitoringService.logEvent({
+            type: 'login_failure',
+            walletAddress: walletAddress,
+            ipAddress: (req as any).ip || (req as any).socket?.remoteAddress,
+            userAgent: req.headers['user-agent'],
+            details: { reason: 'invalid_nonce', nonce },
+            timestamp: new Date()
+          });
+          return errorResponse(res, 'INVALID_NONCE', 'Invalid or expired nonce, please request a new one', 400);
+        }
+
+        // Mark nonce as used
+        await db
+          .update(walletNonces)
+          .set({ used: true })
+          .where(eq(walletNonces.id, existingNonces[0].id));
+
+      } catch (siweError: any) {
+        safeLogger.error('SIWE validation error:', siweError);
+        await securityMonitoringService.logEvent({
+          type: 'login_failure',
+          walletAddress: walletAddress,
+          ipAddress: (req as any).ip || (req as any).socket?.remoteAddress,
+          userAgent: req.headers['user-agent'],
+          details: { reason: 'siwe_validation_error', error: siweError.message },
+          timestamp: new Date()
+        });
+        return errorResponse(res, 'SIWE_VALIDATION_ERROR', 'Failed to validate SIWE message', 401);
+      }
 
       // For development/testing: skip signature verification for known dev addresses
       const devMockAddresses = ['0x742d35Cc6634C0532925a3b844Bc5e8f5a7a3f9D'];
@@ -302,6 +375,45 @@ class AuthController {
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
         const refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
         try {
+          // Check concurrent session limits
+          const activeSessions = await db
+            .select()
+            .from(authSessions)
+            .where(
+              and(
+                eq(authSessions.walletAddress, userData.walletAddress.toLowerCase()),
+                eq(authSessions.isActive, true),
+                gte(authSessions.expiresAt, new Date())
+              )
+            );
+
+          const maxSessions = userData.maxSessions || 5; // Default to 5 if not set
+          
+          if (activeSessions.length >= maxSessions) {
+            // Deactivate oldest session
+            const oldestSession = activeSessions
+              .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0];
+            
+            if (oldestSession) {
+              await db
+                .update(authSessions)
+                .set({ isActive: false })
+                .where(eq(authSessions.id, oldestSession.id));
+              
+              safeLogger.info('Deactivated oldest session due to max session limit', {
+                walletAddress: userData.walletAddress,
+                sessionId: oldestSession.id
+              });
+              
+              await securityMonitoringService.logEvent({
+                type: 'session_revoked',
+                walletAddress: userData.walletAddress,
+                details: { reason: 'max_sessions_reached', maxSessions },
+                timestamp: new Date()
+              });
+            }
+          }
+
           await db.insert(authSessions).values({
             walletAddress: userData.walletAddress.toLowerCase(),
             sessionToken: token,

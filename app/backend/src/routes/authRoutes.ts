@@ -5,6 +5,10 @@ import { adminAuthController } from '../controllers/adminAuthController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { body } from 'express-validator';
 import rateLimit from 'express-rate-limit';
+import { db } from '../db';
+import { walletNonces } from '../db/schema';
+import { safeLogger } from '../utils/safeLogger';
+import { SiweMessage } from 'siwe';
 
 // Rate limiting for auth endpoints - increased from 20 to 60 requests per minute
 // to accommodate multiple auth attempts and service worker retries
@@ -72,39 +76,109 @@ const profileUpdateValidation = [
 /**
  * @route GET /api/auth/nonce
  * @route POST /api/auth/nonce
- * @desc Generate nonce for wallet authentication
+ * @desc Generate SIWE (Sign-In with Ethereum) message for wallet authentication
  * @access Public
  */
 router.route('/nonce')
-  .get(authRateLimit, (req, res) => {
-    // Generate a simple random nonce
-    const crypto = require('crypto');
-    const nonce = crypto.randomBytes(32).toString('hex');
-    const message = `Sign this message to authenticate with LinkDAO.\n\nNonce: ${nonce}\nTimestamp: ${Date.now()}`;
+  .get(authRateLimit, async (req, res) => {
+    try {
+      const crypto = require('crypto');
+      const { walletAddress } = req.query;
+      
+      // Generate nonce
+      const nonce = crypto.randomBytes(32).toString('hex');
+      
+      // Create SIWE message
+      const siweMessage = new SiweMessage({
+        domain: req.hostname || 'linkdao.io',
+        address: walletAddress || '0x0000000000000000000000000000000000000000',
+        statement: 'Sign in with Ethereum to LinkDAO',
+        uri: req.protocol + '://' + req.get('host'),
+        version: '1',
+        chainId: 1, // Ethereum Mainnet
+        nonce: nonce,
+        issuedAt: new Date().toISOString(),
+        expirationTime: new Date(Date.now() + 600000).toISOString(), // 10 minutes
+      });
 
-    res.json({
-      success: true,
-      data: {
+      const message = siweMessage.prepareMessage();
+      
+      // Store nonce in database
+      await db.insert(walletNonces).values({
+        walletAddress: walletAddress || 'unknown',
         nonce,
         message,
-        expiresIn: 600 // 10 minutes
-      }
-    });
+        expiresAt: new Date(Date.now() + 600000), // 10 minutes
+        used: false
+      });
+      
+      res.json({
+        success: true,
+        data: {
+          nonce,
+          message,
+          expiresIn: 600, // 10 minutes
+          domain: req.hostname || 'linkdao.io',
+          chainId: 1
+        }
+      });
+    } catch (error) {
+      safeLogger.error('Error generating SIWE nonce:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to generate nonce'
+      });
+    }
   })
-  .post(authRateLimit, (req, res) => {
-    // Generate a simple random nonce
-    const crypto = require('crypto');
-    const nonce = crypto.randomBytes(32).toString('hex');
-    const message = `Sign this message to authenticate with LinkDAO.\n\nNonce: ${nonce}\nTimestamp: ${Date.now()}`;
+  .post(authRateLimit, async (req, res) => {
+    try {
+      const crypto = require('crypto');
+      const { walletAddress } = req.body;
+      
+      // Generate nonce
+      const nonce = crypto.randomBytes(32).toString('hex');
+      
+      // Create SIWE message
+      const siweMessage = new SiweMessage({
+        domain: req.hostname || 'linkdao.io',
+        address: walletAddress || '0x0000000000000000000000000000000000000000',
+        statement: 'Sign in with Ethereum to LinkDAO',
+        uri: req.protocol + '://' + req.get('host'),
+        version: '1',
+        chainId: 1, // Ethereum Mainnet
+        nonce: nonce,
+        issuedAt: new Date().toISOString(),
+        expirationTime: new Date(Date.now() + 600000).toISOString(), // 10 minutes
+      });
 
-    res.json({
-      success: true,
-      data: {
+      const message = siweMessage.prepareMessage();
+      
+      // Store nonce in database
+      await db.insert(walletNonces).values({
+        walletAddress: walletAddress || 'unknown',
         nonce,
         message,
-        expiresIn: 600 // 10 minutes
-      }
-    });
+        expiresAt: new Date(Date.now() + 600000), // 10 minutes
+        used: false
+      });
+      
+      res.json({
+        success: true,
+        data: {
+          nonce,
+          message,
+          expiresIn: 600, // 10 minutes
+          domain: req.hostname || 'linkdao.io',
+          chainId: 1
+        }
+      });
+    } catch (error) {
+      safeLogger.error('Error generating SIWE nonce:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to generate nonce'
+      });
+    }
   });
 
 /**

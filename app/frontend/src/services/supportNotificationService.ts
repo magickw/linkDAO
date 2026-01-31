@@ -22,7 +22,7 @@ class SupportNotificationService {
     
     this.socket = io(url, {
       auth: { token },
-      transports: ['websocket', 'polling'],
+      // Removed restrictive transports to allow for polling fallback
     });
 
     this.socket.on('notification', (notification: SupportNotification) => {
