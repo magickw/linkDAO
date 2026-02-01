@@ -300,18 +300,28 @@ export class BlueskyOAuthProvider extends BaseOAuthProvider {
       const agent = new AtpAgent({ service: BSKY_SERVICE_URL });
 
       // Restore session with the access token
-      const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString());
-      const did = payload.sub;
+      let did: string;
+      try {
+        const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString());
+        did = payload.sub;
+      } catch (parseError) {
+        safeLogger.warn('Failed to parse Bluesky token during revocation, skipping');
+        return;
+      }
 
-      // Use resumeSession method instead of direct assignment
-      await agent.resumeSession({
-        accessJwt: accessToken,
-        refreshJwt: undefined,
-        did: did,
-        handle: '',
-      });
-
-      await agent.com.atproto.server.deleteSession();
+      // Try to resume session - if it fails, the token is already invalid
+      try {
+        await agent.resumeSession({
+          accessJwt: accessToken,
+          refreshJwt: undefined,
+          did: did,
+          handle: '',
+        });
+        await agent.com.atproto.server.deleteSession();
+      } catch (sessionError: any) {
+        // Session already invalid/expired - nothing to revoke
+        safeLogger.warn('Bluesky session already invalid during revocation:', sessionError?.message);
+      }
     } catch (error) {
       // Ignore errors during revocation
       safeLogger.warn('Bluesky revoke token warning:', error);
@@ -327,16 +337,50 @@ export class BlueskyOAuthProvider extends BaseOAuthProvider {
       const agent = new AtpAgent({ service: BSKY_SERVICE_URL });
 
       // Parse JWT for DID and restore session
-      const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString());
-      const did = payload.sub;
+      let did: string;
+      try {
+        const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString());
+        did = payload.sub;
+      } catch (parseError) {
+        safeLogger.error('Failed to parse Bluesky access token:', parseError);
+        return {
+          success: false,
+          error: 'Invalid access token format. Please reconnect your Bluesky account.',
+        };
+      }
 
-      // Use resumeSession method instead of direct assignment
-      await agent.resumeSession({
-        accessJwt: accessToken,
-        refreshJwt: undefined,
-        did: did,
-        handle: '',
-      });
+      // Try to resume session - handle DID mismatch gracefully
+      try {
+        await agent.resumeSession({
+          accessJwt: accessToken,
+          refreshJwt: undefined,
+          did: did,
+          handle: '',
+        });
+      } catch (sessionError: any) {
+        const errorMessage = sessionError?.message || String(sessionError);
+
+        // Handle DID mismatch - this means the session is stale or account changed
+        if (errorMessage.includes('DID mismatch')) {
+          safeLogger.warn('Bluesky DID mismatch - session needs reauthorization', { did });
+          return {
+            success: false,
+            error: 'Your Bluesky session has expired or the account has changed. Please reconnect your Bluesky account in Settings.',
+          };
+        }
+
+        // Handle expired/invalid token
+        if (errorMessage.includes('expired') || errorMessage.includes('invalid') || errorMessage.includes('Unauthorized')) {
+          safeLogger.warn('Bluesky session expired or invalid', { did });
+          return {
+            success: false,
+            error: 'Your Bluesky session has expired. Please reconnect your Bluesky account in Settings.',
+          };
+        }
+
+        // Re-throw other session errors
+        throw sessionError;
+      }
 
       const rt = new RichText({ text: adaptedContent.text });
       await rt.detectFacets(agent);

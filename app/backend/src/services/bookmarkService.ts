@@ -9,7 +9,7 @@ import { safeLogger } from '../utils/safeLogger';
 import { bookmarks, posts, statuses, users } from '../db/schema';
 import communityNotificationService from './communityNotificationService';
 import { bookmarkCacheService } from './bookmarkCacheService';
-import { eq, and, sql, or, ilike } from 'drizzle-orm';
+import { eq, and, sql, or, ilike, desc } from 'drizzle-orm';
 
 type ContentType = 'post' | 'status';
 

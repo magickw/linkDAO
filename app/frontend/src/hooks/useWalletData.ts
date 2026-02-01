@@ -92,12 +92,21 @@ export function useWalletData({
   autoRefresh = true,
   enableTransactionHistory = false,
   maxTransactions = 10,
-  enableMultiChain = true // Enable multi-chain by default
+  enableMultiChain: providedEnableMultiChain
 }: UseWalletDataOptions = {}): UseWalletDataReturn {
   const { address: connectedAddress } = useAccount();
   const connectedChainId = useChainId();
   const address = providedAddress || connectedAddress;
   const chainId = providedChainId || connectedChainId;
+
+  // Detect mobile to optimize performance
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  
+  // Default to single-chain on mobile unless explicitly requested, 
+  // multi-chain on desktop by default
+  const enableMultiChain = providedEnableMultiChain !== undefined 
+    ? providedEnableMultiChain 
+    : !isMobile;
 
   // No direct on-chain subscription here; we'll poll via our service to support multi-chain balances
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);

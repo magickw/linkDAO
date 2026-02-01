@@ -71,7 +71,7 @@ const FilePreviewItem = React.memo<{
       {/* File info overlay */}
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 rounded-b-lg">
         <div className="text-white text-xs truncate">{file?.name}</div>
-        <div className={`text - xs font - medium ${sizeColor} `}>{fileSize}</div>
+        <div className={`text-xs font-medium ${sizeColor}`}>{fileSize}</div>
       </div>
       <button
         type="button"
@@ -629,13 +629,16 @@ const FacebookStylePostComposer = React.memo(({
   }, [previews, selectedFiles, removeFile, videoEmbeds, maxFileSize]);
 
   return (
-    <div className={`group rounded - xl shadow - sm hover: shadow - md border border - gray - 200 dark: border - gray - 700 ${className} bg - white dark: bg - gray - 800 transition - all duration - 300 focus - within: ring - 2 focus - within: ring - primary - 500 / 20 focus - within: border - primary - 500 / 50`}>
-      <form onSubmit={handleSubmit}>
+    <div
+      className={`group rounded-xl shadow-sm hover:shadow-md border border-gray-200 dark:border-gray-700 ${className} bg-white dark:bg-gray-800 transition-all duration-300 focus-within:ring-2 focus-within:ring-primary-500/20 focus-within:border-primary-500/50 cursor-text`}
+      onClick={() => textareaRef.current?.focus()}
+    >
+      <form onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()}>
         {/* Main composer area */}
         <div className="p-4">
           <div className="flex space-x-4">
             {/* User avatar */}
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
               {userAvatar ? (
                 <img
                   src={userAvatar}
@@ -657,10 +660,10 @@ const FacebookStylePostComposer = React.memo(({
                 onChange={handleTextChange}
                 onFocus={handleFocus}
                 placeholder={content.length ? '' : HINTS[hintIdx]}
-                className="w-full resize-none border-none outline-none bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-lg leading-relaxed"
+                className="w-full resize-none border-none outline-none bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-lg leading-relaxed py-1"
                 rows={isExpanded ? 3 : 1}
                 disabled={isLoading}
-                style={{ minHeight: isExpanded ? '80px' : '40px' }}
+                style={{ minHeight: isExpanded ? '100px' : '44px' }}
               />
 
               {/* Link Previews */}
@@ -717,194 +720,193 @@ const FacebookStylePostComposer = React.memo(({
         {isExpanded && (
           <div className="border-t border-gray-100 dark:border-gray-700/50 px-4 py-3 bg-gray-50/50 dark:bg-gray-800/50 rounded-b-xl">
             <div className="flex items-center justify-between">
-              {/* Media and action buttons */}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all"
-                  title="Add Photo"
-                  disabled={isLoading}
-                >
-                  <Image className="w-5 h-5" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => videoInputRef.current?.click()}
-                  className="p-2 rounded-lg transition-all text-gray-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                  title="Add Video (YouTube, Vimeo, TikTok, Instagram, Twitter, Facebook)"
-                  disabled={isLoading}
-                >
-                  <Video className="w-5 h-5" />
-                </button>
-
-                <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
-
-                <div className="relative" ref={emojiPickerRef}>
-                  <button
-                    type="button"
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className={`p - 2 rounded - lg transition - all ${showEmojiPicker
-                      ? 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20'
-                      : 'text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
-                      } `}
-                    title="Add Emoji"
-                    disabled={isLoading}
-                  >
-                    <Smile className="w-5 h-5" />
-                  </button>
-                  {showEmojiPicker && (
-                    <div className="absolute bottom-full left-0 mb-2 z-50 shadow-2xl rounded-2xl">
-                      <EmojiPicker
-                        onEmojiClick={handleEmojiClick}
-                        width={320}
-                        height={400}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="relative" ref={locationPickerRef}>
-                  <button
-                    type="button"
-                    onClick={() => setShowLocationPicker(!showLocationPicker)}
-                    className={`p - 2 rounded - lg transition - all ${showLocationPicker || selectedLocation
-                      ? 'text-red-600 bg-red-50 dark:bg-red-900/20'
-                      : 'text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
-                      } `}
-                    title="Add Location"
-                    disabled={isLoading}
-                  >
-                    <MapPin className="w-5 h-5" />
-                  </button>
-                  {showLocationPicker && (
-                    <div className="absolute bottom-full left-0 mb-2 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
-                      <div className="p-3 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                        <h4 className="font-semibold text-sm">Add Location</h4>
-                        <button onClick={() => setShowLocationPicker(false)}><X size={16} /></button>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={getCurrentLocation}
-                        disabled={gettingCurrentLocation}
-                        className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 text-left transition-colors"
-                      >
-                        {gettingCurrentLocation ? (
-                          <Loader2 className="w-5 h-5 animate-spin text-primary-500" />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
-                            <MapPin size={16} />
-                          </div>
-                        )}
-                        <div className="flex-1">
-                          <div className="text-sm font-medium">Use current location</div>
-                        </div>
-                      </button>
-
-                      <div className="p-2">
-                        <input
-                          type="text"
-                          placeholder="Search location..."
-                          className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-900 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                          value={locationSearch}
-                          onChange={handleLocationSearch}
-                          autoFocus
-                        />
-                      </div>
-
-                      {locationSuggestions.length > 0 && (
-                        <div className="max-h-48 overflow-y-auto">
-                          {locationSuggestions.map((loc, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => {
-                                setSelectedLocation(loc);
-                                setShowLocationPicker(false);
-                                setLocationSearch('');
-                              }}
-                              className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm flex items-center gap-2"
-                            >
-                              <MapPin size={14} className="text-gray-400" />
-                              <span>{loc.name}</span>
-                              {loc.address && <span className="text-xs text-gray-500 ml-auto">{loc.address}</span>}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
-
-                {/* Social Share Buttons */}
-                <div className="flex items-center gap-1">
-                   <button
-                    type="button"
-                    onClick={() => setShareToTwitter(!shareToTwitter)}
-                    className={`p-2 rounded-lg transition-all ${shareToTwitter
-                      ? 'text-black dark:text-white bg-gray-100 dark:bg-gray-700 ring-1 ring-gray-300 dark:ring-gray-600'
-                      : 'text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
-                    title="Share to Twitter/X"
-                    disabled={isLoading}
-                  >
-                    <span className="text-sm font-bold">𝕏</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShareToFacebook(!shareToFacebook)}
-                    className={`p-2 rounded-lg transition-all ${shareToFacebook
-                      ? 'text-[#1877F2] bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800'
-                      : 'text-gray-400 hover:text-[#1877F2] hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                      }`}
-                    title="Share to Facebook"
-                    disabled={isLoading}
-                  >
-                    <span className="text-sm font-bold">f</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShareToLinkedIn(!shareToLinkedIn)}
-                    className={`p-2 rounded-lg transition-all ${shareToLinkedIn
-                      ? 'text-[#0A66C2] bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800'
-                      : 'text-gray-400 hover:text-[#0A66C2] hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                      }`}
-                    title="Share to LinkedIn"
-                    disabled={isLoading}
-                  >
-                    <span className="text-sm font-bold">in</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShareToThreads(!shareToThreads)}
-                    className={`p-2 rounded-lg transition-all ${shareToThreads
-                      ? 'text-black dark:text-white bg-gray-100 dark:bg-gray-700 ring-1 ring-gray-300 dark:ring-gray-600'
-                      : 'text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
-                    title="Share to Threads"
-                    disabled={isLoading}
-                  >
-                    <span className="text-sm font-bold">@</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShareToBluesky(!shareToBluesky)}
-                    className={`p-2 rounded-lg transition-all ${shareToBluesky
-                      ? 'text-[#0085FF] bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800'
-                      : 'text-gray-400 hover:text-[#0085FF] hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                      }`}
-                    title="Share to Bluesky"
-                    disabled={isLoading}
-                  >
-                    <span className="text-sm">🦋</span>
-                  </button>
-                </div>
-              </div>
-
+                            {/* Media and action buttons */}
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                className="p-3 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                title="Add Photo"
+                                disabled={isLoading}
+                              >
+                                <Image className="w-5 h-5" />
+                              </button>
+              
+                              <button
+                                type="button"
+                                onClick={() => videoInputRef.current?.click()}
+                                className="p-3 rounded-lg transition-all text-gray-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                title="Add Video (YouTube, Vimeo, TikTok, Instagram, Twitter, Facebook)"
+                                disabled={isLoading}
+                              >
+                                <Video className="w-5 h-5" />
+                              </button>
+              
+                              <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+              
+                              <div className="relative" ref={emojiPickerRef}>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                  className={`p-3 rounded-lg transition-all min-h-[44px] min-w-[44px] flex items-center justify-center ${showEmojiPicker
+                                    ? 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20'
+                                    : 'text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
+                                    }`}
+                                  title="Add Emoji"
+                                  disabled={isLoading}
+                                >
+                                  <Smile className="w-5 h-5" />
+                                </button>
+                                {showEmojiPicker && (
+                                  <div className="absolute bottom-full left-0 mb-2 z-50 shadow-2xl rounded-2xl">
+                                    <EmojiPicker
+                                      onEmojiClick={handleEmojiClick}
+                                      width={320}
+                                      height={400}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+              
+                              <div className="relative" ref={locationPickerRef}>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowLocationPicker(!showLocationPicker)}
+                                  className={`p-3 rounded-lg transition-all min-h-[44px] min-w-[44px] flex items-center justify-center ${showLocationPicker || selectedLocation
+                                    ? 'text-red-600 bg-red-50 dark:bg-red-900/20'
+                                    : 'text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
+                                    }`}
+                                  title="Add Location"
+                                  disabled={isLoading}
+                                >
+                                  <MapPin className="w-5 h-5" />
+                                </button>
+                                {showLocationPicker && (
+                                  <div className="absolute bottom-full left-0 mb-2 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
+                                    <div className="p-3 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                                      <h4 className="font-semibold text-sm">Add Location</h4>
+                                      <button onClick={() => setShowLocationPicker(false)}><X size={16} /></button>
+                                    </div>
+              
+                                    <button
+                                      type="button"
+                                      onClick={getCurrentLocation}
+                                      disabled={gettingCurrentLocation}
+                                      className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 text-left transition-colors"
+                                    >
+                                      {gettingCurrentLocation ? (
+                                        <Loader2 className="w-5 h-5 animate-spin text-primary-500" />
+                                      ) : (
+                                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                                          <MapPin size={16} />
+                                        </div>
+                                      )}
+                                      <div className="flex-1">
+                                        <div className="text-sm font-medium">Use current location</div>
+                                      </div>
+                                    </button>
+              
+                                    <div className="p-2">
+                                      <input
+                                        type="text"
+                                        placeholder="Search location..."
+                                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-900 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                        value={locationSearch}
+                                        onChange={handleLocationSearch}
+                                        autoFocus
+                                      />
+                                    </div>
+              
+                                    {locationSuggestions.length > 0 && (
+                                      <div className="max-h-48 overflow-y-auto">
+                                        {locationSuggestions.map((loc, idx) => (
+                                          <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => {
+                                              setSelectedLocation(loc);
+                                              setShowLocationPicker(false);
+                                              setLocationSearch('');
+                                            }}
+                                            className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm flex items-center gap-2"
+                                          >
+                                            <MapPin size={14} className="text-gray-400" />
+                                            <span>{loc.name}</span>
+                                            {loc.address && <span className="text-xs text-gray-500 ml-auto">{loc.address}</span>}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+              
+                              <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+              
+                              {/* Social Share Buttons */}
+                              <div className="flex items-center gap-1">
+                                 <button
+                                  type="button"
+                                  onClick={() => setShareToTwitter(!shareToTwitter)}
+                                  className={`p-2.5 rounded-lg transition-all min-h-[44px] min-w-[44px] flex items-center justify-center ${shareToTwitter
+                                    ? 'text-black dark:text-white bg-gray-100 dark:bg-gray-700 ring-1 ring-gray-300 dark:ring-gray-600'
+                                    : 'text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
+                                    }`}
+                                  title="Share to Twitter/X"
+                                  disabled={isLoading}
+                                >
+                                  <span className="text-sm font-bold">𝕏</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setShareToFacebook(!shareToFacebook)}
+                                  className={`p-2.5 rounded-lg transition-all min-h-[44px] min-w-[44px] flex items-center justify-center ${shareToFacebook
+                                    ? 'text-[#1877F2] bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800'
+                                    : 'text-gray-400 hover:text-[#1877F2] hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                                    }`}
+                                  title="Share to Facebook"
+                                  disabled={isLoading}
+                                >
+                                  <span className="text-sm font-bold">f</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setShareToLinkedIn(!shareToLinkedIn)}
+                                  className={`p-2.5 rounded-lg transition-all min-h-[44px] min-w-[44px] flex items-center justify-center ${shareToLinkedIn
+                                    ? 'text-[#0A66C2] bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800'
+                                    : 'text-gray-400 hover:text-[#0A66C2] hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                                    }`}
+                                  title="Share to LinkedIn"
+                                  disabled={isLoading}
+                                >
+                                  <span className="text-sm font-bold">in</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setShareToThreads(!shareToThreads)}
+                                  className={`p-2.5 rounded-lg transition-all min-h-[44px] min-w-[44px] flex items-center justify-center ${shareToThreads
+                                    ? 'text-black dark:text-white bg-gray-100 dark:bg-gray-700 ring-1 ring-gray-300 dark:ring-gray-600'
+                                    : 'text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
+                                    }`}
+                                  title="Share to Threads"
+                                  disabled={isLoading}
+                                >
+                                  <span className="text-sm font-bold">@</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setShareToBluesky(!shareToBluesky)}
+                                  className={`p-2.5 rounded-lg transition-all min-h-[44px] min-w-[44px] flex items-center justify-center ${shareToBluesky
+                                    ? 'text-[#0085FF] bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800'
+                                    : 'text-gray-400 hover:text-[#0085FF] hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                                    }`}
+                                  title="Share to Bluesky"
+                                  disabled={isLoading}
+                                >
+                                  <span className="text-sm">🦋</span>
+                                </button>
+                              </div>
+                            </div>
               {/* Submit and cancel buttons */}
               <div className="flex items-center space-x-3">
                 <button
@@ -931,7 +933,7 @@ const FacebookStylePostComposer = React.memo(({
         {isExpanded && (
           <div className="px-4 pb-2 bg-gray-50/50 dark:bg-gray-800/50 rounded-b-xl -mt-2">
             <div className="text-right">
-              <span className={`text - xs font - medium ${content.length > 280 ? 'text-red-500' : 'text-gray-400'} `}>
+              <span className={`text-xs font-medium ${content.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
                 {content.length}/280
               </span>
             </div>

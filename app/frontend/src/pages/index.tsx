@@ -192,17 +192,24 @@ export default function Home() {
 
             console.log('[HomePage] Attempting WebSocket connection during idle time...');
             // Connect WebSocket only after wallet is connected and page has stabilized
-            ws.connect().then(() => {
-              console.log('[HomePage] WebSocket connected successfully');
-            }).catch((error) => {
-              console.error('[HomePage] WebSocket connection failed:', error);
-            }).finally(() => {
-              isUpdating.current = false;
-            });
+            // Add an extra small delay to ensure idle callback isn't competing with initial render
+            setTimeout(() => {
+              if (isMounted.current && window.location.pathname === '/') {
+                ws.connect().then(() => {
+                  console.log('[HomePage] WebSocket connected successfully');
+                }).catch((error) => {
+                  console.error('[HomePage] WebSocket connection failed:', error);
+                }).finally(() => {
+                  isUpdating.current = false;
+                });
+              } else {
+                isUpdating.current = false;
+              }
+            }, 2000);
           } else {
             isUpdating.current = false;
           }
-        }, { timeout: 5000 }); // Fallback timeout if idle callback doesn't fire
+        }, { timeout: 10000 }); // Increase fallback timeout
 
         return () => {
           window.cancelIdleCallback(idleCallbackId);

@@ -217,9 +217,9 @@ export default function EnhancedHomeFeed({
         {filteredPosts.map((post, index) => (
           <motion.div
             key={post.id}
-            initial={{ opacity: 0, y: 20 }}
+            initial={typeof window !== 'undefined' && window.innerWidth < 768 ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
+            transition={typeof window !== 'undefined' && window.innerWidth < 768 ? { duration: 0 } : { delay: Math.min(index * 0.1, 0.5) }}
           >
             <EnhancedPostCard
               post={post}
