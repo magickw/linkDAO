@@ -103,9 +103,10 @@ router.route('/nonce')
 
       const message = siweMessage.prepareMessage();
       
-      // Store nonce in database
+      // Store nonce in database (normalize wallet address to lowercase for consistent lookup)
+      const normalizedAddress = walletAddress ? String(walletAddress).toLowerCase() : 'unknown';
       await db.insert(walletNonces).values({
-        walletAddress: walletAddress || 'unknown',
+        walletAddress: normalizedAddress,
         nonce,
         message,
         expiresAt: new Date(Date.now() + 600000), // 10 minutes
@@ -153,9 +154,10 @@ router.route('/nonce')
 
       const message = siweMessage.prepareMessage();
       
-      // Store nonce in database
+      // Store nonce in database (normalize wallet address to lowercase for consistent lookup)
+      const normalizedAddress = walletAddress ? String(walletAddress).toLowerCase() : 'unknown';
       await db.insert(walletNonces).values({
-        walletAddress: walletAddress || 'unknown',
+        walletAddress: normalizedAddress,
         nonce,
         message,
         expiresAt: new Date(Date.now() + 600000), // 10 minutes
