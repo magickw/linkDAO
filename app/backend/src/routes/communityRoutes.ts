@@ -2,15 +2,14 @@ import express from 'express';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { communityController } from '../controllers/communityController';
 import { validateRequest } from '../middleware/validation';
-import { authMiddleware } from '../middleware/authMiddleware';
+import { authMiddleware, optionalAuthMiddleware } from '../middleware/authMiddleware';
 import { rateLimitingMiddleware } from '../middleware/rateLimitingMiddleware';
-import { authenticationMiddleware, AuthenticatedRequest } from '../middleware/authenticationMiddleware';
 
 const router = express.Router();
 
 // Apply authentication middleware to protected routes
 const authRequired = authMiddleware;
-const optionalAuth = authenticationMiddleware.optionalAuth;
+const optionalAuth = optionalAuthMiddleware;
 
 // Apply rate limiting
 router.use(rateLimitingMiddleware({

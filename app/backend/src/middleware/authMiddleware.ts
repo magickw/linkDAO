@@ -63,3 +63,33 @@ export const authMiddleware: RequestHandler = async (req: Request, res: Response
     return ApiResponse.unauthorized(res, 'Token validation failed');
   }
 };
+
+/**
+ * Optional authentication middleware
+ * Attempts to authenticate but doesn't fail if no token is present
+ * Sets req.user if valid token is found, otherwise continues without it
+ */
+export const optionalAuthMiddleware: RequestHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    // No token - that's fine for optional auth
+    return next();
+  }
+
+  try {
+    const user = await authService.verifyToken(token);
+
+    if (user) {
+      const areq = req as AuthenticatedRequest;
+      areq.user = user;
+    }
+    // Continue whether we found a user or not
+    next();
+  } catch (error) {
+    // Token validation failed, but that's okay for optional auth
+    // Just continue without setting user
+    next();
+  }
+};
