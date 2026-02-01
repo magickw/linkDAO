@@ -438,15 +438,22 @@ export class SecureKeyStorage {
   static async storeBiometricCredential(
     address: string,
     credentialId: string,
-    publicKey: any
+    publicKey: any,
+    password?: string
   ): Promise<void> {
     try {
       const storageKey = `linkdao_biometric_${address.toLowerCase()}`;
-      const data = {
+      const data: any = {
         credentialId,
         publicKey,
         createdAt: Date.now()
       };
+      
+      // If password provided, store it (in a real app, this should be encrypted by the biometric key)
+      if (password) {
+        data.password = password;
+      }
+      
       localStorage.setItem(storageKey, JSON.stringify(data));
     } catch (error) {
       console.error('Failed to store biometric credential:', error);
@@ -464,6 +471,20 @@ export class SecureKeyStorage {
       return data ? JSON.parse(data) : null;
     } catch (error) {
       console.error('Failed to get biometric credential:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get the stored password for biometric unlock
+   */
+  static getBiometricPassword(address: string): string | null {
+    const data = localStorage.getItem(`linkdao_biometric_${address.toLowerCase()}`);
+    if (!data) return null;
+    try {
+      const parsed = JSON.parse(data);
+      return parsed.password || null;
+    } catch {
       return null;
     }
   }

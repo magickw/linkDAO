@@ -74,54 +74,6 @@ const OrderDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const errorToastShownRef = useRef(false);
 
-  // Function to convert service Order type to types/order.ts Order type
-  const convertServiceOrderToTypesOrder = (serviceOrder: any): Order => {
-    // Create a minimal Order object that matches the types/order.ts interface
-    const convertedOrder: Order = {
-      id: serviceOrder.id,
-      listingId: serviceOrder.id, // Using order.id as listingId since it's not available
-      buyerAddress: walletAddress || '', // Using current user's address as buyer
-      sellerAddress: serviceOrder.seller?.id || '', // Using seller id as address
-      status: serviceOrder.status,
-      amount: serviceOrder.total.toString(),
-      paymentToken: serviceOrder.paymentMethod === 'crypto' ? 'USDC' : 'FIAT',
-      paymentMethod: serviceOrder.paymentMethod,
-      totalAmount: serviceOrder.total,
-      currency: serviceOrder.currency,
-      product: {
-        id: serviceOrder.items[0]?.id || '1',
-        title: serviceOrder.items[0]?.title || `Order #${serviceOrder.id}`,
-        description: '',
-        image: serviceOrder.items[0]?.image || '/api/placeholder/400/400',
-        category: '',
-        quantity: serviceOrder.items[0]?.quantity || 1,
-        unitPrice: serviceOrder.items[0]?.unitPrice || serviceOrder.total,
-        totalPrice: serviceOrder.items[0]?.totalPrice || serviceOrder.total
-      },
-      shippingAddress: serviceOrder.shippingAddress,
-      billingAddress: serviceOrder.billingAddress,
-      trackingNumber: serviceOrder.trackingNumber,
-      trackingCarrier: undefined,
-      estimatedDelivery: serviceOrder.estimatedDelivery?.toISOString(),
-      actualDelivery: undefined,
-      deliveryConfirmation: undefined,
-      orderNotes: undefined,
-      orderMetadata: undefined,
-      createdAt: serviceOrder.createdAt.toISOString(),
-      updatedAt: serviceOrder.createdAt.toISOString(),
-      timeline: [],
-      trackingInfo: undefined,
-      disputeId: undefined,
-      canConfirmDelivery: false,
-      canOpenDispute: false,
-      canCancel: false,
-      canRefund: false,
-      isEscrowProtected: false,
-      daysUntilAutoComplete: 0
-    };
-    return convertedOrder;
-  };
-
   useEffect(() => {
     if (!orderId || typeof orderId !== 'string') return;
 
@@ -130,9 +82,8 @@ const OrderDetailPage: React.FC = () => {
       try {
         const apiOrder = await orderService.getOrderById(orderId);
         if (apiOrder) {
-          // Convert the service Order type to the types/order.ts Order type
-          const convertedOrder = convertServiceOrderToTypesOrder(apiOrder);
-          setOrder(convertedOrder);
+          // orderService.getOrderById already returns a properly typed Order
+          setOrder(apiOrder);
 
           // Fetch the timeline using getOrderTrackingStatus
           try {

@@ -978,15 +978,16 @@ export class WalletService {
     if (!walletName) return { success: false, error: 'Wallet name is required' };
 
     try {
-      const { bip39Utils } = await import('@/utils/bip39Utils');
-      const mnemonic = bip39Utils.generateMnemonic(12);
-      const address = await bip39Utils.mnemonicToAddress(mnemonic);
-      const privateKey = '0x' + '1'.repeat(64); // Mock private key for derivation
+      const { generateMnemonic, derivePrivateKeyFromMnemonic, deriveAddressFromPrivateKey } = await import('@/utils/bip39Utils');
+      const mnemonic = generateMnemonic(12);
+      const privateKey = derivePrivateKeyFromMnemonic(mnemonic, "m/44'/60'/0'/0/0", 0);
+      const address = deriveAddressFromPrivateKey(privateKey);
 
-      await SecureKeyStorage.storeWallet(address, privateKey, password, { name: walletName }, mnemonic);
+      await SecureKeyStorage.storeWallet(address, privateKey, password, { name: walletName, isHardwareWallet: false, chainIds: [1, 8453, 137, 42161] }, mnemonic);
 
       return { success: true, address, mnemonic };
     } catch (error) {
+      console.error('Wallet creation error:', error);
       return { success: false, error: 'Failed to create wallet' };
     }
   }
@@ -1001,19 +1002,29 @@ export class WalletService {
       let address = '';
       let pk = privateKey;
 
+      const { validateMnemonic, derivePrivateKeyFromMnemonic, deriveAddressFromPrivateKey } = await import('@/utils/bip39Utils');
+
       if (mnemonic) {
-        const { bip39Utils } = await import('@/utils/bip39Utils');
-        if (!bip39Utils.validateMnemonic(mnemonic)) return { success: false, error: 'Invalid mnemonic' };
-        address = await bip39Utils.mnemonicToAddress(mnemonic);
-        pk = '0x' + '1'.repeat(64); // Mock
+        if (!validateMnemonic(mnemonic)) return { success: false, error: 'Invalid mnemonic' };
+        pk = derivePrivateKeyFromMnemonic(mnemonic, "m/44'/60'/0'/0/0", 0);
+        address = deriveAddressFromPrivateKey(pk);
       } else if (privateKey) {
-        if (!privateKey.startsWith('0x') || privateKey.length !== 66) return { success: false, error: 'Invalid private key' };
-        address = '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb'; // Mock
+        if (!privateKey.startsWith('0x')) pk = '0x' + privateKey;
+        if (pk.length !== 66) return { success: false, error: 'Invalid private key length' };
+        address = deriveAddressFromPrivateKey(pk);
+      } else {
+        return { success: false, error: 'Mnemonic or private key is required' };
       }
 
-      await SecureKeyStorage.storeWallet(address, pk, password, { name: walletName }, mnemonic);
+      await SecureKeyStorage.storeWallet(address, pk, password, { 
+        name: walletName || 'Imported Wallet',
+        isHardwareWallet: false,
+        chainIds: [1, 8453, 137, 42161]
+      }, mnemonic);
+      
       return { success: true, address };
     } catch (error) {
+      console.error('Wallet import error:', error);
       return { success: false, error: 'Import failed' };
     }
   }

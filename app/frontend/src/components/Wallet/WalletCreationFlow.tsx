@@ -224,8 +224,9 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
     setIsCreating(true);
 
     try {
-      // Derive private key from mnemonic using proper BIP-39
-      const privateKey = derivePrivateKeyFromMnemonic(mnemonic, "m/44'/60'/0'/0/0", 0);
+      // Derive private key from mnemonic using proper BIP-39 Ethereum standard path
+      const derivationPath = "m/44'/60'/0'/0/0";
+      const privateKey = derivePrivateKeyFromMnemonic(mnemonic, derivationPath, 0);
       const address = deriveAddressFromPrivateKey(privateKey);
 
       // Store wallet securely with mnemonic for backup/recovery
@@ -469,6 +470,174 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
         return (
           <div className="space-y-6">
             <div className="text-center">
+              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Plus className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                Set Wallet Password
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400">
+                Create a password to encrypt your wallet
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Wallet Name (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={walletName}
+                  onChange={(e) => setWalletName(e.target.value)}
+                  placeholder="My Wallet"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password"
+                    className="w-full px-4 py-3 pr-12 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white"
+                  />
+                  <button
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+
+                {/* Password Strength Indicator */}
+                {password && (
+                  <div className="mt-2">
+                    <PasswordStrengthIndicator password={password} />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm password"
+                    className="w-full px-4 py-3 pr-12 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white"
+                  />
+                  <button
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Biometric Authentication Toggle */}
+              {isBiometricSupported && (
+                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                      <Fingerprint className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        Enable Biometric Authentication
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Use fingerprint or face to unlock
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEnableBiometric(!enableBiometric)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      enableBiometric ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        enableBiometric ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              )}
+
+              {password && confirmPassword && password !== confirmPassword && (
+                <p className="text-sm text-red-600 dark:text-red-400">
+                  Passwords do not match
+                </p>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'complete':
+        return (
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle className="w-10 h-10 text-green-600 dark:text-green-400" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                Wallet Created!
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400">
+                Your wallet is ready to use
+              </p>
+            </div>
+
+            <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                Wallet Address:
+              </p>
+              <p className="font-mono text-sm text-gray-900 dark:text-white break-all">
+                {walletAddress}
+              </p>
+            </div>
+
+            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
+              <div className="flex items-start space-x-2">
+                <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                    Remember Your Password
+                  </p>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                    You'll need this password to access your wallet. If you forget it,
+                    you'll need to restore from your recovery phrase.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'complete':
+        return (
+          <div className="space-y-6">
+            <div className="text-center">
               <div className="w-20 h-20 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
                 <CheckCircle className="w-10 h-10 text-green-600 dark:text-green-400" />
               </div>
@@ -564,7 +733,16 @@ export const WalletCreationFlow: React.FC<WalletCreationFlowProps> = ({
         {renderStep()}
 
         {/* Footer */}
-        {step !== 'complete' && (
+        {step === 'complete' ? (
+          <div className="mt-8">
+            <button
+              onClick={onCancel || (() => { })}
+              className="w-full py-3 bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 transition-all"
+            >
+              Done
+            </button>
+          </div>
+        ) : (
           <div className="mt-8 flex space-x-3">
             {step === 'intro' && (
               <button

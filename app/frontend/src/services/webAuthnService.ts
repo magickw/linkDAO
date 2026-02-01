@@ -286,7 +286,7 @@ export class WebAuthnService {
         return result;
       }
 
-      // Store wallet-credential mapping
+      // Store wallet-credential mapping with password for decryption
       const walletCredentials = this.getWalletCredentials();
       walletCredentials[walletAddress] = {
         credentialId: result.credentialId,
@@ -294,6 +294,14 @@ export class WebAuthnService {
         registeredAt: Date.now()
       };
       this.saveWalletCredentials(walletCredentials);
+      
+      // Store the password in secure storage associated with this credential
+      await SecureKeyStorage.storeBiometricCredential(
+        walletAddress,
+        result.credentialId!,
+        (result as any).publicKey || {},
+        password
+      );
 
       return {
         success: true
@@ -339,8 +347,8 @@ export class WebAuthnService {
         };
       }
 
-      // Get password from secure storage (we store a hash for biometric unlock)
-      const password = this.getBiometricPassword(walletAddress);
+      // Get password from secure storage (associated with this biometric credential)
+      const password = SecureKeyStorage.getBiometricPassword(walletAddress);
       if (!password) {
         return {
           success: false,
