@@ -297,7 +297,7 @@ class BookmarkService {
    * Get all bookmarks for a user with filtering and sorting
    */
   async getUserBookmarks(
-    userId: string, 
+    userIdentifier: string, 
     page: number = 1, 
     limit: number = 20,
     contentType?: string,
@@ -306,6 +306,26 @@ class BookmarkService {
   ) {
     try {
       const offset = (page - 1) * limit;
+      let userId = userIdentifier;
+
+      // Resolve wallet address to userId if needed
+      if (userIdentifier.startsWith('0x')) {
+        const user = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(sql`LOWER(${users.walletAddress}) = LOWER(${userIdentifier})`)
+          .limit(1);
+        
+        if (user[0]) {
+          userId = user[0].id;
+        } else {
+          // If user doesn't exist in our DB yet, they can't have bookmarks
+          return {
+            bookmarks: [],
+            pagination: { page, limit, total: 0, totalPages: 0 }
+          };
+        }
+      }
 
       // Check cache first (only if no search, as search results shouldn't be cached)
       if (!search) {

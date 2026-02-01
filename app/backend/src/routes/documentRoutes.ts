@@ -3,7 +3,7 @@ import { DatabaseService } from '../services/databaseService';
 import { safeLogger } from '../utils/safeLogger';
 import { authMiddleware } from '../middleware/authMiddleware';
 import * as schema from '../db/schema';
-import { eq, or, and, desc } from 'drizzle-orm';
+import { eq, or, and, desc, sql } from 'drizzle-orm';
 
 const router = Router();
 const databaseService = new DatabaseService();
@@ -15,8 +15,23 @@ const databaseService = new DatabaseService();
  */
 router.get('/documents', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
+    let userId = (req as any).user.id;
     const db = databaseService.getDatabase();
+
+    // Resolve wallet address to UUID if needed
+    if (userId && userId.startsWith('0x')) {
+      const userResult = await db.select({ id: schema.users.id })
+        .from(schema.users)
+        .where(sql`LOWER(${schema.users.walletAddress}) = LOWER(${userId})`)
+        .limit(1);
+      
+      if (userResult[0]) {
+        userId = userResult[0].id;
+      } else {
+        // If user doesn't exist in DB, they can't have documents
+        return res.json({ success: true, data: [] });
+      }
+    }
 
     // 1. Fetch Receipts
     const receipts = await db.select()
