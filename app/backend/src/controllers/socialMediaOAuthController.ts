@@ -136,9 +136,21 @@ class SocialMediaOAuthController {
         return ApiResponse.badRequest(res, `Unsupported platform: ${platform}`);
       }
 
+      // For Bluesky, pass the full callback params for DPoP handling
+      let callbackParams: URLSearchParams | undefined;
+      if (platform === 'bluesky') {
+        callbackParams = new URLSearchParams();
+        for (const [key, value] of Object.entries(req.query)) {
+          if (typeof value === 'string') {
+            callbackParams.set(key, value);
+          }
+        }
+      }
+
       const connection = await socialMediaConnectionService.completeOAuth(
         String(state),
-        String(code)
+        String(code),
+        callbackParams
       );
 
       // Redirect to frontend with success

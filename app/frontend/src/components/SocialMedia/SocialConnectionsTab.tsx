@@ -57,12 +57,7 @@ const SocialConnectionsTab: React.FC<SocialConnectionsTabProps> = ({ onToast }) 
   };
 
   const handleConnect = async (platform: SocialPlatform) => {
-    // Intercept Bluesky to use direct login modal
-    if (platform === 'bluesky') {
-      setShowBlueskyModal(true);
-      return;
-    }
-
+    // All platforms now use OAuth popup, including Bluesky
     setConnectingPlatform(platform);
     try {
       const response = await initiateOAuth(platform);
@@ -101,7 +96,8 @@ const SocialConnectionsTab: React.FC<SocialConnectionsTabProps> = ({ onToast }) 
     }
   };
 
-  const handleBlueskyLogin = async (e: React.FormEvent) => {
+  const handleBlueskyAppPassword = async (e: React.FormEvent) => {
+    // Fallback method for users who prefer App Password
     e.preventDefault();
     if (!blueskyHandle || !blueskyPassword) {
       onToast?.('Please enter both handle and app password', 'error');
@@ -111,7 +107,7 @@ const SocialConnectionsTab: React.FC<SocialConnectionsTabProps> = ({ onToast }) 
     setIsBlueskyConnecting(true);
     try {
       const response = await connectBlueskyDirect(blueskyHandle, blueskyPassword);
-      
+
       if (response.success) {
         setShowBlueskyModal(false);
         setBlueskyHandle('');
@@ -338,25 +334,25 @@ const SocialConnectionsTab: React.FC<SocialConnectionsTabProps> = ({ onToast }) 
           </div>
         </div>
       </div>
-      {/* Bluesky Connection Modal */}
+      {/* Bluesky App Password Modal (Fallback) */}
       {showBlueskyModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-lg font-medium text-gray-900">Connect Bluesky</h3>
-              <button 
+              <h3 className="text-lg font-medium text-gray-900">Connect Bluesky (App Password)</h3>
+              <button
                 onClick={() => setShowBlueskyModal(false)}
                 className="text-gray-400 hover:text-gray-500"
               >
                 ✕
               </button>
             </div>
-            
-            <form onSubmit={handleBlueskyLogin} className="p-6 space-y-4">
-              <div className="bg-blue-50 p-4 rounded-md mb-4 text-sm text-blue-700">
-                <p>Bluesky requires an App Password instead of your main login password.</p>
+
+            <form onSubmit={handleBlueskyAppPassword} className="p-6 space-y-4">
+              <div className="bg-yellow-50 p-4 rounded-md mb-4 text-sm text-yellow-700">
+                <p><strong>Note:</strong> This is a fallback method. We recommend using the standard OAuth connection via the Connect button.</p>
                 <p className="mt-1">
-                  Go to <strong>Settings &gt; Privacy & Security &gt; App Passwords</strong> in your Bluesky app to create one.
+                  If you prefer to use an App Password, go to <strong>Settings &gt; Privacy & Security &gt; App Passwords</strong> in your Bluesky app to create one.
                 </p>
               </div>
 

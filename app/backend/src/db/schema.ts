@@ -6722,6 +6722,10 @@ export const socialMediaConnections = pgTable("social_media_connections", {
   pageName: varchar("page_name", { length: 255 }),
   pageAccessToken: text("page_access_token"), // Encrypted if possible, but consistent with accessToken for now
 
+  // DPoP (Demonstration of Proof-of-Possession) for AT Protocol OAuth (Bluesky)
+  dpopPrivateKey: text("dpop_private_key"), // Encrypted JWK for DPoP signing
+  dpopPublicKeyId: varchar("dpop_public_key_id", { length: 64 }), // Key thumbprint
+
   // Status tracking
   status: varchar("status", { length: 32 }).default("active"), // 'active' | 'expired' | 'revoked' | 'error'
   lastError: text("last_error"),
@@ -6773,6 +6777,7 @@ export const oauthStates = pgTable("oauth_states", {
   platform: varchar("platform", { length: 32 }).notNull(),
   codeVerifier: text("code_verifier"), // For PKCE (Twitter OAuth 2.0)
   redirectUri: text("redirect_uri"),
+  metadata: text("metadata"), // JSON metadata for DPoP state (Bluesky)
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({

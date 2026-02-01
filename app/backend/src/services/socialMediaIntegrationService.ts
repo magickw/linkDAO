@@ -184,6 +184,10 @@ export class SocialMediaIntegrationService {
             // Fallback to user profile (might fail due to permissions, but keep existing behavior)
             postResult = await provider.postContent(accessToken, socialContent);
           }
+        } else if (platform === 'bluesky' && accessToken === 'dpop-managed') {
+          // Use DPoP session for Bluesky OAuth connections
+          safeLogger.info('Posting to Bluesky using DPoP session');
+          postResult = await (provider as any).postWithDPoP(connection.platformUserId, socialContent);
         } else {
           // Standard posting for other platforms
           postResult = await provider.postContent(accessToken, socialContent);

@@ -4,11 +4,13 @@ import { communityController } from '../controllers/communityController';
 import { validateRequest } from '../middleware/validation';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { rateLimitingMiddleware } from '../middleware/rateLimitingMiddleware';
+import { authenticationMiddleware, AuthenticatedRequest } from '../middleware/authenticationMiddleware';
 
 const router = express.Router();
 
 // Apply authentication middleware to protected routes
 const authRequired = authMiddleware;
+const optionalAuth = authenticationMiddleware.optionalAuth;
 
 // Apply rate limiting
 router.use(rateLimitingMiddleware({
@@ -91,9 +93,10 @@ router.get('/feed',
   communityController.getFollowedCommunitiesFeed
 );
 
-// Get community details by slug or ID (public)
+// Get community details by slug or ID (public with optional auth for membership status)
 // The controller method handles both numeric IDs and slugs
 router.get('/:id',
+  optionalAuth,
   validateRequest({
     params: {
       id: { type: 'string', required: true }

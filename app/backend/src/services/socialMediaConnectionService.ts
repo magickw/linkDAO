@@ -15,6 +15,7 @@ import {
   SocialPlatform,
   OAuthTokens,
   BaseOAuthProvider,
+  BlueskyOAuthProvider,
 } from './oauth';
 
 // Types
@@ -176,7 +177,7 @@ class SocialMediaConnectionService {
   /**
    * Initiate OAuth flow for a platform
    */
-  async initiateOAuth(userId: string, platform: string): Promise<InitiateOAuthResult> {
+  async initiateOAuth(userId: string, platform: string, handle?: string): Promise<InitiateOAuthResult> {
     if (!isSupportedPlatform(platform)) {
       throw new Error(`Unsupported platform: ${platform}`);
     }
@@ -202,9 +203,17 @@ class SocialMediaConnectionService {
     safeLogger.info(`Getting OAuth provider for ${platform}`);
     const provider = getOAuthProvider(platform);
 
+    let authUrl: string;
+
     // Generate authorization URL
     safeLogger.info(`Generating authorization URL for ${platform}`);
-    const authUrl = provider.getAuthorizationUrl(state, codeVerifier);
+    if (platform === 'bluesky') {
+      // Use async method with DPoP for Bluesky
+      const blueskyProvider = provider as BlueskyOAuthProvider;
+      authUrl = await blueskyProvider.getAuthorizationUrlAsync(state, handle);
+    } else {
+      authUrl = provider.getAuthorizationUrl(state, codeVerifier);
+    }
 
     // Store state in database for CSRF protection
     const expiresAt = new Date(Date.now() + OAUTH_STATE_EXPIRY_MS);
@@ -225,7 +234,7 @@ class SocialMediaConnectionService {
   /**
    * Complete OAuth flow after callback
    */
-  async completeOAuth(state: string, code: string): Promise<SocialMediaConnection> {
+  async completeOAuth(state: string, code: string, callbackParams?: URLSearchParams): Promise<SocialMediaConnection> {
     // Find and validate OAuth state
     const storedStates = await db
       .select()
@@ -249,19 +258,30 @@ class SocialMediaConnectionService {
     const provider = getOAuthProvider(platform);
 
     try {
-      // Exchange code for tokens
-      const tokens = await provider.exchangeCodeForTokens(
-        code,
-        storedState.codeVerifier || undefined
-      );
+      let tokens: OAuthTokens;
+      let userInfo: any;
 
-      // Get user info from platform
-      const userInfo = await provider.getUserInfo(tokens.accessToken);
+      // Handle Bluesky OAuth with DPoP separately
+      if (platform === 'bluesky' && callbackParams) {
+        const blueskyProvider = provider as BlueskyOAuthProvider;
+        const result = await blueskyProvider.exchangeCodeForTokensWithDPoP(callbackParams);
+        tokens = result.tokens;
+        userInfo = result.userInfo;
+      } else {
+        // Standard OAuth flow
+        tokens = await provider.exchangeCodeForTokens(
+          code,
+          storedState.codeVerifier || undefined
+        );
+        userInfo = await provider.getUserInfo(tokens.accessToken);
+      }
 
-      // Encrypt tokens for storage
-      const encryptedAccessToken = await this.encryptToken(tokens.accessToken);
+      // Encrypt tokens for storage (for non-DPoP managed tokens)
+      const encryptedAccessToken = tokens.accessToken === 'dpop-managed'
+        ? 'dpop-managed'
+        : await this.encryptToken(tokens.accessToken);
       const encryptedRefreshToken = tokens.refreshToken
-        ? await this.encryptToken(tokens.refreshToken)
+        ? (tokens.refreshToken === 'dpop-managed' ? 'dpop-managed' : await this.encryptToken(tokens.refreshToken))
         : null;
 
       // Facebook Page Support
